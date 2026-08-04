@@ -1,0 +1,8 @@
+[
+  {
+    "title": "SIM-Kartenscanner",
+    "description": "OCR-Erfassung von SIM-Karten für die Metering-Arbeit",
+    "icon": "📇",
+    "url": "https://ricogrutze-oss.github.io/sim-kartenscanner/"
+  }
+]
