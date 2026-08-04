@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f1115">
+<title>Nummern-Scanner</title>
+<link rel="manifest" href="manifest.json">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel2:#1e222b; --border:#2a2f3a;
+    --accent:#2dd4bf; --accent2:#ff5757; --text:#e8eaed; --muted:#8b93a1; --good:#4ade80;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    background:var(--bg); color:var(--text); padding:16px; padding-bottom:80px;
+  }
+  h1{font-size:1.2rem; margin:0 0 4px 0;}
+  p.sub{color:var(--muted); font-size:0.85rem; margin:0 0 16px 0;}
+  .card{
+    background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    padding:14px; margin-bottom:14px;
+  }
+  .btnrow{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;}
+  button{
+    background:var(--panel2); color:var(--text); border:1px solid var(--border);
+    padding:11px 16px; border-radius:8px; font-size:0.95rem; cursor:pointer;
+  }
+  button.primary{ background:var(--accent); color:#062020; border-color:var(--accent); font-weight:700;}
+  button.danger{ background:var(--accent2); color:#2a0505; border-color:var(--accent2); font-weight:600;}
+  button:disabled{opacity:.4; cursor:default;}
+  #stage{
+    position:relative; width:100%; border-radius:10px; overflow:hidden;
+    background:#000; min-height:200px; display:flex; align-items:center; justify-content:center;
+    touch-action:none; user-select:none;
+  }
+  #stage video{ width:100%; display:block; }
+  #stage .placeholder{ color:var(--muted); font-size:0.85rem; padding:40px 10px; text-align:center;}
+  #flashOverlay{
+    position:absolute; inset:0; z-index:10; pointer-events:none;
+    opacity:0; transition: opacity .12s ease-out;
+  }
+  .zone{
+    position:absolute; border:2px solid; border-radius:4px; box-sizing:border-box;
+    transition: border-color .15s, background-color .15s;
+  }
+  .zone.lower{ border-color:var(--accent2); background:rgba(255,87,87,0.12); }
+  .zone.upper{ border-color:var(--accent); background:rgba(45,212,191,0.12); }
+  .zone.locked{ border-color:var(--good) !important; background:rgba(74,222,128,0.22) !important; }
+  .zone .tag{
+    position:absolute; top:-22px; left:-2px; font-size:0.7rem; padding:2px 6px; border-radius:4px 4px 0 0;
+    color:#fff; white-space:nowrap;
+  }
+  .zone.lower .tag{ background:var(--accent2); color:#2a0505;}
+  .zone.upper .tag{ background:var(--accent); color:#062020;}
+  .zone .handle{
+    position:absolute; right:-9px; bottom:-9px; width:20px; height:20px; border-radius:50%;
+    background:#fff; border:2px solid #333; touch-action:none;
+  }
+  .hint{ font-size:0.8rem; color:var(--muted); margin-top:8px; line-height:1.4; }
+  .status{ font-size:0.9rem; color:var(--accent); min-height:1.3em; margin-top:8px; font-family:ui-monospace,Menlo,Consolas,monospace;}
+  .status.saved{ color:var(--good); font-weight:700; }
+  table{ width:100%; min-width:620px; border-collapse:collapse; margin-top:6px; background:#cfe7e5; border:1px solid #9fc4c1; table-layout:fixed;}
+  th,td{ padding:6px 6px; border:1px solid #a9cac7; font-size:0.9rem; overflow:hidden;}
+  th{ text-align:left; background:#d7dba0; color:#2b2e1f; font-weight:700; font-size:0.75rem; position:relative; white-space:nowrap;}
+  .colResizeHandle{ position:absolute; top:0; right:-5px; width:10px; height:100%; cursor:col-resize; touch-action:none; z-index:4; }
+  .colResizeHandle::after{ content:''; position:absolute; right:4px; top:0; width:2px; height:100%; background:rgba(43,46,31,0.35); }
+  td.idx{ color:#2b2e1f; width:22px; text-align:center; background:#e9ecc9; font-weight:700; }
+  td input, td select{
+    width:100%; background:#ffffff; border:1px solid #9fc4c1; color:#12312e;
+    padding:7px 8px; border-radius:4px; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:0.95rem;
+  }
+  td.act{ width:34px; text-align:center; background:#e9ecc9; }
+  td.act button{ padding:4px 8px; }
+  .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between;}
+  footer{ text-align:center; color:var(--muted); font-size:0.75rem; margin-top:10px; }
+  .toggle{display:flex; align-items:center; gap:8px; font-size:0.85rem; color:var(--muted);}
+</style>
+</head>
+<body>
+
+<h1>📷 Nummern-Scanner</h1>
+
+<div class="card">
+  <div id="stage">
+    <div class="placeholder" id="placeholder">Noch keine Kamera aktiv</div>
+    <div id="flashOverlay"></div>
+  </div>
+  <div class="btnrow">
+    <button class="primary" id="startBtn">📷 Kamera starten</button>
+    <button id="stopBtn" disabled>⏹ Stoppen</button>
+    <label class="toggle"><input type="checkbox" id="soundToggle" checked> Ton</label>
+    <label class="toggle"><input type="checkbox" id="vibrateToggle" checked> Vibration</label>
+  </div>
+  <div class="status" id="status"></div>
+</div>
+
+<div class="card">
+  <h2 style="font-size:1rem;margin:0 0 8px 0;">Absender-Daten</h2>
+  <div class="hint" style="margin-top:0;margin-bottom:8px;">Einmal ausfüllen — wird automatisch in jede Export-Zeile übernommen.</div>
+  <div class="btnrow" style="margin-top:0;">
+    <input type="text" id="absKid" placeholder="Absender KID" style="flex:1; min-width:110px; background:var(--panel2); border:1px solid var(--border); color:var(--text); padding:9px 10px; border-radius:8px; font-size:0.9rem;">
+    <input type="text" id="absName" placeholder="Absender Name" style="flex:1; min-width:140px; background:var(--panel2); border:1px solid var(--border); color:var(--text); padding:9px 10px; border-radius:8px; font-size:0.9rem;">
+    <input type="text" id="absOE" placeholder="Absender OE" style="flex:1; min-width:140px; background:var(--panel2); border:1px solid var(--border); color:var(--text); padding:9px 10px; border-radius:8px; font-size:0.9rem;">
+  </div>
+</div>
+
+<div class="card">
+  <div class="row">
+    <h2 style="font-size:1rem;margin:0;">Ergebnis-Tabelle</h2>
+    <button id="addRowBtn">+ leere Zeile</button>
+  </div>
+  <datalist id="ausbaugrundList">
+    <option value="kündigen">
+    <option value="Kartenverlust">
+    <option value="nicht mehr auffindbar">
+    <option value="nicht mehr benötigt">
+    <option value="Rückbau">
+    <option value="Vodafone Rückbau">
+    <option value="CSD-Ablösung">
+  </datalist>
+  <div style="overflow-x:auto;">
+  <table id="resultTable">
+    <colgroup>
+      <col><col><col><col><col><col>
+    </colgroup>
+    <thead><tr><th class="idx">#</th><th>SIM-Karten-Nr</th><th>Rufnummer</th><th>Provider</th><th>Rückgabegrund</th><th></th></tr></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+  </div>
+  <div class="btnrow">
+    <button class="primary" id="exportCsvBtn">⬇️ Excel exportieren</button>
+    <button class="primary" id="mailBtn">📧 Mail senden</button>
+    <button id="copyBtn">📋 Alles kopieren</button>
+    <button class="danger" id="clearAllBtn">Tabelle leeren</button>
+  </div>
+</div>
+
+<footer>Läuft offline. Keine Daten verlassen das Gerät.</footer>
+
+<script>
+const stage = document.getElementById('stage');
+const placeholder = document.getElementById('placeholder');
+const startBtn = document.getElementById('startBtn');
+const stopBtn = document.getElementById('stopBtn');
+const statusEl = document.getElementById('status');
+const tbody = document.getElementById('tbody');
+const soundToggle = document.getElementById('soundToggle');
+const vibrateToggle = document.getElementById('vibrateToggle');
+
+let videoEl = null;
+let stream = null;
+let scanning = false;
+let lowerWorker = null;
+let upperWorker = null;
+let cooldownUntil = 0;
+let stability = { lower: { last: '', count: 0 }, upper: { last: '', count: 0 } };
+
+// Row currently being filled in (decoupled: lower/upper can arrive at different times).
+let pendingRow = { lowerVal: null, upperVal: null, rowEl: null };
+
+const ZONE_STORAGE_KEY = 'nummernscanner_zones_v2';
+let zones = loadZones() || {
+  lower: { x: 8,  y: 62, w: 84, h: 14 },
+  upper: { x: 8,  y: 30, w: 84, h: 14 }
+};
+
+function loadZones(){
+  try{
+    const raw = localStorage.getItem(ZONE_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){ return null; }
+}
+function saveZones(){
+  try{ localStorage.setItem(ZONE_STORAGE_KEY, JSON.stringify(zones)); }catch(e){}
+}
+
+// ---------- Camera ----------
+startBtn.addEventListener('click', startCamera);
+stopBtn.addEventListener('click', stopCamera);
+
+async function startCamera(){
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false
+    });
+  } catch(err){
+    statusEl.textContent = 'Kamera-Fehler: ' + err.message + ' (läuft nur über https oder localhost)';
+    return;
+  }
+
+  placeholder.style.display = 'none';
+  videoEl = document.createElement('video');
+  videoEl.setAttribute('playsinline', '');
+  videoEl.muted = true;
+  videoEl.srcObject = stream;
+  stage.appendChild(videoEl);
+  await videoEl.play();
+
+  buildZoneEls();
+
+  statusEl.textContent = 'Initialisiere Erkennung…';
+  lowerWorker = await Tesseract.createWorker('eng');
+  upperWorker = await Tesseract.createWorker('eng');
+  await lowerWorker.setParameters({ tessedit_pageseg_mode: '7', tessedit_char_whitelist: '0123456789+.-' });
+  await upperWorker.setParameters({ tessedit_pageseg_mode: '7', tessedit_char_whitelist: '0123456789+.-' });
+
+  startBtn.disabled = true;
+  stopBtn.disabled = false;
+  scanning = true;
+  stability = { lower: { last: '', count: 0 }, upper: { last: '', count: 0 } };
+  pendingRow = { lowerVal: null, upperVal: null, rowEl: null };
+  scanLoop();
+}
+
+async function stopCamera(){
+  scanning = false;
+  if (stream){ stream.getTracks().forEach(t => t.stop()); stream = null; }
+  if (videoEl){ videoEl.remove(); videoEl = null; }
+  stage.querySelectorAll('.zone').forEach(el => el.remove());
+  placeholder.style.display = 'block';
+  if (lowerWorker){ await lowerWorker.terminate(); lowerWorker = null; }
+  if (upperWorker){ await upperWorker.terminate(); upperWorker = null; }
+  startBtn.disabled = false;
+  stopBtn.disabled = true;
+  statusEl.textContent = '';
+}
+
+// ---------- Zone overlay (draggable / resizable) ----------
+function buildZoneEls(){
+  ['lower','upper'].forEach(key => {
+    const z = zones[key];
+    const div = document.createElement('div');
+    div.className = 'zone ' + key;
+    div.dataset.key = key;
+    applyZoneStyle(div, z);
+    const tag = document.createElement('div');
+    tag.className = 'tag';
+    tag.textContent = key === 'lower' ? 'SIM-Karten-Nr' : 'Rufnummer';
+    div.appendChild(tag);
+    const handle = document.createElement('div');
+    handle.className = 'handle';
+    div.appendChild(handle);
+    stage.appendChild(div);
+    makeInteractive(div, handle, key);
+  });
+}
+
+function makeInteractive(div, handle, key){
+  let mode = null;
+  let startX, startY, startZone;
+
+  function pos(e){ const t = e.touches ? e.touches[0] : e; return { x: t.clientX, y: t.clientY }; }
+
+  function onDown(e, m){
+    e.preventDefault(); e.stopPropagation();
+    mode = m;
+    const p = pos(e);
+    startX = p.x; startY = p.y;
+    startZone = { ...zones[key] };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('touchmove', onMove, {passive:false});
+    window.addEventListener('mouseup', onUp);
+    window.addEventListener('touchend', onUp);
+  }
+
+  function onMove(e){
+    e.preventDefault();
+    const rect = stage.getBoundingClientRect();
+    const p = pos(e);
+    const dxPct = (p.x - startX) / rect.width * 100;
+    const dyPct = (p.y - startY) / rect.height * 100;
+    if (mode === 'move'){
+      zones[key].x = clamp(startZone.x + dxPct, 0, 100 - zones[key].w);
+      zones[key].y = clamp(startZone.y + dyPct, 0, 100 - zones[key].h);
+    } else {
+      zones[key].w = clamp(startZone.w + dxPct, 5, 100 - zones[key].x);
+      zones[key].h = clamp(startZone.h + dyPct, 5, 100 - zones[key].y);
+    }
+    applyZoneStyle(div, zones[key]);
+  }
+
+  function onUp(){
+    mode = null;
+    saveZones();
+    window.removeEventListener('mousemove', onMove);
+    window.removeEventListener('touchmove', onMove);
+    window.removeEventListener('mouseup', onUp);
+    window.removeEventListener('touchend', onUp);
+  }
+
+  div.addEventListener('mousedown', e => onDown(e, 'move'));
+  div.addEventListener('touchstart', e => onDown(e, 'move'), {passive:false});
+  handle.addEventListener('mousedown', e => onDown(e, 'resize'));
+  handle.addEventListener('touchstart', e => onDown(e, 'resize'), {passive:false});
+}
+
+function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
+function applyZoneStyle(div, z){
+  div.style.left = z.x + '%'; div.style.top = z.y + '%';
+  div.style.width = z.w + '%'; div.style.height = z.h + '%';
+}
+
+// ---------- Scan loop ----------
+async function scanLoop(){
+  if (!scanning) return;
+
+  const now = Date.now();
+  if (now < cooldownUntil){
+    setTimeout(scanLoop, 200);
+    return;
+  }
+
+  try{
+    const full = captureFullFrame();
+
+    // Run both recognitions in parallel (two independent Tesseract workers) —
+    // roughly halves the time per scan cycle compared to running them one after another.
+    const [lowerText, upperText] = await Promise.all([
+      recognizeZone(lowerWorker, full, zones.lower),
+      recognizeZone(upperWorker, full, zones.upper)
+    ]);
+
+    updateStability('lower', lowerText);
+    updateStability('upper', upperText);
+
+    statusEl.className = 'status';
+    statusEl.textContent = `unten: ${lowerText || '—'}   |   oben: ${upperText || '—'}`;
+
+    // Decoupled: each field fires independently as soon as IT is stable twice,
+    // instead of requiring both zones to be sharp at the same instant.
+    if (stability.lower.count === 2 && stability.lower.last){
+      handleFieldLocked('lower', stability.lower.last);
+    }
+    if (stability.upper.count === 2 && stability.upper.last){
+      handleFieldLocked('upper', stability.upper.last);
+    }
+  } catch(err){
+    console.error(err);
+  }
+  setTimeout(scanLoop, 150);
+}
+
+function updateStability(key, text){
+  if (!text){ stability[key] = { last: '', count: 0 }; return; }
+  if (text === stability[key].last){ stability[key].count++; }
+  else { stability[key] = { last: text, count: 1 }; }
+}
+
+function setZoneLocked(key, locked){
+  const el = stage.querySelector('.zone.' + key);
+  if (el) el.classList.toggle('locked', !!locked);
+}
+
+function captureFullFrame(){
+  const c = document.createElement('canvas');
+  c.width = videoEl.videoWidth;
+  c.height = videoEl.videoHeight;
+  c.getContext('2d').drawImage(videoEl, 0, 0, c.width, c.height);
+  return c;
+}
+
+async function recognizeZone(worker, fullCanvas, z){
+  const sx = z.x/100 * fullCanvas.width;
+  const sy = z.y/100 * fullCanvas.height;
+  const sw = z.w/100 * fullCanvas.width;
+  const sh = z.h/100 * fullCanvas.height;
+  const upscale = 3;
+  const c = document.createElement('canvas');
+  c.width = sw * upscale;
+  c.height = sh * upscale;
+  c.getContext('2d').drawImage(fullCanvas, sx, sy, sw, sh, 0, 0, c.width, c.height);
+  const { data } = await worker.recognize(c);
+  return data.text.replace(/\s+/g, '').trim();
+}
+
+// Fires once per field as soon as that field is stable — fills the pending row,
+// creating it on the first field and completing it once both are present.
+function handleFieldLocked(key, value){
+  setZoneLocked(key, true);
+
+  if (!pendingRow.rowEl){
+    pendingRow.rowEl = addRow('', '', '', '');
+  }
+  const fields = pendingRow.rowEl.querySelectorAll('.rowfield');
+  if (key === 'lower'){ fields[0].value = value; pendingRow.lowerVal = value; }
+  else { fields[1].value = value; pendingRow.upperVal = value; }
+  saveTableToStorage();
+
+  // Re-arm this field immediately so it can catch the next distinct number
+  // without waiting for the other field to complete.
+  stability[key] = { last: '', count: 0 };
+  setZoneLocked(key, false);
+
+  if (soundToggle.checked) playBeep(key === 'lower' ? 660 : 880, 0.12);
+  if (vibrateToggle.checked && navigator.vibrate) navigator.vibrate(80);
+
+  if (pendingRow.lowerVal && pendingRow.upperVal){
+    statusEl.className = 'status saved';
+    statusEl.textContent = `✅ Zeile komplett: ${pendingRow.lowerVal}  /  ${pendingRow.upperVal}`;
+    if (soundToggle.checked) playBeep(880, 0.22);
+    if (vibrateToggle.checked && navigator.vibrate) navigator.vibrate(200);
+    flashStage('rgba(251,146,60,0.65)', 500); // orange — Zeile komplett (beide Zahlen)
+    cooldownUntil = Date.now() + 2000;
+    pendingRow = { lowerVal: null, upperVal: null, rowEl: null };
+  } else {
+    statusEl.className = 'status';
+    statusEl.textContent = key === 'lower'
+      ? `✅ SIM-Karten-Nr erfasst: ${value} — Rufnummer fehlt noch`
+      : `✅ Rufnummer erfasst: ${value} — SIM-Karten-Nr fehlt noch`;
+    flashStage('rgba(74,222,128,0.55)', 500); // grün — einzelne Zahl erfolgreich erfasst
+  }
+}
+
+let flashTimer = null;
+function flashStage(color, ms){
+  const el = document.getElementById('flashOverlay');
+  if (!el) return;
+  el.style.background = color;
+  el.style.opacity = '0.5';
+  clearTimeout(flashTimer);
+  flashTimer = setTimeout(() => { el.style.opacity = '0'; }, ms);
+}
+
+function playBeep(freq, duration){
+  try{
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq || 880;
+    gain.gain.setValueAtTime(0.001, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (duration || 0.18));
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(); osc.stop(ctx.currentTime + (duration || 0.18) + 0.02);
+  }catch(e){}
+}
+
+// ---------- Absender-Daten (persist across sessions) ----------
+const ABSENDER_STORAGE_KEY = 'nummernscanner_absender_v1';
+const absKidEl = document.getElementById('absKid');
+const absNameEl = document.getElementById('absName');
+const absOEEl = document.getElementById('absOE');
+
+function loadAbsender(){
+  try{
+    const raw = localStorage.getItem(ABSENDER_STORAGE_KEY);
+    if (!raw) return;
+    const a = JSON.parse(raw);
+    absKidEl.value = a.kid || '';
+    absNameEl.value = a.name || '';
+    absOEEl.value = a.oe || '';
+  }catch(e){}
+}
+function saveAbsender(){
+  try{
+    localStorage.setItem(ABSENDER_STORAGE_KEY, JSON.stringify({
+      kid: absKidEl.value, name: absNameEl.value, oe: absOEEl.value
+    }));
+  }catch(e){}
+}
+[absKidEl, absNameEl, absOEEl].forEach(el => el.addEventListener('input', saveAbsender));
+loadAbsender();
+
+// ---------- Table ----------
+const TABLE_STORAGE_KEY = 'nummernscanner_rows_v4';
+const PROVIDERS = ['Telekom Deutschland / D1', 'T-Mobile Austria', 'Vodafone / D2', 'Telefonica / O2', 'Telefonica / E-Plus', 'unbekannt'];
+
+function saveTableToStorage(){
+  try{
+    const rows = [...tbody.querySelectorAll('tr')].map(tr => {
+      const f = tr.querySelectorAll('.rowfield');
+      return [f[0].value, f[1].value, f[2].value, f[3].value];
+    });
+    localStorage.setItem(TABLE_STORAGE_KEY, JSON.stringify(rows));
+  }catch(e){}
+}
+
+function loadTableFromStorage(){
+  try{
+    const raw = localStorage.getItem(TABLE_STORAGE_KEY);
+    if (!raw) return;
+    const rows = JSON.parse(raw);
+    rows.forEach(r => addRow(r[0] || '', r[1] || '', r[2] || '', r[3] || ''));
+  }catch(e){}
+}
+
+function addRow(val1, val2, provider, reason){
+  const tr = document.createElement('tr');
+  const providerOptions = ['<option value="">– wählen –</option>']
+    .concat(PROVIDERS.map(p => `<option${p === provider ? ' selected' : ''}>${escapeHtml(p)}</option>`))
+    .join('');
+  tr.innerHTML = `
+    <td class="idx"></td>
+    <td><input class="rowfield" type="text" value="${escapeHtml(val1)}"></td>
+    <td><input class="rowfield" type="text" value="${escapeHtml(val2)}"></td>
+    <td><select class="rowfield">${providerOptions}</select></td>
+    <td><input class="rowfield" type="text" list="ausbaugrundList" placeholder="Grund…" value="${escapeHtml(reason)}"></td>
+    <td class="act"><button title="Löschen">✕</button></td>
+  `;
+  tr.querySelectorAll('.rowfield').forEach(el => {
+    el.addEventListener('input', saveTableToStorage);
+    el.addEventListener('change', saveTableToStorage);
+  });
+  tr.querySelector('button').addEventListener('click', () => {
+    if (pendingRow.rowEl === tr) pendingRow = { lowerVal: null, upperVal: null, rowEl: null };
+    tr.remove(); reindex(); saveTableToStorage();
+  });
+  tbody.appendChild(tr);
+  reindex();
+  saveTableToStorage();
+  return tr;
+}
+function reindex(){ [...tbody.children].forEach((tr,i) => tr.querySelector('.idx').textContent = i+1); }
+function escapeHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+document.getElementById('addRowBtn').addEventListener('click', () => addRow('','','',''));
+document.getElementById('clearAllBtn').addEventListener('click', () => {
+  if (!confirm('Tabelle wirklich vollständig löschen? Das kann nicht rückgängig gemacht werden.')) return;
+  tbody.innerHTML = '';
+  pendingRow = { lowerVal: null, upperVal: null, rowEl: null };
+  saveTableToStorage();
+});
+
+loadTableFromStorage();
+
+// ---------- Resizable table columns ----------
+const COLWIDTH_KEY = 'nummernscanner_colwidths_v1';
+const DEFAULT_COLWIDTHS = [32, 160, 150, 190, 170, 40];
+
+function initColumnResize(){
+  const table = document.getElementById('resultTable');
+  const cols = table.querySelectorAll('colgroup col');
+  const saved = (() => { try{ return JSON.parse(localStorage.getItem(COLWIDTH_KEY)); }catch(e){ return null; } })();
+  const widths = (saved && saved.length === cols.length) ? saved : DEFAULT_COLWIDTHS;
+  cols.forEach((col, i) => { col.style.width = (widths[i] || DEFAULT_COLWIDTHS[i]) + 'px'; });
+
+  const ths = table.querySelectorAll('thead th');
+  ths.forEach((th, i) => {
+    if (i === ths.length - 1) return; // letzte Spalte (Löschen) braucht keinen Griff
+    const handle = document.createElement('div');
+    handle.className = 'colResizeHandle';
+    th.appendChild(handle);
+
+    let startX = 0, startWidth = 0;
+    function pos(e){ return (e.touches ? e.touches[0].clientX : e.clientX); }
+    function onDown(e){
+      e.preventDefault(); e.stopPropagation();
+      startX = pos(e);
+      startWidth = cols[i].offsetWidth;
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('touchmove', onMove, {passive:false});
+      window.addEventListener('mouseup', onUp);
+      window.addEventListener('touchend', onUp);
+    }
+    function onMove(e){
+      e.preventDefault();
+      const newWidth = Math.max(36, startWidth + (pos(e) - startX));
+      cols[i].style.width = newWidth + 'px';
+    }
+    function onUp(){
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('touchend', onUp);
+      try{
+        const w = [...cols].map(c => parseInt(c.style.width, 10) || 0);
+        localStorage.setItem(COLWIDTH_KEY, JSON.stringify(w));
+      }catch(e){}
+    }
+    handle.addEventListener('mousedown', onDown);
+    handle.addEventListener('touchstart', onDown, {passive:false});
+  });
+}
+initColumnResize();
+
+function buildExportRows(){
+  const kid = absKidEl.value, name = absNameEl.value, oe = absOEEl.value;
+  return [...tbody.querySelectorAll('tr')].map(tr => {
+    const f = tr.querySelectorAll('.rowfield');
+    // f[0]=SIM-Karten-Nr, f[1]=Rufnummer, f[2]=Provider, f[3]=Rückgabegrund
+    return [kid, name, oe, f[1].value, f[0].value, f[2].value, f[3].value];
+  });
+}
+
+function generateExcelFile(filename){
+  const rows = buildExportRows();
+  const sheetData = [['Absender KID', 'Absender Name', 'Absender OE', 'Rufnummer', 'SIM-Karten-Nr', 'Provider', 'Rückgabegrund'], ...rows];
+  const ws = XLSX.utils.aoa_to_sheet(sheetData);
+  ws['!cols'] = [{ wch: 10 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 22 }, { wch: 22 }, { wch: 20 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Nummern');
+  filename = filename || ('SIM-Karten-Rueckgabe_' + new Date().toISOString().slice(0,19).replace(/[:T]/g,'-') + '.xlsx');
+  XLSX.writeFile(wb, filename);
+  return filename;
+}
+
+// Excel's internal date serial number (1900 date system, incl. the classic 1900-leap-year quirk),
+// matching what Excel itself produces when TODAY() is concatenated with & (no date formatting applied).
+function toExcelSerial(date){
+  const excelEpoch = Date.UTC(1899, 11, 30);
+  const d = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+  return Math.round((d - excelEpoch) / 86400000);
+}
+
+document.getElementById('exportCsvBtn').addEventListener('click', () => {
+  generateExcelFile();
+});
+
+document.getElementById('mailBtn').addEventListener('click', () => {
+  const kid = absKidEl.value || '';
+  const name = absNameEl.value || '';
+  const oe = absOEEl.value || '';
+  const serial = toExcelSerial(new Date());
+  const chargenId = `${kid}-${oe}-${serial}`;
+
+  const filename = generateExcelFile(`Rückgabe-Chargen-ID-${chargenId}.xlsx`);
+
+  const subject = `ZFA M2M SIM-Daten Rückgabe - Chargen-ID: ${chargenId}`;
+  const body =
+`Hallo ZFA BIT Metering Serviceteam,
+
+die SIM-Kartenverträge für die, in der anliegenden Datei enthaltenen, SIM-Kartendaten können zum nächst möglichen Zeitpunkt gekündigt werden.
+
+Vom Absender dieser E-Mail wird garantiert, dass die aufgeführten SIM-Karten unbrauchbar gemacht wurden.
+
+Freundliche Grüße
+
+${name}
+
+
+Diese E-Mail wurde als Bestandteil des M2M-SIM-Kartenrückgabeprozesses automatisiert erstellt.
+Bitte prüfen Sie die Angaben vor dem Versenden.`;
+
+  const mailtoUrl = `mailto:SIM-Karten-Rueckgabe@gw.sharepoint.eon.com?cc=ZFA@eon.com&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+  statusEl.className = 'status';
+  statusEl.textContent = `📎 "${filename}" wurde heruntergeladen. E-Mail-App öffnet sich — bitte die Datei manuell anhängen, prüfen und senden.`;
+
+  setTimeout(() => { window.location.href = mailtoUrl; }, 500);
+});
+
+document.getElementById('copyBtn').addEventListener('click', () => {
+  const rows = buildExportRows().map(r => r.join('\t'));
+  navigator.clipboard.writeText(rows.join('\n')).then(() => { statusEl.textContent = 'In Zwischenablage kopiert.'; });
+});
+
+// ---------- PWA service worker ----------
+if ('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+
+</body>
+</html>
