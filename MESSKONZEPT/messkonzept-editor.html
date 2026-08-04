@@ -1,0 +1,2239 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Messkonzept-Editor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bp-bg:#e9edf1;
+  --bp-grid:#c9d2da;
+  --bp-grid-major:#aebac5;
+  --ink:#1c2733;
+  --ink-soft:#4a5866;
+  --panel:#f6f8fa;
+  --panel-border:#cbd5df;
+  --line:#20303f;
+  --accent:#e08a2c;
+  --accent-dark:#c26f16;
+  --accent-soft:#f6d9ae;
+  --danger:#b5432f;
+  --ok:#3f7d5c;
+  --white:#ffffff;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;}
+body{
+  font-family:'Inter',system-ui,sans-serif;
+  background:var(--bp-bg);
+  color:var(--ink);
+  overflow:hidden;
+  -webkit-tap-highlight-color:transparent;
+}
+.app{
+  display:grid;
+  grid-template-columns:250px 1fr 250px;
+  grid-template-rows:auto 1fr;
+  height:100vh;
+}
+header.topbar{
+  grid-column:1 / -1;
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:10px 16px;
+  background:var(--line);
+  color:#eef2f6;
+  flex-wrap:wrap;
+}
+header.topbar h1{
+  font-size:15px;
+  font-weight:600;
+  letter-spacing:0.02em;
+  margin:0;
+  font-family:'IBM Plex Mono',monospace;
+  color:var(--accent-soft);
+  white-space:nowrap;
+}
+header.topbar .meta{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+header.topbar input{
+  background:#2b3a4a;
+  border:1px solid #3d4e60;
+  color:#eef2f6;
+  border-radius:4px;
+  padding:5px 8px;
+  font-size:12px;
+  font-family:'IBM Plex Mono',monospace;
+  width:120px;
+}
+header.topbar input::placeholder{color:#7f8fa0;}
+.spacer{flex:1;}
+.btn{
+  border:1px solid #3d4e60;
+  background:#2b3a4a;
+  color:#eef2f6;
+  padding:6px 12px;
+  border-radius:5px;
+  font-size:12.5px;
+  font-weight:500;
+  cursor:pointer;
+  font-family:'Inter',sans-serif;
+  white-space:nowrap;
+}
+.btn:hover{background:#374a5e;}
+.btn.primary{background:var(--accent);border-color:var(--accent-dark);color:#241505;font-weight:600;}
+.btn.primary:hover{background:var(--accent-dark);color:#fff;}
+.btn.danger{background:#4a2b2b;border-color:#6b3d3d;}
+.btn.danger:hover{background:#6b3d3d;}
+.pdf-setting{
+  background:#2b3a4a;
+  border:1px solid #3d4e60;
+  color:#eef2f6;
+  padding:6px 8px;
+  border-radius:5px;
+  font-size:12px;
+  font-family:'Inter',sans-serif;
+}
+
+.sidebar{
+  background:var(--panel);
+  border-right:1px solid var(--panel-border);
+  padding:14px 12px;
+  overflow-y:auto;
+}
+.sidebar.right{border-right:none;border-left:1px solid var(--panel-border);}
+.sidebar h2{
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:0.08em;
+  color:var(--ink-soft);
+  margin:0 0 10px 0;
+  font-weight:600;
+}
+.symbol-btn{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  width:100%;
+  padding:9px 10px;
+  margin-bottom:8px;
+  background:var(--white);
+  border:1px solid var(--panel-border);
+  border-radius:6px;
+  cursor:pointer;
+  font-size:13px;
+  font-weight:500;
+  color:var(--ink);
+  text-align:left;
+}
+.symbol-btn:hover{border-color:var(--accent);background:#fff8ef;}
+.symbol-btn .ic{
+  width:26px;height:26px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+}
+.symbol-btn .ic svg{width:100%;height:100%;}
+hr.sep{border:none;border-top:1px solid var(--panel-border);margin:16px 0;}
+.tmpl-select{
+  width:100%;
+  padding:8px;
+  border:1px solid var(--panel-border);
+  border-radius:5px;
+  font-size:12.5px;
+  font-family:'Inter',sans-serif;
+  background:var(--white);
+  margin-bottom:8px;
+}
+.tmpl-note{
+  font-size:11px;
+  line-height:1.5;
+  color:var(--ink-soft);
+  background:#fbf6ec;
+  border:1px solid #e8dcc0;
+  border-radius:5px;
+  padding:8px;
+  margin-bottom:10px;
+}
+.legend{font-size:11px;color:var(--ink-soft);display:flex;align-items:center;gap:6px;margin-bottom:10px;}
+.legend .dot{width:10px;height:10px;border-radius:50%;background:#eaf3ec;border:2px solid var(--ok);display:inline-block;}
+
+.canvas-wrap{
+  position:relative;
+  overflow:auto;
+  background:var(--bp-bg);
+  background-image:
+    linear-gradient(var(--bp-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--bp-grid) 1px, transparent 1px),
+    linear-gradient(var(--bp-grid-major) 1px, transparent 1px),
+    linear-gradient(90deg, var(--bp-grid-major) 1px, transparent 1px);
+  background-size:20px 20px, 20px 20px, 100px 100px, 100px 100px;
+}
+#svgCanvas{display:block;transform-origin:0 0;}
+.zoom-ctrl{
+  position:absolute;
+  bottom:14px;right:14px;
+  display:flex;
+  background:rgba(255,255,255,0.95);
+  border:1px solid var(--panel-border);
+  border-radius:8px;
+  overflow:hidden;
+  box-shadow:0 2px 8px rgba(0,0,0,0.12);
+  z-index:5;
+}
+.zoom-ctrl button{
+  border:none;
+  background:transparent;
+  padding:10px 14px;
+  font-size:15px;
+  font-weight:600;
+  color:var(--ink);
+  cursor:pointer;
+  border-right:1px solid var(--panel-border);
+  font-family:'IBM Plex Mono',monospace;
+}
+.zoom-ctrl button:last-child{border-right:none;}
+.zoom-ctrl button:active{background:var(--accent-soft);}
+#zoomReset{font-size:11.5px;min-width:52px;}
+.hint{
+  position:absolute;
+  top:10px;left:10px;
+  background:rgba(255,255,255,0.9);
+  border:1px solid var(--panel-border);
+  border-radius:6px;
+  padding:6px 10px;
+  font-size:11.5px;
+  color:var(--ink-soft);
+  pointer-events:none;
+  font-family:'IBM Plex Mono',monospace;
+}
+
+.props{font-size:13px;}
+.props .empty{color:var(--ink-soft);font-size:12.5px;line-height:1.5;}
+.field{margin-bottom:12px;}
+.field label{
+  display:block;
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:0.05em;
+  color:var(--ink-soft);
+  margin-bottom:4px;
+  font-weight:600;
+}
+.field select, .field input[type=text], .field input[type=number]{
+  width:100%;
+  padding:7px 8px;
+  border:1px solid var(--panel-border);
+  border-radius:5px;
+  font-size:13px;
+  font-family:'IBM Plex Mono',monospace;
+  background:var(--white);
+  color:var(--ink);
+}
+.field input[type=color]{width:100%;height:32px;border:1px solid var(--panel-border);border-radius:5px;padding:2px;}
+.del-btn{
+  width:100%;
+  padding:8px;
+  border-radius:5px;
+  border:1px solid #d9a79c;
+  background:#fbeeeb;
+  color:var(--danger);
+  font-weight:600;
+  cursor:pointer;
+  font-size:12.5px;
+  margin-top:8px;
+}
+.del-btn:hover{background:#f5ddd6;}
+
+/* SVG node styles */
+.node-shape{fill:#ffffff;stroke:var(--line);stroke-width:2;}
+.node-shape.planned{fill:#dde2e7;stroke-dasharray:4,3;}
+.node-shape.ns{stroke:#3f7d5c;}
+.node-shape.ms{stroke:#2b6cb0;}
+.node-shape.hs{stroke:#b5432f;}
+.notiz-shape{fill:#fef7d9;stroke:#c9a227;stroke-width:1.5;}
+.notiz-fold{fill:#f5e7b0;stroke:#c9a227;stroke-width:1;}
+.notiz-text{font-size:10.5px;fill:#5c4a12;}
+.node .lbl-planned{font-size:10px;font-style:italic;fill:#8a95a3;}
+.node.selected .node-shape{stroke:var(--accent);stroke-width:3;}
+.node.multi-selected .node-shape{stroke:#2b6cb0;stroke-width:3;stroke-dasharray:3,2;}
+.align-ctrl{
+  position:absolute;
+  top:14px;left:50%;transform:translateX(-50%);
+  display:none;
+  background:rgba(255,255,255,0.97);
+  border:1px solid var(--panel-border);
+  border-radius:8px;
+  overflow:hidden;
+  box-shadow:0 2px 8px rgba(0,0,0,0.15);
+  z-index:6;
+}
+.align-ctrl.show{ display:flex; }
+.align-ctrl button{
+  border:none; border-right:1px solid var(--panel-border);
+  background:transparent; padding:9px 12px; font-size:12px; font-weight:500;
+  cursor:pointer; color:var(--ink); font-family:'Inter',sans-serif; white-space:nowrap;
+}
+.align-ctrl button:last-child{ border-right:none; }
+.align-ctrl button:hover{ background:var(--accent-soft); }
+.node text{font-family:'IBM Plex Mono',monospace;fill:var(--line);user-select:none;pointer-events:none;}
+.node .lbl-type{font-size:12px;font-weight:600;}
+.node .lbl-sub{font-size:10.5px;fill:var(--ink-soft);}
+.node .zaehler-header{fill:var(--line);stroke:none;}
+.node .zaehler-header-text{font-size:10.5px;font-weight:600;fill:#eef2f6;}
+.node{touch-action:none;}
+.connector{fill:var(--white);stroke:var(--ink-soft);stroke-width:1.3;cursor:crosshair;touch-action:none;opacity:0.5;}
+.connector:hover{fill:var(--accent);stroke:var(--accent-dark);opacity:1;}
+.connector.ext{fill:#eaf3ec;stroke:var(--ok);stroke-width:2;r:7;opacity:0.75;}
+.connector.ext:hover{fill:var(--ok);stroke:#2c5a41;opacity:1;}
+.connector.pending{fill:var(--accent);stroke:var(--accent-dark);stroke-width:2.5;opacity:1;animation:pulse 0.9s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.45;}}
+.ext-plus{font-family:'IBM Plex Mono',monospace;font-size:10px;fill:var(--ok);pointer-events:none;user-select:none;font-weight:700;}
+.node.locked .node-shape{stroke-dasharray:5,3;}
+.lock-badge{font-size:11px;pointer-events:none;user-select:none;}
+.conn-line{stroke:var(--line);stroke-width:2;fill:none;}
+.conn-line.selected{stroke:var(--accent);stroke-width:3;}
+.conn-line.ctrl{stroke:var(--accent-dark);stroke-dasharray:6,4;}
+.conn-label{font-family:'IBM Plex Mono',monospace;font-size:10.5px;fill:var(--ink-soft);cursor:text;}
+.conn-label-bg{fill:var(--bp-bg);}
+.temp-line{stroke:var(--accent);stroke-width:2;stroke-dasharray:5,4;fill:none;}
+
+.mobile-toggle{display:none;}
+.sidebar-header{display:none;}
+.backdrop{display:none;}
+.backdrop.show{ display:block; position:fixed; inset:0; background:rgba(15,20,26,0.45); z-index:45; }
+.check-modal{ display:none; position:fixed; inset:0; z-index:60; align-items:center; justify-content:center; }
+.check-modal.show{ display:flex; }
+.check-box{
+  background:var(--white);
+  border-radius:10px;
+  width:min(480px, 90vw);
+  max-height:80vh;
+  overflow:hidden;
+  display:flex; flex-direction:column;
+  box-shadow:0 8px 30px rgba(0,0,0,0.3);
+}
+.check-header{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 16px;
+  background:var(--line); color:#eef2f6;
+  font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:14px;
+}
+.check-header button{ background:none; border:none; color:#eef2f6; font-size:20px; cursor:pointer; }
+.check-body{ padding:14px 16px; overflow-y:auto; font-size:13px; }
+.check-item{ display:flex; gap:8px; padding:8px 0; border-bottom:1px solid var(--panel-border); }
+.check-item:last-child{ border-bottom:none; }
+.check-item.err{ color:var(--danger); }
+.check-item.warn{ color:#8a6d1a; }
+.check-ok{ color:var(--ok); font-weight:600; }
+
+@media (max-width:820px){
+  .app{grid-template-columns:1fr;grid-template-rows:auto 1fr;}
+  .sidebar{display:none;}
+  .mobile-toggle{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+  }
+  .sidebar.mobile-open{
+    display:flex;
+    flex-direction:column;
+    position:fixed;
+    top:0;bottom:0;
+    left:0;width:86vw;max-width:340px;
+    z-index:50;
+    background:var(--panel);
+    box-shadow:2px 0 18px rgba(0,0,0,0.25);
+    animation:slideIn 0.18s ease-out;
+  }
+  .sidebar.right.mobile-open{ left:auto; right:0; }
+  .sidebar-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:12px 14px;
+    background:var(--line);
+    color:#eef2f6;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13px;
+    font-weight:600;
+    flex-shrink:0;
+  }
+  .sidebar-header button{
+    background:none;border:none;color:#eef2f6;
+    font-size:20px;line-height:1;cursor:pointer;padding:2px 6px;
+  }
+  .sidebar.mobile-open .props,
+  .sidebar.mobile-open{ overflow-y:auto; }
+  .backdrop.show{
+    display:block;
+    position:fixed;inset:0;
+    background:rgba(15,20,26,0.45);
+    z-index:45;
+  }
+  @keyframes slideIn{ from{transform:translateX(-12px);opacity:0;} to{transform:translateX(0);opacity:1;} }
+  header.topbar h1{font-size:13px;}
+  header.topbar{overflow-x:auto;flex-wrap:nowrap;}
+  header.topbar input{width:84px;flex-shrink:0;}
+  .pdf-setting{flex-shrink:0;}
+  .symbol-btn{padding:13px 12px;font-size:14px;}
+  .symbol-btn .ic{width:30px;height:30px;}
+  .field select, .field input[type=text]{padding:10px 8px;font-size:15px;}
+  .del-btn, .btn{padding:11px 14px;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <h1>MESSKONZEPT&#8203;·EDITOR</h1>
+    <div class="meta">
+      <input id="mProjekt" type="text" placeholder="Projekt/Anlage">
+      <input id="mOrt" type="text" placeholder="Standort">
+      <input id="mErsteller" type="text" placeholder="Ersteller">
+      <input id="mDatum" type="date">
+    </div>
+    <div class="spacer"></div>
+    <button class="btn mobile-toggle" id="btnOpenLeft">☰ Symbole</button>
+    <button class="btn mobile-toggle" id="btnOpenRight">⚙ Eigenschaften</button>
+    <button class="btn" id="btnLoad">Öffnen…</button>
+    <input type="file" id="fileLoad" accept=".json" style="display:none">
+    <button class="btn" id="btnSave">Speichern (.json)</button>
+    <button class="btn" id="btnPng">PNG</button>
+    <select class="pdf-setting" id="pdfFormat" title="Papierformat">
+      <option value="a4">A4</option>
+      <option value="a3">A3</option>
+    </select>
+    <select class="pdf-setting" id="pdfOrientation" title="Ausrichtung">
+      <option value="auto">Ausrichtung: Automatisch</option>
+      <option value="portrait">Hochformat</option>
+      <option value="landscape">Querformat</option>
+    </select>
+    <select class="pdf-setting" id="pdfScale" title="Skalierung">
+      <option value="max">Größe: Maximal (Seite ausfüllen)</option>
+      <option value="1">100%</option>
+      <option value="0.75">75%</option>
+      <option value="0.5">50%</option>
+      <option value="0.25">25%</option>
+    </select>
+    <select class="pdf-setting" id="pdfMargin" title="Rand">
+      <option value="1">Rand: 1 cm</option>
+      <option value="2" selected>Rand: 2 cm</option>
+      <option value="3">Rand: 3 cm</option>
+    </select>
+    <button class="btn primary" id="btnPdf">PDF exportieren</button>
+    <button class="btn" id="btnUndo" title="Rückgängig (Strg+Z)" disabled>↶</button>
+    <button class="btn" id="btnRedo" title="Wiederholen (Strg+Y)" disabled>↷</button>
+    <button class="btn" id="btnCheck">✓ Prüfen</button>
+    <button class="btn danger" id="btnClear">Leeren</button>
+  </header>
+
+  <aside class="sidebar" id="sidebarLeft">
+    <div class="sidebar-header">Symbole &amp; Vorlagen <button id="closeLeft">✕</button></div>
+    <h2>Standard-Messkonzept laden</h2>
+    <select class="tmpl-select" id="tmplSelect">
+      <option value="">– Vorlage wählen –</option>
+      <option value="direkt">Direktmessung (NS, bis 63/100 A)</option>
+      <option value="halbindirekt">Halbindirekte Messung (Stromwandler, NS bis 1000 A)</option>
+      <option value="indirekt">Indirekte Messung (Strom-/Spannungswandler, MS/HS)</option>
+      <optgroup label="MK A · Einzelne Erzeugungsanlage">
+        <option value="a1">MK A1 · Volleinspeisung</option>
+        <option value="a2">MK A2 · Überschusseinspeisung</option>
+        <option value="a3">MK A3 · Überschusseinspeisung mit Erzeugungsmessung</option>
+      </optgroup>
+      <optgroup label="MK B · Mehrere Erzeugungsanlagen">
+        <option value="b1">MK B1 · Volleinspeisung, gemeinsame Erzeugungsmessung</option>
+        <option value="b2">MK B2 · Überschusseinspeisung, gemeinsame Erzeugungsmessung</option>
+        <option value="b2a">MK B2a · Überschusseinspeisung ohne Erzeugungsmessung</option>
+        <option value="b3">MK B3 · Überschusseinspeisung, getrennte Erzeugungsmessung</option>
+      </optgroup>
+      <optgroup label="MK C · Mit steuerbarem Verbraucher">
+        <option value="c1">MK C1 · Überschusseinspeisung, gemeinsame Messung</option>
+        <option value="c2a">MK C2a · Überschusseinspeisung, getrennte Messung</option>
+      </optgroup>
+      <optgroup label="MK D · Selbstversorgergemeinschaft">
+        <option value="d1">MK D1 · Selbstversorgergemeinschaft / Mieterstrommodell</option>
+      </optgroup>
+      <optgroup label="MK Z · Bezugsanlagen">
+        <option value="z1">MK Z1 · Verbraucher ohne steuerbare Einrichtung</option>
+        <option value="z1a">MK Z1a · Steuerbare Verbrauchseinrichtung + weitere Verbraucher</option>
+        <option value="z1b">MK Z1b · Steuerbare Verbrauchseinrichtung, keine weiteren</option>
+      </optgroup>
+    </select>
+    <button class="btn primary" id="btnTmplLoad" style="width:100%;margin-bottom:10px;">Vorlage laden</button>
+    <div class="tmpl-note" style="margin-top:-4px;">MK A–Z: nachgebaut nach den VBEW-Messkonzepten (Verband der Bayerischen Energie- und Wasserwirtschaft, Ausgabe 11.2024) — dieselbe Systematik wie bei Avacon Netz (E.ON-Gruppe).</div>
+    <div class="legend"><span class="dot"></span> grüner Anschluss = an dieser Stelle laut Konzept erweiterbar</div>
+    <hr class="sep">
+    <h2>Symbole hinzufügen</h2>
+    <button class="symbol-btn" data-add="netz">
+      <span class="ic"><svg viewBox="0 0 26 26"><circle cx="13" cy="13" r="10" fill="none" stroke="#1c2733" stroke-width="2"/><path d="M13 6 L13 20 M6 20 L20 20 M8 12 L18 12 M9.5 16 L16.5 16 M11.5 6 L6 20 M14.5 6 L20 20" fill="none" stroke="#1c2733" stroke-width="1.3" stroke-linecap="round"/></svg></span>
+      Netz
+    </button>
+    <button class="symbol-btn" data-add="trafo">
+      <span class="ic"><svg viewBox="0 0 26 26"><circle cx="13" cy="13" r="10" fill="none" stroke="#1c2733" stroke-width="2"/><circle cx="13" cy="9" r="5.5" fill="none" stroke="#1c2733" stroke-width="1.3"/><circle cx="13" cy="17" r="5.5" fill="none" stroke="#1c2733" stroke-width="1.3"/></svg></span>
+      Transformator (MS/NS-Übergang)
+    </button>
+    <button class="symbol-btn" data-add="zaehler">
+      <span class="ic"><svg viewBox="0 0 26 26"><rect x="3" y="4" width="20" height="18" fill="none" stroke="#1c2733" stroke-width="2"/><rect x="3" y="4" width="20" height="6" fill="#1c2733"/><text x="13" y="18" font-size="8" text-anchor="middle" font-family="IBM Plex Mono">kWh</text></svg></span>
+      Zähler
+    </button>
+    <button class="symbol-btn" data-add="anlage">
+      <span class="ic"><svg viewBox="0 0 26 26"><circle cx="13" cy="13" r="10" fill="none" stroke="#1c2733" stroke-width="2"/><text x="13" y="17" font-size="13" font-weight="700" text-anchor="middle" font-family="IBM Plex Mono">?</text></svg></span>
+      Anlage (Bezug/PV/BHKW/Speicher/Wärmepumpe…)
+    </button>
+    <button class="symbol-btn" data-add="steuerung">
+      <span class="ic"><svg viewBox="0 0 26 26"><circle cx="13" cy="13" r="9" fill="none" stroke="#1c2733" stroke-width="2"/><text x="13" y="17" font-size="10" font-weight="700" text-anchor="middle" font-family="IBM Plex Mono">S</text><line x1="13" y1="2" x2="13" y2="4.5" stroke="#1c2733" stroke-width="1.4"/><line x1="9" y1="3" x2="10.5" y2="5" stroke="#1c2733" stroke-width="1.2"/><line x1="17" y1="3" x2="15.5" y2="5" stroke="#1c2733" stroke-width="1.2"/></svg></span>
+      Steuerungseinrichtung (Steuergerät)
+    </button>
+    <button class="symbol-btn" data-add="fae">
+      <span class="ic"><svg viewBox="0 0 26 26"><circle cx="13" cy="13" r="9" fill="none" stroke="#1c2733" stroke-width="2"/><text x="13" y="16" font-size="7" font-weight="700" text-anchor="middle" font-family="IBM Plex Mono">FAE</text></svg></span>
+      FAE (Freischaltelement, für PV)
+    </button>
+    <button class="symbol-btn" data-add="text">
+      <span class="ic"><svg viewBox="0 0 26 26"><text x="4" y="18" font-size="16" font-family="IBM Plex Mono" fill="#1c2733">Aa</text></svg></span>
+      Textfeld
+    </button>
+    <button class="symbol-btn" data-add="notiz">
+      <span class="ic"><svg viewBox="0 0 26 26"><rect x="3" y="3" width="20" height="20" fill="#fef7d9" stroke="#c9a227" stroke-width="1.5"/><polygon points="17,3 23,3 23,9" fill="#f5e7b0" stroke="#c9a227" stroke-width="1"/><line x1="6" y1="10" x2="17" y2="10" stroke="#c9a227" stroke-width="1"/><line x1="6" y1="14" x2="19" y2="14" stroke="#c9a227" stroke-width="1"/><line x1="6" y1="18" x2="14" y2="18" stroke="#c9a227" stroke-width="1"/></svg></span>
+      Notiz (Haftnotiz)
+    </button>
+    <hr class="sep">
+    <h2>Bedienung</h2>
+    <p class="props empty">
+      Symbol antippen fügt es mittig ein.<br><br>
+      <strong>Ziehen verschiebt frei</strong> – ohne dass sich dabei das Eigenschaften-Panel öffnet. Beim Loslassen rastet das Symbol automatisch aufs Raster ein, damit alles sauber ausgerichtet bleibt. <strong>Doppelt antippen (bzw. Doppelklick)</strong> öffnet ein Symbol zum Bearbeiten. Ausgewähltes Symbol/Linie mit der <strong>Entf-Taste</strong> sofort löschen.<br><br>
+      <strong>Umschalt+Klick</strong> auf mehrere Symbole markiert sie gemeinsam (blau gestrichelt) — zusammen verschiebbar, oben erscheint dann eine Ausrichten-Leiste. <strong>Strg+Z / Strg+Y</strong> macht rückgängig/wiederholt.<br><br>
+      Anschlusspunkte verbinden: entweder von Punkt zu Punkt <strong>ziehen</strong>, oder – besonders auf dem Handy einfacher – <strong>ersten Punkt antippen</strong> (er blinkt orange) und dann den <strong>zweiten Punkt antippen</strong>. Nochmal auf denselben Punkt tippen bricht ab.<br><br>
+      Verbindungslinie antippen, um Bezeichnung (z.B. Kabeltyp) einzutragen.<br><br>
+      Bei geladenen Vorlagen sind die Kernsymbole gestrichelt (gesperrt: Struktur fix, Werte wie Wandlerkonstante weiter editierbar). Neue Symbole an den grünen Punkten anhängen.
+    </p>
+  </aside>
+
+  <div class="canvas-wrap" id="canvasWrap">
+    <div class="hint" id="hint">0 Symbole · 0 Verbindungen</div>
+    <div class="align-ctrl" id="alignCtrl">
+      <button id="alignLeft">⊢ Links</button>
+      <button id="alignTop">⊤ Oben</button>
+      <button id="distributeH">↔ Verteilen</button>
+      <button id="clearMultiSelect">✕ Auswahl aufheben</button>
+    </div>
+    <div class="zoom-ctrl">
+      <button id="zoomOut">−</button>
+      <button id="zoomReset">100%</button>
+      <button id="zoomIn">+</button>
+    </div>
+    <svg id="svgCanvas" width="2200" height="1500"></svg>
+  </div>
+
+  <aside class="sidebar right" id="sidebarRight">
+    <div class="sidebar-header">Eigenschaften <button id="closeRight">✕</button></div>
+    <h2>Eigenschaften</h2>
+    <div class="props" id="propsPanel"><div class="empty">Kein Element ausgewählt.<br><br>Symbol im Diagramm antippen, um Eigenschaften zu bearbeiten.</div></div>
+  </aside>
+</div>
+<div class="backdrop" id="backdrop"></div>
+<div class="check-modal" id="checkModal">
+  <div class="check-box">
+    <div class="check-header">Plausibilitäts-Check <button id="closeCheck">✕</button></div>
+    <div class="check-body" id="checkBody"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+(function(){
+'use strict';
+
+const SVGNS = 'http://www.w3.org/2000/svg';
+const svg = document.getElementById('svgCanvas');
+const hint = document.getElementById('hint');
+const propsPanel = document.getElementById('propsPanel');
+
+let nodes = [];      // {id,type,x,y,props:{...}}
+let conns = [];      // {id, a:{node,pt}, b:{node,pt}, label}
+let selNode = null;
+let selConn = null;
+let multiSelect = new Set(); // zusätzliche Mehrfachauswahl (Shift-Klick) für Ausrichten/Gruppen-Verschieben
+let nodeSeq = 1, connSeq = 1;
+
+// ---------- Undo / Redo ----------
+let undoStack = [];
+let redoStack = [];
+function snapshotState(){ return JSON.stringify({nodes, conns}); }
+function pushUndo(){
+  undoStack.push(snapshotState());
+  if(undoStack.length>60) undoStack.shift();
+  redoStack = [];
+  updateUndoButtons();
+}
+function doUndo(){
+  if(undoStack.length===0) return;
+  redoStack.push(snapshotState());
+  const prev = JSON.parse(undoStack.pop());
+  nodes = prev.nodes; conns = prev.conns;
+  selNode=null; selConn=null; render(); renderProps();
+  updateUndoButtons();
+}
+function doRedo(){
+  if(redoStack.length===0) return;
+  undoStack.push(snapshotState());
+  const next = JSON.parse(redoStack.pop());
+  nodes = next.nodes; conns = next.conns;
+  selNode=null; selConn=null; render(); renderProps();
+  updateUndoButtons();
+}
+function updateUndoButtons(){
+  const bu = document.getElementById('btnUndo'), br = document.getElementById('btnRedo');
+  if(bu) bu.disabled = undoStack.length===0;
+  if(br) br.disabled = redoStack.length===0;
+}
+
+const TYPE_DEFS = {
+  netz:        { w:90,  h:90,  shape:'circle' },
+  zaehler:     { w:190, h:132, shape:'rect' },
+  anlage:      { w:90,  h:90,  shape:'circle' },
+  steuerung:   { w:64,  h:64,  shape:'circle' },
+  fae:         { w:56,  h:56,  shape:'circle' },
+  trafo:       { w:90,  h:90,  shape:'circle' },
+  notiz:       { w:170, h:90,  shape:'note' },
+  text:        { w:140, h:34,  shape:'text' }
+};
+
+const NETZFORMEN = ['230 V','400 V','20 kV','110 kV'];
+const ZAEHLERTYPEN = ['Direktmessung (ohne Wandler)','Halbindirekte Messung (nur Stromwandler)','Indirekte Messung (Strom- und Spannungswandler)'];
+const ANLAGENTYPEN = ['Bezug / Verbraucher','PV-Erzeugungsanlage','BHKW-Erzeugungsanlage','Windkraftanlage','Speicher (Batterie)','PV + Speicher (DC-gekoppelt)','Wärmepumpe (steuerbar)','Klimaanlage (steuerbar)','Ladeeinrichtung / Wallbox (steuerbar)'];
+const VERBRAUCHER_ARTIG = [0,6,7,8]; // Anlagentypen, die wie ein Verbraucher (Zacken-Symbol) dargestellt werden
+
+function uid(prefix){ return prefix + '_' + (Date.now().toString(36)) + '_' + (Math.random()*1000|0); }
+
+// Spannungsebene → Farbe (NS grün, MS blau, HS rot), rein visuell zur schnelleren Unterscheidung
+function voltageClass(netzform){
+  if(netzform === NETZFORMEN[2]) return 'ms';
+  if(netzform === NETZFORMEN[3]) return 'hs';
+  return 'ns';
+}
+
+function defaultProps(type){
+  if(type==='netz') return { netzform: NETZFORMEN[1], label:'Netz' };
+  if(type==='zaehler') return { zaehlertyp: ZAEHLERTYPEN[0], label:'Zähler', messlokation: nextZaehlerLabel(), zaehlernummer:'',
+      stromPrimaer:'600', stromSekundaer:'5', spannungPrimaer:'20000', spannungSekundaer:'100', status:'vorhanden', slpRlm:'SLP' };
+  if(type==='anlage') return { anlagentyp: ANLAGENTYPEN[0], label:'', anlagennummer:'', leistung:'', kapazitaet:'', kwp:'', wechselrichterKw:'', ladeleistung:'', status:'vorhanden' };
+  if(type==='steuerung') return { label:'Steuerungseinrichtung', anlagennummer:'', status:'vorhanden' };
+  if(type==='fae') return { label:'FAE (Freischaltelement)', anlagennummer:'', status:'vorhanden' };
+  if(type==='trafo') return { label:'Transformator', primaerspannung:'20 kV', sekundaerspannung:'0,4 kV', leistungKva:'', anlagennummer:'', status:'vorhanden' };
+  if(type==='notiz') return { label:'Notiz eintragen…' };
+  if(type==='text') return { label:'Text' };
+  return {};
+}
+
+function nextZaehlerLabel(){
+  const n = (typeof nodes!=='undefined'?nodes:[]).filter(x=>x.type==='zaehler').length;
+  return 'Z' + (n+1);
+}
+
+// Wandlerkonstante = Übersetzung Stromwandler × Übersetzung Spannungswandler, je nach Zählertyp
+function computeWandlerkonstante(props){
+  if(props.zaehlertyp === ZAEHLERTYPEN[0]) return null; // Direktmessung: kein Wandler
+  const iP = parseFloat(String(props.stromPrimaer||'').replace(',','.'));
+  const iS = parseFloat(String(props.stromSekundaer||'').replace(',','.'));
+  const rI = (iP>0 && iS>0) ? iP/iS : null;
+  let rU = null;
+  if(props.zaehlertyp === ZAEHLERTYPEN[2]){
+    const uP = parseFloat(String(props.spannungPrimaer||'').replace(',','.'));
+    const uS = parseFloat(String(props.spannungSekundaer||'').replace(',','.'));
+    if(uP>0 && uS>0) rU = uP/uS;
+  }
+  if(!rI && !rU) return null;
+  const k = (rI||1) * (rU||1);
+  const rounded = Math.round(k*1000)/1000;
+  return rounded;
+}
+
+function addNode(type, x, y, opts){
+  opts = opts || {};
+  if(!opts.silent) pushUndo();
+  const def = TYPE_DEFS[type];
+  const n = {
+    id: opts.id || uid('n'), type,
+    x: x!=null?x:400+(nodes.length%6)*40,
+    y: y!=null?y:120+(nodes.length%8)*30,
+    w: def.w, h: def.h,
+    props: Object.assign(defaultProps(type), opts.props||{}),
+    locked: !!opts.locked,
+    extPoints: opts.extPoints || []
+  };
+  nodes.push(n);
+  if(!opts.silent){ render(); selectNode(n.id); }
+  return n;
+}
+
+function connectorPoints(n){
+  const hw = n.w/2, hh = n.h/2;
+  return {
+    n:{x:n.x, y:n.y-hh},
+    s:{x:n.x, y:n.y+hh},
+    e:{x:n.x+hw, y:n.y},
+    w:{x:n.x-hw, y:n.y}
+  };
+}
+
+// Which connector points a symbol type actually offers (reduces visual clutter to what's meaningful)
+const ALLOWED_PTS = {
+  netz:        ['s'],
+  zaehler:     ['n','s'],
+  anlage:      ['n','w'],
+  steuerung:   ['n','e'],
+  fae:         ['e'],
+  trafo:       ['n','s'],
+  notiz:       [],
+  text:        []
+};
+function allowedPts(n){ return ALLOWED_PTS[n.type] || ['n','s','e','w']; }
+
+function getNode(id){ return nodes.find(n=>n.id===id); }
+
+function screenToSvg(evt){
+  const pt = svg.createSVGPoint();
+  pt.x = evt.clientX; pt.y = evt.clientY;
+  return pt.matrixTransform(svg.getScreenCTM().inverse());
+}
+
+// ---------- Rendering ----------
+function render(){
+  svg.innerHTML = '';
+
+  // connections first (under nodes)
+  conns.forEach(c=>{
+    const na = getNode(c.a.node), nb = getNode(c.b.node);
+    if(!na||!nb) return;
+    const pa = connectorPoints(na)[c.a.pt];
+    const pb = connectorPoints(nb)[c.b.pt];
+    const line = document.createElementNS(SVGNS,'path');
+    const d = computeConnPath(pa, pb);
+    line.setAttribute('d', d);
+    const isCtrl = (c.a.pt==='e'||c.a.pt==='w') && (c.b.pt==='e'||c.b.pt==='w');
+    line.setAttribute('class','conn-line'+(selConn===c.id?' selected':'')+(c.locked?' locked':'')+(isCtrl?' ctrl':''));
+    line.dataset.connId = c.id;
+    line.addEventListener('pointerdown', (e)=>{ e.stopPropagation(); selectConn(c.id); });
+    svg.appendChild(line);
+
+    if(c.label){
+      const mx = (pa.x+pb.x)/2, my=(pa.y+pb.y)/2;
+      const bg = document.createElementNS(SVGNS,'rect');
+      const approxW = Math.max(30, c.label.length*6.2);
+      bg.setAttribute('x', mx-approxW/2); bg.setAttribute('y', my-9);
+      bg.setAttribute('width', approxW); bg.setAttribute('height', 15);
+      bg.setAttribute('class','conn-label-bg');
+      svg.appendChild(bg);
+      const t = document.createElementNS(SVGNS,'text');
+      t.setAttribute('x', mx); t.setAttribute('y', my+3);
+      t.setAttribute('text-anchor','middle');
+      t.setAttribute('class','conn-label');
+      t.textContent = c.label;
+      t.addEventListener('pointerdown',(e)=>{ e.stopPropagation(); selectConn(c.id); });
+      svg.appendChild(t);
+    }
+  });
+
+  // nodes
+  nodes.forEach(n=>{
+    const g = document.createElementNS(SVGNS,'g');
+    g.setAttribute('class','node'+(selNode===n.id?' selected':'')+(multiSelect.has(n.id)?' multi-selected':''));
+    g.setAttribute('transform', `translate(${n.x},${n.y})`);
+    g.dataset.nodeId = n.id;
+
+    drawShape(g, n);
+
+    // connectors — only the points that make sense for this symbol type
+    const pts = connectorPoints({...n, x:0, y:0});
+    const baseR = isMobile() ? 9 : 5;
+    const extR = isMobile() ? 12 : 7;
+    const allowed = allowedPts(n);
+    Object.entries(pts).filter(([key])=>allowed.includes(key)).forEach(([key,p])=>{
+      const isExt = n.extPoints.includes(key);
+      const isPending = pendingConnector && pendingConnector.nodeId===n.id && pendingConnector.pt===key;
+      const c = document.createElementNS(SVGNS,'circle');
+      c.setAttribute('cx', p.x); c.setAttribute('cy', p.y); c.setAttribute('r', isExt?extR:baseR);
+      c.setAttribute('class','connector'+(isExt?' ext':'')+(isPending?' pending':''));
+      c.dataset.nodeId = n.id; c.dataset.pt = key;
+      c.addEventListener('pointerdown', onConnectorDown);
+      g.appendChild(c);
+      if(isExt){
+        const plus = document.createElementNS(SVGNS,'text');
+        plus.setAttribute('x', p.x + (key==='e'?10:key==='w'?-10:0));
+        plus.setAttribute('y', p.y + (key==='n'?-9:key==='s'?16:4));
+        plus.setAttribute('text-anchor','middle');
+        plus.setAttribute('class','ext-plus');
+        plus.textContent = '+';
+        g.appendChild(plus);
+      }
+    });
+
+    if(n.locked){
+      const lock = document.createElementNS(SVGNS,'text');
+      lock.setAttribute('x', n.w/2 - 4); lock.setAttribute('y', -n.h/2 + 4);
+      lock.setAttribute('class','lock-badge');
+      lock.textContent = '🔒';
+      g.appendChild(lock);
+    }
+
+    g.addEventListener('pointerdown', onNodeDown);
+    svg.appendChild(g);
+  });
+
+  hint.textContent = `${nodes.length} Symbole · ${conns.length} Verbindungen`;
+}
+
+// Shared Zähler box layout — used both for on-screen rendering and for computing
+// exact PDF form-field positions, so the two never drift apart.
+const ZAEHLER_HEADER_H = 22;
+const ZAEHLER_PAD_TOP = 12;
+const ZAEHLER_PAD_LEFT = 10;
+const ZAEHLER_LH = 13.5;
+const ZAEHLER_TYP_SHORT = { [ZAEHLERTYPEN[0]]:'Direkt', [ZAEHLERTYPEN[1]]:'Halbindirekt', [ZAEHLERTYPEN[2]]:'Indirekt' };
+
+function zaehlerBodyLines(props){
+  const lines = [];
+  if(ZAEHLER_TYP_SHORT[props.zaehlertyp]) lines.push({text:`Typ: ${ZAEHLER_TYP_SHORT[props.zaehlertyp]}`, field:null});
+  lines.push({text: `Abrechnung: ${effectiveSlpRlm(props)}`, field:null});
+  if(props.zaehlertyp !== ZAEHLERTYPEN[0]){
+    const k = computeWandlerkonstante(props);
+    lines.push({text: k ? `Wandlerkonstante: ${k}` : 'ohne Wandler', field:null});
+    lines.push({text:`I: ${props.stromPrimaer||'–'}/${props.stromSekundaer||'–'} A`, field:null});
+  }
+  if(props.zaehlertyp === ZAEHLERTYPEN[2]){
+    lines.push({text:`U: ${props.spannungPrimaer||'–'}/${props.spannungSekundaer||'–'} V`, field:null});
+  }
+  if(props.zaehlernummer){
+    lines.push({text:`Nr: ${props.zaehlernummer}`, field:'zaehlernummer', prefix:'Nr: ', value:props.zaehlernummer});
+  }
+  return lines;
+}
+
+// Mittelspannung / indirekte Messung ist immer RLM (registrierende Leistungsmessung) — nicht wählbar.
+function effectiveSlpRlm(props){
+  return props.zaehlertyp === ZAEHLERTYPEN[2] ? 'RLM' : (props.slpRlm || 'SLP');
+}
+
+// Sobald irgendwo RLM gesetzt wird, ziehen alle anderen Zähler automatisch auf RLM nach
+// (kann pro Zähler danach wieder einzeln auf SLP zurückgestellt werden).
+function propagateRlm(exceptNodeId){
+  nodes.filter(n=>n.type==='zaehler' && n.id!==exceptNodeId).forEach(n=>{ n.props.slpRlm = 'RLM'; });
+}
+
+// Technische Kenndaten je Anlagentyp: PV bekommt kWp + Wechselrichterleistung,
+// Speicher bekommt Ladeleistung + Kapazität, alles andere die generische Leistung.
+function anlageSpecLine(props){
+  const at = props.anlagentyp;
+  const isPv = at===ANLAGENTYPEN[1] || at===ANLAGENTYPEN[5];
+  const isSp = at===ANLAGENTYPEN[4] || at===ANLAGENTYPEN[5];
+  const parts = [];
+  if(isPv){
+    if(props.kwp) parts.push(props.kwp+' kWp');
+    if(props.wechselrichterKw) parts.push(props.wechselrichterKw+' kW WR');
+  }
+  if(isSp){
+    if(props.ladeleistung) parts.push(props.ladeleistung+' kW Lade');
+    if(props.kapazitaet) parts.push(props.kapazitaet+' kWh');
+  }
+  if(!isPv && !isSp && props.leistung) parts.push(props.leistung+' kW');
+  return parts.join(' / ');
+}
+
+function drawShape(g, n){
+  const w=n.w, h=n.h;
+  if(n.type==='netz'){
+    const r = w/2;
+    const circ = document.createElementNS(SVGNS,'circle');
+    circ.setAttribute('r', r); circ.setAttribute('class','node-shape '+voltageClass(n.props.netzform));
+    g.appendChild(circ);
+    drawPylonIcon(g, 0, -2, 1.5);
+    addLabel(g, n.props.netzform, -r-14, 'lbl-type');
+    addLabel(g, n.props.label||'Netz', r+14, 'lbl-sub');
+  } else if(n.type==='zaehler'){
+    const rect = document.createElementNS(SVGNS,'rect');
+    rect.setAttribute('x', -w/2); rect.setAttribute('y', -h/2);
+    rect.setAttribute('width', w); rect.setAttribute('height', h);
+    rect.setAttribute('class','node-shape'+(n.props.status==='geplant'?' planned':''));
+    g.appendChild(rect);
+    // Kopfzeile, wie im Referenztool
+    const header = document.createElementNS(SVGNS,'rect');
+    header.setAttribute('x', -w/2); header.setAttribute('y', -h/2);
+    header.setAttribute('width', w); header.setAttribute('height', ZAEHLER_HEADER_H);
+    header.setAttribute('class','zaehler-header');
+    g.appendChild(header);
+    const headerText = `${n.props.messlokation||'Zähler'} · kWh` + (n.props.status==='geplant' ? ' · geplant' : '');
+    addLabel(g, headerText, -h/2+15, 'zaehler-header-text');
+
+    const lines = zaehlerBodyLines(n.props);
+    const bodyTop = -h/2 + ZAEHLER_HEADER_H + ZAEHLER_PAD_TOP;
+    lines.forEach((ln,i)=>{
+      addLabel(g, ln.text, bodyTop + i*ZAEHLER_LH, 'lbl-sub', -w/2+ZAEHLER_PAD_LEFT, 'start');
+    });
+  } else if(n.type==='anlage'){
+    const r = w/2;
+    const circ = document.createElementNS(SVGNS,'circle');
+    circ.setAttribute('r', r); circ.setAttribute('class','node-shape'+(n.props.status==='geplant'?' planned':''));
+    g.appendChild(circ);
+    const at = n.props.anlagentyp;
+    const atIdx = ANLAGENTYPEN.indexOf(at);
+    if(VERBRAUCHER_ARTIG.includes(atIdx)){ // Bezug / Wärmepumpe / Klimaanlage / Wallbox
+      drawProngIcon(g, 0, -2, 1.4);
+    } else if(at === ANLAGENTYPEN[4]){ // Speicher
+      drawBatteryIcon(g, 0, -2, 1);
+    } else if(at === ANLAGENTYPEN[5]){ // PV + Speicher (DC-gekoppelt)
+      const divider = document.createElementNS(SVGNS,'line');
+      divider.setAttribute('x1',0); divider.setAttribute('y1',-r+4);
+      divider.setAttribute('x2',0); divider.setAttribute('y2',r-4);
+      divider.setAttribute('stroke','#1c2733'); divider.setAttribute('stroke-width','1.2');
+      g.appendChild(divider);
+      addLabel(g, 'G', 4, 'lbl-type', -r/2, 'middle');
+      drawBatteryIcon(g, r/2, 0, 0.75);
+    } else { // PV / BHKW / Wind — generischer Erzeuger, Energieträger steht im Text darunter
+      addLabel(g, 'G', 4, 'lbl-type');
+    }
+    addLabel(g, n.props.label || at, r+14, 'lbl-sub');
+    const line2 = [n.props.anlagennummer, anlageSpecLine(n.props)].filter(Boolean).join(' · ');
+    addLabel(g, line2, r+28, 'lbl-sub');
+    if(n.props.status==='geplant'){
+      addLabel(g, '(geplant)', r+42, 'lbl-planned');
+    }
+  } else if(n.type==='steuerung'){
+    const r = w/2;
+    const circ = document.createElementNS(SVGNS,'circle');
+    circ.setAttribute('r', r); circ.setAttribute('class','node-shape'+(n.props.status==='geplant'?' planned':''));
+    g.appendChild(circ);
+    addLabel(g, 'S', 4, 'lbl-type');
+    // kleines Antennen-/Signal-Symbol, deutet Rundsteuer-/Steuersignal an
+    [[-4,-1],[0,0],[4,-1]].forEach(([dx,dy])=>{
+      const l = document.createElementNS(SVGNS,'line');
+      l.setAttribute('x1',dx); l.setAttribute('y1', -r+4+dy);
+      l.setAttribute('x2',dx*0.4); l.setAttribute('y2', -r+9);
+      l.setAttribute('stroke','#1c2733'); l.setAttribute('stroke-width','1.1');
+      g.appendChild(l);
+    });
+    addLabel(g, n.props.label||'Steuerungseinrichtung', r+14, 'lbl-sub');
+    if(n.props.anlagennummer) addLabel(g, n.props.anlagennummer, r+28, 'lbl-sub');
+    if(n.props.status==='geplant'){
+      addLabel(g, '(geplant)', r+ (n.props.anlagennummer?42:28), 'lbl-planned');
+    }
+  } else if(n.type==='fae'){
+    const r = w/2;
+    const circ = document.createElementNS(SVGNS,'circle');
+    circ.setAttribute('r', r); circ.setAttribute('class','node-shape'+(n.props.status==='geplant'?' planned':''));
+    g.appendChild(circ);
+    addLabel(g, 'FAE', 4, 'lbl-type');
+    addLabel(g, n.props.label||'FAE', r+14, 'lbl-sub');
+    if(n.props.anlagennummer) addLabel(g, n.props.anlagennummer, r+28, 'lbl-sub');
+    if(n.props.status==='geplant'){
+      addLabel(g, '(geplant)', r+ (n.props.anlagennummer?42:28), 'lbl-planned');
+    }
+  } else if(n.type==='trafo'){
+    const r = w/2;
+    const circ = document.createElementNS(SVGNS,'circle');
+    circ.setAttribute('r', r); circ.setAttribute('class','node-shape'+(n.props.status==='geplant'?' planned':''));
+    g.appendChild(circ);
+    // Klassisches Trafo-Symbol: zwei überlappende Kreise (Wicklungen)
+    [[-1,-8],[1,8]].forEach(([dir,dy])=>{
+      const c = document.createElementNS(SVGNS,'circle');
+      c.setAttribute('cx',0); c.setAttribute('cy',dy); c.setAttribute('r',13);
+      c.setAttribute('fill','none'); c.setAttribute('stroke','#1c2733'); c.setAttribute('stroke-width','1.4');
+      g.appendChild(c);
+    });
+    addLabel(g, n.props.primaerspannung||'', -r-8, 'lbl-type');
+    const specLine = [n.props.sekundaerspannung||'', n.props.leistungKva?n.props.leistungKva+' kVA':''].filter(Boolean).join(' · ');
+    addLabel(g, n.props.label||'Transformator', r+14, 'lbl-sub');
+    addLabel(g, specLine, r+28, 'lbl-sub');
+    if(n.props.anlagennummer) addLabel(g, n.props.anlagennummer, r+42, 'lbl-sub');
+    if(n.props.status==='geplant'){
+      addLabel(g, '(geplant)', r+ (n.props.anlagennummer?56:42), 'lbl-planned');
+    }
+  } else if(n.type==='notiz'){
+    const rect = document.createElementNS(SVGNS,'rect');
+    rect.setAttribute('x', -w/2); rect.setAttribute('y', -h/2);
+    rect.setAttribute('width', w); rect.setAttribute('height', h);
+    rect.setAttribute('class','notiz-shape');
+    g.appendChild(rect);
+    // Umgeknickte Ecke, klassisches Sticky-Note-Aussehen
+    const fold = document.createElementNS(SVGNS,'polygon');
+    const fx = w/2, fy = -h/2;
+    fold.setAttribute('points', `${fx-16},${fy} ${fx},${fy} ${fx},${fy+16}`);
+    fold.setAttribute('class','notiz-fold');
+    g.appendChild(fold);
+    const lines = wrapText(n.props.label||'', w-20, 10.5);
+    const lh = 13;
+    const startY = -((lines.length-1)/2)*lh;
+    lines.forEach((ln,i)=>{
+      addLabel(g, ln, startY + i*lh, 'notiz-text', -w/2+10, 'start');
+    });
+  } else if(n.type==='text'){
+    addLabel(g, n.props.label||'Text', 4, 'lbl-type');
+  }
+}
+
+function drawPylonIcon(g, cx, cy, scale){
+  const s = scale||1;
+  const path = document.createElementNS(SVGNS,'path');
+  const d = `M ${cx} ${cy-11*s} L ${cx} ${cy+9*s}
+             M ${cx-7*s} ${cy+9*s} L ${cx+7*s} ${cy+9*s}
+             M ${cx-5*s} ${cy-3*s} L ${cx+5*s} ${cy-3*s}
+             M ${cx-3.5*s} ${cy+3*s} L ${cx+3.5*s} ${cy+3*s}
+             M ${cx-1.8*s} ${cy-11*s} L ${cx-7*s} ${cy+9*s}
+             M ${cx+1.8*s} ${cy-11*s} L ${cx+7*s} ${cy+9*s}`;
+  path.setAttribute('d', d);
+  path.setAttribute('fill','none'); path.setAttribute('stroke','#1c2733'); path.setAttribute('stroke-width', 1.5);
+  path.setAttribute('stroke-linecap','round');
+  g.appendChild(path);
+}
+
+function drawProngIcon(g, cx, cy, scale){
+  const s = scale||1;
+  const stem = document.createElementNS(SVGNS,'line');
+  stem.setAttribute('x1', cx); stem.setAttribute('y1', cy-11*s);
+  stem.setAttribute('x2', cx); stem.setAttribute('y2', cy-4*s);
+  stem.setAttribute('stroke','#1c2733'); stem.setAttribute('stroke-width', 1.6*s);
+  g.appendChild(stem);
+  const bar = document.createElementNS(SVGNS,'line');
+  bar.setAttribute('x1', cx-7*s); bar.setAttribute('y1', cy-4*s);
+  bar.setAttribute('x2', cx+7*s); bar.setAttribute('y2', cy-4*s);
+  bar.setAttribute('stroke','#1c2733'); bar.setAttribute('stroke-width', 1.6*s);
+  g.appendChild(bar);
+  [-6,0,6].forEach(dx=>{
+    const tine = document.createElementNS(SVGNS,'line');
+    tine.setAttribute('x1', cx+dx*s); tine.setAttribute('y1', cy-4*s);
+    tine.setAttribute('x2', cx+dx*s); tine.setAttribute('y2', cy+9*s);
+    tine.setAttribute('stroke','#1c2733'); tine.setAttribute('stroke-width', 1.6*s);
+    g.appendChild(tine);
+  });
+}
+
+function drawEarthIcon(g, cx, cy, scale){
+  const s = scale||1;
+  const stem = document.createElementNS(SVGNS,'line');
+  stem.setAttribute('x1', cx); stem.setAttribute('y1', cy-11*s);
+  stem.setAttribute('x2', cx); stem.setAttribute('y2', cy);
+  stem.setAttribute('stroke','#1c2733'); stem.setAttribute('stroke-width', 1.6*s);
+  g.appendChild(stem);
+  const bars = [ [9,0], [6,4.5], [3,9] ];
+  bars.forEach(([len,dy])=>{
+    const l = document.createElementNS(SVGNS,'line');
+    l.setAttribute('x1', cx-len*s*0.7); l.setAttribute('y1', cy+dy*s);
+    l.setAttribute('x2', cx+len*s*0.7); l.setAttribute('y2', cy+dy*s);
+    l.setAttribute('stroke','#1c2733'); l.setAttribute('stroke-width', 1.6*s);
+    g.appendChild(l);
+  });
+}
+
+function drawBatteryIcon(g, cx, cy, scale){
+  const s = scale||1;
+  const l1 = document.createElementNS(SVGNS,'line');
+  l1.setAttribute('x1', cx-4*s); l1.setAttribute('y1', cy-8*s);
+  l1.setAttribute('x2', cx-4*s); l1.setAttribute('y2', cy+8*s);
+  l1.setAttribute('stroke','#1c2733'); l1.setAttribute('stroke-width', 2.2*s);
+  g.appendChild(l1);
+  const l2 = document.createElementNS(SVGNS,'line');
+  l2.setAttribute('x1', cx+4*s); l2.setAttribute('y1', cy-4.5*s);
+  l2.setAttribute('x2', cx+4*s); l2.setAttribute('y2', cy+4.5*s);
+  l2.setAttribute('stroke','#1c2733'); l2.setAttribute('stroke-width', 1.6*s);
+  g.appendChild(l2);
+}
+
+// Einfacher Zeilenumbruch nach Zeichenanzahl (monospace-Schätzung), für das Notiz-Symbol
+function wrapText(str, maxWidth, fontSize){
+  const charsPerLine = Math.max(6, Math.floor(maxWidth / (fontSize*0.6)));
+  const words = String(str).split(/\s+/).filter(Boolean);
+  const lines = [];
+  let cur = '';
+  words.forEach(word=>{
+    const test = cur ? cur+' '+word : word;
+    if(test.length > charsPerLine && cur){
+      lines.push(cur);
+      cur = word;
+    } else {
+      cur = test;
+    }
+  });
+  if(cur) lines.push(cur);
+  return lines.length ? lines.slice(0,6) : [''];
+}
+
+function addLabel(g, str, y, cls, x, anchor){
+  if(!str) return;
+  const t = document.createElementNS(SVGNS,'text');
+  t.setAttribute('x', x!=null?x:0); t.setAttribute('y',y);
+  t.setAttribute('text-anchor', anchor||'middle');
+  t.setAttribute('class',cls);
+  t.textContent = str;
+  g.appendChild(t);
+}
+
+// ---------- Drag: move node ----------
+let dragState = null;
+let pendingConnector = null; // {nodeId, pt} — set on a tap (no real drag) on a connector
+let lastTap = null; // {id, time} — for double-tap-to-edit detection
+const DOUBLE_TAP_MS = 400;
+
+function onNodeDown(e){
+  e.stopPropagation();
+  if(e.target.classList.contains('connector')) return;
+  const id = e.currentTarget.dataset.nodeId;
+  const n = getNode(id);
+
+  if(e.shiftKey){
+    // Shift-Klick: nur zur Mehrfachauswahl hinzufügen/entfernen, kein Verschieben starten
+    if(multiSelect.has(id)) multiSelect.delete(id); else multiSelect.add(id);
+    selNode = null; selConn = null;
+    render(); renderProps(); updateAlignToolbar();
+    return;
+  }
+
+  const p = screenToSvg(e);
+  const groupIds = multiSelect.has(id) ? [...multiSelect] : null;
+  dragState = { mode:'move', id, dx: p.x-n.x, dy: p.y-n.y, startX:e.clientX, startY:e.clientY, groupIds };
+  if(groupIds){
+    dragState.groupStart = {};
+    groupIds.forEach(gid=>{ const gn=getNode(gid); if(gn) dragState.groupStart[gid] = {x:gn.x, y:gn.y}; });
+  }
+  try{ e.currentTarget.setPointerCapture(e.pointerId); }catch(err){}
+  window.addEventListener('pointermove', onPointerMove);
+  window.addEventListener('pointerup', onPointerUp);
+}
+
+let tempLine = null;
+const TAP_THRESHOLD = 10; // px of screen movement below which a connector press counts as a "tap"
+const GRID_SIZE = 100; // coarser grid: symbols land touching (2 steps) or with a half-gap (3 steps)
+
+// Shared connection creation: validates FAE (nur an PV-Anlagen) and auto-marks/labels
+// Steuerungseinrichtung/FAE ↔ Anlage links as "Steuerleitung" so they render distinctly.
+function tryCreateConnection(nodeIdA, ptA, nodeIdB, ptB){
+  if(nodeIdA === nodeIdB) return false;
+  const na = getNode(nodeIdA), nb = getNode(nodeIdB);
+  if(!na || !nb) return false;
+
+  const faeSide = na.type==='fae' ? na : (nb.type==='fae' ? nb : null);
+  const otherSide = faeSide ? (faeSide===na ? nb : na) : null;
+  if(faeSide){
+    const okType = otherSide.type==='anlage' && (otherSide.props.anlagentyp===ANLAGENTYPEN[1] || otherSide.props.anlagentyp===ANLAGENTYPEN[5]);
+    if(!okType){
+      alert('FAE kann nur an eine PV-Erzeugungsanlage (oder PV+Speicher, DC-gekoppelt) angeschlossen werden.');
+      return false;
+    }
+  }
+
+  const isControl = (na.type==='steuerung' || na.type==='fae') && nb.type==='anlage'
+                  || (nb.type==='steuerung' || nb.type==='fae') && na.type==='anlage';
+  pushUndo();
+  const c = { id: uid('c'), a:{node:nodeIdA, pt:ptA}, b:{node:nodeIdB, pt:ptB}, label: isControl ? 'steuert' : '', controlLink: isControl };
+  conns.push(c);
+  return true;
+}
+
+function onConnectorDown(e){
+  e.stopPropagation();
+  const nodeId = e.currentTarget.dataset.nodeId;
+  const pt = e.currentTarget.dataset.pt;
+
+  // Tap-to-connect: if a connector is already pending, a tap on a different one finishes the link immediately.
+  if(pendingConnector && !(pendingConnector.nodeId===nodeId && pendingConnector.pt===pt)){
+    tryCreateConnection(pendingConnector.nodeId, pendingConnector.pt, nodeId, pt);
+    pendingConnector = null;
+    render();
+    return;
+  }
+
+  dragState = { mode:'connect', fromNode: nodeId, fromPt: pt, startX:e.clientX, startY:e.clientY, dragged:false };
+  try{ e.currentTarget.setPointerCapture(e.pointerId); }catch(err){}
+  window.addEventListener('pointermove', onPointerMove);
+  window.addEventListener('pointerup', onPointerUp);
+}
+
+function onPointerMove(e){
+  if(!dragState) return;
+  if(dragState.mode==='move'){
+    dragState.lastEvent = e;
+    if(!dragState.undoPushed){
+      const moved = Math.hypot(e.clientX-dragState.startX, e.clientY-dragState.startY);
+      if(moved > TAP_THRESHOLD){ dragState.undoPushed = true; pushUndo(); }
+    }
+    if(!dragState.rafScheduled){
+      dragState.rafScheduled = true;
+      requestAnimationFrame(()=>{
+        if(!dragState || dragState.mode!=='move'){ return; }
+        dragState.rafScheduled = false;
+        const ev = dragState.lastEvent;
+        const p = screenToSvg(ev);
+        const newX = p.x - dragState.dx;
+        const newY = p.y - dragState.dy;
+        if(dragState.groupIds){
+          const start = dragState.groupStart[dragState.id];
+          const deltaX = newX - start.x, deltaY = newY - start.y;
+          dragState.groupIds.forEach(gid=>{
+            const gn = getNode(gid);
+            const st = dragState.groupStart[gid];
+            if(gn && st){ gn.x = st.x + deltaX; gn.y = st.y + deltaY; updateNodePositionLive(gn); }
+          });
+        } else {
+          const n = getNode(dragState.id);
+          n.x = newX; n.y = newY;
+          updateNodePositionLive(n);
+        }
+      });
+    }
+  } else if(dragState.mode==='connect'){
+    const p = screenToSvg(e);
+    const moved = Math.hypot(e.clientX-dragState.startX, e.clientY-dragState.startY);
+    if(moved > TAP_THRESHOLD){
+      if(!dragState.dragged){
+        dragState.dragged = true;
+        tempLine = document.createElementNS(SVGNS,'line');
+        tempLine.setAttribute('class','temp-line');
+        svg.appendChild(tempLine);
+      }
+      const n = getNode(dragState.fromNode);
+      const from = connectorPoints(n)[dragState.fromPt];
+      tempLine.setAttribute('x1', from.x); tempLine.setAttribute('y1', from.y);
+      tempLine.setAttribute('x2', p.x); tempLine.setAttribute('y2', p.y);
+    }
+  }
+}
+
+// Shared elbow routing: bend close to the SOURCE point rather than at the midpoint.
+// This keeps multiple lines leaving the same connector visually parallel/"combed"
+// instead of each bending at a different point and crossing other symbols.
+const CONN_STUB = 28;
+function computeConnPath(pa, pb){
+  if(Math.abs(pa.x-pb.x)<4 || Math.abs(pa.y-pb.y)<4){
+    return `M ${pa.x} ${pa.y} L ${pb.x} ${pb.y}`;
+  }
+  const dir = pb.y >= pa.y ? 1 : -1;
+  let bendY = pa.y + dir*CONN_STUB;
+  if(dir>0 && bendY > pb.y) bendY = pa.y + (pb.y-pa.y)/2;
+  if(dir<0 && bendY < pb.y) bendY = pa.y + (pb.y-pa.y)/2;
+  return `M ${pa.x} ${pa.y} L ${pa.x} ${bendY} L ${pb.x} ${bendY} L ${pb.x} ${pb.y}`;
+}
+
+// Cheap in-place update while dragging: move just the one <g> and reflow only its connected lines,
+// instead of tearing down and rebuilding the whole SVG on every pointer event (that's what caused the lag).
+function connLinePath(c){
+  const na = getNode(c.a.node), nb = getNode(c.b.node);
+  if(!na||!nb) return null;
+  const pa = connectorPoints(na)[c.a.pt];
+  const pb = connectorPoints(nb)[c.b.pt];
+  return computeConnPath(pa, pb);
+}
+function updateNodePositionLive(n){
+  const g = svg.querySelector(`.node[data-node-id="${n.id}"]`);
+  if(g) g.setAttribute('transform', `translate(${n.x},${n.y})`);
+  conns.forEach(c=>{
+    if(c.a.node!==n.id && c.b.node!==n.id) return;
+    const lineEl = svg.querySelector(`.conn-line[data-conn-id="${c.id}"]`);
+    const d = connLinePath(c);
+    if(lineEl && d) lineEl.setAttribute('d', d);
+  });
+}
+
+function onPointerUp(e){
+  if(dragState && dragState.mode==='move'){
+    const moved = Math.hypot(e.clientX-dragState.startX, e.clientY-dragState.startY);
+    if(moved <= TAP_THRESHOLD){
+      const now = Date.now();
+      if(lastTap && lastTap.id===dragState.id && (now-lastTap.time) < DOUBLE_TAP_MS){
+        selectNode(dragState.id); // double-tap/double-click → open for editing
+        lastTap = null;
+      } else {
+        lastTap = { id: dragState.id, time: now };
+      }
+    } else {
+      lastTap = null;
+      // Snap to grid once the drag finishes — keeps symbols tidily aligned
+      if(dragState.groupIds){
+        const n = getNode(dragState.id);
+        if(n){
+          const snappedX = Math.round(n.x/GRID_SIZE)*GRID_SIZE;
+          const snappedY = Math.round(n.y/GRID_SIZE)*GRID_SIZE;
+          const nudgeX = snappedX-n.x, nudgeY = snappedY-n.y;
+          dragState.groupIds.forEach(gid=>{ const gn=getNode(gid); if(gn){ gn.x+=nudgeX; gn.y+=nudgeY; } });
+        }
+      } else {
+        const n = getNode(dragState.id);
+        if(n){
+          n.x = Math.round(n.x/GRID_SIZE)*GRID_SIZE;
+          n.y = Math.round(n.y/GRID_SIZE)*GRID_SIZE;
+        }
+      }
+    }
+    render();
+    reselect();
+  } else if(dragState && dragState.mode==='connect'){
+    if(dragState.dragged){
+      // Real drag: connect if released on top of a (different) connector
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      if(el && el.classList.contains('connector')){
+        const toNode = el.dataset.nodeId, toPt = el.dataset.pt;
+        if(toNode !== dragState.fromNode){
+          tryCreateConnection(dragState.fromNode, dragState.fromPt, toNode, toPt);
+        }
+      }
+      pendingConnector = null;
+    } else {
+      // Plain tap, no movement: arm/disarm tap-to-connect
+      if(pendingConnector && pendingConnector.nodeId===dragState.fromNode && pendingConnector.pt===dragState.fromPt){
+        pendingConnector = null; // tapped the same point again → cancel
+      } else {
+        pendingConnector = { nodeId: dragState.fromNode, pt: dragState.fromPt };
+      }
+    }
+    if(tempLine){ tempLine.remove(); tempLine=null; }
+    render();
+    reselect();
+  }
+  dragState = null;
+  window.removeEventListener('pointermove', onPointerMove);
+  window.removeEventListener('pointerup', onPointerUp);
+}
+
+svg.addEventListener('pointerdown', (e)=>{
+  if(e.target === svg){
+    selectNode(null); selectConn(null);
+    if(pendingConnector){ pendingConnector=null; render(); }
+    if(multiSelect.size){ multiSelect.clear(); render(); updateAlignToolbar(); }
+  }
+});
+
+function updateAlignToolbar(){
+  document.getElementById('alignCtrl').classList.toggle('show', multiSelect.size>=2);
+}
+
+document.getElementById('alignLeft').addEventListener('click', ()=>{
+  const ids = [...multiSelect];
+  if(ids.length<2) return;
+  pushUndo();
+  const minX = Math.min(...ids.map(id=>getNode(id).x));
+  ids.forEach(id=>{ getNode(id).x = minX; });
+  render(); reselect();
+});
+document.getElementById('alignTop').addEventListener('click', ()=>{
+  const ids = [...multiSelect];
+  if(ids.length<2) return;
+  pushUndo();
+  const minY = Math.min(...ids.map(id=>getNode(id).y));
+  ids.forEach(id=>{ getNode(id).y = minY; });
+  render(); reselect();
+});
+document.getElementById('distributeH').addEventListener('click', ()=>{
+  const ids = [...multiSelect];
+  if(ids.length<3){ alert('Zum Verteilen mindestens 3 Symbole auswählen.'); return; }
+  pushUndo();
+  const sorted = ids.map(id=>getNode(id)).sort((a,b)=>a.x-b.x);
+  const first = sorted[0].x, last = sorted[sorted.length-1].x;
+  const step = (last-first)/(sorted.length-1);
+  sorted.forEach((n,i)=>{ n.x = Math.round((first + i*step)/GRID_SIZE)*GRID_SIZE; });
+  render(); reselect();
+});
+document.getElementById('clearMultiSelect').addEventListener('click', ()=>{
+  multiSelect.clear(); render(); updateAlignToolbar();
+});
+
+function reselect(){
+  document.querySelectorAll('.node').forEach(g=>{
+    g.classList.toggle('selected', g.dataset.nodeId===selNode);
+    g.classList.toggle('multi-selected', multiSelect.has(g.dataset.nodeId));
+  });
+}
+
+// ---------- Selection & properties ----------
+function selectNode(id){
+  selNode = id; selConn = null;
+  render();
+  renderProps();
+  if(id && isMobile()) openSidebar('right');
+}
+function selectConn(id){
+  selConn = id; selNode = null;
+  render();
+  renderProps();
+  if(id && isMobile()) openSidebar('right');
+}
+
+function deleteSelected(){
+  if(selNode){
+    const n = getNode(selNode);
+    if(!n || n.locked) return;
+    pushUndo();
+    conns = conns.filter(c=>c.a.node!==n.id && c.b.node!==n.id);
+    nodes = nodes.filter(x=>x.id!==n.id);
+    selNode=null; render(); renderProps();
+  } else if(selConn){
+    const c = conns.find(x=>x.id===selConn);
+    if(!c || c.locked) return;
+    pushUndo();
+    conns = conns.filter(x=>x.id!==c.id);
+    selConn=null; render(); renderProps();
+  }
+}
+
+document.addEventListener('keydown', (e)=>{
+  const tag = (document.activeElement && document.activeElement.tagName) || '';
+  const inField = tag==='INPUT' || tag==='SELECT' || tag==='TEXTAREA';
+
+  if((e.ctrlKey||e.metaKey) && !inField && (e.key==='z'||e.key==='Z') && !e.shiftKey){
+    e.preventDefault(); doUndo(); return;
+  }
+  if((e.ctrlKey||e.metaKey) && !inField && ((e.key==='y'||e.key==='Y') || (e.shiftKey && (e.key==='z'||e.key==='Z')))){
+    e.preventDefault(); doRedo(); return;
+  }
+  if(e.key!=='Delete' && e.key!=='Backspace') return;
+  if(inField) return; // Nicht eingreifen, während in einem Eingabefeld getippt wird
+  if(selNode || selConn){ e.preventDefault(); deleteSelected(); }
+});
+document.getElementById('btnUndo').addEventListener('click', doUndo);
+document.getElementById('btnRedo').addEventListener('click', doRedo);
+
+function renderProps(){
+  propsPanel.innerHTML = '';
+  if(selNode){
+    const n = getNode(selNode);
+    if(!n) return;
+    const box = document.createElement('div');
+
+    if(n.type==='netz'){
+      box.appendChild(fieldSelect('Netzform', n.props.netzform, NETZFORMEN, v=>{ n.props.netzform=v; render(); }));
+      box.appendChild(fieldText('Bezeichnung', n.props.label, v=>{ n.props.label=v; render(); }));
+    } else if(n.type==='zaehler'){
+      box.appendChild(fieldText('Messlokation / Zählpunkt', n.props.messlokation, v=>{ n.props.messlokation=v; render(); }, 'z.B. Z1'));
+      box.appendChild(fieldText('Zählernummer (Gerät)', n.props.zaehlernummer, v=>{ n.props.zaehlernummer=v; render(); }, 'z.B. 1SAG1234567890'));
+      box.appendChild(fieldSelect('Zählertyp', n.props.zaehlertyp, ZAEHLERTYPEN, v=>{
+        n.props.zaehlertyp=v;
+        if(v===ZAEHLERTYPEN[2]){ n.props.slpRlm='RLM'; propagateRlm(n.id); } // MS/indirekt → immer RLM
+        render(); renderProps();
+      }));
+      if(n.props.zaehlertyp===ZAEHLERTYPEN[2]){
+        const note = document.createElement('div');
+        note.className='tmpl-note';
+        note.textContent = 'Automatisch RLM – bei Mittelspannung/indirekter Messung nicht wählbar.';
+        box.appendChild(note);
+      } else {
+        box.appendChild(fieldSelect('Abrechnung', n.props.slpRlm||'SLP', ['SLP','RLM'], v=>{
+          n.props.slpRlm=v;
+          if(v==='RLM') propagateRlm(n.id); // ein RLM zieht alle anderen Zähler automatisch mit
+          render(); renderProps();
+        }));
+      }
+      if(n.props.zaehlertyp !== ZAEHLERTYPEN[0]){
+        box.appendChild(fieldPair('Stromwandler (A)', n.props.stromPrimaer, n.props.stromSekundaer,
+          v=>{ n.props.stromPrimaer=v; renderKPreview(); render(); },
+          v=>{ n.props.stromSekundaer=v; renderKPreview(); render(); }));
+      }
+      if(n.props.zaehlertyp === ZAEHLERTYPEN[2]){
+        box.appendChild(fieldPair('Spannungswandler (V)', n.props.spannungPrimaer, n.props.spannungSekundaer,
+          v=>{ n.props.spannungPrimaer=v; renderKPreview(); render(); },
+          v=>{ n.props.spannungSekundaer=v; renderKPreview(); render(); }));
+      }
+      const kBox = document.createElement('div');
+      kBox.className = 'tmpl-note'; kBox.id = 'kPreview';
+      box.appendChild(kBox);
+      function renderKPreview(){
+        const k = computeWandlerkonstante(n.props);
+        kBox.textContent = k ? ('Berechnete Wandlerkonstante: ' + k) : 'Direktmessung – kein Wandler';
+      }
+      renderKPreview();
+      box.appendChild(fieldCheckbox('In Planung (noch nicht vorhanden)', n.props.status==='geplant', v=>{ n.props.status = v ? 'geplant' : 'vorhanden'; render(); }));
+    } else if(n.type==='anlage'){
+      box.appendChild(fieldSelect('Anlagentyp', n.props.anlagentyp, ANLAGENTYPEN, v=>{ n.props.anlagentyp=v; render(); renderProps(); }));
+      box.appendChild(fieldText('Bezeichnung', n.props.label, v=>{ n.props.label=v; render(); }, n.props.anlagentyp));
+      box.appendChild(fieldText('Anlagennummer', n.props.anlagennummer, v=>{ n.props.anlagennummer=v; render(); }, 'z.B. EZA-4711'));
+      const isPv = n.props.anlagentyp===ANLAGENTYPEN[1] || n.props.anlagentyp===ANLAGENTYPEN[5];
+      const isSp = n.props.anlagentyp===ANLAGENTYPEN[4] || n.props.anlagentyp===ANLAGENTYPEN[5];
+      if(isPv){
+        box.appendChild(fieldText('Peakleistung (kWp)', n.props.kwp, v=>{ n.props.kwp=v; render(); }, 'z.B. 9,9'));
+        box.appendChild(fieldText('Wechselrichterleistung (kW)', n.props.wechselrichterKw, v=>{ n.props.wechselrichterKw=v; render(); }, 'z.B. 8,2'));
+      }
+      if(isSp){
+        box.appendChild(fieldText('Speicherladeleistung (kW)', n.props.ladeleistung, v=>{ n.props.ladeleistung=v; render(); }, 'z.B. 5'));
+        box.appendChild(fieldText('Speicherkapazität (kWh)', n.props.kapazitaet, v=>{ n.props.kapazitaet=v; render(); }, 'z.B. 10'));
+      }
+      if(!isPv && !isSp){
+        box.appendChild(fieldText('Leistung (kW)', n.props.leistung, v=>{ n.props.leistung=v; render(); }, 'z.B. 9,8'));
+      }
+      box.appendChild(fieldCheckbox('In Planung (noch nicht vorhanden)', n.props.status==='geplant', v=>{ n.props.status = v ? 'geplant' : 'vorhanden'; render(); }));
+    } else if(n.type==='steuerung'){
+      box.appendChild(fieldText('Bezeichnung', n.props.label, v=>{ n.props.label=v; render(); }, 'z.B. Rundsteuerempfänger'));
+      box.appendChild(fieldText('Anlagennummer', n.props.anlagennummer, v=>{ n.props.anlagennummer=v; render(); }, 'z.B. STV-01'));
+      box.appendChild(fieldCheckbox('In Planung (noch nicht vorhanden)', n.props.status==='geplant', v=>{ n.props.status = v ? 'geplant' : 'vorhanden'; render(); }));
+      const hint = document.createElement('div');
+      hint.className='tmpl-note';
+      hint.textContent = 'Der Anschluss rechts (→) ist die Steuerleitung: mit dem Anschluss links (←) an der zu steuernden Anlage verbinden, um zu zeigen, was diese Einrichtung abschalten/steuern kann.';
+      box.appendChild(hint);
+    } else if(n.type==='fae'){
+      box.appendChild(fieldText('Bezeichnung', n.props.label, v=>{ n.props.label=v; render(); }, 'z.B. FAE'));
+      box.appendChild(fieldText('Anlagennummer', n.props.anlagennummer, v=>{ n.props.anlagennummer=v; render(); }, 'z.B. FAE-01'));
+      box.appendChild(fieldCheckbox('In Planung (noch nicht vorhanden)', n.props.status==='geplant', v=>{ n.props.status = v ? 'geplant' : 'vorhanden'; render(); }));
+      const hint2 = document.createElement('div');
+      hint2.className='tmpl-note';
+      hint2.textContent = 'Für PV-Erzeugungsanlagen: Anschluss rechts (→) mit dem Anschluss links (←) an der PV-Anlage verbinden.';
+      box.appendChild(hint2);
+    } else if(n.type==='trafo'){
+      box.appendChild(fieldText('Bezeichnung', n.props.label, v=>{ n.props.label=v; render(); }, 'z.B. Transformator'));
+      box.appendChild(fieldText('Primärspannung', n.props.primaerspannung, v=>{ n.props.primaerspannung=v; render(); }, 'z.B. 20 kV'));
+      box.appendChild(fieldText('Sekundärspannung', n.props.sekundaerspannung, v=>{ n.props.sekundaerspannung=v; render(); }, 'z.B. 0,4 kV'));
+      box.appendChild(fieldText('Nennleistung (kVA)', n.props.leistungKva, v=>{ n.props.leistungKva=v; render(); }, 'z.B. 630'));
+      box.appendChild(fieldText('Anlagennummer', n.props.anlagennummer, v=>{ n.props.anlagennummer=v; render(); }, 'z.B. ONT-12'));
+      box.appendChild(fieldCheckbox('In Planung (noch nicht vorhanden)', n.props.status==='geplant', v=>{ n.props.status = v ? 'geplant' : 'vorhanden'; render(); }));
+    } else if(n.type==='notiz'){
+      box.appendChild(fieldTextarea('Notiztext', n.props.label, v=>{ n.props.label=v; render(); }, 'z.B. Zähler wird 2027 im Zuge der Sanierung getauscht'));
+    } else if(n.type==='text'){
+      box.appendChild(fieldText('Text', n.props.label, v=>{ n.props.label=v; render(); }));
+    }
+
+    if(n.locked){
+      const note = document.createElement('div');
+      note.className = 'tmpl-note';
+      note.innerHTML = '🔒 Teil des Standard-Messkonzepts. Struktur ist gesperrt, um die Norm-Konformität zu erhalten – Werte oben bleiben editierbar.';
+      box.appendChild(note);
+    } else {
+      const del = document.createElement('button');
+      del.className='del-btn'; del.textContent='Symbol löschen';
+      del.onclick = deleteSelected;
+      box.appendChild(del);
+    }
+    propsPanel.appendChild(box);
+  } else if(selConn){
+    const c = conns.find(x=>x.id===selConn);
+    if(!c) return;
+    const box = document.createElement('div');
+    box.appendChild(fieldText('Verbindungsbezeichnung', c.label, v=>{ c.label=v; render(); }, 'z.B. NYCY 4x2,5mm²'));
+    if(c.locked){
+      const note = document.createElement('div');
+      note.className = 'tmpl-note';
+      note.innerHTML = '🔒 Teil des Standard-Messkonzepts – Verbindung ist gesperrt.';
+      box.appendChild(note);
+    } else {
+      const del = document.createElement('button');
+      del.className='del-btn'; del.textContent='Verbindung löschen';
+      del.onclick = deleteSelected;
+      box.appendChild(del);
+    }
+    propsPanel.appendChild(box);
+  } else {
+    propsPanel.innerHTML = '<div class="empty">Kein Element ausgewählt.<br><br>Symbol im Diagramm antippen, um Eigenschaften zu bearbeiten.</div>';
+  }
+}
+
+function fieldSelect(labelStr, value, options, onChange){
+  const wrap = document.createElement('div'); wrap.className='field';
+  const l = document.createElement('label'); l.textContent=labelStr;
+  const sel = document.createElement('select');
+  options.forEach(o=>{
+    const op = document.createElement('option'); op.value=o; op.textContent=o;
+    if(o===value) op.selected=true;
+    sel.appendChild(op);
+  });
+  sel.onchange = ()=>{ pushUndo(); onChange(sel.value); };
+  wrap.appendChild(l); wrap.appendChild(sel);
+  return wrap;
+}
+function fieldText(labelStr, value, onChange, placeholder){
+  const wrap = document.createElement('div'); wrap.className='field';
+  const l = document.createElement('label'); l.textContent=labelStr;
+  const inp = document.createElement('input'); inp.type='text';
+  inp.value = value||''; if(placeholder) inp.placeholder=placeholder;
+  let snapped = false;
+  inp.oninput = ()=>{ if(!snapped){ pushUndo(); snapped=true; } onChange(inp.value); };
+  wrap.appendChild(l); wrap.appendChild(inp);
+  return wrap;
+}
+function fieldPair(labelStr, val1, val2, onChange1, onChange2){
+  const wrap = document.createElement('div'); wrap.className='field';
+  const l = document.createElement('label'); l.textContent=labelStr;
+  wrap.appendChild(l);
+  const row = document.createElement('div');
+  row.style.display='flex'; row.style.gap='8px';
+  const mk = (val, ph, onChange)=>{
+    const col = document.createElement('div'); col.style.flex='1';
+    const sub = document.createElement('div');
+    sub.textContent = ph; sub.style.fontSize='10px'; sub.style.color='var(--ink-soft)'; sub.style.marginBottom='3px';
+    const inp = document.createElement('input');
+    inp.type='number'; inp.inputMode='decimal'; inp.value = val||'';
+    let snapped = false;
+    inp.oninput = ()=>{ if(!snapped){ pushUndo(); snapped=true; } onChange(inp.value); };
+    col.appendChild(sub); col.appendChild(inp);
+    return col;
+  };
+  row.appendChild(mk(val1,'Primär',onChange1));
+  row.appendChild(mk(val2,'Sekundär',onChange2));
+  wrap.appendChild(row);
+  return wrap;
+}
+function fieldCheckbox(labelStr, checked, onChange){
+  const wrap = document.createElement('div'); wrap.className='field';
+  const row = document.createElement('label');
+  row.style.display='flex'; row.style.alignItems='center'; row.style.gap='8px';
+  row.style.textTransform='none'; row.style.fontSize='13px'; row.style.fontWeight='500'; row.style.color='var(--ink)';
+  const cb = document.createElement('input');
+  cb.type='checkbox'; cb.checked = !!checked; cb.style.width='17px'; cb.style.height='17px';
+  cb.onchange = ()=>{ pushUndo(); onChange(cb.checked); };
+  row.appendChild(cb);
+  row.appendChild(document.createTextNode(labelStr));
+  wrap.appendChild(row);
+  return wrap;
+}
+function fieldTextarea(labelStr, value, onChange, placeholder){
+  const wrap = document.createElement('div'); wrap.className='field';
+  const l = document.createElement('label'); l.textContent=labelStr;
+  const ta = document.createElement('textarea');
+  ta.value = value||''; if(placeholder) ta.placeholder=placeholder;
+  ta.rows = 3;
+  ta.style.width='100%'; ta.style.padding='7px 8px'; ta.style.border='1px solid var(--panel-border)';
+  ta.style.borderRadius='5px'; ta.style.fontSize='13px'; ta.style.fontFamily="'IBM Plex Mono',monospace";
+  ta.style.resize='vertical';
+  let snapped = false;
+  ta.oninput = ()=>{ if(!snapped){ pushUndo(); snapped=true; } onChange(ta.value); };
+  wrap.appendChild(l); wrap.appendChild(ta);
+  return wrap;
+}
+
+// ---------- Standard-Messkonzept-Vorlagen ----------
+function conn(nodeA, ptA, nodeB, ptB, locked, controlLabel){
+  return { id: uid('c'), a:{node:nodeA.id, pt:ptA}, b:{node:nodeB.id, pt:ptB}, label: controlLabel||'', locked: !!locked, controlLink: !!controlLabel };
+}
+
+function loadTemplate(key){
+  if(!key) return;
+  if((nodes.length>0 || conns.length>0) && !confirm('Das aktuelle Diagramm wird ersetzt. Fortfahren?')) return;
+  if(nodes.length>0 || conns.length>0) pushUndo();
+  nodes = []; conns = []; selNode=null; selConn=null;
+  const cx = 520;
+
+  if(key==='direkt'){
+    const n1 = addNode('netz', cx, 140, {locked:true, props:{netzform:'400 V', label:'Netz'}, silent:true});
+    const n2 = addNode('zaehler', cx, 300, {locked:true, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[0], messlokation:'Z1', stromPrimaer:'', stromSekundaer:''}, silent:true});
+    conns.push(conn(n1,'s',n2,'n',true));
+  } else if(key==='halbindirekt'){
+    const n1 = addNode('netz', cx, 100, {locked:true, props:{netzform:'400 V'}, silent:true});
+    const n2 = addNode('zaehler', cx, 260, {locked:true, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[1], messlokation:'Z1', stromPrimaer:'600', stromSekundaer:'5'}, silent:true});
+    conns.push(conn(n1,'s',n2,'n',true));
+  } else if(key==='indirekt'){
+    const n1 = addNode('netz', cx, 100, {locked:true, props:{netzform:'20 kV'}, silent:true});
+    const n2 = addNode('zaehler', cx, 260, {locked:true, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[2], messlokation:'Z1', stromPrimaer:'300', stromSekundaer:'5', spannungPrimaer:'20000', spannungSekundaer:'100'}, silent:true});
+    conns.push(conn(n1,'s',n2,'n',true));
+
+  } else if(key==='a1'){ // Volleinspeisung: ein Zähler (Bezug+Lieferung), volle Einspeisung der EA
+    const n1 = addNode('netz', cx, 100, {locked:true, props:{netzform:'400 V'}, silent:true});
+    const n2 = addNode('zaehler', cx, 260, {locked:true, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[0], messlokation:'Z1', stromPrimaer:'', stromSekundaer:''}, silent:true});
+    const n3 = addNode('anlage', cx, 420, {locked:false, props:{anlagentyp:ANLAGENTYPEN[1], label:'Erzeugungsanlage (Volleinspeisung)'}, silent:true});
+    conns.push(conn(n1,'s',n2,'n',true));
+    conns.push(conn(n2,'s',n3,'n',false));
+
+  } else if(key==='a2'){ // Überschusseinspeisung: ein Zähler für Bezug + Lieferung
+    const n1 = addNode('netz', cx, 100, {locked:true, props:{netzform:'400 V'}, silent:true});
+    const n2 = addNode('zaehler', cx, 240, {locked:true, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[0], messlokation:'Z1', stromPrimaer:'', stromSekundaer:''}, silent:true});
+    const n3 = addNode('anlage', cx-120, 400, {locked:false, props:{anlagentyp:ANLAGENTYPEN[0], label:'Kundenanlage'}, silent:true});
+    const n4 = addNode('anlage', cx+150, 400, {locked:false, props:{anlagentyp:ANLAGENTYPEN[1], label:'Erzeugungsanlage'}, silent:true});
+    conns.push(conn(n1,'s',n2,'n',true));
+    conns.push(conn(n2,'s',n3,'n',false));
+    conns.push(conn(n2,'s',n4,'n',false));
+
+  } else if(key==='a3'){ // Überschusseinspeisung mit Erzeugungsmessung: Z1 (Bezug+Lieferung) + Z2 (Lieferung)
+    const n1 = addNode('netz', cx, 100, {locked:true, props:{netzform:'400 V'}, silent:true});
+    const n2 = addNode('zaehler', cx, 240, {locked:true, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[0], messlokation:'Z1', stromPrimaer:'', stromSekundaer:''}, silent:true});
+    const n3 = addNode('anlage', cx-160, 400, {locked:false, props:{anlagentyp:ANLAGENTYPEN[0], label:'Kundenanlage'}, silent:true});
+    const n4 = addNode('zaehler', cx+160, 380, {locked:true, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[0], messlokation:'Z2', stromPrimaer:'', stromSekundaer:''}, silent:true});
+    const n5 = addNode('anlage', cx+160, 540, {locked:false, props:{anlagentyp:ANLAGENTYPEN[1], label:'Erzeugungsanlage'}, silent:true});
+    conns.push(conn(n1,'s',n2,'n',true));
+    conns.push(conn(n2,'s',n3,'n',false));
+    conns.push(conn(n2,'s',n4,'n',true));
+    conns.push(conn(n4,'s',n5,'n',false));
+
+  } else if(key==='b1'){ // Volleinspeisung mit gemeinsamer Erzeugungsmessung (mehrere EA, gleicher Energieträger)
+    const n1 = addNode('netz', cx, 100, {locked:true, props:{netzform:'400 V'}, silent:true});
+    const n2 = addNode('zaehler', cx, 260, {locked:true, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[0], messlokation:'Z1', stromPrimaer:'', stromSekundaer:''}, silent:true});
+    const n3 = addNode('anlage', cx-120, 420, {locked:false, props:{anlagentyp:ANLAGENTYPEN[1], label:'Erzeugungsanlage 1'}, silent:true});
+    const n4 = addNode('anlage', cx+120, 420, {locked:false, props:{anlagentyp:ANLAGENTYPEN[1], label:'Erzeugungsanlage 2'}, silent:true});
+    conns.push(conn(n1,'s',n2,'n',true));
+    conns.push(conn(n2,'s',n3,'n',false));
+    conns.push(conn(n2,'s',n4,'n',false));
+
+  } else if(key==='b2'){ // Überschusseinspeisung mit gemeinsamer Erzeugungsmessung (mehrere EA)
+    const n1 = addNode('netz', cx, 100, {locked:true, props:{netzform:'400 V'}, silent:true});
+    const n2 = addNode('zaehler', cx, 240, {locked:true, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[0], messlokation:'Z1', stromPrimaer:'', stromSekundaer:''}, silent:true});
+    const n3 = addNode('anlage', cx-200, 400, {locked:false, props:{anlagentyp:ANLAGENTYPEN[0], label:'Kundenanlage'}, silent:true});
+    const n4 = addNode('zaehler', cx+120, 380, {locked:true, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[0], messlokation:'Z2', stromPrimaer:'', stromSekundaer:''}, silent:true});
+    const n5 = addNode('anlage', cx+20, 540, {locked:false, props:{anlagentyp:ANLAGENTYPEN[1], label:'Erzeugungsanlage 1'}, silent:true});
+    const n6 = addNode('anlage', cx+240, 540, {locked:false, props:{anlagentyp:ANLAGENTYPEN[1], label:'Erzeugungsanlage 2'}, silent:true});
+    conns.push(conn(n1,'s',n2,'n',true));
+    conns.push(conn(n2,'s',n3,'n',false));
+    conns.push(conn(n2,'s',n4,'n',true));
+    conns.push(conn(n4,'s',n5,'n',false));
+    conns.push(conn(n4,'s',n6,'n',false));
+
+  } else if(key==='b2a'){ // Überschusseinspeisung ohne Erzeugungsmessung (mehrere EA, keine Vergütung Eigenverbrauch)
+    const n1 = addNode('netz', cx, 100, {locked:true, props:{netzform:'400 V'}, silent:true});
+    const n2 = addNode('zaehler', cx, 260, {locked:true, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[0], messlokation:'Z1', stromPrimaer:'', stromSekundaer:''}, silent:true});
+    const n3 = addNode('anlage', cx-220, 440, {locked:false, props:{anlagentyp:ANLAGENTYPEN[0], label:'Kundenanlage'}, silent:true});
+    const n4 = addNode('anlage', cx, 440, {locked:false, props:{anlagentyp:ANLAGENTYPEN[1], label:'Erzeugungsanlage 1'}, silent:true});
+    const n5 = addNode('anlage', cx+220, 440, {locked:false, props:{anlagentyp:ANLAGENTYPEN[1], label:'Erzeugungsanlage 2'}, silent:true});
+    conns.push(conn(n1,'s',n2,'n',true));
+    conns.push(conn(n2,'s',n3,'n',false));
+    conns.push(conn(n2,'s',n4,'n',false));
+    conns.push(conn(n2,'s',n5,'n',false));
+
+  } else if(key==='b3'){ // Überschusseinspeisung mit getrennter Erzeugungsmessung (je EA ein Zähler)
+    const n1 = addNode('netz', cx, 100, {locked:true, props:{netzform:'400 V'}, silent:true});
+    const n2 = addNode('zaehler', cx, 260, {locked:true, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[0], messlokation:'Z1', stromPrimaer:'', stromSekundaer:''}, silent:true});
+    const n3 = addNode('anlage', cx-220, 420, {locked:false, props:{anlagentyp:ANLAGENTYPEN[0], label:'Kundenanlage'}, silent:true});
+    const n4 = addNode('zaehler', cx+30, 400, {locked:true, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[0], messlokation:'Z2', stromPrimaer:'', stromSekundaer:''}, silent:true});
+    const n5 = addNode('anlage', cx+30, 560, {locked:false, props:{anlagentyp:ANLAGENTYPEN[1], label:'Erzeugungsanlage 1'}, silent:true});
+    const n6 = addNode('zaehler', cx+280, 400, {locked:true, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[0], messlokation:'Z3', stromPrimaer:'', stromSekundaer:''}, silent:true});
+    const n7 = addNode('anlage', cx+280, 560, {locked:false, props:{anlagentyp:ANLAGENTYPEN[1], label:'Erzeugungsanlage 2'}, silent:true});
+    conns.push(conn(n1,'s',n2,'n',true));
+    conns.push(conn(n2,'s',n3,'n',false));
+    conns.push(conn(n2,'s',n4,'n',true));
+    conns.push(conn(n4,'s',n5,'n',false));
+    conns.push(conn(n2,'s',n6,'n',true));
+    conns.push(conn(n6,'s',n7,'n',false));
+
+  } else if(key==='c1'){ // Überschusseinspeisung mit gemeinsamer Messung + steuerbarer Verbraucher
+    const n1 = addNode('netz', cx, 80, {locked:true, props:{netzform:'400 V'}, silent:true});
+    const n2 = addNode('zaehler', cx, 220, {locked:true, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[0], messlokation:'Z1', stromPrimaer:'', stromSekundaer:''}, silent:true});
+    const n3 = addNode('anlage', cx-220, 380, {locked:false, props:{anlagentyp:ANLAGENTYPEN[0], label:'Allgemeine Verbrauchseinrichtungen'}, silent:true});
+    const n4 = addNode('anlage', cx-20, 380, {locked:false, props:{anlagentyp:ANLAGENTYPEN[6], label:'Steuerbare Verbrauchseinrichtung'}, silent:true});
+    const n5 = addNode('steuerung', cx+80, 500, {locked:false, props:{}, silent:true});
+    const n6 = addNode('zaehler', cx+240, 380, {locked:true, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[0], messlokation:'Z2', stromPrimaer:'', stromSekundaer:''}, silent:true});
+    const n7 = addNode('anlage', cx+240, 540, {locked:false, props:{anlagentyp:ANLAGENTYPEN[1], label:'Erzeugungsanlage'}, silent:true});
+    conns.push(conn(n1,'s',n2,'n',true));
+    conns.push(conn(n2,'s',n3,'n',false));
+    conns.push(conn(n2,'s',n4,'n',false));
+    conns.push(conn(n5,'e',n4,'w',false,'steuert'));
+    conns.push(conn(n2,'s',n6,'n',true));
+    conns.push(conn(n6,'s',n7,'n',false));
+
+  } else if(key==='c2a'){ // Überschusseinspeisung mit getrennter Messung + steuerbarer Verbraucher
+    const n1 = addNode('netz', cx, 80, {locked:true, props:{netzform:'400 V'}, silent:true});
+    const n2 = addNode('zaehler', cx-140, 220, {locked:true, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[0], messlokation:'Z1', stromPrimaer:'', stromSekundaer:''}, silent:true});
+    const n3 = addNode('anlage', cx-260, 380, {locked:false, props:{anlagentyp:ANLAGENTYPEN[0], label:'Allgemeine Verbrauchseinrichtungen'}, silent:true});
+    const n4 = addNode('anlage', cx-20, 380, {locked:false, props:{anlagentyp:ANLAGENTYPEN[6], label:'Steuerbare Verbrauchseinrichtung'}, silent:true});
+    const n5 = addNode('steuerung', cx-20, 500, {locked:false, props:{}, silent:true});
+    const n6 = addNode('zaehler', cx+220, 220, {locked:true, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[0], messlokation:'Z2', stromPrimaer:'', stromSekundaer:''}, silent:true});
+    const n7 = addNode('anlage', cx+220, 380, {locked:false, props:{anlagentyp:ANLAGENTYPEN[1], label:'Erzeugungsanlage'}, silent:true});
+    conns.push(conn(n1,'s',n2,'n',true));
+    conns.push(conn(n1,'s',n6,'n',true));
+    conns.push(conn(n2,'s',n3,'n',false));
+    conns.push(conn(n2,'s',n4,'n',false));
+    conns.push(conn(n5,'e',n4,'w',false,'steuert'));
+    conns.push(conn(n6,'s',n7,'n',false));
+
+  } else if(key==='d1'){ // Selbstversorgergemeinschaft (Beispiel): EA versorgt mehrere Nutzer
+    const n1 = addNode('netz', cx, 60, {locked:true, props:{netzform:'400 V'}, silent:true});
+    const n2 = addNode('zaehler', cx, 200, {locked:true, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[0], messlokation:'Z1', stromPrimaer:'', stromSekundaer:''}, silent:true});
+    const n3 = addNode('zaehler', cx-220, 360, {locked:true, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[0], messlokation:'Z2', stromPrimaer:'', stromSekundaer:''}, silent:true});
+    const n4 = addNode('anlage', cx-220, 520, {locked:false, props:{anlagentyp:ANLAGENTYPEN[1], label:'Erzeugungsanlage (EA)'}, silent:true});
+    const n5 = addNode('zaehler', cx+30, 360, {locked:false, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[0], messlokation:'ZN1', stromPrimaer:'', stromSekundaer:''}, silent:true});
+    const n6 = addNode('anlage', cx+30, 520, {locked:false, props:{anlagentyp:ANLAGENTYPEN[0], label:'Nutzer 1'}, silent:true});
+    const n7 = addNode('zaehler', cx+280, 360, {locked:false, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[0], messlokation:'ZN2', stromPrimaer:'', stromSekundaer:''}, silent:true});
+    const n8 = addNode('anlage', cx+280, 520, {locked:false, props:{anlagentyp:ANLAGENTYPEN[0], label:'Nutzer 2'}, silent:true});
+    const n9 = addNode('zaehler', cx+530, 360, {locked:false, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[0], messlokation:'ZN3', stromPrimaer:'', stromSekundaer:''}, silent:true});
+    const n10 = addNode('anlage', cx+530, 520, {locked:false, props:{anlagentyp:ANLAGENTYPEN[0], label:'Nutzer 3'}, silent:true});
+    conns.push(conn(n1,'s',n2,'n',true));
+    conns.push(conn(n2,'s',n3,'n',true));
+    conns.push(conn(n3,'s',n4,'n',false));
+    conns.push(conn(n2,'s',n5,'n',false));
+    conns.push(conn(n5,'s',n6,'n',false));
+    conns.push(conn(n2,'s',n7,'n',false));
+    conns.push(conn(n7,'s',n8,'n',false));
+    conns.push(conn(n2,'s',n9,'n',false));
+    conns.push(conn(n9,'s',n10,'n',false));
+
+  } else if(key==='z1'){ // Verbraucher ohne steuerbare Verbrauchseinrichtungen
+    const n1 = addNode('netz', cx, 100, {locked:true, props:{netzform:'400 V'}, silent:true});
+    const n2 = addNode('zaehler', cx, 260, {locked:true, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[0], messlokation:'Z1', stromPrimaer:'', stromSekundaer:''}, silent:true});
+    const n3 = addNode('anlage', cx, 420, {locked:false, props:{anlagentyp:ANLAGENTYPEN[0], label:'Kundenanlage'}, silent:true});
+    conns.push(conn(n1,'s',n2,'n',true));
+    conns.push(conn(n2,'s',n3,'n',false));
+
+  } else if(key==='z1a'){ // Steuerbare Verbrauchseinrichtung + weitere Verbraucher, gemeinsame Messung
+    const n1 = addNode('netz', cx, 100, {locked:true, props:{netzform:'400 V'}, silent:true});
+    const n2 = addNode('zaehler', cx, 260, {locked:true, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[0], messlokation:'Z1', stromPrimaer:'', stromSekundaer:''}, silent:true});
+    const n3 = addNode('anlage', cx-160, 420, {locked:false, props:{anlagentyp:ANLAGENTYPEN[0], label:'Allgemeine Verbrauchseinrichtungen'}, silent:true});
+    const n4 = addNode('anlage', cx+80, 420, {locked:false, props:{anlagentyp:ANLAGENTYPEN[6], label:'Steuerbare Verbrauchseinrichtung'}, silent:true});
+    const n5 = addNode('steuerung', cx+80, 540, {locked:false, props:{}, silent:true});
+    conns.push(conn(n1,'s',n2,'n',true));
+    conns.push(conn(n2,'s',n3,'n',false));
+    conns.push(conn(n2,'s',n4,'n',false));
+    conns.push(conn(n5,'e',n4,'w',false,'steuert'));
+
+  } else if(key==='z1b'){ // Steuerbare Verbrauchseinrichtung ohne weitere Verbraucher
+    const n1 = addNode('netz', cx, 100, {locked:true, props:{netzform:'400 V'}, silent:true});
+    const n2 = addNode('zaehler', cx, 260, {locked:true, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[0], messlokation:'Z1', stromPrimaer:'', stromSekundaer:''}, silent:true});
+    const n3 = addNode('anlage', cx-60, 420, {locked:false, props:{anlagentyp:ANLAGENTYPEN[6], label:'Steuerbare Verbrauchseinrichtung'}, silent:true});
+    const n4 = addNode('steuerung', cx-60, 540, {locked:false, props:{}, silent:true});
+    conns.push(conn(n1,'s',n2,'n',true));
+    conns.push(conn(n2,'s',n3,'n',false));
+    conns.push(conn(n4,'e',n3,'w',false,'steuert'));
+  }
+
+  render();
+  renderProps();
+}
+
+document.getElementById('btnTmplLoad').addEventListener('click', ()=>{
+  const key = document.getElementById('tmplSelect').value;
+  if(!key){ alert('Bitte zuerst eine Vorlage auswählen.'); return; }
+  loadTemplate(key);
+  if(isMobile()) closeSidebars();
+});
+
+// ---------- Zoom ----------
+let canvasScale = 1;
+const ZOOM_MIN = 0.4, ZOOM_MAX = 2.5;
+const zoomResetBtn = document.getElementById('zoomReset');
+
+function applyZoom(){
+  svg.style.transform = `scale(${canvasScale})`;
+  zoomResetBtn.textContent = Math.round(canvasScale*100) + '%';
+}
+function setZoom(scale, anchorClientX, anchorClientY){
+  const wrap = document.getElementById('canvasWrap');
+  const rect = wrap.getBoundingClientRect();
+  const beforeX = (wrap.scrollLeft + (anchorClientX!=null ? anchorClientX-rect.left : wrap.clientWidth/2)) / canvasScale;
+  const beforeY = (wrap.scrollTop + (anchorClientY!=null ? anchorClientY-rect.top : wrap.clientHeight/2)) / canvasScale;
+  canvasScale = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, scale));
+  applyZoom();
+  wrap.scrollLeft = beforeX*canvasScale - (anchorClientX!=null ? anchorClientX-rect.left : wrap.clientWidth/2);
+  wrap.scrollTop = beforeY*canvasScale - (anchorClientY!=null ? anchorClientY-rect.top : wrap.clientHeight/2);
+}
+document.getElementById('zoomIn').addEventListener('click', ()=>setZoom(canvasScale*1.25));
+document.getElementById('zoomOut').addEventListener('click', ()=>setZoom(canvasScale/1.25));
+document.getElementById('zoomReset').addEventListener('click', ()=>setZoom(1));
+
+// Pinch-to-zoom (two-finger touch)
+let pinchStartDist = null, pinchStartScale = 1;
+const canvasWrapEl = document.getElementById('canvasWrap');
+canvasWrapEl.addEventListener('touchstart', (e)=>{
+  if(e.touches.length===2){
+    pinchStartDist = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+    pinchStartScale = canvasScale;
+  }
+}, {passive:true});
+canvasWrapEl.addEventListener('touchmove', (e)=>{
+  if(e.touches.length===2 && pinchStartDist){
+    e.preventDefault();
+    const dist = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+    const midX = (e.touches[0].clientX+e.touches[1].clientX)/2;
+    const midY = (e.touches[0].clientY+e.touches[1].clientY)/2;
+    setZoom(pinchStartScale * (dist/pinchStartDist), midX, midY);
+  }
+}, {passive:false});
+canvasWrapEl.addEventListener('touchend', (e)=>{
+  if(e.touches.length<2) pinchStartDist = null;
+});
+
+// Ctrl+Scroll zoom on desktop
+canvasWrapEl.addEventListener('wheel', (e)=>{
+  if(e.ctrlKey || e.metaKey){
+    e.preventDefault();
+    setZoom(canvasScale * (e.deltaY<0 ? 1.1 : 0.9), e.clientX, e.clientY);
+  }
+}, {passive:false});
+
+// ---------- Mobile sidebar handling ----------
+const sidebarLeft = document.getElementById('sidebarLeft');
+const sidebarRight = document.getElementById('sidebarRight');
+const backdrop = document.getElementById('backdrop');
+const isMobile = () => window.matchMedia('(max-width: 820px)').matches;
+
+function openSidebar(which){
+  if(!isMobile()) return;
+  sidebarLeft.classList.toggle('mobile-open', which==='left');
+  sidebarRight.classList.toggle('mobile-open', which==='right');
+  backdrop.classList.add('show');
+}
+function closeSidebars(){
+  sidebarLeft.classList.remove('mobile-open');
+  sidebarRight.classList.remove('mobile-open');
+  backdrop.classList.remove('show');
+}
+document.getElementById('btnOpenLeft').addEventListener('click', ()=>openSidebar('left'));
+document.getElementById('btnOpenRight').addEventListener('click', ()=>openSidebar('right'));
+document.getElementById('closeLeft').addEventListener('click', closeSidebars);
+document.getElementById('closeRight').addEventListener('click', closeSidebars);
+backdrop.addEventListener('click', ()=>{ closeSidebars(); closeCheckModal(); });
+
+// ---------- Toolbar ----------
+document.querySelectorAll('.symbol-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const type = btn.dataset.add;
+    const wrap = document.getElementById('canvasWrap');
+    const x = Math.round((wrap.scrollLeft + wrap.clientWidth/2)/GRID_SIZE)*GRID_SIZE;
+    const y = Math.round((wrap.scrollTop + wrap.clientHeight/2)/GRID_SIZE)*GRID_SIZE;
+    addNode(type, x, y);
+    if(isMobile()) openSidebar('right');
+  });
+});
+
+// ---------- Plausibilitäts-Check ----------
+function runChecks(){
+  const issues = [];
+  const zaehlerNodes = nodes.filter(n=>n.type==='zaehler');
+
+  zaehlerNodes.forEach(n=>{
+    const label = n.props.messlokation || '(ohne Messlokation)';
+    if(n.props.zaehlertyp !== ZAEHLERTYPEN[0]){
+      const iP = parseFloat(String(n.props.stromPrimaer||'').replace(',','.'));
+      const iS = parseFloat(String(n.props.stromSekundaer||'').replace(',','.'));
+      if(!(iP>0) || !(iS>0)){
+        issues.push({level:'err', text:`Zähler ${label}: Halbindirekt/Indirekt gewählt, aber Stromwandler-Werte fehlen.`});
+      }
+    }
+    if(n.props.zaehlertyp === ZAEHLERTYPEN[2]){
+      const uP = parseFloat(String(n.props.spannungPrimaer||'').replace(',','.'));
+      const uS = parseFloat(String(n.props.spannungSekundaer||'').replace(',','.'));
+      if(!(uP>0) || !(uS>0)){
+        issues.push({level:'err', text:`Zähler ${label}: Indirekte Messung gewählt, aber Spannungswandler-Werte fehlen.`});
+      }
+    }
+    if(!n.props.messlokation){
+      issues.push({level:'warn', text:`Ein Zähler hat noch keine Messlokation (Z1, Z2 …) eingetragen.`});
+    }
+  });
+
+  // Doppelte Messlokationen
+  const seen = {};
+  zaehlerNodes.forEach(n=>{
+    const ml = n.props.messlokation;
+    if(!ml) return;
+    seen[ml] = (seen[ml]||0) + 1;
+  });
+  Object.entries(seen).filter(([,count])=>count>1).forEach(([ml])=>{
+    issues.push({level:'err', text:`Messlokation „${ml}" ist mehrfach vergeben.`});
+  });
+
+  // Unverbundene Symbole (keine einzige Verbindung)
+  nodes.filter(n=>n.type!=='text' && n.type!=='notiz').forEach(n=>{
+    const hasConn = conns.some(c=>c.a.node===n.id || c.b.node===n.id);
+    if(!hasConn){
+      const label = n.props.messlokation || n.props.label || n.props.anlagentyp || n.type;
+      issues.push({level:'warn', text:`„${label}" ist mit nichts verbunden.`});
+    }
+  });
+
+  // FAE ohne gültige PV-Verbindung (Sicherheitsnetz, falls eine Vorlage/Datei das umgeht)
+  nodes.filter(n=>n.type==='fae').forEach(n=>{
+    const linked = conns.some(c=>{
+      const other = c.a.node===n.id ? getNode(c.b.node) : (c.b.node===n.id ? getNode(c.a.node) : null);
+      return other && other.type==='anlage' && (other.props.anlagentyp===ANLAGENTYPEN[1] || other.props.anlagentyp===ANLAGENTYPEN[5]);
+    });
+    if(!linked) issues.push({level:'err', text:'FAE ist nicht mit einer PV-Erzeugungsanlage verbunden.'});
+  });
+
+  // Steuerungseinrichtung ohne Verknüpfung zu einer steuerbaren Anlage
+  nodes.filter(n=>n.type==='steuerung').forEach(n=>{
+    const linked = conns.some(c=> c.controlLink && (c.a.node===n.id || c.b.node===n.id));
+    if(!linked) issues.push({level:'warn', text:'Eine Steuerungseinrichtung ist mit keiner steuerbaren Anlage verknüpft (Steuerleitung fehlt).'});
+  });
+
+  return issues;
+}
+
+function showCheckModal(){
+  const issues = runChecks();
+  const body = document.getElementById('checkBody');
+  body.innerHTML = '';
+  if(issues.length===0){
+    const ok = document.createElement('div');
+    ok.className = 'check-ok';
+    ok.textContent = '✓ Keine Auffälligkeiten gefunden.';
+    body.appendChild(ok);
+  } else {
+    issues.forEach(iss=>{
+      const row = document.createElement('div');
+      row.className = 'check-item ' + (iss.level==='err' ? 'err' : 'warn');
+      row.textContent = (iss.level==='err' ? '✕ ' : '⚠ ') + iss.text;
+      body.appendChild(row);
+    });
+  }
+  document.getElementById('checkModal').classList.add('show');
+  document.getElementById('backdrop').classList.add('show');
+}
+function closeCheckModal(){
+  document.getElementById('checkModal').classList.remove('show');
+  document.getElementById('backdrop').classList.remove('show');
+}
+document.getElementById('btnCheck').addEventListener('click', showCheckModal);
+document.getElementById('closeCheck').addEventListener('click', closeCheckModal);
+
+document.getElementById('btnClear').addEventListener('click', ()=>{
+  if(nodes.length===0 && conns.length===0) return;
+  if(confirm('Gesamtes Diagramm leeren?')){
+    pushUndo();
+    nodes=[]; conns=[]; selNode=null; selConn=null; render(); renderProps();
+  }
+});
+
+function buildSaveData(){
+  return {
+    meta: {
+      projekt: document.getElementById('mProjekt').value,
+      ort: document.getElementById('mOrt').value,
+      ersteller: document.getElementById('mErsteller').value,
+      datum: document.getElementById('mDatum').value
+    },
+    nodes, conns
+  };
+}
+function loadProjectData(data){
+  nodes = data.nodes||[]; conns = data.conns||[];
+  if(data.meta){
+    document.getElementById('mProjekt').value = data.meta.projekt||'';
+    document.getElementById('mOrt').value = data.meta.ort||'';
+    document.getElementById('mErsteller').value = data.meta.ersteller||'';
+    document.getElementById('mDatum').value = data.meta.datum||'';
+  }
+  selNode=null; selConn=null; render(); renderProps();
+}
+
+document.getElementById('btnSave').addEventListener('click', ()=>{
+  const data = buildSaveData();
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (data.meta.projekt||'messkonzept').replace(/[^a-z0-9_\-]+/gi,'_') + '.json';
+  a.click();
+});
+
+document.getElementById('btnLoad').addEventListener('click', ()=>document.getElementById('fileLoad').click());
+document.getElementById('fileLoad').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    try{
+      const data = JSON.parse(ev.target.result);
+      if(nodes.length>0 || conns.length>0) pushUndo();
+      loadProjectData(data);
+    }catch(err){ alert('Datei konnte nicht gelesen werden: '+err.message); }
+  };
+  reader.readAsText(file);
+  e.target.value='';
+});
+
+// ---------- Export ----------
+function buildExportSvgDataUrl(){
+  // clone svg, trim to content bounding box, add header text
+  const clone = svg.cloneNode(true);
+  clone.querySelectorAll('.connector, .ext-plus, .lock-badge').forEach(c=>c.remove());
+
+  // The exported SVG is decoded as a standalone image, so it has no access to the page's
+  // external <style> — without this, shapes/text would render unstyled (black boxes, no text).
+  const styleEl = document.createElementNS(SVGNS,'style');
+  styleEl.textContent = `
+    text{font-family:'IBM Plex Mono',monospace;fill:#20303f;}
+    .node-shape{fill:#ffffff;stroke:#20303f;stroke-width:2;}
+    .node-shape.planned{fill:#dde2e7;stroke-dasharray:4,3;}
+    .node-shape.ns{stroke:#3f7d5c;}
+    .node-shape.ms{stroke:#2b6cb0;}
+    .node-shape.hs{stroke:#b5432f;}
+    .notiz-shape{fill:#fef7d9;stroke:#c9a227;stroke-width:1.5;}
+    .notiz-fold{fill:#f5e7b0;stroke:#c9a227;stroke-width:1;}
+    .notiz-text{font-size:10.5px;fill:#5c4a12;}
+    .lbl-planned{font-size:10px;font-style:italic;fill:#8a95a3;}
+    .zaehler-header{fill:#20303f;stroke:none;}
+    .zaehler-header-text{font-size:10.5px;font-weight:600;fill:#eef2f6;}
+    .lbl-type{font-size:12px;font-weight:600;}
+    .lbl-sub{font-size:10.5px;fill:#4a5866;}
+    .conn-line{stroke:#20303f;stroke-width:2;fill:none;}
+    .conn-line.ctrl{stroke:#c26f16;stroke-dasharray:6,4;}
+    .conn-label{font-size:10.5px;fill:#4a5866;}
+    .conn-label-bg{fill:#ffffff;}
+  `;
+  clone.insertBefore(styleEl, clone.firstChild);
+
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  nodes.forEach(n=>{
+    minX=Math.min(minX,n.x-n.w/2-20); maxX=Math.max(maxX,n.x+n.w/2+120);
+    minY=Math.min(minY,n.y-n.h/2-30); maxY=Math.max(maxY,n.y+n.h/2+50);
+  });
+  if(!isFinite(minX)){ minX=0;minY=0;maxX=800;maxY=500; }
+  const padTop = 70;
+
+  // Legende: nur Einträge für Symbole, die im Diagramm tatsächlich vorkommen
+  const legendItems = [];
+  if(nodes.some(n=>n.type==='netz')) legendItems.push('○ Netz');
+  if(nodes.some(n=>n.type==='zaehler')) legendItems.push('▭ Zähler / Messpunkt');
+  const anlTypes = new Set(nodes.filter(n=>n.type==='anlage').map(n=>n.props.anlagentyp));
+  if([...anlTypes].some(t=>VERBRAUCHER_ARTIG.includes(ANLAGENTYPEN.indexOf(t)))) legendItems.push('○ mit Zacken = Bezug/Verbraucher (auch WP/Klima/Wallbox)');
+  if(anlTypes.has(ANLAGENTYPEN[1]) || anlTypes.has(ANLAGENTYPEN[2]) || anlTypes.has(ANLAGENTYPEN[3])) legendItems.push('○ mit „G" = Erzeugungsanlage (PV/BHKW/Wind)');
+  if(anlTypes.has(ANLAGENTYPEN[4])) legendItems.push('○ mit Batteriesymbol = Speicher');
+  if(anlTypes.has(ANLAGENTYPEN[5])) legendItems.push('○ geteilt (G + Batterie) = PV + Speicher, DC-gekoppelt');
+  if(nodes.some(n=>n.type==='steuerung')) legendItems.push('○ „S" = Steuerungseinrichtung (Steuergerät)');
+  if(nodes.some(n=>n.type==='fae')) legendItems.push('○ „FAE" = Freischaltelement');
+  if(nodes.some(n=>n.type==='trafo')) legendItems.push('○ zwei Kreise übereinander = Transformator (MS/NS-Übergang)');
+  if(nodes.some(n=>n.type==='notiz')) legendItems.push('▭ gelbe Haftnotiz = Anmerkung');
+  const netzVoltageClasses = new Set(nodes.filter(n=>n.type==='netz').map(n=>voltageClass(n.props.netzform)));
+  if(netzVoltageClasses.size>1) legendItems.push('Netz-Farbe: grün = NS, blau = MS, rot = HS');
+  if(nodes.some(n=>n.props && n.props.status==='geplant')) legendItems.push('grau / gestrichelt = in Planung, noch nicht vorhanden');
+  if(conns.some(c=>c.controlLink)) legendItems.push('– – – (orange) = Steuerleitung');
+
+  const legendLineH = 15;
+  const legendH = legendItems.length ? (legendItems.length*legendLineH + 26) : 0;
+  const w = maxX-minX, h = (maxY-minY)+padTop+legendH;
+
+  clone.setAttribute('viewBox', `${minX} ${minY-padTop} ${w} ${h}`);
+  clone.setAttribute('width', w); clone.setAttribute('height', h);
+
+  const bg = document.createElementNS(SVGNS,'rect');
+  bg.setAttribute('x',minX); bg.setAttribute('y',minY-padTop);
+  bg.setAttribute('width',w); bg.setAttribute('height',h);
+  bg.setAttribute('fill','#ffffff');
+  clone.insertBefore(bg, clone.firstChild);
+
+  if(legendItems.length){
+    const legendY = maxY + 30;
+    const heading = document.createElementNS(SVGNS,'text');
+    heading.setAttribute('x', minX+16); heading.setAttribute('y', legendY);
+    heading.setAttribute('font-family','IBM Plex Mono, monospace');
+    heading.setAttribute('font-size','10.5'); heading.setAttribute('font-weight','600');
+    heading.setAttribute('fill','#4a5866');
+    heading.textContent = 'LEGENDE';
+    clone.appendChild(heading);
+    legendItems.forEach((txt,i)=>{
+      const t = document.createElementNS(SVGNS,'text');
+      t.setAttribute('x', minX+16); t.setAttribute('y', legendY + 18 + i*legendLineH);
+      t.setAttribute('font-family','IBM Plex Mono, monospace');
+      t.setAttribute('font-size','9.5'); t.setAttribute('fill','#4a5866');
+      t.textContent = txt;
+      clone.appendChild(t);
+    });
+  }
+
+  const meta = {
+    projekt: document.getElementById('mProjekt').value || 'Messkonzept',
+    ort: document.getElementById('mOrt').value,
+    ersteller: document.getElementById('mErsteller').value,
+    datum: document.getElementById('mDatum').value
+  };
+  const title = document.createElementNS(SVGNS,'text');
+  title.setAttribute('x', minX+16); title.setAttribute('y', minY-padTop+28);
+  title.setAttribute('font-family','IBM Plex Mono, monospace');
+  title.setAttribute('font-size','18'); title.setAttribute('font-weight','600');
+  title.setAttribute('fill','#1c2733');
+  title.textContent = meta.projekt;
+  clone.appendChild(title);
+
+  const sub = document.createElementNS(SVGNS,'text');
+  sub.setAttribute('x', minX+16); sub.setAttribute('y', minY-padTop+48);
+  sub.setAttribute('font-family','IBM Plex Mono, monospace');
+  sub.setAttribute('font-size','11.5'); sub.setAttribute('fill','#4a5866');
+  sub.textContent = [meta.ort, meta.ersteller, meta.datum].filter(Boolean).join('   ·   ');
+  clone.appendChild(sub);
+
+  const xml = new XMLSerializer().serializeToString(clone);
+  const svg64 = btoa(unescape(encodeURIComponent(xml)));
+  return { url: 'data:image/svg+xml;base64,'+svg64, w, h, minX, viewY: minY-padTop };
+}
+
+function renderToCanvas(cb){
+  const { url, w, h, minX, viewY } = buildExportSvgDataUrl();
+  const scale = 2;
+  const img = new Image();
+  img.onload = ()=>{
+    const canvas = document.createElement('canvas');
+    canvas.width = w*scale; canvas.height = h*scale;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.scale(scale,scale);
+    ctx.drawImage(img,0,0,w,h);
+    cb(canvas, { minX, viewY, w, h });
+  };
+  img.src = url;
+}
+
+document.getElementById('btnPng').addEventListener('click', ()=>{
+  if(nodes.length===0){ alert('Diagramm ist leer.'); return; }
+  renderToCanvas((canvas)=>{
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = (document.getElementById('mProjekt').value||'messkonzept').replace(/[^a-z0-9_\-]+/gi,'_') + '.png';
+    a.click();
+  });
+});
+
+document.getElementById('btnPdf').addEventListener('click', ()=>{
+  if(nodes.length===0){ alert('Diagramm ist leer.'); return; }
+  renderToCanvas((canvas, tf)=>{
+    const { jsPDF } = window.jspdf;
+    const imgData = canvas.toDataURL('image/png');
+    const ratio = canvas.width/canvas.height;
+    const orientSetting = document.getElementById('pdfOrientation').value;
+    const orientation = orientSetting==='auto' ? (ratio>1 ? 'landscape':'portrait') : orientSetting;
+    const format = document.getElementById('pdfFormat').value;
+    const pdf = new jsPDF({ orientation, unit:'pt', format });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const marginCm = parseFloat(document.getElementById('pdfMargin').value) || 2;
+    const margin = marginCm * 28.3465; // cm → pt
+    let imgW = pageW-margin*2, imgH = imgW/ratio;
+    if(imgH > pageH-margin*2){ imgH = pageH-margin*2; imgW = imgH*ratio; }
+    const scaleSetting = document.getElementById('pdfScale').value;
+    if(scaleSetting !== 'max'){
+      const factor = parseFloat(scaleSetting);
+      imgW *= factor; imgH *= factor;
+    }
+    const x = (pageW-imgW)/2, y = (pageH-imgH)/2;
+    pdf.addImage(imgData,'PNG',x,y,imgW,imgH);
+
+    // Zählernummer als editierbares PDF-Formularfeld überlagern, damit sie sich später
+    // (z.B. bei Zählertausch) direkt im PDF ändern lässt, ohne das Diagramm neu zu exportieren.
+    if(tf && jsPDF.AcroFormTextField){
+      const scaleX = imgW / tf.w, scaleY = imgH / tf.h;
+      // Monospace-Zeichenbreite grob geschätzt, um die "Nr: "-Vorsilbe im Bild nicht zu überdecken
+      const charW = ZAEHLER_LH * 0.62;
+      let fieldSeq = 0;
+      nodes.filter(n=>n.type==='zaehler').forEach(n=>{
+        const lines = zaehlerBodyLines(n.props);
+        const idx = lines.findIndex(l=>l.field==='zaehlernummer');
+        if(idx===-1) return;
+        const bodyTop = -n.h/2 + ZAEHLER_HEADER_H + ZAEHLER_PAD_TOP;
+        const lineY = n.y + bodyTop + idx*ZAEHLER_LH; // Baseline in SVG-Koordinaten
+        const prefixW = lines[idx].prefix.length * charW;
+        const svgFieldX = n.x - n.w/2 + ZAEHLER_PAD_LEFT + prefixW;
+        const svgFieldRight = n.x + n.w/2 - 8;
+        const svgFieldTop = lineY - 10;
+        const svgFieldH = 14;
+
+        const pdfX = x + (svgFieldX - tf.minX) * scaleX;
+        const pdfY = y + (svgFieldTop - tf.viewY) * scaleY;
+        const pdfW = Math.max(20, (svgFieldRight - svgFieldX) * scaleX);
+        const pdfH = svgFieldH * scaleY;
+
+        // Weiße Fläche über den fest eingebrannten Wert legen, damit nur das Formularfeld sichtbar ist
+        pdf.setFillColor(255,255,255);
+        pdf.rect(pdfX-1, pdfY-1, pdfW+2, pdfH+2, 'F');
+
+        const field = new jsPDF.AcroFormTextField();
+        field.fieldName = 'zaehlernummer_' + (fieldSeq++) + '_' + (n.props.messlokation||n.id);
+        field.value = n.props.zaehlernummer || '';
+        field.x = pdfX; field.y = pdfY; field.width = pdfW; field.height = pdfH;
+        field.fontSize = Math.max(7, Math.round(10.5*scaleY));
+        field.color = '#20303f';
+        pdf.addField(field);
+      });
+    }
+
+    pdf.save((document.getElementById('mProjekt').value||'messkonzept').replace(/[^a-z0-9_\-]+/gi,'_') + '.pdf');
+  });
+});
+
+// ---------- init ----------
+loadTemplate('direkt');
+document.getElementById('tmplSelect').value = 'direkt';
+document.getElementById('mDatum').valueAsDate = new Date();
+
+})();
+</script>
+</body>
+</html>
