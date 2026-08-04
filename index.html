@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rico's Toolbox</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0b0f14">
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#121821; --panel2:#182130; --edge:#243044;
+    --amber:#ffb020; --text:#e7edf5; --text-dim:#8ea0b8; --green:#37e08a;
+    --mono:'SF Mono',ui-monospace,Consolas,monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    min-height:100vh;
+  }
+  header{ padding:32px 20px 20px; text-align:center; border-bottom:1px solid var(--edge); }
+  header h1{margin:0 0 6px; font-size:22px; letter-spacing:.02em;}
+  header h1 b{color:var(--amber);}
+  header p{margin:0; color:var(--text-dim); font-size:13px; font-family:var(--mono);}
+
+  main{max-width:900px; margin:0 auto; padding:24px 16px 60px;}
+
+  .searchbar{ display:flex; gap:10px; margin-bottom:18px; }
+  .searchbar input{
+    flex:1; background:var(--panel); border:1px solid var(--edge); color:var(--text);
+    padding:10px 14px; border-radius:10px; font-size:14px; font-family:inherit;
+  }
+  .searchbar button{
+    background:var(--panel2); border:1px solid var(--edge); color:var(--text-dim);
+    padding:10px 14px; border-radius:10px; cursor:pointer; font-family:var(--mono); font-size:12px;
+  }
+
+  .status{color:var(--text-dim); font-size:13px; font-family:var(--mono); text-align:center; padding:30px 0;}
+
+  .grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:14px; }
+  .card{
+    background:var(--panel); border:1px solid var(--edge); border-radius:14px; padding:16px;
+    text-decoration:none; color:var(--text); display:flex; flex-direction:column; gap:8px;
+    transition:.15s; position:relative; overflow:hidden;
+  }
+  .card:hover{ border-color:var(--amber); transform:translateY(-2px); }
+  .card .icon{font-size:22px;}
+  .card .name{font-weight:700; font-size:15px;}
+  .card .desc{font-size:12.5px; color:var(--text-dim); line-height:1.4; min-height:34px;}
+  .card .meta{
+    display:flex; justify-content:flex-end; align-items:center;
+    font-family:var(--mono); font-size:10.5px; color:var(--text-dim); margin-top:auto; padding-top:8px;
+    border-top:1px solid var(--edge);
+  }
+  .card .arrow{color:var(--amber); font-size:16px;}
+
+  .pin{position:absolute; top:10px; right:10px; font-size:11px; color:var(--amber); cursor:pointer; opacity:.6;}
+  .pin.active{opacity:1;}
+
+  footer{
+    text-align:center; color:var(--text-dim); font-size:11px; font-family:var(--mono);
+    padding:20px; border-top:1px solid var(--edge);
+  }
+  footer a{color:var(--amber); text-decoration:none;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🧰 <b>Rico's</b> Toolbox</h1>
+  <p id="countLabel">lädt …</p>
+</header>
+
+<main>
+  <div class="searchbar">
+    <input type="text" id="search" placeholder="Tool suchen…">
+    <button id="refreshBtn">↻ Aktualisieren</button>
+  </div>
+
+  <div id="status" class="status">Lade Tools …</div>
+  <div class="grid" id="grid"></div>
+</main>
+
+<footer>
+  Neuer Ordner mit <code>index.html</code> in diesem Repo → taucht automatisch hier auf.<br>
+  Optional: <code>meta.json</code> im Ordner für Titel/Beschreibung/Icon.
+</footer>
+
+<script>
+(() => {
+  // ---- Repo-Konfiguration: hier anpassen falls Name/Owner abweicht ----
+  const OWNER = 'ricogrutze-oss';
+  const REPO  = 'tools';
+  // -----------------------------------------------------------------
+
+  const CACHE_KEY = 'toolbox_cache_v1';
+  const CACHE_TTL_MS = 10 * 60 * 1000;
+  const PIN_KEY = 'toolbox_pins_v1';
+
+  const els = {
+    grid: document.getElementById('grid'),
+    status: document.getElementById('status'),
+    countLabel: document.getElementById('countLabel'),
+    search: document.getElementById('search'),
+    refreshBtn: document.getElementById('refreshBtn'),
+  };
+
+  let allTools = [];
+  let pins = JSON.parse(localStorage.getItem(PIN_KEY) || '[]');
+
+  async function loadTools(force){
+    if(!force){
+      const cached = localStorage.getItem(CACHE_KEY);
+      if(cached){
+        try{
+          const {ts, data} = JSON.parse(cached);
+          if(Date.now() - ts < CACHE_TTL_MS){ allTools = data; render(); return; }
+        }catch(e){}
+      }
+    }
+    els.status.textContent = 'Lade Tools …';
+    els.status.style.display = 'block';
+    try{
+      const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/`);
+      if(!res.ok){
+        if(res.status === 403) throw new Error('GitHub API Rate-Limit erreicht — später erneut versuchen.');
+        throw new Error('GitHub API Fehler: ' + res.status);
+      }
+      const items = await res.json();
+      const dirs = items.filter(i => i.type === 'dir');
+
+      allTools = await Promise.all(dirs.map(async (d) => {
+        let meta = {};
+        try{
+          const metaRes = await fetch(`https://raw.githubusercontent.com/${OWNER}/${REPO}/main/${d.name}/meta.json`);
+          if(metaRes.ok) meta = await metaRes.json();
+        }catch(e){ /* kein meta.json vorhanden, egal */ }
+        return {
+          folder: d.name,
+          title: meta.title || d.name,
+          description: meta.description || '',
+          icon: meta.icon || '🔧',
+          url: `./${d.name}/`
+        };
+      }));
+
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ts: Date.now(), data: allTools}));
+      render();
+    }catch(err){
+      els.status.textContent = '⚠ ' + err.message;
+      const cached = localStorage.getItem(CACHE_KEY);
+      if(cached){ try{ allTools = JSON.parse(cached).data; render(); }catch(e){} }
+    }
+  }
+
+  function render(){
+    const q = els.search.value.trim().toLowerCase();
+    let list = allTools.filter(t =>
+      !q || t.title.toLowerCase().includes(q) || t.description.toLowerCase().includes(q)
+    );
+    list.sort((a,b) => {
+      const pa = pins.includes(a.folder), pb = pins.includes(b.folder);
+      if(pa !== pb) return pa ? -1 : 1;
+      return a.title.localeCompare(b.title);
+    });
+
+    els.countLabel.textContent = list.length + (list.length===1 ? ' Tool' : ' Tools');
+    els.status.style.display = list.length ? 'none' : 'block';
+    if(!list.length && !els.status.textContent.startsWith('⚠')){
+      els.status.textContent = q ? 'Keine Treffer.' : 'Noch keine Tool-Ordner gefunden.';
+      els.status.style.display = 'block';
+    }
+
+    els.grid.innerHTML = '';
+    list.forEach(t => {
+      const card = document.createElement('a');
+      card.className = 'card';
+      card.href = t.url;
+      const pinned = pins.includes(t.folder);
+      card.innerHTML = `
+        <span class="pin ${pinned?'active':''}" title="Anheften" data-name="${t.folder}">📌</span>
+        <div class="icon">${t.icon}</div>
+        <div class="name">${escapeHtml(t.title)}</div>
+        <div class="desc">${escapeHtml(t.description || 'Keine Beschreibung')}</div>
+        <div class="meta"><span class="arrow">→</span></div>
+      `;
+      card.querySelector('.pin').addEventListener('click', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        togglePin(t.folder);
+      });
+      els.grid.appendChild(card);
+    });
+  }
+
+  function togglePin(name){
+    if(pins.includes(name)) pins = pins.filter(n => n !== name);
+    else pins.push(name);
+    localStorage.setItem(PIN_KEY, JSON.stringify(pins));
+    render();
+  }
+
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  els.search.addEventListener('input', render);
+  els.refreshBtn.addEventListener('click', () => loadTools(true));
+
+  loadTools(false);
+
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(()=>{});
+    });
+  }
+})();
+</script>
+</body>
+</html>
