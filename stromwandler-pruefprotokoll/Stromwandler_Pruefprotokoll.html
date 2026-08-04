@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stromwandler Prüfprotokoll</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --blau:     #1a3a5c;
+  --hellblau: #d0e4f7;
+  --akzent:   #2e7fc1;
+  --ok:       #2ecc71;
+  --warn:     #f39c12;
+  --danger:   #e74c3c;
+  --grau:     #f4f6f8;
+  --border:   #ccd6e0;
+  --text:     #1a2530;
+  --muted:    #6b7f90;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  color: var(--text);
+  background: #eef2f6;
+  padding: 12px;
+}
+h1 { font-size: 18px; color: var(--blau); font-weight: 700; }
+h2 { font-size: 12px; color: var(--blau); font-weight: 700; letter-spacing: 0.08em;
+     text-transform: uppercase; margin: 14px 0 6px; border-left: 3px solid var(--akzent);
+     padding-left: 8px; }
+.card { background: white; border-radius: 10px; padding: 14px; margin-bottom: 12px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+.header-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.header-bar .logo { font-size: 22px; }
+
+/* Stammdaten Grid */
+.stamm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.field label { font-size: 10px; color: var(--muted); display: block; margin-bottom: 2px; }
+.field input, .field select {
+  width: 100%; border: 1px solid var(--border); border-radius: 5px;
+  padding: 6px 8px; font-size: 12px; color: var(--text); background: var(--grau);
+  outline: none;
+}
+.field input:focus, .field select:focus { border-color: var(--akzent); background: white; }
+
+/* Bürdenrechner */
+.buerden-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+.buerden-result {
+  background: var(--hellblau); border-radius: 6px; padding: 8px 10px;
+  margin-top: 8px; font-size: 12px; color: var(--blau);
+}
+.buerden-result b { font-size: 14px; }
+
+/* Messmatrix */
+table { width: 100%; border-collapse: collapse; font-size: 11px; }
+thead th {
+  background: var(--blau); color: white; padding: 6px 4px; text-align: center;
+  font-size: 10px; font-weight: 600;
+}
+thead th.col-strom { width: 55px; }
+thead th.col-mess  { width: 70px; }
+thead th.col-buerden { }
+.strom-header td {
+  background: var(--hellblau); color: var(--blau); font-weight: 700;
+  padding: 5px 8px; font-size: 12px;
+}
+tbody tr:nth-child(even) td { background: var(--grau); }
+tbody td { padding: 3px 4px; border: 1px solid var(--border); vertical-align: middle; }
+tbody td.label-cell { color: var(--muted); font-size: 10px; white-space: nowrap; }
+.buerden-label-input {
+  width: 100%; border: none; background: transparent; text-align: center;
+  font-size: 10px; font-weight: 700; color: var(--blau); padding: 2px;
+}
+.buerden-label-input:focus { outline: 1px solid var(--akzent); border-radius: 3px; }
+.mess-input {
+  width: 100%; border: none; background: transparent; text-align: center;
+  font-size: 11px; padding: 2px;
+}
+.mess-input:focus { outline: 1px solid var(--akzent); border-radius: 3px; background: white; }
+
+/* Ampel */
+.ampel { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
+.ampel-ok   { background: var(--ok); }
+.ampel-warn { background: var(--warn); }
+.ampel-bad  { background: var(--danger); }
+
+/* Buttons */
+.btn { display: inline-block; padding: 9px 18px; border-radius: 7px; border: none;
+       font-size: 13px; font-weight: 600; cursor: pointer; }
+.btn-primary { background: var(--akzent); color: white; }
+.btn-secondary { background: var(--grau); color: var(--blau); border: 1px solid var(--border); }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Chart */
+.chart-wrap { position: relative; height: 240px; }
+
+/* Normgrenzen Tabelle */
+.norm-table { font-size: 10px; }
+.norm-table th { font-size: 10px; }
+.norm-table td { text-align: center; }
+.norm-ok   { color: var(--ok); font-weight: 700; }
+.norm-warn { color: var(--warn); font-weight: 700; }
+.norm-bad  { color: var(--danger); font-weight: 700; }
+
+/* Bemerkungen */
+textarea {
+  width: 100%; border: 1px solid var(--border); border-radius: 5px;
+  padding: 8px; font-size: 12px; font-family: inherit; resize: vertical;
+  background: var(--grau); color: var(--text);
+}
+textarea:focus { outline: none; border-color: var(--akzent); background: white; }
+
+/* Print */
+@media print {
+  body { background: white; padding: 0; font-size: 11px; }
+  .card { box-shadow: none; border: 1px solid #ccc; margin-bottom: 8px; padding: 10px; }
+  .no-print { display: none !important; }
+  .chart-wrap { height: 200px; }
+  h2 { margin: 10px 0 4px; }
+  .buerden-label-input, .mess-input { border-bottom: 1px solid #ccc; }
+}
+</style>
+</head>
+<body>
+
+<!-- Kopfbereich -->
+<div class="card">
+  <div class="header-bar">
+    <div class="logo">⚡</div>
+    <div>
+      <h1>Stromwandler Prüfprotokoll</h1>
+      <div style="font-size:10px;color:var(--muted)">Bürdenabhängigkeit · Fehlerkurve · IEC 61869-2</div>
+    </div>
+  </div>
+
+  <h2>Stammdaten</h2>
+  <div class="stamm-grid">
+    <div class="field"><label>Messort / Anlage</label><input id="s_messort" type="text" placeholder="z.B. UW Magdeburg Nord"></div>
+    <div class="field"><label>Prüfgerät</label><input id="s_pruefgeraet" type="text" value="PWS 2.3"></div>
+    <div class="field"><label>Wandlertyp / Fabrikat</label><input id="s_wandler" type="text" placeholder="z.B. ABB TPU 52"></div>
+    <div class="field"><label>Prüfkabel</label><input id="s_kabel" type="text" placeholder="Querschnitt, Länge"></div>
+    <div class="field"><label>Nennübersetzung (A/A)</label><input id="s_uebersetzung" type="text" placeholder="z.B. 100/1"></div>
+    <div class="field"><label>Prüfdatum</label><input id="s_datum" type="date"></div>
+    <div class="field"><label>Nennbürde (VA)</label><input id="s_nennbuerde" type="number" placeholder="z.B. 5" oninput="updateBuerdenrechner()"></div>
+    <div class="field"><label>Prüfer</label><input id="s_pruefer" type="text" placeholder="Name"></div>
+    <div class="field"><label>Genauigkeitsklasse</label>
+      <select id="s_klasse">
+        <option value="0.2S">0,2S</option>
+        <option value="0.5S">0,5S</option>
+        <option value="0.2">0,2</option>
+        <option value="0.5">0,5</option>
+      </select>
+    </div>
+    <div class="field"><label>Witterung</label><input id="s_witterung" type="text" placeholder="z.B. trocken, 22°C"></div>
+  </div>
+</div>
+
+<!-- Bürdenrechner -->
+<div class="card no-print" id="buerden_card">
+  <h2>🔧 Bürdenrechner (Sekundärkabel)</h2>
+  <div class="buerden-row">
+    <div class="field">
+      <label>Kabellänge ges. (m)</label>
+      <input id="b_laenge" type="number" placeholder="z.B. 10" oninput="updateBuerdenrechner()">
+    </div>
+    <div class="field">
+      <label>Querschnitt (mm²)</label>
+      <input id="b_querschnitt" type="number" placeholder="z.B. 2.5" step="0.1" oninput="updateBuerdenrechner()">
+    </div>
+    <div class="field">
+      <label>Sekundärstrom (A)</label>
+      <input id="b_isek" type="number" placeholder="z.B. 1" step="0.1" value="1" oninput="updateBuerdenrechner()">
+    </div>
+  </div>
+  <div class="buerden-result" id="buerden_result" style="display:none">
+    R = <b id="br_r">–</b> Ω &nbsp;·&nbsp;
+    Bürde Kabel = <b id="br_va">–</b> VA &nbsp;·&nbsp;
+    = <b id="br_pct">–</b>% der Nennbürde
+    <span id="br_ampel" style="margin-left:8px"></span>
+  </div>
+</div>
+
+<!-- Messmatrix -->
+<div class="card">
+  <h2>Messmatrix – Verhältnis- und Phasenfehler</h2>
+  <div style="font-size:10px;color:var(--muted);margin-bottom:6px">
+    Bürdenspalten frei beschriftbar (z.B. VA oder %) · Werte in mA und %
+  </div>
+  <table id="mess_table">
+    <thead>
+      <tr>
+        <th class="col-strom">I<sub>prim</sub></th>
+        <th class="col-mess">Messgröße</th>
+        <th><input class="buerden-label-input" id="bl_0" value="Bürde 1%" oninput="updateChart()"></th>
+        <th><input class="buerden-label-input" id="bl_1" value="Bürde 5%" oninput="updateChart()"></th>
+        <th><input class="buerden-label-input" id="bl_2" value="Bürde 10%" oninput="updateChart()"></th>
+        <th><input class="buerden-label-input" id="bl_3" value="Bürde 25%" oninput="updateChart()"></th>
+      </tr>
+    </thead>
+    <tbody id="mess_body">
+    </tbody>
+  </table>
+</div>
+
+<!-- Diagramm -->
+<div class="card">
+  <h2>Fehlerkurve – Verhältnisfehler vs. Bürde</h2>
+  <div class="chart-wrap">
+    <canvas id="fehlerChart"></canvas>
+  </div>
+  <div style="font-size:10px;color:var(--muted);margin-top:6px">
+    Gestrichelt = Normgrenze Klasse <span id="chart_klasse_label">0,2S</span> bei Nennstrom (±0,20%)
+  </div>
+</div>
+
+<!-- Normgrenzwerte -->
+<div class="card">
+  <h2>Normgrenzwerte IEC 61869-2</h2>
+  <table class="norm-table">
+    <thead>
+      <tr>
+        <th>Klasse</th>
+        <th>1% In</th>
+        <th>5% In</th>
+        <th>20% In</th>
+        <th>100% In</th>
+        <th>120% In</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><b>0,2S</b></td><td>±0,75% / ±30'</td><td>±0,35% / ±15'</td><td>±0,20% / ±10'</td><td>±0,20% / ±10'</td><td>±0,20% / ±10'</td></tr>
+      <tr><td><b>0,5S</b></td><td>±1,50% / ±90'</td><td>±0,75% / ±45'</td><td>±0,50% / ±30'</td><td>±0,50% / ±30'</td><td>±0,50% / ±30'</td></tr>
+      <tr><td><b>0,2</b></td><td>n.a.</td><td>±0,35% / ±15'</td><td>±0,20% / ±10'</td><td>±0,20% / ±10'</td><td>±0,20% / ±10'</td></tr>
+      <tr><td><b>0,5</b></td><td>n.a.</td><td>±0,75% / ±45'</td><td>±0,50% / ±30'</td><td>±0,50% / ±30'</td><td>±0,50% / ±30'</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Ergebnis + Bemerkungen -->
+<div class="card">
+  <h2>Prüfergebnis</h2>
+  <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+    <label style="display:flex;align-items:center;gap:5px;font-weight:600">
+      <input type="radio" name="ergebnis" value="bestanden"> ✓ Bestanden
+    </label>
+    <label style="display:flex;align-items:center;gap:5px;font-weight:600">
+      <input type="radio" name="ergebnis" value="nicht_bestanden"> ✗ Nicht bestanden
+    </label>
+    <label style="display:flex;align-items:center;gap:5px;font-weight:600">
+      <input type="radio" name="ergebnis" value="bedingt"> ⚠ Bedingt bestanden
+    </label>
+  </div>
+  <div class="field">
+    <label>Bemerkungen / Auffälligkeiten</label>
+    <textarea id="bemerkungen" rows="3" placeholder="Besonderheiten, Auffälligkeiten, Empfehlungen..."></textarea>
+  </div>
+</div>
+
+<!-- Buttons -->
+<div class="card no-print">
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="window.print()">🖨 Als PDF drucken</button>
+    <button class="btn btn-secondary" onclick="saveData()">💾 Speichern</button>
+    <button class="btn btn-secondary" onclick="loadData()">📂 Laden</button>
+    <button class="btn btn-secondary" onclick="clearAll()">🗑 Leeren</button>
+  </div>
+  <div style="font-size:10px;color:var(--muted);margin-top:6px">
+    Drucken → "Als PDF speichern" im Druckdialog · Speichern lädt Datei als JSON
+  </div>
+</div>
+
+<script>
+// ── Messmatrix aufbauen ────────────────────────────────────────────────────
+const STROEME = ['I1', 'I2', 'I3'];
+const MESSGROESSEN = [
+  { id: 'vf', label: 'Verh.-Fehler [%]' },
+  { id: 'pf', label: 'Phasenfehler [\']' },
+  { id: 'isek', label: 'I<sub>sek</sub> [mA]' },
+];
+const N_BUERDEN = 4;
+
+function buildTable() {
+  const tbody = document.getElementById('mess_body');
+  tbody.innerHTML = '';
+
+  STROEME.forEach((strom, si) => {
+    // Primärstrom-Zeile
+    const trStrom = document.createElement('tr');
+    trStrom.className = 'strom-header';
+    trStrom.innerHTML = `<td colspan="${2 + N_BUERDEN}">
+      <input style="border:none;background:transparent;font-weight:700;font-size:12px;
+                    color:var(--blau);width:200px" 
+             id="iprim_${si}" placeholder="${strom} = ___ A" oninput="updateChart()">
+    </td>`;
+    tbody.appendChild(trStrom);
+
+    MESSGROESSEN.forEach((mg, mi) => {
+      const tr = document.createElement('tr');
+      let cells = `<td style="width:55px"></td>
+                   <td class="label-cell">${mg.label}</td>`;
+      for (let bi = 0; bi < N_BUERDEN; bi++) {
+        cells += `<td><input class="mess-input" id="v_${si}_${mi}_${bi}"
+                    type="number" step="0.001"
+                    oninput="updateChart()" placeholder="–"></td>`;
+      }
+      tr.innerHTML = cells;
+      tbody.appendChild(tr);
+    });
+  });
+}
+
+// ── Bürdenrechner ──────────────────────────────────────────────────────────
+function updateBuerdenrechner() {
+  const L  = parseFloat(document.getElementById('b_laenge').value);
+  const A  = parseFloat(document.getElementById('b_querschnitt').value);
+  const I  = parseFloat(document.getElementById('b_isek').value);
+  const Sn = parseFloat(document.getElementById('s_nennbuerde').value);
+
+  const res = document.getElementById('buerden_result');
+  if (!L || !A || !I) { res.style.display = 'none'; return; }
+
+  const R  = 0.0175 * 2 * L / A;
+  const Va = I * I * R;
+  const pct = Sn ? (Va / Sn * 100) : null;
+
+  document.getElementById('br_r').textContent   = R.toFixed(3);
+  document.getElementById('br_va').textContent  = Va.toFixed(4);
+  document.getElementById('br_pct').textContent = pct ? pct.toFixed(1) : '–';
+
+  const ampel = document.getElementById('br_ampel');
+  if (pct) {
+    if      (pct < 5)  ampel.innerHTML = '<span class="ampel ampel-bad"></span>Stark unterbürdet';
+    else if (pct < 25) ampel.innerHTML = '<span class="ampel ampel-warn"></span>Unterbürdet';
+    else               ampel.innerHTML = '<span class="ampel ampel-ok"></span>OK';
+  }
+  res.style.display = 'block';
+}
+
+// ── Diagramm ───────────────────────────────────────────────────────────────
+let chart = null;
+const FARBEN = ['#2e7fc1', '#e74c3c', '#2ecc71'];
+
+function getKlasseGrenze(klasse) {
+  const g = { '0.2S': 0.20, '0.5S': 0.50, '0.2': 0.20, '0.5': 0.50 };
+  return g[klasse] || 0.20;
+}
+
+function updateChart() {
+  const labels = [];
+  for (let bi = 0; bi < N_BUERDEN; bi++) {
+    labels.push(document.getElementById(`bl_${bi}`)?.value || `B${bi+1}`);
+  }
+
+  const klasse = document.getElementById('s_klasse').value;
+  const grenze = getKlasseGrenze(klasse);
+  document.getElementById('chart_klasse_label').textContent = klasse.replace('.', ',');
+
+  const datasets = STROEME.map((strom, si) => {
+    const data = [];
+    for (let bi = 0; bi < N_BUERDEN; bi++) {
+      const val = parseFloat(document.getElementById(`v_${si}_0_${bi}`)?.value);
+      data.push(isNaN(val) ? null : val);
+    }
+    const iprim = document.getElementById(`iprim_${si}`)?.value || strom;
+    return {
+      label: iprim || strom,
+      data,
+      borderColor: FARBEN[si],
+      backgroundColor: FARBEN[si] + '22',
+      borderWidth: 2,
+      pointRadius: 5,
+      tension: 0.2,
+      spanGaps: false,
+    };
+  });
+
+  // Normgrenzlinien
+  const grenzeOben = Array(N_BUERDEN).fill(grenze);
+  const grenzeUnten = Array(N_BUERDEN).fill(-grenze);
+  datasets.push({
+    label: `+Grenze ${klasse}`,
+    data: grenzeOben,
+    borderColor: '#e74c3c',
+    borderDash: [6,3],
+    borderWidth: 1.5,
+    pointRadius: 0,
+    tension: 0,
+  });
+  datasets.push({
+    label: `−Grenze ${klasse}`,
+    data: grenzeUnten,
+    borderColor: '#e74c3c',
+    borderDash: [6,3],
+    borderWidth: 1.5,
+    pointRadius: 0,
+    tension: 0,
+  });
+
+  if (chart) chart.destroy();
+  chart = new Chart(document.getElementById('fehlerChart').getContext('2d'), {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', labels: { font: { size: 11 } } },
+      },
+      scales: {
+        x: { title: { display: true, text: 'Bürde', font: { size: 10 } } },
+        y: {
+          title: { display: true, text: 'Verhältnisfehler (%)', font: { size: 10 } },
+          grid: { color: '#e0e0e0' },
+        }
+      }
+    }
+  });
+}
+
+// ── Speichern / Laden ──────────────────────────────────────────────────────
+function collectData() {
+  const stamm = {};
+  ['messort','pruefgeraet','wandler','kabel','uebersetzung','datum',
+   'nennbuerde','pruefer','klasse','witterung'].forEach(k => {
+    const el = document.getElementById('s_' + k);
+    stamm[k] = el ? el.value : '';
+  });
+
+  const buerden_labels = [];
+  for (let bi = 0; bi < N_BUERDEN; bi++) {
+    buerden_labels.push(document.getElementById(`bl_${bi}`)?.value || '');
+  }
+
+  const iprim = STROEME.map((_, si) =>
+    document.getElementById(`iprim_${si}`)?.value || '');
+
+  const mess = {};
+  STROEME.forEach((_, si) => {
+    MESSGROESSEN.forEach((mg, mi) => {
+      for (let bi = 0; bi < N_BUERDEN; bi++) {
+        const id = `v_${si}_${mi}_${bi}`;
+        mess[id] = document.getElementById(id)?.value || '';
+      }
+    });
+  });
+
+  const ergebnis = document.querySelector('input[name="ergebnis"]:checked')?.value || '';
+  const bemerkungen = document.getElementById('bemerkungen').value;
+
+  return { stamm, buerden_labels, iprim, mess, ergebnis, bemerkungen };
+}
+
+function saveData() {
+  const data = JSON.stringify(collectData(), null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `Pruefprotokoll_${document.getElementById('s_wandler').value || 'SW'}_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+}
+
+function loadData() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = e => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const d = JSON.parse(ev.target.result);
+        // Stammdaten
+        Object.entries(d.stamm || {}).forEach(([k, v]) => {
+          const el = document.getElementById('s_' + k);
+          if (el) el.value = v;
+        });
+        // Bürdenlabels
+        (d.buerden_labels || []).forEach((v, bi) => {
+          const el = document.getElementById(`bl_${bi}`);
+          if (el) el.value = v;
+        });
+        // Primärströme
+        (d.iprim || []).forEach((v, si) => {
+          const el = document.getElementById(`iprim_${si}`);
+          if (el) el.value = v;
+        });
+        // Messwerte
+        Object.entries(d.mess || {}).forEach(([id, v]) => {
+          const el = document.getElementById(id);
+          if (el) el.value = v;
+        });
+        // Ergebnis
+        if (d.ergebnis) {
+          const radio = document.querySelector(`input[name="ergebnis"][value="${d.ergebnis}"]`);
+          if (radio) radio.checked = true;
+        }
+        document.getElementById('bemerkungen').value = d.bemerkungen || '';
+        updateChart();
+        updateBuerdenrechner();
+      } catch(e) { alert('Fehler beim Laden: ' + e.message); }
+    };
+    reader.readAsText(e.target.files[0]);
+  };
+  input.click();
+}
+
+function clearAll() {
+  if (!confirm('Alle Eingaben löschen?')) return;
+  document.querySelectorAll('input[type="text"], input[type="number"], input[type="date"], textarea')
+    .forEach(el => { if (!el.id.startsWith('bl_')) el.value = ''; });
+  for (let bi = 0; bi < N_BUERDEN; bi++) {
+    const el = document.getElementById(`bl_${bi}`);
+    if (el) el.value = `Bürde ${[1,5,10,25][bi]}%`;
+  }
+  document.querySelectorAll('input[name="ergebnis"]').forEach(r => r.checked = false);
+  updateChart();
+}
+
+// Init
+buildTable();
+updateChart();
+</script>
+</body>
+</html>
