@@ -193,12 +193,16 @@ input::placeholder{color:var(--muted);}
 }
 .gps-box .ga{color:var(--text);font-size:.75rem;}
 .gps-box .gc{color:var(--muted);}
-.rtable{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:.76rem;}
-.rtable th{padding:.38rem .5rem;background:var(--card);border:1px solid var(--border);color:var(--muted);font-weight:400;font-size:.6rem;letter-spacing:.1em;text-align:left;}
-.rtable td{padding:.48rem .5rem;border:1px solid var(--border);}
-.rtable td:not(:first-child){text-align:right;}
-.pi{color:var(--green);font-size:1rem;}
-.fi{color:var(--red);font-size:1rem;}
+.rtable{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:.8rem;}
+.rtable th{
+  padding:.45rem .6rem;background:var(--card);border:1px solid var(--border);
+  color:var(--muted);font-weight:400;font-size:.6rem;letter-spacing:.1em;
+  text-align:left;line-height:1.35;
+}
+.rtable td{padding:.65rem .6rem;border:1px solid var(--border);vertical-align:middle;}
+.rtable td:nth-child(2),.rtable td:nth-child(3),.rtable td:nth-child(4){text-align:right;}
+.rtable tbody tr:hover{background:rgba(255,255,255,.025);}
+.pi{color:var(--green);} .fi{color:var(--red);} .wi{color:var(--accent);}
 .pfields{display:grid;grid-template-columns:1fr 1fr;gap:.55rem;}
 .pfield{display:flex;flex-direction:column;gap:.22rem;}
 .pfield.full{grid-column:1/-1;}
@@ -657,28 +661,59 @@ function renderProto(){
     $('gps-proto').style.display='none';
   }
   const tb=$('rtbody');tb.innerHTML='';
-  let anyFail=false, anyWarn=false;
+  let anyOverFail=false, anyUnderFail=false, anyWarn=false;
   ST.results.forEach(r=>{
     const tr=document.createElement('tr');
-    const sollStr=r.pct===100?'Referenz':r.pct===0?'0.000':f(r.tgt,3);
+    // Soll: always show the numeric target (100% → anlageBase, others → pct% of base)
+    const sollStr=f(r.tgt,3);
     const pctStr=r.pctOfBase!=null?f(r.pctOfBase,1)+' %':'—';
-    // Icon: green ✓ / yellow ⚠ (sun-limited pass) / red ✗
-    let icon;
-    if(!r.pass){icon='<span class="fi">✗</span>';anyFail=true;}
-    else if(r.sunLimited){icon='<span class="wi">⚠</span>';anyWarn=true;}
-    else{icon='<span class="pi">✓</span>';}
-    tr.innerHTML=`<td>${r.lbl}</td><td>${sollStr}</td><td>${f(r.pwr,3)}</td>`
-      +`<td style="text-align:right;">${pctStr}</td>`
-      +`<td style="text-align:center">${icon}</td>`;
+    // Icon logic:
+    // ✓ green  = pass, fully in band
+    // ⚠ yellow = sun-limited pass  OR  fail but under-production (too little, not dangerous)
+    // ✗ red    = over-production (too much = FAE not working = critical)
+    let icon, rowStyle='';
+    if(!r.pass){
+      if(r.overLimit){
+        icon='<span class="fi" style="font-size:1.25rem;">✗</span>';
+        rowStyle='background:rgba(248,81,73,.06);';
+        anyOverFail=true;
+      }else{
+        icon='<span class="wi" style="font-size:1.25rem;">⚠</span>';
+        rowStyle='background:rgba(240,165,0,.06);';
+        anyUnderFail=true;
+      }
+    }else if(r.sunLimited){
+      icon='<span class="wi" style="font-size:1.25rem;">⚠</span>';
+      anyWarn=true;
+    }else{
+      icon='<span class="pi" style="font-size:1.25rem;">✓</span>';
+    }
+    tr.style.cssText=rowStyle;
+    tr.innerHTML=
+      `<td style="font-weight:600;">${r.lbl}</td>`+
+      `<td><span style="color:var(--muted)">${sollStr}</span></td>`+
+      `<td><strong>${f(r.pwr,3)}</strong></td>`+
+      `<td style="text-align:right;color:${r.pctOfBase!=null&&r.pct>0&&Math.abs(r.pctOfBase-r.pct)<5?'var(--green)':'var(--text)'}">${pctStr}</td>`+
+      `<td style="text-align:center">${icon}</td>`;
     tb.appendChild(tr);
   });
   // Overall result banner
   const banner=$('gesamt-banner');
   if(ST.results.length>0){
     banner.style.display='block';
-    if(anyFail){banner.className='gesamt fail';banner.textContent='✗ NICHT BESTANDEN';}
-    else if(anyWarn){banner.className='gesamt warn';banner.textContent='⚠ BESTANDEN – Sonnen-limitiert (nicht vollst. prüfbar)';}
-    else{banner.className='gesamt ok';banner.textContent='✓ VOLLSTÄNDIG BESTANDEN';}
+    if(anyOverFail){
+      banner.className='gesamt fail';
+      banner.textContent='✗ NICHT BESTANDEN – Übereinspeisung erkannt';
+    }else if(anyUnderFail){
+      banner.className='gesamt warn';
+      banner.textContent='⚠ NICHT BESTANDEN – Mindereinspeisung';
+    }else if(anyWarn){
+      banner.className='gesamt warn';
+      banner.textContent='⚠ BESTANDEN – Sonnen-limitiert (nicht vollst. prüfbar)';
+    }else{
+      banner.className='gesamt ok';
+      banner.textContent='✓ VOLLSTÄNDIG BESTANDEN';
+    }
   }else{banner.style.display='none';}
   $('p-nr').value=ST.anlageNr;
   $('p-fae').value=ST.faeCode;
@@ -1080,12 +1115,16 @@ function confirmZero(){addResult(0,true);advance();}
 function addResult(pwr,pass){
   const s=STEPS[ST.step];
   const base=ST.anlageBase||ST.refPower;
-  const tgt=s.pct===100?pwr:(base?base*s.pct/100:pwr);
+  // Soll: basis value for all steps (100% → basis, 60% → 60% of basis, 0% → 0)
+  const tgt=s.isZero?0:(base?base*s.pct/100:pwr);
   const pMinNom=base&&s.tol?base*(s.pct-s.tol)/100:0;
-  // Sun-limited: reference (100% measurement) was already below the nominal lower bound
+  const pMaxNom=base?base*(s.pct+(s.tol||0))/100:Infinity;
+  // overLimit = too much feed-in (FAE not working = critical = RED)
+  // underLimit = too little feed-in (could be weather/sun = less critical = YELLOW)
+  const overLimit=!s.isRef&&(s.isZero?pwr>(base||0)*0.01:pwr>pMaxNom);
   const sunLimited=!s.isRef&&!s.isZero&&ST.refPower<pMinNom;
   const pctOfBase=base?(pwr/base*100):null;
-  ST.results.push({lbl:s.lbl,pct:s.pct,tgt,pwr,pctOfBase,pass,sunLimited});
+  ST.results.push({lbl:s.lbl,pct:s.pct,tgt,pwr,pctOfBase,pass,sunLimited,overLimit});
 }
 function advance(){
   ST.step++;
@@ -1167,15 +1206,15 @@ function buildPDF(){
   y+=2;doc.line(lm,y,lm+rw,y);y+=3;
   doc.setFont('helvetica','normal');
   ST.results.forEach(r=>{
-    const sollStr=r.pct===100?'Referenz':r.pct===0?'0.000':f(r.tgt,3);
+    const sollStr=f(r.tgt,3);
     const pctStr=r.pctOfBase!=null?f(r.pctOfBase,1)+' %':'—';
-    const resultTxt=!r.pass?'FEHLER':r.sunLimited?'OK (limitiert)':'OK';
+    const resultTxt=!r.pass?(r.overLimit?'ÜBEREINSP.':'UNTEREINSP.'):r.sunLimited?'OK (Sonne)':'OK';
     const row=[r.lbl,sollStr,f(r.pwr,3),pctStr,resultTxt];
     x=lm;
     row.forEach((v,i)=>{
       if(i===4){
-        if(!r.pass) doc.setTextColor(200,0,0);
-        else if(r.sunLimited) doc.setTextColor(200,130,0);
+        if(!r.pass&&r.overLimit) doc.setTextColor(200,0,0);
+        else if(!r.pass||r.sunLimited) doc.setTextColor(200,120,0);
         else doc.setTextColor(0,150,0);
       }
       doc.text(String(v),x+1,y);
