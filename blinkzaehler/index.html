@@ -131,7 +131,7 @@
   <div class="readout">
     <div class="label">Momentanleistung (primärseitig)</div>
     <div class="value"><span id="powerPrimary">–</span><small id="powerPrimaryUnit"> kW</small></div>
-    <div class="sub" id="powerRaw">Zähler-Leistung: – kW · Periode: – ms</div>
+    <div class="sub" id="powerRaw">Zähler-Leistung: – kW · Mittelung: – Pulse</div>
   </div>
 
   <div class="row2">
@@ -185,6 +185,24 @@
         <label>Eigene Impulsrate (Imp/kWh)</label>
         <input type="number" id="rateCustom" placeholder="z. B. 20000">
       </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Mittelungsfenster <span class="badge">glättet Schwankungen</span></h2>
+    <div class="chips" id="avgChips">
+      <div class="chip" data-avg="1">1 Puls</div>
+      <div class="chip active" data-avg="10">10 Pulse</div>
+      <div class="chip" data-avg="50">50 Pulse</div>
+    </div>
+    <div class="fields">
+      <div class="field">
+        <label>Eigenes Fenster (Anzahl Pulse)</label>
+        <input type="number" id="avgCustom" placeholder="z. B. 20" min="1">
+      </div>
+    </div>
+    <div class="ratioline" style="text-align:left; margin-top:8px;">
+      Leistung wird über die letzten <span id="avgWindowLabel">10</span> Pulse gemittelt (Gesamtzeit / Anzahl Pulse). Größer = ruhigerer Wert, aber trägeres Ansprechen bei Laständerungen.
     </div>
   </div>
 

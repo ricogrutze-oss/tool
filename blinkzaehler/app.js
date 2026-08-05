@@ -10,6 +10,7 @@
     sensitivity: 0.5,      // 0..1 -> Hysterese-Fensterbreite
     refractoryMs: 40,
     rateImpPerKWh: 10000,
+    avgWindow: 10,          // Anzahl Pulse, über die die Leistung gemittelt wird
     vtP: 1, vtS: 1,
     ctP: 1, ctS: 1,
     pulses: [],             // timestamps (ms)
@@ -24,7 +25,8 @@
   ['video','overlay','roiBox','camHint','camStart','startBtn','statusDot','pulseCount',
    'powerPrimary','powerRaw','freqVal','energyVal','chart','scope',
    'sensSlider','sensVal','refracSlider','refracVal','irToggle','torchToggle',
-   'rateChips','rateCustom','vtChips','vtP','vtS','vtFactor','ctChips','ctP','ctS','ctFactor',
+   'rateChips','rateCustom','avgChips','avgCustom','avgWindowLabel',
+   'vtChips','vtP','vtS','vtFactor','ctChips','ctP','ctS','ctFactor',
    'resetBtn','tapBtn','chartRange'
   ].forEach(id => els[id] = document.getElementById(id));
 
@@ -34,6 +36,7 @@
     try{
       localStorage.setItem(SKEY, JSON.stringify({
         rateImpPerKWh: state.rateImpPerKWh,
+        avgWindow: state.avgWindow,
         vtP: state.vtP, vtS: state.vtS, ctP: state.ctP, ctS: state.ctS,
         sensitivity: state.sensitivity, refractoryMs: state.refractoryMs, ir: state.ir
       }));
@@ -69,6 +72,22 @@
     if(v > 0){
       state.rateImpPerKWh = v;
       [...els.rateChips.children].forEach(c => c.classList.remove('active'));
+      saveSettings();
+    }
+  });
+
+  wireChips(els.avgChips, (chip) => {
+    state.avgWindow = parseInt(chip.dataset.avg, 10);
+    els.avgCustom.value = '';
+    els.avgWindowLabel.textContent = state.avgWindow;
+    saveSettings();
+  });
+  els.avgCustom.addEventListener('input', () => {
+    const v = parseInt(els.avgCustom.value, 10);
+    if(v >= 1){
+      state.avgWindow = v;
+      els.avgWindowLabel.textContent = v;
+      [...els.avgChips.children].forEach(c => c.classList.remove('active'));
       saveSettings();
     }
   });
@@ -245,9 +264,18 @@
     while(state.pulses.length > 200) state.pulses.shift();
     els.pulseCount.textContent = state.pulses.length + ' Pulse';
 
-    if(state.pulses.length >= 2){
-      const periodMs = t - state.pulses[state.pulses.length-2];
-      updatePowerFromPeriod(periodMs, t);
+    const n = Math.max(1, state.avgWindow);
+    if(state.pulses.length >= n + 1){
+      // Durchschnittsperiode über die letzten n Pulse: Gesamtzeit / n
+      const totalMs = t - state.pulses[state.pulses.length - 1 - n];
+      const avgPeriodMs = totalMs / n;
+      updatePowerFromPeriod(avgPeriodMs, t, n);
+    } else if(state.pulses.length >= 2){
+      // Noch nicht genug Pulse für volles Fenster -> mit dem bisher Verfügbaren mitteln
+      const avail = state.pulses.length - 1;
+      const totalMs = t - state.pulses[0];
+      const avgPeriodMs = totalMs / avail;
+      updatePowerFromPeriod(avgPeriodMs, t, avail);
     }
     flashRoi();
   }
@@ -257,7 +285,7 @@
     setTimeout(() => { els.roiBox.style.borderColor = 'var(--amber)'; }, 90);
   }
 
-  function updatePowerFromPeriod(periodMs, t){
+  function updatePowerFromPeriod(periodMs, t, usedN){
     const periodS = periodMs / 1000;
     if(periodS <= 0) return;
     const rate = state.rateImpPerKWh;
@@ -271,7 +299,7 @@
     state.energyKWh += (1/rate) * vtFactor * ctFactor;
 
     els.powerPrimary.textContent = formatPower(pPrimaryKW);
-    els.powerRaw.textContent = `Zähler-Leistung: ${pMeterKW.toFixed(3)} kW · Periode: ${periodMs.toFixed(0)} ms`;
+    els.powerRaw.textContent = `Zähler-Leistung: ${pMeterKW.toFixed(3)} kW · Mittelung: ${usedN} Puls${usedN===1?'':'e'}`;
     els.freqVal.textContent = freqHz.toFixed(2);
     els.energyVal.textContent = state.energyKWh.toFixed(3);
 
@@ -381,6 +409,14 @@
   });
   if(![...els.rateChips.children].some(c=>c.classList.contains('active'))){
     els.rateCustom.value = state.rateImpPerKWh;
+  }
+
+  els.avgWindowLabel.textContent = state.avgWindow;
+  [...els.avgChips.children].forEach(c => {
+    c.classList.toggle('active', parseInt(c.dataset.avg,10) === state.avgWindow);
+  });
+  if(![...els.avgChips.children].some(c=>c.classList.contains('active'))){
+    els.avgCustom.value = state.avgWindow;
   }
 
 })();
