@@ -44,7 +44,12 @@
     transition:.15s; position:relative; overflow:hidden;
   }
   .card:hover{ border-color:var(--amber); transform:translateY(-2px); }
-  .card .icon{font-size:22px;}
+  .card .icon{
+    width:48px; height:48px; border-radius:12px; background:var(--panel2);
+    border:1px solid var(--edge); display:flex; align-items:center; justify-content:center;
+    font-size:24px; flex-shrink:0;
+  }
+  .card .cardhead{display:flex; align-items:center; gap:10px;}
   .card .name{font-weight:700; font-size:15px;}
   .card .desc{font-size:12.5px; color:var(--text-dim); line-height:1.4; min-height:34px;}
   .card .meta{
@@ -129,7 +134,7 @@
       const items = await res.json();
       const dirs = items.filter(i => i.type === 'dir');
 
-      allTools = await Promise.all(dirs.map(async (d) => {
+      const folderTools = await Promise.all(dirs.map(async (d) => {
         let meta = {};
         try{
           const metaRes = await fetch(`https://raw.githubusercontent.com/${OWNER}/${REPO}/main/${d.name}/meta.json`);
@@ -143,6 +148,24 @@
           url: `./${d.name}/`
         };
       }));
+
+      // Externe Tools (eigene Repos/URLs), optional aus external-tools.json
+      let externalTools = [];
+      try{
+        const extRes = await fetch(`https://raw.githubusercontent.com/${OWNER}/${REPO}/main/external-tools.json`);
+        if(extRes.ok){
+          const ext = await extRes.json();
+          externalTools = ext.map(t => ({
+            folder: t.url,
+            title: t.title,
+            description: t.description || '',
+            icon: t.icon || '🔗',
+            url: t.url
+          }));
+        }
+      }catch(e){ /* keine externe Liste vorhanden, egal */ }
+
+      allTools = [...folderTools, ...externalTools];
 
       localStorage.setItem(CACHE_KEY, JSON.stringify({ts: Date.now(), data: allTools}));
       render();
@@ -175,12 +198,14 @@
     list.forEach(t => {
       const card = document.createElement('a');
       card.className = 'card';
-      card.href = t.url;
+      card.href = `viewer.html?url=${encodeURIComponent(t.url)}&title=${encodeURIComponent(t.title)}`;
       const pinned = pins.includes(t.folder);
       card.innerHTML = `
         <span class="pin ${pinned?'active':''}" title="Anheften" data-name="${t.folder}">📌</span>
-        <div class="icon">${t.icon}</div>
-        <div class="name">${escapeHtml(t.title)}</div>
+        <div class="cardhead">
+          <div class="icon">${renderIcon(t.icon)}</div>
+          <div class="name">${escapeHtml(t.title)}</div>
+        </div>
         <div class="desc">${escapeHtml(t.description || 'Keine Beschreibung')}</div>
         <div class="meta"><span class="arrow">→</span></div>
       `;
@@ -201,6 +226,14 @@
 
   function escapeHtml(s){
     return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function renderIcon(icon){
+    const isImage = /^(https?:\/\/|\.\/|\/)/.test(icon) || /\.(svg|png|jpe?g|webp|gif)$/i.test(icon);
+    if(isImage){
+      return `<img src="${icon}" alt="" style="width:28px;height:28px;object-fit:contain;" onerror="this.parentElement.textContent='🔧'">`;
+    }
+    return icon;
   }
 
   els.search.addEventListener('input', render);
