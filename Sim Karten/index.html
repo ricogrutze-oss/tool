@@ -94,8 +94,10 @@
     <button id="stopBtn" disabled>⏹ Stoppen</button>
     <label class="toggle"><input type="checkbox" id="soundToggle" checked> Ton</label>
     <label class="toggle"><input type="checkbox" id="vibrateToggle" checked> Vibration</label>
+    <label class="toggle"><input type="checkbox" id="singleScanToggle"> Einzeln scannen</label>
   </div>
   <div class="status" id="status"></div>
+  <div class="hint">Standard: Zeile erst bei beiden Zahlen gleichzeitig. "Einzeln scannen" für schlecht lesbare Etiketten.</div>
 </div>
 
 <div class="card">
@@ -150,6 +152,16 @@ const statusEl = document.getElementById('status');
 const tbody = document.getElementById('tbody');
 const soundToggle = document.getElementById('soundToggle');
 const vibrateToggle = document.getElementById('vibrateToggle');
+const singleScanToggle = document.getElementById('singleScanToggle');
+
+const SINGLESCAN_KEY = 'nummernscanner_singlescan_v1';
+singleScanToggle.checked = localStorage.getItem(SINGLESCAN_KEY) === '1';
+singleScanToggle.addEventListener('change', () => {
+  try{ localStorage.setItem(SINGLESCAN_KEY, singleScanToggle.checked ? '1' : '0'); }catch(e){}
+  pendingRow = { lowerVal: null, upperVal: null, rowEl: null };
+  lastCombinedSaved = { lower: '', upper: '' };
+  stability = { lower: { last: '', count: 0 }, upper: { last: '', count: 0 } };
+});
 
 let videoEl = null;
 let stream = null;
@@ -159,8 +171,10 @@ let upperWorker = null;
 let cooldownUntil = 0;
 let stability = { lower: { last: '', count: 0 }, upper: { last: '', count: 0 } };
 
-// Row currently being filled in (decoupled: lower/upper can arrive at different times).
+// Row currently being filled in (nur im "Einzeln scannen"-Modus relevant: lower/upper können zeitversetzt eintreffen).
 let pendingRow = { lowerVal: null, upperVal: null, rowEl: null };
+// Zuletzt gespeichertes Zahlenpaar im Standardmodus, um Dubletten bei gehaltener Kamera zu verhindern.
+let lastCombinedSaved = { lower: '', upper: '' };
 
 const ZONE_STORAGE_KEY = 'nummernscanner_zones_v2';
 let zones = loadZones() || {
@@ -214,6 +228,7 @@ async function startCamera(){
   scanning = true;
   stability = { lower: { last: '', count: 0 }, upper: { last: '', count: 0 } };
   pendingRow = { lowerVal: null, upperVal: null, rowEl: null };
+  lastCombinedSaved = { lower: '', upper: '' };
   scanLoop();
 }
 
@@ -328,16 +343,29 @@ async function scanLoop(){
     updateStability('lower', lowerText);
     updateStability('upper', upperText);
 
+    setZoneLocked('lower', stability.lower.count >= 2 && !!stability.lower.last);
+    setZoneLocked('upper', stability.upper.count >= 2 && !!stability.upper.last);
+
     statusEl.className = 'status';
     statusEl.textContent = `unten: ${lowerText || '—'}   |   oben: ${upperText || '—'}`;
 
-    // Decoupled: each field fires independently as soon as IT is stable twice,
-    // instead of requiring both zones to be sharp at the same instant.
-    if (stability.lower.count === 2 && stability.lower.last){
-      handleFieldLocked('lower', stability.lower.last);
-    }
-    if (stability.upper.count === 2 && stability.upper.last){
-      handleFieldLocked('upper', stability.upper.last);
+    if (singleScanToggle.checked){
+      // Einzeln scannen: jedes Feld für sich, sobald es zweimal stabil erkannt wurde.
+      if (stability.lower.count === 2 && stability.lower.last){
+        handleFieldLocked('lower', stability.lower.last);
+      }
+      if (stability.upper.count === 2 && stability.upper.last){
+        handleFieldLocked('upper', stability.upper.last);
+      }
+    } else {
+      // Standard: nur speichern, wenn BEIDE Felder gleichzeitig stabil erkannt sind.
+      const lowerReady = stability.lower.count >= 2 && stability.lower.last;
+      const upperReady = stability.upper.count >= 2 && stability.upper.last;
+      if (lowerReady && upperReady &&
+          (stability.lower.last !== lastCombinedSaved.lower || stability.upper.last !== lastCombinedSaved.upper)){
+        handleBothLocked(stability.lower.last, stability.upper.last);
+        lastCombinedSaved = { lower: stability.lower.last, upper: stability.upper.last };
+      }
     }
   } catch(err){
     console.error(err);
@@ -378,11 +406,9 @@ async function recognizeZone(worker, fullCanvas, z){
   return data.text.replace(/\s+/g, '').trim();
 }
 
-// Fires once per field as soon as that field is stable — fills the pending row,
-// creating it on the first field and completing it once both are present.
+// Nur im "Einzeln scannen"-Modus: fires once per field as soon as that field is stable —
+// fills the pending row, creating it on the first field and completing it once both are present.
 function handleFieldLocked(key, value){
-  setZoneLocked(key, true);
-
   if (!pendingRow.rowEl){
     pendingRow.rowEl = addRow('', '', '', '');
   }
@@ -394,7 +420,6 @@ function handleFieldLocked(key, value){
   // Re-arm this field immediately so it can catch the next distinct number
   // without waiting for the other field to complete.
   stability[key] = { last: '', count: 0 };
-  setZoneLocked(key, false);
 
   if (soundToggle.checked) playBeep(key === 'lower' ? 660 : 880, 0.12);
   if (vibrateToggle.checked && navigator.vibrate) navigator.vibrate(80);
@@ -414,6 +439,18 @@ function handleFieldLocked(key, value){
       : `✅ Rufnummer erfasst: ${value} — SIM-Karten-Nr fehlt noch`;
     flashStage('rgba(74,222,128,0.55)', 500); // grün — einzelne Zahl erfolgreich erfasst
   }
+}
+
+// Standardmodus: erzeugt erst dann eine Zeile, wenn BEIDE Felder gleichzeitig stabil erkannt wurden.
+function handleBothLocked(lowerVal, upperVal){
+  addRow(lowerVal, upperVal, '', '');
+  statusEl.className = 'status saved';
+  statusEl.textContent = `✅ Zeile komplett: ${lowerVal}  /  ${upperVal}`;
+  if (soundToggle.checked) playBeep(880, 0.22);
+  if (vibrateToggle.checked && navigator.vibrate) navigator.vibrate(200);
+  flashStage('rgba(251,146,60,0.65)', 500); // orange — Zeile komplett
+  cooldownUntil = Date.now() + 2000;
+  stability = { lower: { last: '', count: 0 }, upper: { last: '', count: 0 } };
 }
 
 let flashTimer = null;
