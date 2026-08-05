@@ -1,0 +1,6 @@
+{
+  "name": "FAE Test – PV Anlage",
+  "description": "Prüftool für FAE-Abnahmen: Impulsmessung via Kamera, Wandlerfaktor, 4 Teststufen, GPS, QR-Scanner, Protokoll",
+  "icon": "⚡",
+  "version": "1.0"
+}
