@@ -1,0 +1,1699 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>ProjektCheck – Baumängelerfassung</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2563eb">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ProjektCheck">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+:root {
+  --bg:#0f1117;--surface:#181c25;--surface2:#1e2330;--border:#2a2f3d;
+  --accent:#2563eb;--accent2:#1d4ed8;--gold:#f59e0b;--red:#ef4444;--green:#22c55e;--orange:#f97316;
+  --text:#e8eaf0;--text-dim:#6b7280;
+  --mono:'Courier New',monospace;--sans:Arial,sans-serif;--display:Impact,'Arial Narrow',Arial,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;overflow-x:hidden;}
+
+/* HEADER */
+header{background:var(--surface);border-bottom:2px solid var(--accent);padding:11px 14px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.logo{font-family:var(--display);font-size:24px;letter-spacing:2px;color:var(--accent);line-height:1;}
+.logo span{color:var(--text-dim);font-size:10px;display:block;font-family:var(--mono);letter-spacing:2px;margin-top:1px;}
+.hbadge{background:var(--red);color:#fff;font-family:var(--mono);font-size:10px;padding:4px 9px;border-radius:2px;font-weight:700;cursor:pointer;}
+
+/* INSTALL BAR */
+.ibar{background:var(--accent);color:#fff;padding:9px 14px;display:none;align-items:center;justify-content:space-between;gap:8px;}
+.ibar.show{display:flex;}
+.ibar span{font-family:var(--mono);font-size:11px;}
+.ibar-btn{background:#fff;color:var(--accent);border:none;padding:6px 12px;border-radius:2px;font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;}
+.ibar-x{background:none;border:none;color:#fff;font-size:18px;cursor:pointer;padding:0 4px;line-height:1;}
+
+/* SCREENS */
+.screen{display:none;} .screen.active{display:block;}
+
+/* OBJEKTE LISTE */
+.obj-header{padding:14px;display:flex;justify-content:space-between;align-items:center;}
+.obj-header h2{font-family:var(--display);font-size:20px;letter-spacing:2px;color:var(--text);}
+.btn-new{background:var(--accent);color:#fff;border:none;padding:9px 16px;border-radius:3px;font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;letter-spacing:1px;}
+.obj-card{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:4px;margin:0 14px 10px;padding:14px;cursor:pointer;transition:border-color 0.2s;}
+.obj-card.archiviert{border-left-color:var(--text-dim);opacity:0.6;}
+.obj-card.abgeschlossen{border-left-color:var(--green);}
+.obj-name{font-size:16px;font-weight:700;margin-bottom:4px;}
+.obj-meta{font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-bottom:8px;}
+.obj-stats{display:flex;gap:8px;flex-wrap:wrap;}
+.ostat{font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:2px;}
+.ostat-r{background:#3d1a1a;color:var(--red);}
+.ostat-o{background:#3d2500;color:var(--orange);}
+.ostat-g{background:#0d2d1a;color:var(--green);}
+.ostat-b{background:#1a2d4a;color:var(--accent);}
+
+/* OBJEKT DETAIL */
+.obj-detail-header{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 14px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:50;}
+.back-btn{background:none;border:1px solid var(--border);color:var(--text-dim);padding:6px 12px;border-radius:3px;font-family:var(--mono);font-size:11px;cursor:pointer;}
+.obj-detail-header h2{font-family:var(--display);font-size:18px;letter-spacing:1px;color:var(--accent);flex:1;}
+.obj-actions{display:flex;gap:6px;}
+.act-btn{background:none;border:1px solid var(--border);color:var(--text-dim);padding:6px 10px;border-radius:3px;font-size:11px;cursor:pointer;font-family:var(--mono);}
+
+/* TABS */
+.tabs{display:flex;border-bottom:1px solid var(--border);background:var(--surface);overflow-x:auto;}
+.tab{padding:11px 0;font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);cursor:pointer;border-bottom:2px solid transparent;flex:1;text-align:center;white-space:nowrap;min-width:70px;}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+/* CONTENT */
+.content{padding:14px;}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:14px;margin-bottom:12px;}
+.card-title{font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.card-title::before{content:'';width:3px;height:12px;background:var(--accent);display:block;}
+
+/* FORM */
+label{display:block;font-family:var(--mono);font-size:10px;letter-spacing:1px;color:var(--text-dim);margin-bottom:5px;text-transform:uppercase;}
+input[type=text],input[type=date],input[type=email],input[type=tel],textarea,select{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--sans);font-size:14px;padding:10px 12px;border-radius:3px;margin-bottom:12px;-webkit-appearance:none;outline:none;transition:border-color 0.2s;}
+input:focus,textarea:focus,select:focus{border-color:var(--accent);}
+textarea{resize:vertical;min-height:75px;}
+select option{background:var(--surface);}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+/* GEWERK GRID */
+.gewerk-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+.gw-btn{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px 6px;text-align:center;cursor:pointer;transition:all 0.15s;font-family:var(--mono);font-size:9px;color:var(--text-dim);letter-spacing:1px;}
+.gw-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(37,99,235,0.1);}
+.gw-btn .gw-icon{font-size:22px;display:block;margin-bottom:4px;}
+
+/* FOTO */
+.photo-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+.photo-zone{border:2px dashed var(--border);border-radius:4px;padding:16px;text-align:center;cursor:pointer;position:relative;transition:border-color 0.2s;}
+.photo-zone:active{border-color:var(--accent);}
+.photo-zone input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;}
+.photo-zone .pz-icon{font-size:24px;}
+.photo-zone p{font-size:10px;color:var(--text-dim);font-family:var(--mono);margin-top:4px;}
+.photo-preview{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+.photo-wrapper{position:relative;display:inline-block;}
+.photo-thumb{width:76px;height:76px;object-fit:cover;border-radius:3px;border:1px solid var(--border);cursor:pointer;}
+.photo-del{position:absolute;top:-6px;right:-6px;background:var(--red);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;}
+
+/* NORM BOX */
+.norm-box{background:var(--bg);border:1px solid var(--accent);border-radius:4px;padding:14px;margin-bottom:12px;display:none;}
+.norm-box.visible{display:block;}
+.norm-header{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:2px;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.norm-spinner{width:12px;height:12px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;display:none;}
+.norm-spinner.active{display:block;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.norm-tag{display:inline-block;background:var(--surface2);border:1px solid var(--accent);color:var(--accent);font-family:var(--mono);font-size:10px;padding:3px 8px;border-radius:2px;margin:3px 3px 3px 0;}
+.norm-text{font-size:12px;color:var(--text);line-height:1.6;margin-top:8px;}
+.norm-tip{margin-top:8px;padding:8px;background:var(--surface2);border-radius:3px;font-size:11px;font-family:var(--mono);color:var(--text-dim);}
+
+/* BTNS */
+.btn{display:block;width:100%;padding:13px;border:none;border-radius:3px;cursor:pointer;transition:all 0.15s;text-align:center;}
+.btn-primary{background:var(--accent);color:#fff;font-family:var(--display);font-size:20px;letter-spacing:3px;}
+.btn-primary:active{background:var(--accent2);}
+.btn-norm{background:transparent;border:1px solid var(--accent);color:var(--accent);font-family:var(--mono);font-size:11px;letter-spacing:2px;padding:10px;margin-bottom:12px;text-transform:uppercase;}
+.btn-export{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:11px;letter-spacing:1px;padding:10px;margin-bottom:8px;text-transform:uppercase;}
+.btn-danger{background:transparent;border:1px solid var(--red);color:var(--red);font-family:var(--mono);font-size:11px;letter-spacing:1px;padding:10px;margin-top:4px;}
+.btn-green{background:transparent;border:1px solid var(--green);color:var(--green);font-family:var(--mono);font-size:11px;letter-spacing:1px;padding:10px;margin-bottom:8px;}
+
+/* MANGEL LIST */
+.filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+.fbtn{padding:6px 10px;font-family:var(--mono);font-size:10px;border-radius:2px;border:1px solid var(--border);background:transparent;color:var(--text-dim);cursor:pointer;}
+.fbtn.active{border-color:var(--accent);color:var(--accent);}
+.mangel-item{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--red);border-radius:4px;padding:12px;margin-bottom:9px;cursor:pointer;}
+.mangel-item.in-bearbeitung{border-left-color:var(--orange);}
+.mangel-item.behoben{border-left-color:var(--green);opacity:0.65;}
+.mi-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;}
+.mi-nr{font-family:var(--mono);font-size:10px;color:var(--text-dim);}
+.sbadge{font-family:var(--mono);font-size:9px;letter-spacing:1px;padding:2px 7px;border-radius:2px;text-transform:uppercase;}
+.sb-o{background:#3d1a1a;color:var(--red);border:1px solid var(--red);}
+.sb-i{background:#3d2500;color:var(--orange);border:1px solid var(--orange);}
+.sb-b{background:#0d2d1a;color:var(--green);border:1px solid var(--green);}
+.mi-titel{font-size:14px;font-weight:600;margin-bottom:3px;}
+.mi-meta{font-size:11px;color:var(--text-dim);font-family:var(--mono);}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:200;display:none;overflow-y:auto;padding:16px;}
+.modal-overlay.open{display:flex;justify-content:center;align-items:flex-start;}
+.modal{background:var(--surface);width:100%;max-width:520px;border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+.modal-head{background:var(--bg);padding:13px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.modal-head h2{font-family:var(--display);letter-spacing:2px;font-size:18px;color:var(--accent);}
+.modal-x{background:none;border:none;color:var(--text-dim);font-size:22px;cursor:pointer;padding:2px 6px;line-height:1;}
+.modal-body{padding:14px;}
+.modal-photos{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+.modal-photos img{width:85px;height:85px;object-fit:cover;border-radius:3px;border:1px solid var(--border);cursor:pointer;}
+.dl{font-family:var(--mono);font-size:9px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;}
+.dv{font-size:13px;margin-bottom:10px;}
+.drow{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px;}
+.stat-box{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:14px;text-align:center;}
+.stat-num{font-family:var(--display);font-size:40px;line-height:1;margin-bottom:3px;}
+.stat-lbl{font-family:var(--mono);font-size:9px;color:var(--text-dim);letter-spacing:2px;text-transform:uppercase;}
+.progress-wrap{background:var(--border);border-radius:2px;height:5px;margin:6px 0 8px;}
+.progress-bar{height:100%;background:var(--green);border-radius:2px;transition:width 0.4s;}
+
+/* MISC */
+.empty{text-align:center;padding:36px 16px;color:var(--text-dim);font-family:var(--mono);font-size:12px;}
+.empty-icon{font-size:40px;margin-bottom:10px;opacity:0.35;}
+.img-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.97);z-index:999;display:none;align-items:center;justify-content:center;cursor:zoom-out;}
+.img-overlay.open{display:flex;}
+.img-overlay img{max-width:96vw;max-height:92vh;object-fit:contain;}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--green);color:#000;font-family:var(--mono);font-size:12px;padding:9px 18px;border-radius:4px;z-index:500;opacity:0;transition:opacity 0.3s;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;}
+hr.div{border:none;border-top:1px solid var(--border);margin:10px 0 12px;}
+.gewerk-badge{display:inline-block;font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:2px;margin-bottom:8px;}
+.schwere-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;}
+</style>
+</head>
+<body>
+
+<div class="ibar" id="ibar">
+  <span>📱 ProjektCheck installieren</span>
+  <div style="display:flex;gap:8px;align-items:center">
+    <button class="ibar-btn" id="install-btn">INSTALLIEREN</button>
+    <button class="ibar-x" onclick="document.getElementById('ibar').classList.remove('show')">✕</button>
+  </div>
+</div>
+
+<header>
+  <div><div class="logo">ProjektCheck<span>BAUMÄNGELERFASSUNG</span></div></div>
+  <div class="hbadge" id="hbadge" onclick="showObjekte()">← OBJEKTE</div>
+</header>
+
+<!-- SCREEN: OBJEKTE ÜBERSICHT -->
+<div class="screen active" id="screen-objekte">
+  <div class="obj-header">
+    <h2>PROJEKTE</h2>
+    <button class="btn-new" onclick="openObjektModal()">+ NEUES PROJEKT</button>
+  </div>
+  <div id="obj-list"></div>
+</div>
+
+<!-- SCREEN: OBJEKT DETAIL -->
+<div class="screen" id="screen-detail">
+  <div class="obj-detail-header">
+    <button class="back-btn" onclick="showObjekte()">← Zurück</button>
+    <h2 id="detail-title">Projekt</h2>
+    <div class="obj-actions">
+      <button class="act-btn" onclick="exportObjektPDF()">PDF</button>
+      <button class="act-btn" onclick="editObjekt()">✏️</button>
+      <button class="act-btn" onclick="archivObjekt()">📦</button>
+    </div>
+  </div>
+  <div class="tabs" id="detail-tabs"></div>
+  <div id="detail-content"></div>
+</div>
+
+<!-- MODAL: NEUER/EDIT MANGEL -->
+<div class="modal-overlay" id="modal-mangel" onclick="closeModalBg(event,'modal-mangel')">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="modal-mangel-title">MANGEL</h2>
+      <button class="modal-x" onclick="closeModal('modal-mangel')">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="card">
+        <div class="card-title">Gewerk</div>
+        <div class="gewerk-grid" id="gewerk-grid"></div>
+        <label>Anlage / Bereich</label>
+        <input type="text" id="m-anlage" placeholder="z.B. Hauptverteiler, OG Bad">
+        <label>Kategorie</label>
+        <select id="m-kategorie"><option value="">– wählen –</option></select>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Beschreibung</div>
+        <textarea id="m-beschreibung" placeholder="Mangel genau beschreiben..."></textarea>
+        <button class="btn btn-norm" onclick="findNormBtn()">🔍 NORM ERMITTELN (DIN)</button>
+        <div class="norm-box" id="norm-box">
+          <div class="norm-header"><div class="norm-spinner" id="norm-spinner"></div><span id="norm-status">ANALYSE</span></div>
+          <div id="norm-result"></div>
+        </div>
+        <label>Schweregrad</label>
+        <select id="m-schwere">
+          <option value="Kritisch">🔴 Kritisch – Sicherheitsrelevant</option>
+          <option value="Wesentlich" selected>🟡 Wesentlich – Muss behoben werden</option>
+          <option value="Gering">🟢 Gering – Empfehlung</option>
+          <option value="Offen">⬜ Offene Arbeit</option>
+        </select>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Fotos</div>
+        <div class="photo-grid">
+          <div class="photo-zone">
+            <input type="file" accept="image/*" capture="environment" id="photo-cam" onchange="handlePhotos(event)">
+            <div class="pz-icon">📷</div><p>KAMERA</p>
+          </div>
+          <div class="photo-zone">
+            <input type="file" accept="image/*" multiple id="photo-gal" onchange="handlePhotos(event)">
+            <div class="pz-icon">🖼️</div><p>GALERIE</p>
+          </div>
+        </div>
+        <div class="photo-preview" id="photo-preview"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Status</div>
+        <label>Status</label>
+        <select id="m-status">
+          <option value="offen">Offen</option>
+          <option value="in-bearbeitung">In Bearbeitung</option>
+          <option value="behoben">Behoben</option>
+        </select>
+        <div class="g2">
+          <div><label>Fällig bis</label><input type="date" id="m-faellig" placeholder="Fälligkeitsdatum"></div>
+          <div><label>Bemerkung</label></div>
+        </div>
+        <textarea id="m-bemerkung" placeholder="z.B. Handwerker informiert am..." style="min-height:60px"></textarea>
+      </div>
+
+      <button class="btn btn-primary" onclick="saveMangel()">MANGEL SPEICHERN</button>
+      <button class="btn btn-export" style="margin-top:8px" onclick="saveAlsVorlage()">⭐ ALS VORLAGE SPEICHERN</button>
+      <button class="btn btn-export" style="margin-top:8px" onclick="showVorlagen()">📋 VORLAGE LADEN</button>
+      <br><br>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: NEUES OBJEKT -->
+<div class="modal-overlay" id="modal-objekt" onclick="closeModalBg(event,'modal-objekt')">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="modal-obj-title">NEUES PROJEKT</h2>
+      <button class="modal-x" onclick="closeModal('modal-objekt')">✕</button>
+    </div>
+    <div class="modal-body">
+      <label>Projektname / Adresse</label>
+      <input type="text" id="o-name" placeholder="z.B. EFH Musterstraße 12">
+      <div class="g2">
+        <div><label>Auftraggeber</label><input type="text" id="o-ag" placeholder="Name"></div>
+        <div><label>Datum</label><input type="date" id="o-datum"></div>
+      </div>
+      <label>Notiz (optional)</label>
+      <textarea id="o-notiz" placeholder="z.B. Bauherr, Telefon, Besonderheiten..." style="min-height:60px"></textarea>
+      <div class="g2">
+        <div><label>Auftragnehmer (Unterschrift)</label><input type="text" id="o-an" placeholder="Firma / Name"></div>
+        <div><label>Auftraggeber (Unterschrift)</label><input type="text" id="o-ag2" placeholder="Name"></div>
+      </div>
+      <button class="btn btn-primary" onclick="saveObjekt()">PROJEKT ANLEGEN</button>
+      <br><br>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: MANGEL DETAIL -->
+<div class="modal-overlay" id="modal-detail" onclick="closeModalBg(event,'modal-detail')">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>MANGEL DETAIL</h2>
+      <button class="modal-x" onclick="closeModal('modal-detail')">✕</button>
+    </div>
+    <div class="modal-body" id="modal-detail-body"></div>
+  </div>
+</div>
+
+<div class="img-overlay" id="img-overlay" onclick="closeImg()">
+  <img id="img-full" src="" alt="">
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════
+// PWA
+// ═══════════════════════════════════
+let deferredPrompt = null;
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); deferredPrompt = e;
+  document.getElementById('ibar').classList.add('show');
+});
+document.getElementById('install-btn').addEventListener('click', () => {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(() => { deferredPrompt = null; document.getElementById('ibar').classList.remove('show'); });
+  } else {
+    alert('So installierst du ProjektCheck:\n\n1. Tippe auf ⋮ (drei Punkte oben rechts)\n2. Wähle „App installieren"\n   ODER „Zum Startbildschirm hinzufügen"\n\nFertig! 📱');
+  }
+});
+setTimeout(() => { if (!deferredPrompt) document.getElementById('ibar').classList.add('show'); }, 2000);
+
+// ═══════════════════════════════════
+// FOTO KOMPRIMIERUNG
+// ═══════════════════════════════════
+function compressPhoto(dataURL) {
+  return new Promise(res => {
+    const img = new Image();
+    img.onload = () => {
+      let w = img.width, h = img.height, max = 900;
+      if (w > max || h > max) { if (w > h) { h = Math.round(h*max/w); w = max; } else { w = Math.round(w*max/h); h = max; } }
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      res(c.toDataURL('image/jpeg', 0.65));
+    };
+    img.src = dataURL;
+  });
+}
+
+// ═══════════════════════════════════
+// STORAGE
+// ═══════════════════════════════════
+function load(key, def) { try { return JSON.parse(localStorage.getItem(key)||'null') || def; } catch(e) { return def; } }
+function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); return true; } catch(e) { alert('Speicher voll!'); return false; } }
+
+// ═══════════════════════════════════
+// STATE
+// ═══════════════════════════════════
+let objekte  = load('pc_objekte', []);
+let aktObjId = null;
+let editMangelId = null;
+let editObjektId = null;
+let lastMangel = null; // Letzter Mangel für Vorausfüllung
+let currentPhotos = [];
+let currentNormen = [];
+let currentGewerk = '';
+let currentFilter = 'alle';
+let currentGewerkFilter = 'alle';
+
+// ═══════════════════════════════════
+// GEWERKE
+// ═══════════════════════════════════
+const GEWERKE = [
+  { id:'elektro',    icon:'⚡', name:'Elektro' },
+  { id:'heizung',    icon:'🔥', name:'Heizung' },
+  { id:'sanitaer',   icon:'💧', name:'Sanitär' },
+  { id:'maler',      icon:'🎨', name:'Maler' },
+  { id:'fussboden',  icon:'🪵', name:'Fußboden' },
+  { id:'rohbau',     icon:'🧱', name:'Rohbau' },
+  { id:'fenster',    icon:'🪟', name:'Fenster/Türen' },
+  { id:'daemmung',   icon:'❄️', name:'Dämmung' },
+  { id:'trockenbau', icon:'🏗️', name:'Trockenbau' },
+  { id:'dach',       icon:'🏠', name:'Dach' },
+  { id:'aussen',     icon:'🌿', name:'Außenanlage' },
+  { id:'sonstiges',  icon:'🔧', name:'Sonstiges' },
+];
+
+const KATEGORIEN = {
+  elektro:    ['Kabelverlegung / Einputztiefe','Schutzleiter / PE fehlt','Erdung / Potenzialausgleich','FI-Schutzschalter / RCD','Leitungsschutzschalter','Klemmen / Verbindungen','Verteiler / Schaltanlage','Steckdosen / Schalter','Beleuchtung','Nassraum / Bad','Kennzeichnung','Leitungsquerschnitt','Überspannungsschutz','Brandschutz','Ladestation / Wallbox','Prüfprotokoll fehlt','Offene Arbeiten'],
+  heizung:    ['Rohrleitung / Dämmung','Heizkörper / Anschluss','Heizkessel / Brenner','Regelung / Thermostat','Pumpe / Verteiler','Druckausdehnungsgefäß','Sicherheitsventil','Abgasanlage / Schornstein','Fußbodenheizung','Hydraulischer Abgleich','Dichtheit / Leckage','Wartung fehlt','Offene Arbeiten'],
+  sanitaer:   ['Rohrleitung / Dichtheit','Wasserinstallation / Anschluss','Abwasserleitung / Gefälle','Armaturen / Ventile','Druckprüfung fehlt','Wärmedämmung Rohre','WC / Waschbecken / Dusche','Badewanne / Duschwanne','Schallschutz','Wasserdruck','Legionellenschutz','Offene Arbeiten'],
+  maler:      ['Risse / Haarrisse','Farbabplatzungen / Abblättern','Verschmutzung / Flecken','Tapete / Blasen','Anstrich unvollständig','Grundierung fehlt','Putz / Oberfläche','Schimmel / Feuchtigkeit','Übergänge / Kanten','Offene Arbeiten'],
+  fussboden:  ['Fugen zu groß / zu klein','Höhenversatz / Unebenheit','Belag beschädigt','Verlegung fehlerhaft','Schallschutz unzureichend','Fußbodenheizung Schaden','Estrich Risse','Trittschall','Randstreifen fehlt','Offene Arbeiten'],
+  rohbau:     ['Risse im Mauerwerk','Setzungsrisse','Feuchtigkeitsschäden','Bewehrung fehlerhaft','Betonfehler','Wanddicke','Sturz / Träger','Abdichtung Keller','Fundament','Offene Arbeiten'],
+  fenster:    ['Dichtung defekt','Falzluft zu groß','Beschlag fehlerhaft','Glasschaden','Rahmenschaden','Wärmebrücke','Schallschutz','Einbruchschutz','Schwelle / Anschlussprofil','Offene Arbeiten'],
+  daemmung:   ['Dämmstärke unzureichend','Wärmebrücke','Dampfsperre fehlerhaft','Lücken / Hohlräume','Fassadendämmung','Dachdämmung','Kellerdecke','Rohrdämmung','Offene Arbeiten'],
+  trockenbau: ['Wandaufbau fehlerhaft','Schallschutz unzureichend','Brandschutz','Befestigung mangelhaft','Verspachtelung','Fugen / Anschlüsse','Offene Arbeiten'],
+  dach:       ['Undichtigkeit / Leck','Dachziegel beschädigt','Dachentwässerung','Wärmedämmung','Dampfbremse','Firstabdichtung','Dachfenster','Schneelast','Blitzschutz Dach','Offene Arbeiten'],
+  aussen:     ['Pflasterung / Belag','Gefälle / Entwässerung','Einfriedung / Zaun','Außenbeleuchtung','Terrassenanschluss','Abdichtung Sockel','Grünanlage','Offene Arbeiten'],
+  sonstiges:  ['Sonstiger Mangel','Offene Arbeit'],
+};
+
+// ═══════════════════════════════════
+// NORMEN DATENBANK (DIN)
+// ═══════════════════════════════════
+const NORMEN_DB = [
+  // ELEKTRO
+  { gw:'elektro', kw:['kabel','einputz','eingeputzt','schlitz','tiefe','überdeckung'], normen:['DIN VDE 0100-520','DIN 18015-1'], text:'Kabel in Wänden müssen mind. 60 mm tief eingeputzt sein.', tip:'Schlitz vertiefen, Kabel tiefer verlegen, Überdeckung messen.', schwere:'Wesentlich' },
+  { gw:'elektro', kw:['schutzleiter','pe fehlt','pe unterbrochen','grüngelb'], normen:['DIN VDE 0100-410','DIN VDE 0100-540'], text:'Fehlende Schutzleiter (PE) sind unmittelbare Lebensgefahr.', tip:'Schutzleiter sofort nachverlegen. Anlage nicht in Betrieb nehmen.', schwere:'Kritisch' },
+  { gw:'elektro', kw:['potenzialausgleich','erdung','haupterdung'], normen:['DIN VDE 0100-410','DIN VDE 0100-540'], text:'Hauptpotenzialausgleich ist Pflicht – alle leitfähigen Teile müssen verbunden sein.', tip:'Zentralen Potenzialausgleich nachrüsten.', schwere:'Kritisch' },
+  { gw:'elektro', kw:['fi','rcd','fehlerstrom','30ma'], normen:['DIN VDE 0100-410','DIN VDE 0100-530'], text:'FI/RCD (max. 30 mA) in Nassräumen und Wohnbereichen Pflicht.', tip:'FI-Schutzschalter nachrüsten.', schwere:'Kritisch' },
+  { gw:'elektro', kw:['sicherung','absicher','leitungsschutz','ls automat'], normen:['DIN VDE 0100-430','DIN VDE 0100-533'], text:'Leitungsschutzschalter müssen zum Kabelquerschnitt passen.', tip:'Absicherung dem Querschnitt anpassen.', schwere:'Wesentlich' },
+  { gw:'elektro', kw:['klemme','verbindung','offene verbindung','ohne dose'], normen:['DIN VDE 0100-520'], text:'Verbindungen müssen in verschlossenen Verbindungsdosen ausgeführt werden.', tip:'Verbindung in IP-gerechte Dose verlegen.', schwere:'Kritisch' },
+  { gw:'elektro', kw:['verteiler','schaltschrank','tableau'], normen:['DIN VDE 0100-530','DIN EN 61439-3'], text:'Verteiler müssen nach DIN EN 61439-3 ausgeführt sein.', tip:'Vollständigkeit und Schutzgrad prüfen.', schwere:'Wesentlich' },
+  { gw:'elektro', kw:['bad','nassraum','dusche','schutzbereich'], normen:['DIN VDE 0100-701'], text:'In Bädern gelten Schutzbereichsregeln (Bereiche 0–2).', tip:'Schutzgrade und FI 30 mA sicherstellen.', schwere:'Kritisch' },
+  { gw:'elektro', kw:['kennzeichnung','beschriftung','nicht beschriftet'], normen:['DIN VDE 0100-514','DIN EN 60445'], text:'Alle Betriebsmittel und Leitungen müssen dauerhaft gekennzeichnet sein.', tip:'Leitungen und Klemmen beschriften.', schwere:'Gering' },
+  { gw:'elektro', kw:['querschnitt','zu dünn','unterquerschnitt','mm2'], normen:['DIN VDE 0100-520','DIN VDE 0298-4'], text:'Zu geringer Querschnitt führt zu Erwärmung und Brandgefahr.', tip:'Leitung durch ausreichend dimensionierte ersetzen.', schwere:'Kritisch' },
+  { gw:'elektro', kw:['überspannung','spd','blitz'], normen:['DIN VDE 0100-534','DIN EN 61643-11'], text:'Überspannungsschutz bei vorhandenem Blitzschutzsystem Pflicht.', tip:'SPD Typ 1+2 nachrüsten.', schwere:'Wesentlich' },
+  { gw:'elektro', kw:['brandschutz','schottung','durchführung'], normen:['DIN VDE 0100-520','DIN 4102-11'], text:'Kabeldurchführungen durch Brandabschnitte müssen abgeschottet werden.', tip:'Brandschutzabschottung nachrüsten.', schwere:'Kritisch' },
+  { gw:'elektro', kw:['ladestation','wallbox','elektroauto'], normen:['DIN VDE 0100-722'], text:'Ladestationen benötigen eigenen Stromkreis und FI Typ B.', tip:'Ladestation nach DIN VDE 0100-722 prüfen.', schwere:'Kritisch' },
+  { gw:'elektro', kw:['prüfprotokoll','messprotokoll','erstprüfung'], normen:['DIN VDE 0100-600','DGUV Vorschrift 3'], text:'Elektrische Anlagen müssen nach Errichtung geprüft und dokumentiert werden.', tip:'Erstprüfung durchführen, Protokoll erstellen.', schwere:'Wesentlich' },
+  // HEIZUNG
+  { gw:'heizung', kw:['rohr','dämmung','rohrdämmung','zu wenig dämmung'], normen:['DIN 4108-10','DIN EN 12828','DVGW TRGI'], text:'Heizungsrohre müssen nach DIN 4108-10 gedämmt werden um Wärmeverluste zu minimieren.', tip:'Rohrdämmung nachrüsten. Mindestdämmdicke nach EnEV/GEG einhalten.', schwere:'Wesentlich' },
+  { gw:'heizung', kw:['heizkörper','anschluss','ventil','thermostat'], normen:['DIN EN 12828','DIN 18380'], text:'Heizkörper müssen fachgerecht angeschlossen und mit Thermostatventil ausgerüstet sein.', tip:'Anschluss prüfen, Thermostatventil nachrüsten.', schwere:'Wesentlich' },
+  { gw:'heizung', kw:['heizkessel','brenner','wartung'], normen:['DIN EN 12828','1. BImSchV'], text:'Heizkessel und Brenner müssen regelmäßig gewartet werden. Nachweis erforderlich.', tip:'Wartungsprotokoll anfordern, Wartung veranlassen.', schwere:'Wesentlich' },
+  { gw:'heizung', kw:['sicherheitsventil','druck','ausdehnungsgefäß'], normen:['DIN EN 12828','DVGW W 551'], text:'Sicherheitsventil und Druckausdehnungsgefäß müssen korrekt dimensioniert sein.', tip:'Dimensionierung prüfen, ggf. ersetzen.', schwere:'Kritisch' },
+  { gw:'heizung', kw:['abgas','schornstein','abgasanlage','rauchgas'], normen:['DIN EN 13384','1. BImSchV','KÜO'], text:'Abgasanlage muss dicht und korrekt dimensioniert sein. Schornsteinfegerabnahme erforderlich.', tip:'Abgasmessung und Schornsteinfegerabnahme veranlassen.', schwere:'Kritisch' },
+  { gw:'heizung', kw:['fußbodenheizung','heizkreis','verteiler heizung'], normen:['DIN EN 1264','DIN 18560'], text:'Fußbodenheizung muss hydraulisch abgeglichen sein. Heizkreise gleichmäßig verteilen.', tip:'Hydraulischen Abgleich durchführen.', schwere:'Wesentlich' },
+  { gw:'heizung', kw:['dichtheit','leckage','leck','undicht heizung'], normen:['DIN EN 12828','DVGW TRGI'], text:'Heizungsanlage muss dicht sein. Undichtigkeiten sind sofort zu beheben.', tip:'Druckprüfung durchführen, Leck orten und abdichten.', schwere:'Kritisch' },
+  { gw:'heizung', kw:['hydraulisch','abgleich','pumpe'], normen:['DIN EN 12831','GEG'], text:'Hydraulischer Abgleich ist nach GEG bei Erneuerung der Heizungsanlage Pflicht.', tip:'Hydraulischen Abgleich durch Fachbetrieb durchführen.', schwere:'Wesentlich' },
+  // SANITÄR
+  { gw:'sanitaer', kw:['rohr','leitung','dicht','undicht','leck'], normen:['DIN 1988-200','DIN EN 806'], text:'Trinkwasserinstallationen müssen dicht sein und den Anforderungen der DIN 1988 entsprechen.', tip:'Druckprüfung durchführen, undichte Stellen beheben.', schwere:'Kritisch' },
+  { gw:'sanitaer', kw:['gefälle','abwasser','entwässerung'], normen:['DIN EN 12056','DIN 1986-100'], text:'Abwasserleitungen müssen das vorgeschriebene Mindestgefälle aufweisen (mind. 0,5–1%).', tip:'Gefälle messen und ggf. Leitungen neu verlegen.', schwere:'Wesentlich' },
+  { gw:'sanitaer', kw:['legionellen','legionella','trinkwasser','hygiene'], normen:['DIN EN 806','DVGW W 551','TrinkwV'], text:'Trinkwasseranlagen müssen Legionellenwachstum verhindern. Warmwasser mind. 60°C.', tip:'Wassertemperatur prüfen, ggf. thermische Desinfektion.', schwere:'Kritisch' },
+  { gw:'sanitaer', kw:['dämmung rohr','wärmedämmung sanitär'], normen:['DIN 1988-200','GEG'], text:'Kalt- und Warmwasserleitungen müssen nach GEG gedämmt werden.', tip:'Rohrdämmung nachrüsten.', schwere:'Wesentlich' },
+  { gw:'sanitaer', kw:['schallschutz','trittschall sanitär','geräusch'], normen:['DIN 4109','DIN EN 12056'], text:'Sanitäranlagen müssen Schallschutzanforderungen der DIN 4109 erfüllen.', tip:'Schallentkopplung prüfen, Leitungsbefestigung kontrollieren.', schwere:'Wesentlich' },
+  { gw:'sanitaer', kw:['druckprüfung','druck','prüfung sanitär'], normen:['DIN EN 806','DIN 1988-200'], text:'Trinkwasserinstallationen müssen nach Fertigstellung einer Druckprüfung unterzogen werden.', tip:'Druckprüfung durchführen und protokollieren.', schwere:'Wesentlich' },
+  // MALER
+  { gw:'maler', kw:['riss','haarriss','risse wand'], normen:['DIN 18363','DIN 55945'], text:'Haarrisse bis 0,2 mm sind tolerierbar. Breitere Risse müssen vor Anstrich geschlossen werden.', tip:'Risse mit Füller schließen, schleifen, grundieren.', schwere:'Wesentlich' },
+  { gw:'maler', kw:['abplatzen','abblättern','farbe ab'], normen:['DIN 18363','DIN EN ISO 4628'], text:'Farbabplatzungen deuten auf mangelnde Haftung hin. Untergrund muss tragfähig sein.', tip:'Untergrund prüfen, abblätternde Schichten entfernen, neu grundieren.', schwere:'Wesentlich' },
+  { gw:'maler', kw:['schimmel','feuchtigkeit','feuchtefleck'], normen:['DIN 18363','WTA-Merkblatt'], text:'Schimmel auf Wänden erfordert Ursachenbeseitigung vor Behandlung.', tip:'Feuchtigkeitsursache beseitigen, Schimmel fachgerecht entfernen, Anstrich erneuern.', schwere:'Kritisch' },
+  { gw:'maler', kw:['tapete','blase','tapete löst','tapete wellt'], normen:['DIN 18363','DIN EN 233'], text:'Tapetenablösungen entstehen durch mangelnde Untergrundvorbereitung oder falschen Kleister.', tip:'Untergrund prüfen, Tapete neu verkleben oder ersetzen.', schwere:'Wesentlich' },
+  { gw:'maler', kw:['anstrich','deckend','deckkraft','streichen'], normen:['DIN 18363','DIN EN 13300'], text:'Anstrich muss deckend und gleichmäßig sein. Mindest-Nassschichtdicke einhalten.', tip:'Anstrich auf ausreichende Deckung prüfen, ggf. weiteren Anstrich aufbringen.', schwere:'Gering' },
+  // FUSSBODEN
+  { gw:'fussboden', kw:['fuge','fugenbreite','fugen zu groß','fugen zu klein'], normen:['DIN 18365','DIN 18157'], text:'Fugenbreiten müssen den Herstellervorgaben und der Norm entsprechen. Bewegungsfugen einplanen.', tip:'Fugenbreite messen, bei Abweichungen Belag neu verlegen.', schwere:'Wesentlich' },
+  { gw:'fussboden', kw:['höhenversatz','unebenheit','nicht eben','welle'], normen:['DIN 18365','DIN 18202'], text:'Unebenheiten im Bodenbelag dürfen 3 mm/1m (Stichmaß) nicht überschreiten.', tip:'Ebenheit prüfen, ggf. Untergrund ausgleichen und Belag neu verlegen.', schwere:'Wesentlich' },
+  { gw:'fussboden', kw:['schallschutz','trittschall','fußboden schall'], normen:['DIN 4109','DIN EN ISO 717-2'], text:'Trittschallschutz muss Anforderungen der DIN 4109 erfüllen. Trittschalldämmung kontrollieren.', tip:'Trittschallmessung durchführen, Dämmung nachbessern.', schwere:'Wesentlich' },
+  { gw:'fussboden', kw:['estrich','riss','estrich beschädigt'], normen:['DIN 18560','DIN EN 13813'], text:'Risse im Estrich müssen vor Belagsverlegung behoben werden.', tip:'Estrichrisse bewerten, ggf. vergießen oder Estrich erneuern.', schwere:'Wesentlich' },
+  { gw:'fussboden', kw:['randstreifen','randfuge','dehnfuge'], normen:['DIN 18365','DIN 18560'], text:'Randfugen und Randstreifen sind zur Aufnahme von Dehnbewegungen zwingend erforderlich.', tip:'Randstreifen nachrüsten, fehlende Randfugen einschneiden.', schwere:'Wesentlich' },
+  // ROHBAU
+  { gw:'rohbau', kw:['riss mauerwerk','setzungsriss','wandriss'], normen:['DIN 1053-1','DIN EN 1996'], text:'Risse im Mauerwerk müssen bewertet werden. Aktive Risse deuten auf Setzungen hin.', tip:'Rissgröße dokumentieren, Statiker hinzuziehen.', schwere:'Kritisch' },
+  { gw:'rohbau', kw:['feuchtigkeit','feuchte keller','nass keller','abdichtung'], normen:['DIN 18195','WU-Richtlinie'], text:'Keller müssen gegen Feuchtigkeit abgedichtet sein.', tip:'Abdichtung prüfen, ggf. Drainage und Abdichtung nachrüsten.', schwere:'Kritisch' },
+  { gw:'rohbau', kw:['beton','betonfehler','kiesnest'], normen:['DIN EN 206','DIN 1045'], text:'Betonmängel wie Kiesnester müssen fachgerecht geschlossen werden.', tip:'Schadstellen auskratzen, mit Betonersatz verfüllen.', schwere:'Wesentlich' },
+  // FENSTER / TÜREN
+  { gw:'fenster', kw:['dichtung','undicht fenster','zugluft'], normen:['DIN 18355','DIN EN 14351'], text:'Fenster und Türen müssen luftdicht eingebaut und die Dichtungen intakt sein.', tip:'Dichtungen prüfen und ggf. ersetzen, Einbau prüfen.', schwere:'Wesentlich' },
+  { gw:'fenster', kw:['wärmebrücke fenster','kondensat','schimmel fenster'], normen:['DIN 4108-2','DIN EN 10211'], text:'Wärmebrücken an Fensteranschlüssen führen zu Kondensation und Schimmel.', tip:'Anschlussdetail prüfen, Wärmedämmung verbessern.', schwere:'Wesentlich' },
+  { gw:'fenster', kw:['beschlag','griff','schloss','schließt nicht'], normen:['DIN 18355','DIN EN 12519'], text:'Beschläge und Schlösser müssen leichtgängig und korrekt eingestellt sein.', tip:'Beschlag nachjustieren oder ersetzen.', schwere:'Gering' },
+  // DÄMMUNG
+  { gw:'daemmung', kw:['dämmstärke','zu dünn','unzureichend gedämmt'], normen:['DIN 4108-2','GEG','EnEV'], text:'Wärmedämmung muss den Anforderungen des GEG entsprechen. U-Wert prüfen.', tip:'Dämmstärke berechnen, ggf. nachbessern.', schwere:'Wesentlich' },
+  { gw:'daemmung', kw:['dampfsperre','dampfbremse','dampf'], normen:['DIN 4108-3','DIN 68800'], text:'Dampfbremse muss auf der warmen Seite der Dämmung eingebaut sein.', tip:'Lage und Dichtheit der Dampfbremse prüfen.', schwere:'Wesentlich' },
+  { gw:'daemmung', kw:['lücke','hohlraum','wärmebrücke dämmung'], normen:['DIN 4108-2','DIN EN 10211'], text:'Lücken und Hohlräume in der Dämmung sind Wärmebrücken und müssen geschlossen werden.', tip:'Dämmung auf Lücken prüfen, schließen.', schwere:'Wesentlich' },
+  // TROCKENBAU
+  { gw:'trockenbau', kw:['schallschutz trockenbau','wand schall'], normen:['DIN 4109','DIN 18183'], text:'Trockenbauständerwände müssen Schallschutzanforderungen der DIN 4109 erfüllen.', tip:'Wandaufbau und Bewertung prüfen.', schwere:'Wesentlich' },
+  { gw:'trockenbau', kw:['brandschutz trockenbau','feuerwiderstand'], normen:['DIN 4102','DIN EN 13501','DIN 18183'], text:'Brandschutzanforderungen an Trockenbauteile müssen durch geeignete Systeme erfüllt werden.', tip:'Beplankung und Fugenabdichtung auf Brandschutzeignung prüfen.', schwere:'Kritisch' },
+  // DACH
+  { gw:'dach', kw:['undicht dach','leck dach','wasser','regen'], normen:['DIN 18338','DIN EN 14783'], text:'Undichte Dächer müssen sofort abgedichtet werden um Folgeschäden zu vermeiden.', tip:'Schadstelle orten, provisorisch abdichten, Dachwart hinzuziehen.', schwere:'Kritisch' },
+  { gw:'dach', kw:['dachziegel','beschädigt','gebrochen ziegel'], normen:['DIN 18338','DIN EN 1304'], text:'Beschädigte Dachziegel müssen umgehend ausgetauscht werden.', tip:'Schadhafte Ziegel austauschen.', schwere:'Wesentlich' },
+  { gw:'dach', kw:['entwässerung','regenrinne','fallrohr'], normen:['DIN 18338','DIN EN 612'], text:'Dachentwässerung muss ausreichend dimensioniert und dicht sein.', tip:'Regenrinnen und Fallrohre prüfen, ggf. reinigen oder ersetzen.', schwere:'Wesentlich' },
+  // AUSSENANLAGE
+  { gw:'aussen', kw:['pflaster','belag','absackung'], normen:['DIN 18318','ZTV Pflaster'], text:'Pflasterflächen müssen eben und mit ausreichendem Gefälle verlegt sein.', tip:'Gefälle prüfen, abgesackte Stellen neu verlegen.', schwere:'Wesentlich' },
+  { gw:'aussen', kw:['entwässerung','gefälle außen','pfütze'], normen:['DIN 18318','DIN 1986-100'], text:'Außenflächen müssen ausreichendes Entwässerungsgefälle haben (mind. 2%).', tip:'Gefälle messen, Entwässerungsrinnen ergänzen.', schwere:'Wesentlich' },
+];
+
+function findNorm(beschreibung, kategorie, gewerk) {
+  const txt = (beschreibung + ' ' + kategorie).toLowerCase();
+  let best = null, bestScore = 0;
+  for (const e of NORMEN_DB) {
+    if (gewerk && e.gw !== gewerk) continue;
+    const score = e.kw.filter(k => txt.includes(k)).length;
+    if (score > bestScore) { bestScore = score; best = e; }
+  }
+  if (!best) {
+    // Fallback: gleiche Gewerk, kein Keyword-Match
+    for (const e of NORMEN_DB) {
+      if (e.gw === gewerk) { best = e; break; }
+    }
+  }
+  return best || { normen:['DIN 18299'], text:'Allgemeine Norm für Bauarbeiten.', tip:'Mangel durch Fachbetrieb prüfen lassen.', schwere:'Wesentlich' };
+}
+
+// ═══════════════════════════════════
+// UI HELPERS
+// ═══════════════════════════════════
+function toast(msg) {
+  const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+function showImg(src) { document.getElementById('img-full').src = src; document.getElementById('img-overlay').classList.add('open'); }
+function closeImg()   { document.getElementById('img-overlay').classList.remove('open'); }
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function closeModalBg(e, id) { if (e.target === document.getElementById(id)) closeModal(id); }
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function getGewerkInfo(id) { return GEWERKE.find(g => g.id === id) || {icon:'🔧', name:'Sonstiges'}; }
+
+// ═══════════════════════════════════
+// OBJEKTE
+// ═══════════════════════════════════
+function getObjekt(id) { return objekte.find(o => o.id === id); }
+
+function getMaengel(objId) {
+  return load('pc_maengel_' + objId, []);
+}
+function saveMaengelForObj(objId, maengel) {
+  save('pc_maengel_' + objId, maengel);
+}
+
+function renderObjekte() {
+  const el = document.getElementById('obj-list');
+  document.getElementById('hbadge').textContent = '🏗️ PROJEKTE';
+  if (!objekte.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">🏗️</div>NOCH KEIN PROJEKT<br><br>Tippe auf + NEUES PROJEKT</div>';
+    return;
+  }
+  el.innerHTML = objekte.map(o => {
+    const mn = getMaengel(o.id);
+    const offn = mn.filter(m=>m.status==='offen').length;
+    const bearb = mn.filter(m=>m.status==='in-bearbeitung').length;
+    const beh  = mn.filter(m=>m.status==='behoben').length;
+    const statusClass = o.archiviert ? 'archiviert' : (offn === 0 && mn.length > 0 ? 'abgeschlossen' : '');
+    return `<div class="obj-card ${statusClass}" onclick="openObjekt('${o.id}')">
+      <div class="obj-name">${o.name}</div>
+      <div class="obj-meta">${o.auftraggeber ? o.auftraggeber + ' · ' : ''}${o.datum||''}${o.archiviert?' · 📦 ARCHIVIERT':''}</div>
+      <div class="obj-stats">
+        <span class="ostat ostat-b">${mn.length} Mängel</span>
+        ${offn?`<span class="ostat ostat-r">🔴 ${offn} offen</span>`:''}
+        ${bearb?`<span class="ostat ostat-o">🟡 ${bearb} bearb.</span>`:''}
+        ${beh?`<span class="ostat ostat-g">🟢 ${beh} behoben</span>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function showObjekte() {
+  aktObjId = null;
+  showScreen('screen-objekte');
+  renderObjekte();
+  document.getElementById('hbadge').textContent = '🏗️ PROJEKTE';
+}
+
+function openObjektModal(id) {
+  editObjektId = id || null;
+  const o = id ? getObjekt(id) : null;
+  document.getElementById('modal-obj-title').textContent = o ? 'PROJEKT BEARBEITEN' : 'NEUES PROJEKT';
+  document.getElementById('o-name').value   = o ? o.name : '';
+  document.getElementById('o-ag').value     = o ? o.auftraggeber : '';
+  document.getElementById('o-datum').value  = o ? o.datum : new Date().toISOString().split('T')[0];
+  document.getElementById('o-notiz').value  = o ? (o.notiz||'') : '';
+  document.getElementById('o-an').value     = o ? (o.auftragnehmer||'') : '';
+  document.getElementById('o-ag2').value    = o ? (o.auftraggeber2||'') : '';
+  openModal('modal-objekt');
+}
+
+function saveObjekt() {
+  const name = document.getElementById('o-name').value.trim();
+  if (!name) { alert('Bitte Projektname eingeben!'); return; }
+  const o = {
+    id:          editObjektId || Date.now().toString(),
+    name,
+    auftraggeber:  document.getElementById('o-ag').value.trim(),
+    auftragnehmer: document.getElementById('o-an').value.trim(),
+    auftraggeber2: document.getElementById('o-ag2').value.trim(),
+    datum:         document.getElementById('o-datum').value,
+    notiz:         document.getElementById('o-notiz').value.trim(),
+    archiviert:    editObjektId ? (getObjekt(editObjektId)?.archiviert || false) : false,
+    erstellt:      editObjektId ? (getObjekt(editObjektId)?.erstellt || new Date().toISOString()) : new Date().toISOString(),
+  };
+  if (editObjektId) {
+    const idx = objekte.findIndex(x=>x.id===editObjektId);
+    if (idx!==-1) objekte[idx]=o;
+  } else {
+    objekte.unshift(o);
+  }
+  save('pc_objekte', objekte);
+  closeModal('modal-objekt');
+  if (editObjektId && aktObjId === editObjektId) {
+    document.getElementById('detail-title').textContent = o.name;
+  }
+  renderObjekte();
+  toast('✅ Projekt gespeichert!');
+}
+
+function editObjekt() { openObjektModal(aktObjId); }
+
+function archivObjekt() {
+  const o = getObjekt(aktObjId);
+  if (!o) return;
+  o.archiviert = !o.archiviert;
+  save('pc_objekte', objekte);
+  toast(o.archiviert ? '📦 Archiviert' : '✅ Reaktiviert');
+  renderObjekte();
+}
+
+// ═══════════════════════════════════
+// OBJEKT DETAIL
+// ═══════════════════════════════════
+function openObjekt(id) {
+  aktObjId = id;
+  const o = getObjekt(id);
+  if (!o) return;
+  showScreen('screen-detail');
+  document.getElementById('detail-title').textContent = o.name;
+  document.getElementById('hbadge').textContent = '← ZURÜCK';
+
+  // Tabs: Mängel + Bericht
+  document.getElementById('detail-tabs').innerHTML = `
+    <div class="tab active" onclick="showDetailTab('maengel',this)">⚡ Mängel</div>
+    <div class="tab" onclick="showDetailTab('erfassen',this)">+ Erfassen</div>
+    <div class="tab" onclick="showDetailTab('bericht',this)">📊 Bericht</div>
+  `;
+  showDetailTab('maengel', document.querySelector('#detail-tabs .tab'));
+}
+
+function showDetailTab(tab, el) {
+  document.querySelectorAll('#detail-tabs .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  const c = document.getElementById('detail-content');
+  if (tab === 'maengel') renderMaengelTab(c);
+  else if (tab === 'erfassen') renderErfassenTab(c);
+  else if (tab === 'bericht') renderBerichtTab(c);
+}
+
+// ═══════════════════════════════════
+// MÄNGEL TAB
+// ═══════════════════════════════════
+function renderMaengelTab(container) {
+  const mn = getMaengel(aktObjId);
+
+  // Gewerke die Mängel haben
+  const vorhandeneGW = [...new Set(mn.map(m=>m.gewerk))];
+
+  let html = `<div class="content">
+    <div class="filter-row">
+      <button class="fbtn ${currentFilter==='alle'?'active':''}" onclick="setMFilter('alle',this)">Alle</button>
+      <button class="fbtn ${currentFilter==='offen'?'active':''}" onclick="setMFilter('offen',this)">🔴 Offen</button>
+      <button class="fbtn ${currentFilter==='in-bearbeitung'?'active':''}" onclick="setMFilter('in-bearbeitung',this)">🟡 Bearb.</button>
+      <button class="fbtn ${currentFilter==='behoben'?'active':''}" onclick="setMFilter('behoben',this)">🟢 Behoben</button>
+    </div>
+    <div class="filter-row" style="margin-top:-4px">
+      <button class="fbtn ${currentGewerkFilter==='alle'?'active':''}" onclick="setGWFilter('alle',this)">🔧 Alle Gewerke</button>
+      ${vorhandeneGW.map(gwId => {
+        const g = getGewerkInfo(gwId);
+        return `<button class="fbtn ${currentGewerkFilter===gwId?'active':''}" onclick="setGWFilter('${gwId}',this)">${g.icon} ${g.name}</button>`;
+      }).join('')}
+    </div>`;
+
+  let items = mn;
+  if (currentFilter !== 'alle') items = items.filter(m=>m.status===currentFilter);
+  if (currentGewerkFilter !== 'alle') items = items.filter(m=>m.gewerk===currentGewerkFilter);
+
+  const stLbl = {offen:'Offen','in-bearbeitung':'In Bearb.',behoben:'Behoben'};
+  const sc = {Kritisch:'var(--red)',Wesentlich:'var(--orange)',Gering:'var(--green)',Offen:'var(--text-dim)'};
+
+  if (!items.length) {
+    html += '<div class="empty"><div class="empty-icon">📋</div>KEINE MÄNGEL</div>';
+  } else {
+    items.forEach(m => {
+      const gw = getGewerkInfo(m.gewerk);
+      const nr = m.nr ? m.nr.toString().padStart(3,'0') : '–';
+      // Fällig-Warnung
+      const heute = new Date().toISOString().split('T')[0];
+      const faelligWarning = m.faellig && m.status !== 'behoben' && m.faellig < heute;
+      const faelligBald    = m.faellig && m.status !== 'behoben' && m.faellig >= heute && m.faellig <= new Date(Date.now()+7*86400000).toISOString().split('T')[0];
+      html += `<div class="mangel-item ${m.status}" onclick="showMangelDetail('${m.id}')">
+        <div class="mi-top">
+          <span class="mi-nr">#${nr} · ${m.datum||'–'}</span>
+          <span class="sbadge sb-${m.status==='in-bearbeitung'?'i':m.status==='behoben'?'b':'o'}">${stLbl[m.status]}</span>
+        </div>
+        <div style="margin-bottom:4px"><span style="font-size:16px">${gw.icon}</span> <span style="font-family:var(--mono);font-size:10px;color:var(--text-dim)">${gw.name}${m.anlage?' · '+m.anlage:''}</span></div>
+        <div class="mi-titel">${m.beschreibung.slice(0,65)}${m.beschreibung.length>65?'…':''}</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:5px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:4px"><div class="schwere-dot" style="background:${sc[m.schwere]||'#888'}"></div><span style="font-size:11px;font-family:var(--mono);color:var(--text-dim)">${m.schwere}</span></div>
+          ${m.fotoCount?`<span style="font-size:11px;font-family:var(--mono);color:var(--text-dim)">📷 ${m.fotoCount}</span>`:''}
+          ${faelligWarning?`<span style="font-size:11px;font-family:var(--mono);color:var(--red);font-weight:bold">⚠️ ÜBERFÄLLIG ${m.faellig}</span>`:''}
+          ${faelligBald?`<span style="font-size:11px;font-family:var(--mono);color:var(--orange)">⏰ Fällig ${m.faellig}</span>`:''}
+          ${m.faellig && !faelligWarning && !faelligBald && m.status!=='behoben'?`<span style="font-size:11px;font-family:var(--mono);color:var(--text-dim)">📅 ${m.faellig}</span>`:''}
+        </div>
+        ${m.normen?.length?'<div style="margin-top:5px">'+m.normen.map(n=>`<span class="norm-tag">${n}</span>`).join('')+'</div>':''}
+      </div>`;
+    });
+  }
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function setMFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderMaengelTab(document.getElementById('detail-content'));
+}
+
+function setGWFilter(f, btn) {
+  currentGewerkFilter = f;
+  renderMaengelTab(document.getElementById('detail-content'));
+}
+
+// ═══════════════════════════════════
+// ERFASSEN TAB
+// ═══════════════════════════════════
+function renderErfassenTab(container) {
+  container.innerHTML = '<div id="erfassen-mount"></div>';
+  openMangelModal(null);
+}
+
+function renderGewerkGrid() {
+  document.getElementById('gewerk-grid').innerHTML = GEWERKE.map(g =>
+    `<div class="gw-btn ${currentGewerk===g.id?'active':''}" onclick="selectGewerk('${g.id}')">
+      <span class="gw-icon">${g.icon}</span>${g.name}
+    </div>`
+  ).join('');
+}
+
+function selectGewerk(id) {
+  currentGewerk = id;
+  renderGewerkGrid();
+  // Kategorien aktualisieren
+  const cats = KATEGORIEN[id] || ['Sonstiges'];
+  const sel = document.getElementById('m-kategorie');
+  sel.innerHTML = '<option value="">– wählen –</option>' + cats.map(c=>`<option>${c}</option>`).join('');
+}
+
+function openMangelModal(id) {
+  editMangelId = id;
+  const mn = id ? getMaengel(aktObjId).find(m=>m.id===id) : null;
+  // Für neuen Mangel: letzten als Vorlage nehmen
+  const vorlage = (!id && lastMangel) ? lastMangel : null;
+  document.getElementById('modal-mangel-title').textContent = mn ? 'MANGEL BEARBEITEN' : 'NEUER MANGEL';
+
+  currentGewerk  = mn ? mn.gewerk : (vorlage ? vorlage.gewerk : '');
+  currentNormen  = mn ? (mn.normen||[]) : [];
+  currentPhotos  = mn ? (mn.fotos||[]).map((d,i)=>({dataURL:d, name:'foto_'+i, caption:(mn.fotoCaptions||[])[i]||''})) : [];
+
+  renderGewerkGrid();
+  selectGewerk(currentGewerk || 'elektro');
+
+  // Felder füllen: bei Edit → Mangel-Werte, bei Neu → Vorlage (außer Beschreibung/Fotos/Bemerkung)
+  document.getElementById('m-anlage').value       = mn ? mn.anlage||'' : (vorlage ? vorlage.anlage||'' : '');
+  document.getElementById('m-beschreibung').value = mn ? mn.beschreibung||'' : '';
+  document.getElementById('m-schwere').value      = mn ? mn.schwere||'Wesentlich' : (vorlage ? vorlage.schwere||'Wesentlich' : 'Wesentlich');
+  document.getElementById('m-status').value       = mn ? mn.status||'offen' : 'offen';
+  document.getElementById('m-faellig').value      = mn ? mn.faellig||'' : '';
+  document.getElementById('m-bemerkung').value    = mn ? mn.bemerkung||'' : '';
+
+  // Kategorie setzen
+  const kat = mn ? mn.kategorie : (vorlage ? vorlage.kategorie : '');
+  if (kat) setTimeout(() => { document.getElementById('m-kategorie').value = kat; }, 10);
+
+  const normBox = document.getElementById('norm-box');
+  normBox.classList.remove('visible');
+  if (currentNormen.length) {
+    normBox.classList.add('visible');
+    document.getElementById('norm-status').textContent = 'GESPEICHERTE NORMEN';
+    document.getElementById('norm-result').innerHTML = currentNormen.map(n=>`<span class="norm-tag">${n}</span>`).join('');
+  }
+
+  // Vorausfüll-Hinweis
+  if (!id && vorlage) {
+    toast('📋 Vorlage übernommen von letztem Mangel');
+  }
+
+  renderPhotoPreview();
+  openModal('modal-mangel');
+}
+
+// ═══════════════════════════════════
+// NORM ERMITTELN
+// ═══════════════════════════════════
+async function findNormBtn() {
+  const beschreibung = document.getElementById('m-beschreibung').value.trim();
+  const kategorie    = document.getElementById('m-kategorie').value;
+  if (!beschreibung) { alert('Bitte Mangel beschreiben!'); return; }
+
+  const box = document.getElementById('norm-box');
+  box.classList.add('visible');
+  document.getElementById('norm-spinner').classList.add('active');
+  document.getElementById('norm-status').textContent = 'ANALYSIERE...';
+  document.getElementById('norm-result').innerHTML = '';
+  currentNormen = [];
+
+  await new Promise(r => setTimeout(r, 400));
+
+  const result = findNorm(beschreibung, kategorie, currentGewerk);
+  currentNormen = result.normen;
+  document.getElementById('m-schwere').value = result.schwere;
+  document.getElementById('norm-spinner').classList.remove('active');
+  document.getElementById('norm-status').textContent = 'DIN NORM ERMITTELT ✓';
+
+  const sc = {Kritisch:'var(--red)',Wesentlich:'var(--orange)',Gering:'var(--green)',Offen:'var(--text-dim)'};
+  document.getElementById('norm-result').innerHTML =
+    '<div style="margin-bottom:8px">'+currentNormen.map(n=>`<span class="norm-tag">${n}</span>`).join('')+'</div>'+
+    `<div class="norm-text">${result.text}</div>`+
+    `<div class="norm-tip">💡 ${result.tip}</div>`+
+    `<div style="display:flex;align-items:center;gap:6px;margin-top:8px"><div class="schwere-dot" style="background:${sc[result.schwere]||'#888'}"></div><span style="font-family:var(--mono);font-size:11px">Schweregrad: ${result.schwere}</span></div>`;
+}
+
+// ═══════════════════════════════════
+// FOTOS
+// ═══════════════════════════════════
+function handlePhotos(e) {
+  Array.from(e.target.files).forEach(f => {
+    const reader = new FileReader();
+    reader.onload = async ev => {
+      const compressed = await compressPhoto(ev.target.result);
+      currentPhotos.push({dataURL: compressed, name: f.name});
+      renderPhotoPreview();
+    };
+    reader.readAsDataURL(f);
+  });
+  e.target.value = '';
+}
+
+function renderPhotoPreview() {
+  const el = document.getElementById('photo-preview');
+  if (!el) return;
+  el.innerHTML = '';
+  currentPhotos.forEach((p,i) => {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:relative;display:inline-block;margin:0 8px 8px 0;';
+    // Bild
+    const img = document.createElement('img');
+    img.className = 'photo-thumb'; img.src = p.dataURL;
+    img.onclick = () => showImg(p.dataURL);
+    // Löschen
+    const del = document.createElement('button');
+    del.className = 'photo-del'; del.innerHTML = '✕';
+    del.onclick = ev => { ev.stopPropagation(); currentPhotos.splice(i,1); renderPhotoPreview(); };
+    // Beschriftung
+    const cap = document.createElement('input');
+    cap.type = 'text';
+    cap.placeholder = 'Beschriftung...';
+    cap.value = p.caption || '';
+    cap.style.cssText = 'width:80px;font-size:10px;padding:3px 4px;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:2px;margin-top:3px;display:block;font-family:var(--mono);';
+    cap.oninput = () => { currentPhotos[i].caption = cap.value; };
+    wrap.appendChild(img); wrap.appendChild(del); wrap.appendChild(cap);
+    el.appendChild(wrap);
+  });
+}
+
+// ═══════════════════════════════════
+// MANGEL SPEICHERN
+// ═══════════════════════════════════
+function saveMangel() {
+  const beschreibung = document.getElementById('m-beschreibung').value.trim();
+  if (!beschreibung) { alert('Bitte Mangel beschreiben!'); return; }
+  if (!currentGewerk) { alert('Bitte Gewerk wählen!'); return; }
+
+  const mn = getMaengel(aktObjId);
+  const id = editMangelId || Date.now().toString();
+
+  // Auto-Nummer: höchste vorhandene + 1
+  const maxNr = mn.reduce((max, m) => Math.max(max, m.nr||0), 0);
+  const autoNr = editMangelId ? (mn.find(x=>x.id===editMangelId)?.nr || maxNr+1) : maxNr+1;
+
+  const m = {
+    id,
+    nr:          autoNr,
+    gewerk:      currentGewerk,
+    anlage:      document.getElementById('m-anlage').value.trim(),
+    kategorie:   document.getElementById('m-kategorie').value,
+    beschreibung,
+    schwere:     document.getElementById('m-schwere').value,
+    status:      document.getElementById('m-status').value,
+    faellig:     document.getElementById('m-faellig').value,
+    bemerkung:   document.getElementById('m-bemerkung').value.trim(),
+    normen:      [...currentNormen],
+    fotos:       currentPhotos.map(p=>p.dataURL),
+    fotoCaptions: currentPhotos.map(p=>p.caption||''),
+    fotoCount:   currentPhotos.length,
+    datum:       new Date().toISOString().split('T')[0],
+    erstellt:    editMangelId ? (mn.find(x=>x.id===editMangelId)?.erstellt||new Date().toISOString()) : new Date().toISOString(),
+  };
+
+  if (editMangelId) {
+    const idx = mn.findIndex(x=>x.id===editMangelId);
+    if (idx!==-1) mn[idx]=m; else mn.unshift(m);
+  } else {
+    mn.unshift(m);
+  }
+
+  saveMaengelForObj(aktObjId, mn);
+  // Letzten Mangel für Vorausfüllung merken (ohne Beschreibung/Fotos/Bemerkung)
+  if (!editMangelId) {
+    lastMangel = { gewerk: m.gewerk, anlage: m.anlage, kategorie: m.kategorie, schwere: m.schwere };
+  }
+  closeModal('modal-mangel');
+  currentPhotos=[]; currentNormen=[]; editMangelId=null;
+  renderMaengelTab(document.getElementById('detail-content'));
+  // Tab auf Mängel schalten
+  const tabs = document.querySelectorAll('#detail-tabs .tab');
+  tabs.forEach(t=>t.classList.remove('active')); tabs[0].classList.add('active');
+  toast('✅ Mangel gespeichert!');
+}
+
+// ═══════════════════════════════════
+// MANGEL DETAIL
+// ═══════════════════════════════════
+function showMangelDetail(id) {
+  const mn = getMaengel(aktObjId);
+  const m  = mn.find(x=>x.id===id);
+  if (!m) return;
+  const nr  = (mn.indexOf(m)+1).toString().padStart(3,'0');
+  const gw  = getGewerkInfo(m.gewerk);
+  const stLbl = {offen:'Offen','in-bearbeitung':'In Bearbeitung',behoben:'Behoben'};
+  const sc = {Kritisch:'var(--red)',Wesentlich:'var(--orange)',Gering:'var(--green)',Offen:'var(--text-dim)'};
+
+  let html = `
+    <div class="drow" style="margin-bottom:10px">
+      <div><div class="dl">Nr.</div><div class="dv" style="font-family:var(--mono)">#${nr}</div></div>
+      <div><div class="dl">Datum</div><div class="dv">${m.datum||'–'}</div></div>
+    </div>
+    <div class="drow" style="margin-bottom:10px">
+      <div><div class="dl">Gewerk</div><div class="dv">${gw.icon} ${gw.name}</div></div>
+      <div><div class="dl">Anlage</div><div class="dv">${m.anlage||'–'}</div></div>
+    </div>
+    <div class="dl">Beschreibung</div>
+    <div class="dv" style="line-height:1.6;margin-bottom:10px">${m.beschreibung}</div>
+    <div class="drow" style="margin-bottom:10px">
+      <div><div class="dl">Schweregrad</div><div class="dv" style="display:flex;align-items:center;gap:6px"><div class="schwere-dot" style="background:${sc[m.schwere]||'#888'}"></div>${m.schwere}</div></div>
+      <div><div class="dl">Status</div><div class="dv"><span class="sbadge sb-${m.status==='in-bearbeitung'?'i':m.status==='behoben'?'b':'o'}">${stLbl[m.status]}</span></div></div>
+    </div>
+    ${m.faellig?`<div class="dl">Fällig bis</div><div class="dv" style="color:${m.faellig < new Date().toISOString().split('T')[0] && m.status!=='behoben' ? 'var(--red)' : 'var(--text)'}">${m.faellig}${m.faellig < new Date().toISOString().split('T')[0] && m.status!=='behoben' ? ' ⚠️ ÜBERFÄLLIG' : ''}</div>`:''}`;
+
+  if (m.normen?.length) html += `<div class="dl">DIN Normen</div><div style="margin-bottom:10px">${m.normen.map(n=>`<span class="norm-tag">${n}</span>`).join('')}</div>`;
+  if (m.bemerkung) html += `<div class="dl">Bemerkung</div><div class="dv">${m.bemerkung}</div>`;
+
+  // Fotos mit Beschriftung
+  if (m.fotos?.length) {
+    html += `<div class="dl">Fotos</div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">`;
+    m.fotos.forEach((u,i) => {
+      const cap = (m.fotoCaptions||[])[i]||'';
+      html += `<div style="text-align:center">
+        <img src="${u}" onclick="showImg('${u}')" style="width:90px;height:90px;object-fit:cover;border-radius:3px;border:1px solid var(--border);cursor:pointer;display:block">
+        ${cap?`<div style="font-size:10px;font-family:var(--mono);color:var(--text-dim);margin-top:3px;width:90px;word-break:break-word">${cap}</div>`:''}
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  // KOMMENTARVERLAUF
+  const kommentare = m.kommentare || [];
+  html += `<hr class="div">
+    <div class="dl" style="margin-bottom:8px">💬 KOMMENTARVERLAUF (${kommentare.length})</div>`;
+
+  if (kommentare.length) {
+    html += '<div style="margin-bottom:10px">';
+    kommentare.forEach(k => {
+      html += `<div style="background:var(--surface2);border-radius:3px;padding:8px 10px;margin-bottom:6px;border-left:2px solid var(--accent)">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-bottom:4px">${k.autor} · ${k.datum}</div>
+        <div style="font-size:13px">${k.text}</div>
+      </div>`;
+    });
+    html += '</div>';
+  } else {
+    html += '<div style="color:var(--text-dim);font-family:var(--mono);font-size:11px;margin-bottom:10px">Noch keine Kommentare</div>';
+  }
+
+  html += `<div style="display:flex;gap:6px;margin-bottom:6px">
+    <input type="text" id="kom-autor" placeholder="Dein Name" style="flex:0.4;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--sans);font-size:13px;padding:8px 10px;border-radius:3px;outline:none;-webkit-appearance:none">
+    <input type="text" id="kom-text" placeholder="Kommentar eingeben..." style="flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--sans);font-size:13px;padding:8px 10px;border-radius:3px;outline:none;-webkit-appearance:none">
+  </div>
+  <button class="btn btn-export" style="margin-bottom:12px" onclick="addKommentar('${id}')">💬 KOMMENTAR HINZUFÜGEN</button>`;
+
+  html += `<hr class="div">
+    <div class="dl" style="margin-bottom:6px">Status ändern</div>
+    <select id="det-status" style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--sans);font-size:14px;padding:10px;border-radius:3px;margin-bottom:10px;-webkit-appearance:none">
+      <option value="offen" ${m.status==='offen'?'selected':''}>Offen</option>
+      <option value="in-bearbeitung" ${m.status==='in-bearbeitung'?'selected':''}>In Bearbeitung</option>
+      <option value="behoben" ${m.status==='behoben'?'selected':''}>Behoben</option>
+    </select>
+    <button class="btn btn-primary" style="margin-bottom:8px" onclick="updateMangelStatus('${id}')">STATUS AKTUALISIEREN</button>
+    <button class="btn btn-export" onclick="closeModal('modal-detail');openMangelModal('${id}')">✏️ BEARBEITEN</button>
+    <button class="btn btn-danger" onclick="deleteMangel('${id}')">🗑 LÖSCHEN</button>`;
+
+  document.getElementById('modal-detail-body').innerHTML = html;
+  openModal('modal-detail');
+}
+
+function updateMangelStatus(id) {
+  const mn = getMaengel(aktObjId);
+  const m  = mn.find(x=>x.id===id);
+  if (!m) return;
+  m.status = document.getElementById('det-status').value;
+  saveMaengelForObj(aktObjId, mn);
+  closeModal('modal-detail');
+  renderMaengelTab(document.getElementById('detail-content'));
+  toast('Status aktualisiert');
+}
+
+function deleteMangel(id) {
+  if (!confirm('Mangel löschen?')) return;
+  let mn = getMaengel(aktObjId);
+  mn = mn.filter(x=>x.id!==id);
+  saveMaengelForObj(aktObjId, mn);
+  closeModal('modal-detail');
+  renderMaengelTab(document.getElementById('detail-content'));
+  toast('Mangel gelöscht');
+}
+
+// ═══════════════════════════════════
+// KOMMENTARVERLAUF
+// ═══════════════════════════════════
+function addKommentar(mangelId) {
+  const autor = document.getElementById('kom-autor').value.trim() || 'Unbekannt';
+  const text  = document.getElementById('kom-text').value.trim();
+  if (!text) { alert('Bitte Kommentar eingeben!'); return; }
+
+  const mn = getMaengel(aktObjId);
+  const m  = mn.find(x=>x.id===mangelId);
+  if (!m) return;
+
+  if (!m.kommentare) m.kommentare = [];
+  m.kommentare.push({
+    autor,
+    text,
+    datum: new Date().toLocaleString('de-DE', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})
+  });
+
+  saveMaengelForObj(aktObjId, mn);
+  showMangelDetail(mangelId); // Ansicht neu laden
+  toast('💬 Kommentar gespeichert');
+}
+
+// ═══════════════════════════════════
+// VORLAGEN
+// ═══════════════════════════════════
+function getVorlagen() { return load('pc_vorlagen', []); }
+function saveVorlagen(v) { save('pc_vorlagen', v); }
+
+function saveAlsVorlage() {
+  const beschreibung = document.getElementById('m-beschreibung').value.trim();
+  if (!beschreibung) { alert('Bitte zuerst Mangel beschreiben!'); return; }
+
+  const name = prompt('Name für diese Vorlage:', beschreibung.slice(0,40));
+  if (!name) return;
+
+  const vorlagen = getVorlagen();
+  vorlagen.unshift({
+    id:          Date.now().toString(),
+    name,
+    gewerk:      currentGewerk,
+    anlage:      document.getElementById('m-anlage').value.trim(),
+    kategorie:   document.getElementById('m-kategorie').value,
+    beschreibung,
+    schwere:     document.getElementById('m-schwere').value,
+    normen:      [...currentNormen],
+  });
+  saveVorlagen(vorlagen);
+  toast('⭐ Vorlage gespeichert!');
+}
+
+function showVorlagen() {
+  const vorlagen = getVorlagen();
+  if (!vorlagen.length) { alert('Noch keine Vorlagen gespeichert.\n\nMangel ausfüllen → "Als Vorlage speichern"'); return; }
+
+  let html = `<div class="dl" style="margin-bottom:10px">⭐ VORLAGE WÄHLEN</div>`;
+  vorlagen.forEach(v => {
+    const g = getGewerkInfo(v.gewerk);
+    html += `<div style="background:var(--surface2);border-radius:4px;padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px">
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:14px;margin-bottom:3px">${v.name}</div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--text-dim)">${g.icon} ${g.name}${v.anlage?' · '+v.anlage:''}</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="act-btn" onclick="ladeVorlage('${v.id}')">LADEN</button>
+        <button class="act-btn" style="color:var(--red);border-color:var(--red)" onclick="deleteVorlage('${v.id}')">✕</button>
+      </div>
+    </div>`;
+  });
+  html += `<hr class="div"><button class="btn btn-export" onclick="closeModal('modal-detail')">Abbrechen</button>`;
+
+  document.getElementById('modal-detail-body').innerHTML = html;
+  openModal('modal-detail');
+}
+
+function ladeVorlage(vorlagenId) {
+  const v = getVorlagen().find(x=>x.id===vorlagenId);
+  if (!v) return;
+  closeModal('modal-detail');
+
+  // Felder füllen
+  currentGewerk  = v.gewerk;
+  currentNormen  = v.normen || [];
+  renderGewerkGrid();
+  selectGewerk(v.gewerk);
+  setTimeout(() => {
+    document.getElementById('m-anlage').value        = v.anlage||'';
+    document.getElementById('m-beschreibung').value  = v.beschreibung||'';
+    document.getElementById('m-schwere').value       = v.schwere||'Wesentlich';
+    if (v.kategorie) document.getElementById('m-kategorie').value = v.kategorie;
+    if (currentNormen.length) {
+      document.getElementById('norm-box').classList.add('visible');
+      document.getElementById('norm-status').textContent = 'AUS VORLAGE';
+      document.getElementById('norm-result').innerHTML = currentNormen.map(n=>`<span class="norm-tag">${n}</span>`).join('');
+    }
+  }, 50);
+
+  // Modal öffnen falls nicht schon offen
+  openModal('modal-mangel');
+  toast('⭐ Vorlage geladen!');
+}
+
+function deleteVorlage(vorlagenId) {
+  if (!confirm('Vorlage löschen?')) return;
+  const vorlagen = getVorlagen().filter(x=>x.id!==vorlagenId);
+  saveVorlagen(vorlagen);
+  showVorlagen();
+  toast('Vorlage gelöscht');
+}
+
+// ═══════════════════════════════════
+// BERICHT TAB
+// ═══════════════════════════════════
+function renderBerichtTab(container) {
+  const mn = getMaengel(aktObjId);
+  const o  = getObjekt(aktObjId);
+  const total=mn.length, offen=mn.filter(m=>m.status==='offen').length,
+        bearb=mn.filter(m=>m.status==='in-bearbeitung').length,
+        beh=mn.filter(m=>m.status==='behoben').length;
+  const pct = total ? Math.round(beh/total*100) : 0;
+
+  // Gewerk-Verteilung
+  const gwCount = {};
+  mn.forEach(m => { gwCount[m.gewerk] = (gwCount[m.gewerk]||0)+1; });
+  const gwRows = Object.entries(gwCount).sort((a,b)=>b[1]-a[1]).map(([gw,c]) => {
+    const g = getGewerkInfo(gw);
+    return `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span>${g.icon} <span style="font-family:var(--mono);font-size:11px">${g.name}</span></span><span style="font-family:var(--mono);font-size:12px;color:var(--text-dim)">${c}×</span></div>`;
+  }).join('');
+
+  container.innerHTML = `<div class="content">
+    <div class="stats-grid">
+      <div class="stat-box"><div class="stat-num" style="color:var(--text)">${total}</div><div class="stat-lbl">Gesamt</div></div>
+      <div class="stat-box"><div class="stat-num" style="color:var(--red)">${offen}</div><div class="stat-lbl">Offen</div></div>
+      <div class="stat-box"><div class="stat-num" style="color:var(--orange)">${bearb}</div><div class="stat-lbl">In Bearb.</div></div>
+      <div class="stat-box"><div class="stat-num" style="color:var(--green)">${beh}</div><div class="stat-lbl">Behoben</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Fortschritt</div>
+      <div class="progress-wrap"><div class="progress-bar" style="width:${pct}%"></div></div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--text-dim)">${beh} von ${total} behoben (${pct}%)</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Export</div>
+      <button class="btn btn-export" onclick="exportObjektPDF()">📄 Gesamt-PDF (alle Gewerke)</button>
+      <button class="btn btn-export" onclick="showGewerkeExport()">📂 PDF pro Gewerk</button>
+      <button class="btn btn-export" onclick="exportCSV()">📊 CSV exportieren</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Gewerke</div>
+      ${gwRows||'<div style="color:var(--text-dim);font-family:var(--mono);font-size:12px">Noch keine Mängel</div>'}
+    </div>
+    <div class="card">
+      <div class="card-title">Projekt-Einstellungen</div>
+      <button class="btn btn-export" onclick="editObjekt()">✏️ Projektdaten bearbeiten</button>
+      <button class="btn btn-green" onclick="archivObjekt()">${o?.archiviert?'✅ Reaktivieren':'📦 Archivieren'}</button>
+      <button class="btn btn-danger" onclick="deleteObjekt()">🗑 Projekt löschen</button>
+    </div>
+  </div>`;
+}
+
+function deleteObjekt() {
+  if (!confirm('Projekt und ALLE Mängel löschen?')) return;
+  localStorage.removeItem('pc_maengel_' + aktObjId);
+  objekte = objekte.filter(o=>o.id!==aktObjId);
+  save('pc_objekte', objekte);
+  showObjekte();
+  toast('Projekt gelöscht');
+}
+
+// ═══════════════════════════════════
+// QR-CODE (einfacher Matrix-Generator)
+// ═══════════════════════════════════
+function drawQR(doc, text, x, y, size) {
+  // Einfacher QR-artiger Code als Platzhalter mit Text-URL
+  // Nutzt Google Charts API-kompatiblen Ansatz via Canvas
+  try {
+    const canvas = document.createElement('canvas');
+    const s = 120;
+    canvas.width = s; canvas.height = s;
+    const ctx = canvas.getContext('2d');
+    // Weißer Hintergrund
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0,0,s,s);
+    // Einfaches Muster das den Text codiert (visuelle Referenz)
+    ctx.fillStyle = '#000';
+    // Eckenquadrate (Finder Pattern)
+    [[0,0],[s-21,0],[0,s-21]].forEach(([ex,ey])=>{
+      ctx.fillRect(ex,ey,21,21);
+      ctx.fillStyle='#fff'; ctx.fillRect(ex+3,ey+3,15,15);
+      ctx.fillStyle='#000'; ctx.fillRect(ex+6,ey+6,9,9);
+      ctx.fillStyle='#000';
+    });
+    // Text-Hash als Muster
+    let hash = 0;
+    for(let i=0;i<text.length;i++) hash = ((hash<<5)-hash)+text.charCodeAt(i);
+    const rng = (seed) => { seed = (seed*9301+49297)%233280; return seed/233280; };
+    let seed = Math.abs(hash);
+    for(let row=0;row<15;row++){
+      for(let col=0;col<15;col++){
+        seed = Math.abs((seed*9301+49297)%233280);
+        if(seed/233280 > 0.5){
+          ctx.fillRect(25+col*5, 25+row*5, 4, 4);
+        }
+      }
+    }
+    const imgData = canvas.toDataURL('image/png');
+    doc.addImage(imgData,'PNG',x,y,size,size);
+    // Rahmen
+    doc.setDrawColor(200,200,200); doc.setLineWidth(0.3);
+    doc.rect(x,y,size,size,'S');
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════
+// PDF PRO GEWERK
+// ═══════════════════════════════════
+function showGewerkeExport() {
+  const mn = getMaengel(aktObjId);
+  if (!mn.length) { alert('Keine Mängel vorhanden.'); return; }
+
+  // Welche Gewerke haben Mängel?
+  const vorhandene = [...new Set(mn.map(m=>m.gewerk))];
+
+  let html = '<div class="dl" style="margin-bottom:10px">Gewerk für PDF wählen:</div>';
+  vorhandene.forEach(gwId => {
+    const g = getGewerkInfo(gwId);
+    const count = mn.filter(m=>m.gewerk===gwId).length;
+    html += `<button class="btn btn-export" style="margin-bottom:8px;display:flex;align-items:center;gap:10px;text-align:left" onclick="exportGewerktPDF('${gwId}');closeModal('modal-detail')">
+      <span style="font-size:20px">${g.icon}</span>
+      <span style="flex:1">${g.name}</span>
+      <span style="color:var(--text-dim)">${count} Mängel</span>
+    </button>`;
+  });
+
+  // Kurz ein Modal-ähnliches Element nutzen
+  document.getElementById('modal-detail-body').innerHTML = html +
+    `<hr class="div"><button class="btn btn-export" onclick="closeModal('modal-detail')">Abbrechen</button>`;
+  openModal('modal-detail');
+}
+
+async function exportGewerktPDF(gewerkId) {
+  const mn  = getMaengel(aktObjId).filter(m => m.gewerk === gewerkId);
+  const o   = getObjekt(aktObjId);
+  const gw  = getGewerkInfo(gewerkId);
+  if (!mn.length) { alert('Keine Mängel für dieses Gewerk.'); return; }
+  toast('PDF wird erstellt...');
+
+  const {jsPDF} = window.jspdf;
+  const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const W=doc.internal.pageSize.getWidth(), H=doc.internal.pageSize.getHeight(), ML=14, MR=14;
+  const CA=[37,99,235],CR=[239,68,68],CG=[34,197,94],CO=[249,115,22],CGR=[107,114,128],CL=[220,220,220],CB=[248,249,255],CW=[255,255,255],CK=[30,30,30];
+  const sc={Kritisch:CR,Wesentlich:CO,Gering:CG,Offen:CGR};
+  const stc={offen:CR,'in-bearbeitung':CO,behoben:CG};
+  const stl={offen:'OFFEN','in-bearbeitung':'IN BEARBEITUNG',behoben:'BEHOBEN'};
+
+  const total=mn.length, offen=mn.filter(m=>m.status==='offen').length,
+        beh=mn.filter(m=>m.status==='behoben').length;
+
+  // DECKBLATT
+  doc.setFillColor(...CW); doc.rect(0,0,W,H,'F');
+  doc.setFillColor(...CA); doc.rect(0,0,W,48,'F');
+  doc.setTextColor(...CW); doc.setFont('helvetica','bold'); doc.setFontSize(26);
+  doc.text('PROJEKTCHECK', ML, 18);
+  doc.setFontSize(12); doc.setFont('helvetica','normal');
+  doc.text(`MÄNGELBERICHT – ${gw.name.toUpperCase()}`, ML, 28);
+  doc.setFontSize(10); doc.setFont('helvetica','bold');
+  doc.text(o.name, ML, 38);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9);
+  doc.text('Erstellt: '+new Date().toLocaleDateString('de-DE',{day:'2-digit',month:'long',year:'numeric'}), ML, 45);
+
+  // Gewerk-Icon groß
+  doc.setFontSize(48); doc.setTextColor(...CK);
+  doc.text(gw.icon, W-ML-20, 38);
+
+  // Stats
+  const stats=[{l:'GESAMT',v:total,c:CK},{l:'OFFEN',v:offen,c:CR},{l:'BEHOBEN',v:beh,c:CG}];
+  const bw=(W-ML-MR-6)/3;
+  stats.forEach((s,i)=>{
+    const bx=ML+i*(bw+3),by=55;
+    doc.setFillColor(...CB); doc.roundedRect(bx,by,bw,22,2,2,'F');
+    doc.setDrawColor(...CL); doc.setLineWidth(0.3); doc.roundedRect(bx,by,bw,22,2,2,'S');
+    doc.setFont('helvetica','bold'); doc.setFontSize(18); doc.setTextColor(...s.c);
+    doc.text(String(s.v),bx+bw/2,by+13,{align:'center'});
+    doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(...CGR);
+    doc.text(s.l,bx+bw/2,by+20,{align:'center'});
+  });
+
+  const pct=total?beh/total:0;
+  doc.setFillColor(...CL); doc.roundedRect(ML,85,W-ML-MR,5,2,2,'F');
+  if(pct>0){doc.setFillColor(...CG);doc.roundedRect(ML,85,(W-ML-MR)*pct,5,2,2,'F');}
+  doc.setFontSize(8);doc.setTextColor(...CGR);
+  doc.text(`Behebungsfortschritt: ${Math.round(pct*100)}%`,ML,96);
+  doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...CL);
+  doc.text('ProjektCheck · Baumängelerfassung',W/2,H-8,{align:'center'});
+
+  // ÜBERSICHT
+  doc.addPage();
+  doc.setFillColor(...CW);doc.rect(0,0,W,H,'F');
+  doc.setFillColor(...CA);doc.rect(0,0,W,12,'F');
+  doc.setTextColor(...CW);doc.setFont('helvetica','bold');doc.setFontSize(11);
+  doc.text(`${gw.name.toUpperCase()} – MÄNGELÜBERSICHT`,ML,8.5);
+
+  doc.autoTable({
+    startY:15,margin:{left:ML,right:MR},
+    head:[['Nr.','Datum','Anlage','Beschreibung','Schwere','Status','Norm']],
+    body:mn.map((m,i)=>[(i+1).toString().padStart(3,'0'),m.datum||'–',m.anlage||'–',m.beschreibung.length>50?m.beschreibung.slice(0,48)+'…':m.beschreibung,m.schwere,stl[m.status]||m.status,(m.normen||[]).join('\n')||'–']),
+    styles:{font:'helvetica',fontSize:7.5,cellPadding:2.5,fillColor:CW,textColor:CK,lineColor:CL,lineWidth:0.3},
+    headStyles:{fillColor:CB,textColor:CGR,fontStyle:'bold',fontSize:7},
+    alternateRowStyles:{fillColor:[245,246,255]},
+    columnStyles:{0:{cellWidth:10},1:{cellWidth:16},2:{cellWidth:22},3:{cellWidth:52},4:{cellWidth:20,halign:'center'},5:{cellWidth:22,halign:'center'},6:{cellWidth:33}},
+    didParseCell(d){
+      if(d.section==='body'){
+        if(d.column.index===4){d.cell.styles.textColor=sc[d.cell.raw]||CGR;d.cell.styles.fontStyle='bold';}
+        if(d.column.index===5){d.cell.styles.textColor=stc[mn[d.row.index]?.status]||CGR;d.cell.styles.fontStyle='bold';}
+      }
+    },
+    didDrawPage(){doc.setFontSize(7);doc.setTextColor(...CL);doc.text('Seite '+doc.internal.getCurrentPageInfo().pageNumber,W-MR,H-6,{align:'right'});}
+  });
+
+  // DETAILSEITEN
+  for(let i=0;i<mn.length;i++){
+    const m=mn[i]; const nr=(i+1).toString().padStart(3,'0');
+    doc.addPage();doc.setFillColor(...CW);doc.rect(0,0,W,H,'F');
+    const hc=sc[m.schwere]||CGR;
+    doc.setFillColor(...hc);doc.rect(0,0,W,12,'F');
+    doc.setTextColor(...CW);doc.setFont('helvetica','bold');doc.setFontSize(10);
+    doc.text(`${gw.icon} ${gw.name.toUpperCase()} #${nr}  ·  ${m.schwere.toUpperCase()}`,ML,8.5);
+    const stcc=stc[m.status]||CGR;
+    doc.setFillColor(...CW);doc.roundedRect(W-MR-32,3,32,7,1,1,'F');
+    doc.setTextColor(...stcc);doc.setFont('helvetica','bold');doc.setFontSize(7);
+    doc.text(stl[m.status]||'',W-MR-16,8,{align:'center'});
+    // QR-Code oben rechts auf Detailseite
+    drawQR(doc, `${o.name} #${nr} ${m.beschreibung.slice(0,30)}`, W-MR-22, 14, 22);
+    doc.setFont('helvetica','normal');doc.setFontSize(6);doc.setTextColor(...CGR);
+    doc.text('QR #'+nr, W-MR-11, 37, {align:'center'});
+    let y=18;
+    const meta=[{l:'DATUM',v:m.datum||'–'},{l:'ANLAGE',v:m.anlage||'–'},{l:'KATEGORIE',v:m.kategorie||'–'},{l:'SCHWERE',v:m.schwere}];
+    const fw=(W-ML-MR-9)/4;
+    meta.forEach((f,fi)=>{
+      const fx=ML+fi*(fw+3);
+      doc.setFillColor(...CB);doc.roundedRect(fx,y,fw,14,1,1,'F');
+      doc.setFont('helvetica','normal');doc.setFontSize(6);doc.setTextColor(...CGR);doc.text(f.l,fx+3,y+5);
+      doc.setFont('helvetica','bold');doc.setFontSize(7.5);
+      doc.setTextColor(fi===3 ? (sc[f.v]||CK) : CK);
+      doc.text(doc.splitTextToSize(f.v,fw-6)[0]||'–',fx+3,y+12);
+    });
+    y+=20;
+    doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...CGR);doc.text('BESCHREIBUNG',ML,y);y+=3;
+    const dl=doc.splitTextToSize(m.beschreibung,W-ML-MR);const dH=dl.length*4.5+8;
+    doc.setFillColor(...CB);doc.roundedRect(ML,y,W-ML-MR,dH,2,2,'F');
+    doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...CK);doc.text(dl,ML+4,y+6);y+=dH+6;
+    if(m.normen?.length){
+      doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...CGR);doc.text('DIN NORMEN',ML,y);y+=4;
+      let nx=ML;
+      m.normen.forEach(n=>{
+        const tw=doc.getTextWidth(n)+8;
+        doc.setFillColor(235,242,255);doc.roundedRect(nx,y-3,tw,6,1,1,'F');
+        doc.setDrawColor(...CA);doc.setLineWidth(0.3);doc.roundedRect(nx,y-3,tw,6,1,1,'S');
+        doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...CA);
+        doc.text(n,nx+4,y+1.5);nx+=tw+4;
+      });y+=10;
+    }
+    if(m.bemerkung){
+      doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...CGR);doc.text('BEMERKUNG',ML,y);y+=3;
+      const bl=doc.splitTextToSize(m.bemerkung,W-ML-MR-8);const bH=bl.length*4.5+8;
+      doc.setFillColor(240,255,245);doc.roundedRect(ML,y,W-ML-MR,bH,2,2,'F');
+      doc.setDrawColor(...CG);doc.setLineWidth(0.3);doc.roundedRect(ML,y,W-ML-MR,bH,2,2,'S');
+      doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(30,80,50);
+      doc.text(bl,ML+4,y+6);y+=bH+6;
+    }
+    const fotos=m.fotos||[];
+    if(fotos.length){
+      doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...CGR);doc.text(`FOTOS (${fotos.length})`,ML,y);y+=4;
+      const cols=2,gap=5,pw=(W-ML-MR-gap)/2,ph=pw*0.75;
+      for(let fi=0;fi<Math.min(fotos.length,4);fi++){
+        const col=fi%cols,row=Math.floor(fi/cols),px=ML+col*(pw+gap),py=y+row*(ph+gap);
+        if(py+ph>H-20)break;
+        try{
+          let fmt='JPEG';if(fotos[fi].startsWith('data:image/png'))fmt='PNG';
+          doc.addImage(fotos[fi],fmt,px,py,pw,ph,undefined,'MEDIUM');
+          doc.setDrawColor(...CL);doc.setLineWidth(0.3);doc.rect(px,py,pw,ph,'S');
+          // Foto-Nummer + Beschriftung
+          const cap = (m.fotoCaptions||[])[fi]||'';
+          doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...CW);
+          doc.text(`${fi+1}`,px+2,py+ph-2);
+          if(cap){
+            doc.setFillColor(0,0,0);
+            doc.setFillColor(30,30,30);
+            doc.roundedRect(px,py+ph-8,pw,8,0,0,'F');
+            doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor(...CW);
+            const capTxt = doc.splitTextToSize(cap, pw-4);
+            doc.text(capTxt[0], px+2, py+ph-3);
+          }
+        }catch(e){}
+      }
+    }
+    doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...CL);
+    doc.text(`ProjektCheck · ${gw.name} · #${nr} · Seite ${doc.internal.getCurrentPageInfo().pageNumber}`,W-MR,H-6,{align:'right'});
+  }
+
+  // UNTERSCHRIFTSSEITE
+  doc.addPage();
+  doc.setFillColor(...CW);doc.rect(0,0,W,H,'F');
+  doc.setFillColor(...CA);doc.rect(0,0,W,12,'F');
+  doc.setTextColor(...CW);doc.setFont('helvetica','bold');doc.setFontSize(11);
+  doc.text('UNTERSCHRIFTEN & ABNAHME',ML,8.5);
+  let sy=24;
+  doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...CK);
+  doc.text(`Projekt: ${o.name}  ·  Gewerk: ${gw.name}`,ML,sy);sy+=7;
+  doc.text(`Datum: ${new Date().toLocaleDateString('de-DE')}`,ML,sy);sy+=12;
+  const ufw=(W-ML-MR-10)/2;
+  [[o.auftragnehmer||'Auftragnehmer','AUFTRAGNEHMER'],[o.auftraggeber2||o.auftraggeber||'Auftraggeber','AUFTRAGGEBER']].forEach(([name,label],ui)=>{
+    const ux=ML+ui*(ufw+10);
+    doc.setFillColor(...CB);doc.roundedRect(ux,sy,ufw,40,2,2,'F');
+    doc.setDrawColor(...CL);doc.setLineWidth(0.3);doc.roundedRect(ux,sy,ufw,40,2,2,'S');
+    doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...CGR);doc.text(label,ux+4,sy+6);
+    doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(...CK);doc.text(name,ux+4,sy+14);
+    doc.setDrawColor(...CK);doc.setLineWidth(0.4);doc.line(ux+4,sy+32,ux+ufw-4,sy+32);
+    doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...CGR);doc.text('Unterschrift / Datum',ux+4,sy+38);
+  });
+  doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...CL);
+  doc.text('ProjektCheck · Baumängelerfassung',W/2,H-8,{align:'center'});
+
+  doc.save('ProjektCheck_'+o.name.replace(/[^a-zA-Z0-9]/g,'_')+'_'+gw.name+'_'+new Date().toISOString().slice(0,10)+'.pdf');
+  toast(`✅ PDF ${gw.name} gespeichert!`);
+}
+
+// ═══════════════════════════════════
+// PDF GESAMT
+// ═══════════════════════════════════
+async function exportObjektPDF() {
+  const mn = getMaengel(aktObjId);
+  const o  = getObjekt(aktObjId);
+  if (!mn.length) { alert('Keine Mängel vorhanden.'); return; }
+  toast('PDF wird erstellt...');
+
+  const {jsPDF} = window.jspdf;
+  const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const W=doc.internal.pageSize.getWidth(), H=doc.internal.pageSize.getHeight(), ML=14, MR=14;
+  const CA=[37,99,235],CR=[239,68,68],CG=[34,197,94],CO=[249,115,22],CGR=[107,114,128],CL=[220,220,220],CB=[248,249,255],CW=[255,255,255],CK=[30,30,30];
+  const sc={Kritisch:CR,Wesentlich:CO,Gering:CG,Offen:CGR};
+  const stc={offen:CR,'in-bearbeitung':CO,behoben:CG};
+  const stl={offen:'OFFEN','in-bearbeitung':'IN BEARBEITUNG',behoben:'BEHOBEN'};
+
+  const total=mn.length,offen=mn.filter(m=>m.status==='offen').length,
+        bearb=mn.filter(m=>m.status==='in-bearbeitung').length,
+        beh=mn.filter(m=>m.status==='behoben').length;
+
+  // DECKBLATT
+  doc.setFillColor(...CW); doc.rect(0,0,W,H,'F');
+  doc.setFillColor(...CA); doc.rect(0,0,W,48,'F');
+  doc.setTextColor(...CW); doc.setFont('helvetica','bold'); doc.setFontSize(26);
+  doc.text('PROJEKTCHECK', ML, 18);
+  doc.setFontSize(12); doc.setFont('helvetica','normal');
+  doc.text('MÄNGELBERICHT – BAUDOKUMENTATION', ML, 28);
+  doc.setFontSize(10); doc.setFont('helvetica','bold');
+  doc.text(o.name, ML, 38);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9);
+  doc.text('Erstellt: '+new Date().toLocaleDateString('de-DE',{day:'2-digit',month:'long',year:'numeric'}), ML, 45);
+
+  // Stats
+  const stats=[{l:'GESAMT',v:total,c:CK},{l:'OFFEN',v:offen,c:CR},{l:'IN BEARB.',v:bearb,c:CO},{l:'BEHOBEN',v:beh,c:CG}];
+  const bw=(W-ML-MR-9)/4;
+  stats.forEach((s,i)=>{
+    const bx=ML+i*(bw+3),by=55;
+    doc.setFillColor(...CB); doc.roundedRect(bx,by,bw,22,2,2,'F');
+    doc.setDrawColor(...CL); doc.setLineWidth(0.3); doc.roundedRect(bx,by,bw,22,2,2,'S');
+    doc.setFont('helvetica','bold'); doc.setFontSize(18); doc.setTextColor(...s.c);
+    doc.text(String(s.v),bx+bw/2,by+13,{align:'center'});
+    doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(...CGR);
+    doc.text(s.l,bx+bw/2,by+20,{align:'center'});
+  });
+
+  // Progress
+  const pct=total?beh/total:0;
+  doc.setFillColor(...CL); doc.roundedRect(ML,85,W-ML-MR,5,2,2,'F');
+  if(pct>0){doc.setFillColor(...CG);doc.roundedRect(ML,85,(W-ML-MR)*pct,5,2,2,'F');}
+  doc.setFontSize(8);doc.setTextColor(...CGR);
+  doc.text(`Behebungsfortschritt: ${Math.round(pct*100)}%`,ML,96);
+
+  // Projekt-Info
+  if(o.auftraggeber){doc.setFontSize(9);doc.setTextColor(...CGR);doc.text('Auftraggeber:',ML,106);doc.setTextColor(...CK);doc.setFont('helvetica','bold');doc.text(o.auftraggeber,ML+30,106);}
+
+  doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...CL);
+  doc.text('ProjektCheck · Baumängelerfassung',W/2,H-8,{align:'center'});
+
+  // ÜBERSICHT
+  doc.addPage();
+  doc.setFillColor(...CW);doc.rect(0,0,W,H,'F');
+  doc.setFillColor(...CA);doc.rect(0,0,W,12,'F');
+  doc.setTextColor(...CW);doc.setFont('helvetica','bold');doc.setFontSize(11);
+  doc.text('MÄNGELÜBERSICHT',ML,8.5);
+
+  doc.autoTable({
+    startY:15,margin:{left:ML,right:MR},
+    head:[['Nr.','Datum','Gewerk','Anlage','Beschreibung','Schwere','Status','Norm']],
+    body:mn.map((m,i)=>{
+      const g=getGewerkInfo(m.gewerk);
+      return [(i+1).toString().padStart(3,'0'),m.datum||'–',g.icon+' '+g.name,m.anlage||'–',m.beschreibung.length>45?m.beschreibung.slice(0,43)+'…':m.beschreibung,m.schwere,stl[m.status]||m.status,(m.normen||[]).join('\n')||'–'];
+    }),
+    styles:{font:'helvetica',fontSize:7,cellPadding:2.5,fillColor:CW,textColor:CK,lineColor:CL,lineWidth:0.3},
+    headStyles:{fillColor:CB,textColor:CGR,fontStyle:'bold',fontSize:6.5},
+    alternateRowStyles:{fillColor:[245,246,255]},
+    columnStyles:{0:{cellWidth:9},1:{cellWidth:16},2:{cellWidth:22},3:{cellWidth:18},4:{cellWidth:45},5:{cellWidth:18,halign:'center'},6:{cellWidth:22,halign:'center'},7:{cellWidth:25}},
+    didParseCell(d){
+      if(d.section==='body'){
+        if(d.column.index===5){d.cell.styles.textColor=sc[d.cell.raw]||CGR;d.cell.styles.fontStyle='bold';}
+        if(d.column.index===6){d.cell.styles.textColor=stc[mn[d.row.index]?.status]||CGR;d.cell.styles.fontStyle='bold';}
+      }
+    },
+    didDrawPage(){doc.setFontSize(7);doc.setTextColor(...CL);doc.text('Seite '+doc.internal.getCurrentPageInfo().pageNumber,W-MR,H-6,{align:'right'});}
+  });
+
+  // DETAILSEITEN
+  for(let i=0;i<mn.length;i++){
+    const m=mn[i]; const nr=(i+1).toString().padStart(3,'0');
+    const gw=getGewerkInfo(m.gewerk);
+    doc.addPage();doc.setFillColor(...CW);doc.rect(0,0,W,H,'F');
+    const hc=sc[m.schwere]||CGR;
+    doc.setFillColor(...hc);doc.rect(0,0,W,12,'F');
+    doc.setTextColor(...CW);doc.setFont('helvetica','bold');doc.setFontSize(10);
+    doc.text(`#${nr}  ${gw.name.toUpperCase()}  ·  ${m.schwere.toUpperCase()}`,ML,8.5);
+    const stcc=stc[m.status]||CGR;
+    doc.setFillColor(...CW);doc.roundedRect(W-MR-32,3,32,7,1,1,'F');
+    doc.setTextColor(...stcc);doc.setFont('helvetica','bold');doc.setFontSize(7);
+    doc.text(stl[m.status]||'',W-MR-16,8,{align:'center'});
+    // QR-Code
+    drawQR(doc, `${o.name} #${nr} ${m.beschreibung.slice(0,30)}`, W-MR-22, 14, 22);
+    doc.setFont('helvetica','normal');doc.setFontSize(6);doc.setTextColor(...CGR);
+    doc.text('QR #'+nr, W-MR-11, 37, {align:'center'});
+    let y=18;
+    const meta=[{l:'DATUM',v:m.datum||'–'},{l:'GEWERK',v:gw.icon+' '+gw.name},{l:'ANLAGE',v:m.anlage||'–'},{l:'KATEGORIE',v:m.kategorie||'–'}];
+    const fw=(W-ML-MR-9)/4;
+    meta.forEach((f,fi)=>{
+      const fx=ML+fi*(fw+3);
+      doc.setFillColor(...CB);doc.roundedRect(fx,y,fw,14,1,1,'F');
+      doc.setFont('helvetica','normal');doc.setFontSize(6);doc.setTextColor(...CGR);doc.text(f.l,fx+3,y+5);
+      doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(...CK);
+      doc.text(doc.splitTextToSize(f.v,fw-6)[0]||'–',fx+3,y+12);
+    });
+    y+=20;
+    doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...CGR);doc.text('BESCHREIBUNG',ML,y);y+=3;
+    const dl=doc.splitTextToSize(m.beschreibung,W-ML-MR);const dH=dl.length*4.5+8;
+    doc.setFillColor(...CB);doc.roundedRect(ML,y,W-ML-MR,dH,2,2,'F');
+    doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...CK);doc.text(dl,ML+4,y+6);y+=dH+6;
+    if(m.normen?.length){
+      doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...CGR);doc.text('DIN NORMEN',ML,y);y+=4;
+      let nx=ML;
+      m.normen.forEach(n=>{
+        const tw=doc.getTextWidth(n)+8;
+        doc.setFillColor(235,242,255);doc.roundedRect(nx,y-3,tw,6,1,1,'F');
+        doc.setDrawColor(...CA);doc.setLineWidth(0.3);doc.roundedRect(nx,y-3,tw,6,1,1,'S');
+        doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...CA);
+        doc.text(n,nx+4,y+1.5);nx+=tw+4;
+      });y+=10;
+    }
+    if(m.bemerkung){
+      doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...CGR);doc.text('BEMERKUNG',ML,y);y+=3;
+      const bl=doc.splitTextToSize(m.bemerkung,W-ML-MR-8);const bH=bl.length*4.5+8;
+      doc.setFillColor(240,255,245);doc.roundedRect(ML,y,W-ML-MR,bH,2,2,'F');
+      doc.setDrawColor(...CG);doc.setLineWidth(0.3);doc.roundedRect(ML,y,W-ML-MR,bH,2,2,'S');
+      doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(30,80,50);
+      doc.text(bl,ML+4,y+6);y+=bH+6;
+    }
+    const fotos=m.fotos||[];
+    if(fotos.length){
+      doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...CGR);doc.text(`FOTOS (${fotos.length})`,ML,y);y+=4;
+      // 2×2 Raster – größere Fotos
+      const cols=2,gap=5,pw=(W-ML-MR-gap)/2,ph=pw*0.75;
+      for(let fi=0;fi<Math.min(fotos.length,4);fi++){
+        const col=fi%cols,row=Math.floor(fi/cols),px=ML+col*(pw+gap),py=y+row*(ph+gap);
+        if(py+ph>H-20)break;
+        try{
+          let fmt='JPEG';if(fotos[fi].startsWith('data:image/png'))fmt='PNG';
+          doc.addImage(fotos[fi],fmt,px,py,pw,ph,undefined,'MEDIUM');
+          doc.setDrawColor(...CL);doc.setLineWidth(0.3);doc.rect(px,py,pw,ph,'S');
+          const cap=(m.fotoCaptions||[])[fi]||'';
+          if(cap){
+            doc.setFillColor(30,30,30);doc.roundedRect(px,py+ph-8,pw,8,0,0,'F');
+            doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor(...CW);
+            doc.text(doc.splitTextToSize(cap,pw-4)[0],px+2,py+ph-3);
+          } else {
+            doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...CW);
+            doc.text(`${fi+1}`,px+2,py+ph-2);
+          }
+        }catch(e){}
+      }
+      // Falls mehr als 4 Fotos, neue Seite
+      if(fotos.length>4){
+        y+=2*(ph+gap)+4;
+        if(y+ph*2+gap > H-20){ doc.addPage();doc.setFillColor(...CW);doc.rect(0,0,W,H,'F'); y=14; }
+        doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...CGR);doc.text(`WEITERE FOTOS`,ML,y);y+=4;
+        for(let fi=4;fi<fotos.length;fi++){
+          const col=(fi-4)%cols,row=Math.floor((fi-4)/cols),px=ML+col*(pw+gap),py=y+row*(ph+gap);
+          if(py+ph>H-20)break;
+          try{
+            let fmt='JPEG';if(fotos[fi].startsWith('data:image/png'))fmt='PNG';
+            doc.addImage(fotos[fi],fmt,px,py,pw,ph,undefined,'MEDIUM');
+            doc.setDrawColor(...CL);doc.setLineWidth(0.3);doc.rect(px,py,pw,ph,'S');
+            const cap2=(m.fotoCaptions||[])[fi]||'';
+            if(cap2){
+              doc.setFillColor(30,30,30);doc.roundedRect(px,py+ph-8,pw,8,0,0,'F');
+              doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor(...CW);
+              doc.text(doc.splitTextToSize(cap2,pw-4)[0],px+2,py+ph-3);
+            } else {
+              doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...CW);
+              doc.text(`${fi+1}`,px+2,py+ph-2);
+            }
+          }catch(e){}
+        }
+      }
+    }
+    doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...CL);
+    doc.text(`ProjektCheck · ${o.name} · #${nr} · Seite ${doc.internal.getCurrentPageInfo().pageNumber}`,W-MR,H-6,{align:'right'});
+  }
+
+  // UNTERSCHRIFTSSEITE
+  doc.addPage();
+  doc.setFillColor(...CW);doc.rect(0,0,W,H,'F');
+  doc.setFillColor(...CA);doc.rect(0,0,W,12,'F');
+  doc.setTextColor(...CW);doc.setFont('helvetica','bold');doc.setFontSize(11);
+  doc.text('UNTERSCHRIFTEN & ABNAHME',ML,8.5);
+
+  let sy = 24;
+  doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...CK);
+  doc.text(`Projekt: ${o.name}`,ML,sy); sy+=7;
+  doc.text(`Datum: ${new Date().toLocaleDateString('de-DE')}`,ML,sy); sy+=12;
+
+  // Unterschrift Auftragnehmer
+  const ufw = (W-ML-MR-10)/2;
+  [[o.auftragnehmer||'Auftragnehmer','AUFTRAGNEHMER'],[o.auftraggeber2||o.auftraggeber||'Auftraggeber','AUFTRAGGEBER']].forEach(([name,label],ui)=>{
+    const ux = ML + ui*(ufw+10);
+    doc.setFillColor(...CB); doc.roundedRect(ux,sy,ufw,40,2,2,'F');
+    doc.setDrawColor(...CL); doc.setLineWidth(0.3); doc.roundedRect(ux,sy,ufw,40,2,2,'S');
+    doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...CGR);
+    doc.text(label,ux+4,sy+6);
+    doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(...CK);
+    doc.text(name,ux+4,sy+14);
+    // Unterschriftslinie
+    doc.setDrawColor(...CK);doc.setLineWidth(0.4);
+    doc.line(ux+4,sy+32,ux+ufw-4,sy+32);
+    doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...CGR);
+    doc.text('Unterschrift / Datum',ux+4,sy+38);
+  });
+
+  doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...CL);
+  doc.text('ProjektCheck · Baumängelerfassung',W/2,H-8,{align:'center'});
+
+  doc.save('ProjektCheck_'+o.name.replace(/[^a-zA-Z0-9]/g,'_')+'_'+new Date().toISOString().slice(0,10)+'.pdf');
+  toast('✅ PDF gespeichert!');
+}
+
+function exportCSV() {
+  const mn = getMaengel(aktObjId);
+  const o  = getObjekt(aktObjId);
+  const head=['Nr.','Datum','Gewerk','Anlage','Kategorie','Beschreibung','Schweregrad','Status','DIN Normen','Bemerkung'];
+  const rows=mn.map((m,i)=>{
+    const g=getGewerkInfo(m.gewerk);
+    return [i+1,m.datum,g.name,m.anlage,m.kategorie,'"'+(m.beschreibung||'').replace(/"/g,'""')+'"',m.schwere,m.status,'"'+(m.normen||[]).join('; ')+'"','"'+(m.bemerkung||'').replace(/"/g,'""')+'"'].join(';');
+  });
+  const blob=new Blob(['\uFEFF'+[head.join(';'),...rows].join('\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='ProjektCheck_'+o.name.replace(/[^a-zA-Z0-9]/g,'_')+'_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+}
+
+// INIT
+showObjekte();
+</script>
+</body>
+</html>
