@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>FAE Test – PV Anlage</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d1117;--card:#161b22;--border:#30363d;
+  --accent:#f0a500;--green:#3fb950;--red:#f85149;
+  --blue:#58a6ff;--muted:#7d8590;--text:#e6edf3;
+  --mono:'Share Tech Mono',monospace;--sans:'Barlow',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);}
+
+.screen{display:none;height:100dvh;overflow-y:auto;flex-direction:column;}
+.screen.active{display:flex;}
+
+/* ── SETUP ── */
+#setup{padding:1rem;gap:.85rem;align-items:center;}
+.s-inner{width:100%;max-width:430px;display:flex;flex-direction:column;gap:.85rem;}
+.s-title{text-align:center;}
+.s-title h1{font-size:1.4rem;font-weight:700;color:var(--accent);letter-spacing:.07em;text-transform:uppercase;}
+.s-title p{font-size:.75rem;color:var(--muted);margin-top:.2rem;}
+
+.back-link{
+  display:flex;align-items:center;gap:.35rem;
+  font-family:var(--mono);font-size:.68rem;color:var(--muted);
+  text-decoration:none;padding:.3rem 0;
+  letter-spacing:.06em;
+}
+.back-link:hover{color:var(--text);}
+.back-link::before{content:'←';font-size:.8rem;}
+
+/* Section label */
+.sec-hdr{
+  font-family:var(--mono);font-size:.6rem;color:var(--accent);
+  letter-spacing:.15em;text-transform:uppercase;padding-bottom:.3rem;
+  border-bottom:1px solid var(--border);
+}
+.s-section{display:flex;flex-direction:column;gap:.6rem;}
+.s-row{display:flex;gap:.5rem;align-items:stretch;}
+.s-lbl{font-family:var(--mono);font-size:.62rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.25rem;}
+
+input[type=number],input[type=text],select{
+  background:var(--card);border:1px solid var(--border);color:var(--text);
+  font-family:var(--mono);font-size:.92rem;padding:.55rem .75rem;outline:none;width:100%;
+}
+input:focus,select:focus{border-color:var(--accent);}
+input::placeholder{color:var(--muted);}
+
+/* Radio */
+.radio-row{display:flex;gap:1.2rem;}
+.radio-lbl{display:flex;align-items:center;gap:.4rem;font-family:var(--mono);font-size:.8rem;color:var(--muted);cursor:pointer;}
+.radio-lbl input{width:auto;accent-color:var(--accent);}
+.radio-lbl:has(input:checked){color:var(--text);}
+
+/* Wandler fields */
+.wand-fields{
+  display:none;flex-direction:column;gap:.5rem;
+  padding:.65rem .75rem;background:rgba(255,255,255,.03);border:1px solid var(--border);
+}
+.wand-fields.visible{display:flex;}
+.wand-row{display:flex;align-items:center;gap:.4rem;}
+.wand-row input{flex:1;min-width:60px;}
+.wand-sep{font-family:var(--mono);color:var(--muted);padding:0 .1rem;}
+.wand-factor{font-family:var(--mono);font-size:.72rem;color:var(--accent);margin-top:.1rem;}
+
+/* GPS */
+.gps-status{
+  font-family:var(--mono);font-size:.7rem;color:var(--muted);
+  padding:.5rem .75rem;background:rgba(255,255,255,.025);border:1px solid var(--border);
+  line-height:1.65;
+}
+.gps-status.ok{color:var(--green);}
+.gps-status.err{color:var(--red);}
+
+/* Buttons */
+.btn{
+  display:block;width:100%;background:var(--accent);color:#000;border:none;
+  font-family:var(--sans);font-weight:700;font-size:.88rem;letter-spacing:.06em;
+  padding:.75rem;text-transform:uppercase;cursor:pointer;text-align:center;
+}
+.btn:hover{background:#ffb820;}
+.btn:disabled{opacity:.35;cursor:default;}
+.btn.sec{
+  background:transparent;border:1px solid var(--border);color:var(--muted);
+  font-size:.78rem;padding:.5rem .85rem;width:auto;
+}
+.btn.sec:hover{border-color:var(--text);color:var(--text);}
+.btn.grn{background:var(--green);color:#000;}
+.btn.grn:hover{background:#56d36e;}
+.btn.grn:disabled{opacity:.35;cursor:default;}
+
+/* ── QR MODAL ── */
+#qr-modal{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);
+  z-index:200;flex-direction:column;align-items:center;justify-content:center;
+  gap:.75rem;padding:1rem;
+}
+#qr-modal.open{display:flex;}
+.qr-frame{position:relative;width:100%;max-width:340px;background:#000;overflow:hidden;}
+#qr-video{width:100%;display:block;max-height:45vh;object-fit:cover;}
+.qr-scan-box{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:160px;height:160px;pointer-events:none;
+}
+.qr-scan-box::before,.qr-scan-box::after,
+.qr-c2::before,.qr-c2::after{
+  content:'';position:absolute;width:36px;height:36px;
+  border-color:var(--accent);border-style:solid;
+}
+.qr-scan-box::before{top:0;left:0;border-width:3px 0 0 3px;}
+.qr-scan-box::after{bottom:0;right:0;border-width:0 3px 3px 0;}
+.qr-c2::before{top:0;right:0;border-width:3px 3px 0 0;}
+.qr-c2::after{bottom:0;left:0;border-width:0 0 3px 3px;}
+#qr-status{
+  font-family:var(--mono);font-size:.78rem;color:var(--muted);
+  text-align:center;max-width:340px;line-height:1.5;
+}
+#qr-status.found{color:var(--green);}
+.qr-manual{display:flex;gap:.5rem;width:100%;max-width:340px;}
+.qr-actions{display:flex;gap:.5rem;width:100%;max-width:340px;}
+
+/* ── TEST ── */
+#test{padding:0;}
+.step-hdr{
+  background:var(--card);border-bottom:1px solid var(--border);
+  padding:.6rem 1rem;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+.step-n{font-family:var(--mono);font-size:.62rem;color:var(--muted);}
+.step-l{font-weight:700;font-size:.92rem;color:var(--accent);}
+.pips{display:flex;gap:4px;}
+.pip{width:20px;height:4px;background:var(--border);border-radius:2px;}
+.pip.done{background:var(--green);}.pip.cur{background:var(--accent);}
+
+.cam-wrap{position:relative;background:#000;flex-shrink:0;overflow:hidden;}
+#tvid{width:100%;display:block;max-height:36vh;object-fit:cover;}
+#tovl{position:absolute;top:0;left:0;width:100%;height:100%;cursor:crosshair;}
+.cam-hint{
+  position:absolute;bottom:.35rem;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.75);color:var(--muted);font-size:.65rem;
+  padding:.2rem .55rem;font-family:var(--mono);white-space:nowrap;pointer-events:none;
+}
+
+.pwr-sec{padding:.75rem 1rem .4rem;flex-shrink:0;}
+.pwr-main{display:flex;align-items:baseline;gap:.3rem;}
+#pkw{font-family:var(--mono);font-size:2.6rem;font-weight:700;line-height:1;color:var(--text);}
+#pkw.dim{color:var(--muted);}
+.pwr-u{font-family:var(--mono);font-size:.85rem;color:var(--muted);}
+.pwr-sub{display:flex;gap:1rem;align-items:baseline;margin-top:.2rem;}
+#pamps{font-family:var(--mono);font-size:.78rem;color:var(--blue);}
+#pwfak{font-family:var(--mono);font-size:.68rem;color:var(--muted);}
+.badge{
+  display:inline-flex;align-items:center;gap:.3rem;
+  padding:.22rem .6rem;font-family:var(--mono);font-size:.68rem;letter-spacing:.07em;
+  margin-top:.45rem;border-radius:2px;
+}
+.badge.wait{background:rgba(125,133,144,.1);color:var(--muted);border:1px solid var(--border);}
+.badge.ok{background:rgba(63,185,80,.12);color:var(--green);border:1px solid rgba(63,185,80,.35);}
+.badge.fail{background:rgba(248,81,73,.12);color:var(--red);border:1px solid rgba(248,81,73,.35);}
+.badge.ref{background:rgba(240,165,0,.12);color:var(--accent);border:1px solid rgba(240,165,0,.35);}
+
+.tol-sec{padding:0 1rem .45rem;flex-shrink:0;}
+.tol-lbl{font-family:var(--mono);font-size:.58rem;color:var(--muted);letter-spacing:.1em;}
+.tol-bar{position:relative;height:6px;background:var(--border);border-radius:3px;margin:.3rem 0;}
+.tol-band{position:absolute;height:100%;background:rgba(63,185,80,.3);border-radius:3px;}
+.tol-needle{position:absolute;top:-3px;width:4px;height:12px;background:var(--blue);margin-left:-2px;border-radius:2px;transition:left .2s;}
+.tol-nums{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.62rem;color:var(--muted);}
+.tol-vals{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.65rem;color:var(--muted);margin-top:.3rem;}
+.tol-vals span{color:var(--text);}
+
+.instr{padding:0 1rem .4rem;font-size:.8rem;color:var(--muted);flex-shrink:0;line-height:1.5;}
+.actions{padding:.5rem 1rem .8rem;display:flex;flex-direction:column;gap:.4rem;flex-shrink:0;margin-top:auto;}
+
+/* ── PROTOCOL ── */
+#proto{padding:1rem;gap:.8rem;}
+.p-hdr{text-align:center;font-size:1rem;font-weight:700;color:var(--accent);letter-spacing:.07em;text-transform:uppercase;}
+.p-meta{
+  font-family:var(--mono);font-size:.7rem;
+  display:grid;grid-template-columns:1fr 1fr;gap:.4rem;
+}
+.p-meta-item{display:flex;flex-direction:column;gap:.1rem;}
+.p-meta-item .ml{color:var(--muted);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;}
+.p-meta-item .mv{color:var(--text);}
+.gps-box{
+  background:var(--card);border:1px solid var(--border);border-left:3px solid var(--green);
+  padding:.55rem .85rem;font-family:var(--mono);font-size:.7rem;line-height:1.7;
+}
+.gps-box .ga{color:var(--text);font-size:.75rem;}
+.gps-box .gc{color:var(--muted);}
+.rtable{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:.76rem;}
+.rtable th{padding:.38rem .5rem;background:var(--card);border:1px solid var(--border);color:var(--muted);font-weight:400;font-size:.6rem;letter-spacing:.1em;text-align:left;}
+.rtable td{padding:.48rem .5rem;border:1px solid var(--border);}
+.rtable td:not(:first-child){text-align:right;}
+.pi{color:var(--green);font-size:1rem;}
+.fi{color:var(--red);font-size:1rem;}
+.pfields{display:grid;grid-template-columns:1fr 1fr;gap:.55rem;}
+.pfield{display:flex;flex-direction:column;gap:.22rem;}
+.pfield.full{grid-column:1/-1;}
+.pfield input{font-size:.82rem;padding:.48rem .65rem;}
+
+/* Pulse count control */
+.imp-ctrl{
+  display:flex;align-items:center;gap:.5rem;
+  font-family:var(--mono);font-size:.72rem;color:var(--muted);
+  padding:.4rem 1rem;border-top:1px solid var(--border);
+}
+.imp-ctrl button{
+  background:var(--card);border:1px solid var(--border);color:var(--text);
+  width:1.8rem;height:1.8rem;font-size:.9rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.imp-ctrl button:hover{border-color:var(--accent);color:var(--accent);}
+#imp-n{color:var(--accent);font-size:.9rem;min-width:1.5rem;text-align:center;}
+
+/* Email button */
+.btn.email{background:#1a73e8;color:#fff;}
+.btn.email:hover{background:#1557b0;}
+
+/* ── PRINT ── */
+@media print{
+  .no-print{display:none!important;}
+  html,body{height:auto;overflow:visible;}
+  .screen{display:none!important;}
+  #proto{display:flex!important;height:auto;overflow:visible;background:white;color:#000;padding:.5cm;}
+  .p-hdr{color:#000;}
+  .rtable th{background:#f0f0f0;color:#333;border-color:#ccc;}
+  .rtable td{border-color:#ccc;}
+  .pfield input{border:1px solid #ccc;color:#000;background:white;}
+  .gps-box{background:#f8f8f8;border-color:#ccc;border-left-color:#3fb950;}
+  .gps-box .ga,.gps-box .gc{color:#333;}
+  .p-meta-item .ml{color:#666;}.p-meta-item .mv{color:#000;}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ SETUP ═══ -->
+<div id="setup" class="screen active">
+<div class="s-inner">
+
+  <a href="../" class="back-link no-print">Tool-Übersicht</a>
+
+  <div class="s-title">
+    <h1>FAE Test</h1>
+    <p>PV-Anlage · Wirkleistungssteuerung</p>
+  </div>
+
+  <!-- ANLAGE -->
+  <div class="s-section">
+    <div class="sec-hdr">Anlage</div>
+
+    <div>
+      <div class="s-lbl">Anlagenleistung</div>
+      <div class="s-row">
+        <input type="number" id="anlage-kw" placeholder="z.B. 29.7" min="0" step="0.1" style="flex:1;" oninput="onAnlageKwChange()"/>
+        <span style="font-family:var(--mono);font-size:.8rem;color:var(--muted);padding:.55rem .3rem;align-self:center;">kWp ×</span>
+        <input type="number" id="anlage-fak" value="1.00" min="0.01" max="1" step="0.01" style="width:4.5rem;flex:0 0 auto;" title="Ertragsfaktor (auto: 0.70 für &lt;100 kW)" oninput="onFaktorChange()"/>
+        <span style="font-family:var(--mono);font-size:.72rem;color:var(--accent);padding:.55rem .3rem;align-self:center;white-space:nowrap;" id="anlage-eff">= — kW</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="s-lbl">Anlagen-Nr.</div>
+      <div class="s-row">
+        <input type="text" id="anlage-nr" placeholder="Nr. eingeben oder QR scannen" style="flex:1;"/>
+        <button class="btn sec" onclick="openQR()">📷 QR</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="s-lbl">FAE-Code</div>
+      <input type="text" id="fae-code" placeholder="FAE-Kennung"/>
+    </div>
+  </div>
+
+  <!-- MESSUNG -->
+  <div class="s-section">
+    <div class="sec-hdr">Messung</div>
+
+    <div>
+      <div class="s-lbl">Impulskonstante</div>
+      <div class="s-row">
+        <select id="imp-sel" style="flex:0 0 auto;width:auto;" onchange="onImpChange()">
+          <option value="1000">1 000 imp/kWh</option>
+          <option value="2000">2 000 imp/kWh</option>
+          <option value="10000">10 000 imp/kWh</option>
+          <option value="custom">Manuell</option>
+        </select>
+        <input type="number" id="imp-custom" placeholder="imp/kWh" min="1" style="display:none;flex:1;"/>
+      </div>
+    </div>
+
+    <div>
+      <div class="s-lbl">Wandler</div>
+      <div class="radio-row">
+        <label class="radio-lbl">
+          <input type="radio" name="mtyp" value="direkt" checked onchange="onMessart()"> Direktmessung
+        </label>
+        <label class="radio-lbl">
+          <input type="radio" name="mtyp" value="wandler" onchange="onMessart()"> Wandlermessung
+        </label>
+      </div>
+      <div class="wand-fields" id="wand-fields">
+        <div class="s-lbl" style="margin-bottom:0;">Stromwandler I<sub>N</sub> / I<sub>S</sub></div>
+        <div class="wand-row">
+          <input type="number" id="ct-prim" placeholder="I_N (z.B. 100)" min="1" oninput="calcWandler()"/>
+          <span class="wand-sep">/</span>
+          <input type="number" id="ct-sec" placeholder="I_S (z.B. 5)" min="0.01" step="0.01" oninput="calcWandler()"/>
+          <span class="wand-sep">A</span>
+        </div>
+        <div class="wand-factor" id="wfak-display">Wandlerfaktor: —</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STANDORT -->
+  <div class="s-section">
+    <div class="sec-hdr">Standort</div>
+    <button class="btn sec" id="gps-btn" onclick="captureGPS()" style="width:100%;text-align:center;">
+      📍 GPS erfassen
+    </button>
+    <div class="gps-status" id="gps-st">Noch kein Standort erfasst</div>
+  </div>
+
+  <button class="btn" onclick="startTest()" style="margin-top:.25rem;">▶ Test starten</button>
+
+  <!-- E-Mail Empfänger -->
+  <div class="s-section" style="width:100%;max-width:430px;">
+    <div class="sec-hdr">E-Mail Empfänger (Protokoll)</div>
+    <input type="email" id="email-1" placeholder="E-Mail 1"/>
+    <input type="email" id="email-2" placeholder="E-Mail 2 (optional)" style="margin-top:.4rem;"/>
+    <input type="email" id="email-3" placeholder="E-Mail 3 (optional)" style="margin-top:.4rem;"/>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══ QR MODAL ═══ -->
+<div id="qr-modal">
+  <div class="qr-frame">
+    <video id="qr-video" autoplay playsinline muted></video>
+    <div class="qr-scan-box"><div class="qr-c2"></div></div>
+  </div>
+  <div id="qr-status">Kamera auf QR-Code richten …</div>
+  <div class="qr-manual">
+    <input type="text" id="qr-inp" placeholder="Oder hier manuell eingeben"/>
+    <button class="btn sec" onclick="applyQRManual()">OK</button>
+  </div>
+  <div class="qr-actions">
+    <button class="btn sec" onclick="closeQR()" style="flex:1;">Abbrechen</button>
+  </div>
+</div>
+
+<!-- ═══ TEST ═══ -->
+<div id="test" class="screen">
+  <div class="step-hdr">
+    <div>
+      <div class="step-n" id="step-n">Schritt 1 / 4</div>
+      <div class="step-l" id="step-l">Stufe 100 %</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.3rem;">
+      <div class="pips" id="pips"></div>
+      <a href="../" class="back-link no-print" style="font-size:.58rem;">Übersicht</a>
+    </div>
+  </div>
+
+  <div class="cam-wrap">
+    <video id="tvid" autoplay playsinline muted></video>
+    <canvas id="tovl"></canvas>
+    <div class="cam-hint" id="cam-hint">Auf Impuls-LED tippen</div>
+  </div>
+
+  <div class="pwr-sec">
+    <div class="pwr-main">
+      <div id="pkw" class="dim">---</div>
+      <div class="pwr-u">kW</div>
+    </div>
+    <div class="pwr-sub">
+      <div id="pamps">--- A @ 400V/√3</div>
+      <div id="pwfak"></div>
+    </div>
+    <div id="badge" class="badge wait">⏳ Warte auf Impuls …</div>
+  </div>
+
+  <div class="tol-sec" id="tol-sec">
+    <div class="tol-lbl">TOLERANZBAND ± 5 %</div>
+    <div class="tol-bar">
+      <div class="tol-band" id="tol-band"></div>
+      <div class="tol-needle" id="tol-ndl" style="display:none;"></div>
+    </div>
+    <div class="tol-nums">
+      <span id="tn-min">---</span><span id="tn-max">---</span>
+    </div>
+    <div class="tol-vals">
+      MIN: <span id="tv-min">---</span> &nbsp; MAX: <span id="tv-max">---</span>
+    </div>
+  </div>
+
+  <div class="instr" id="instr"></div>
+
+  <div class="actions">
+    <div class="imp-ctrl no-print">
+      <span>Mittelung über</span>
+      <button onclick="adjImp(-1)">−</button>
+      <span id="imp-n">10</span>
+      <button onclick="adjImp(+1)">+</button>
+      <span>Impulse</span>
+    </div>
+    <button class="btn grn" id="btn-ok" onclick="confirmStep()" disabled>✓ Bestätigen</button>
+    <button class="btn sec" id="btn-zero" onclick="confirmZero()" style="display:none;">
+      Kein Impuls – 0 W bestätigen
+    </button>
+  </div>
+</div>
+
+<!-- ═══ PROTOCOL ═══ -->
+<div id="proto" class="screen">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:.2rem;">
+    <a href="../" class="back-link no-print">Übersicht</a>
+    <div class="p-hdr" style="flex:1;">FAE Prüfprotokoll</div>
+    <div style="width:5rem;"></div>
+  </div>
+
+  <div class="p-meta" id="p-meta"></div>
+
+  <div class="gps-box" id="gps-proto" style="display:none;">
+    <div class="ga" id="gps-pa">—</div>
+    <div class="gc" id="gps-pc">—</div>
+  </div>
+
+  <table class="rtable">
+    <thead><tr>
+      <th>Stufe</th><th>Soll (kW)</th><th>Ist (kW)</th><th>Strom (A)</th><th>Ergebnis</th>
+    </tr></thead>
+    <tbody id="rtbody"></tbody>
+  </table>
+
+  <div class="pfields">
+    <div class="pfield">
+      <div class="s-lbl">Anlagen-Nr.</div>
+      <input type="text" id="p-nr"/>
+    </div>
+    <div class="pfield">
+      <div class="s-lbl">FAE-Code</div>
+      <input type="text" id="p-fae"/>
+    </div>
+    <div class="pfield full">
+      <div class="s-lbl">Adresse</div>
+      <input type="text" id="p-adr" placeholder="Aus GPS oder manuell"/>
+    </div>
+    <div class="pfield">
+      <div class="s-lbl">Prüfer</div>
+      <input type="text" id="p-pruefer"/>
+    </div>
+    <div class="pfield">
+      <div class="s-lbl">Datum</div>
+      <input type="text" id="p-datum"/>
+    </div>
+  </div>
+
+  <button class="btn no-print" onclick="window.print()">🖨 Protokoll drucken</button>
+  <button class="btn email no-print" onclick="sendEmail()">✉ Per E-Mail senden</button>
+  <button class="btn sec no-print" style="width:100%;color:var(--red);border-color:var(--red);" onclick="deleteTest()">🗑 Testdaten löschen</button>
+</div>
+
+<script>
+'use strict';
+const STEPS=[
+  {pct:100,lbl:'Stufe 100 %',isRef:true, tol:null,isZero:false,
+   instr:'Wechselrichter auf Vollleistung bringen.<br>Kamera auf die Impuls-LED des Zählers richten und LED antippen.'},
+  {pct:60, lbl:'Stufe 60 %', isRef:false,tol:5,   isZero:false,
+   instr:'FAE-Signal auf 60 % Begrenzung senden.<br>Auf stabile Anzeige warten, dann bestätigen.'},
+  {pct:30, lbl:'Stufe 30 %', isRef:false,tol:5,   isZero:false,
+   instr:'FAE-Signal auf 30 % Begrenzung senden.<br>Auf stabile Anzeige warten, dann bestätigen.'},
+  {pct:0,  lbl:'Stufe 0 %',  isRef:false,tol:null,isZero:true,
+   instr:'Einspeisung vollständig sperren.<br>Kein Impuls erwartet — LED bleibt still.'},
+];
+const U=400,S3=Math.sqrt(3);
+const toA=kw=>kw*1000/(U*S3);
+const f=(v,d)=>v.toFixed(d);
+const $=id=>document.getElementById(id);
+
+const ST={
+  impConst:1000, wandler:1, numImpulse:10,
+  anlageKw:null, anlageFak:1, anlageBase:null,
+  anlageNr:'', faeCode:'',
+  gpsCoords:null, gpsAddr:'',
+  step:0, refPower:null, results:[],
+  stream:null, raf:null,
+  roi:null, pulses:[], darkBase:null, inPulse:false,
+  stable:false, curPwr:null,
+  qrStream:null, qrRaf:null, qrRunning:false, bdector:null,
+};
+
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$(id).classList.add('active');}
+
+// ── LOCALSTORAGE ──────────────────────────────────────────────
+const LS='fae-pv:';
+function saveSetup(){
+  try{
+    localStorage.setItem(LS+'setup', JSON.stringify({
+      impSel:$('imp-sel').value,
+      impCustom:$('imp-custom').value,
+      anlageKw:$('anlage-kw').value,
+      anlageFak:$('anlage-fak').value,
+      messart:document.querySelector('input[name=mtyp]:checked')?.value||'direkt',
+      ctPrim:$('ct-prim').value,
+      ctSec:$('ct-sec').value,
+      numImpulse:ST.numImpulse,
+      email1:$('email-1').value,
+      email2:$('email-2').value,
+      email3:$('email-3').value,
+    }));
+  }catch{}
+}
+function loadSetup(){
+  // Default email pre-fill
+  $('email-1').value='rico.grzenner@avacon.de';
+  try{
+    const d=JSON.parse(localStorage.getItem(LS+'setup')||'null');
+    if(!d)return;
+    if(d.impSel){$('imp-sel').value=d.impSel;onImpChange();}
+    if(d.impCustom)$('imp-custom').value=d.impCustom;
+    if(d.anlageKw)$('anlage-kw').value=d.anlageKw;
+    if(d.anlageFak)$('anlage-fak').value=d.anlageFak;
+    if(d.messart){
+      document.querySelectorAll('input[name=mtyp]').forEach(r=>r.checked=r.value===d.messart);
+      onMessart();
+    }
+    if(d.ctPrim)$('ct-prim').value=d.ctPrim;
+    if(d.ctSec){$('ct-sec').value=d.ctSec;calcWandler();}
+    if(d.numImpulse){ST.numImpulse=d.numImpulse;$('imp-n').textContent=d.numImpulse;}
+    if(d.email1)$('email-1').value=d.email1;
+    if(d.email2)$('email-2').value=d.email2;
+    if(d.email3)$('email-3').value=d.email3;
+    onFaktorChange();
+  }catch{}
+}
+window.addEventListener('DOMContentLoaded', ()=>{
+  loadSetup();
+  // Show "letzten Test laden" button if saved test exists
+  try{
+    const t=localStorage.getItem(LS+'test');
+    if(t){
+      const d=JSON.parse(t);
+      const btn=document.createElement('button');
+      btn.className='btn sec';
+      btn.style.cssText='width:100%;max-width:430px;text-align:center;';
+      btn.textContent=`📋 Letzten Test laden (${d.datum||'?'})`;
+      btn.onclick=loadSavedTest;
+      $('setup').querySelector('.s-inner').appendChild(btn);
+    }
+  }catch{}
+});
+
+function saveTest(){
+  try{
+    localStorage.setItem(LS+'test', JSON.stringify({
+      results:ST.results,
+      refPower:ST.refPower,
+      anlageKw:ST.anlageKw, anlageFak:ST.anlageFak, anlageBase:ST.anlageBase,
+      wandler:ST.wandler, impConst:ST.impConst, numImpulse:ST.numImpulse,
+      gpsCoords:ST.gpsCoords, gpsAddr:ST.gpsAddr,
+      anlageNr:ST.anlageNr, faeCode:ST.faeCode,
+      prAdresse:$('p-adr').value,
+      prPruefer:$('p-pruefer').value,
+      datum:$('p-datum').value,
+    }));
+  }catch{}
+}
+
+function loadSavedTest(){
+  try{
+    const d=JSON.parse(localStorage.getItem(LS+'test')||'null');
+    if(!d){alert('Keine gespeicherten Daten gefunden.');return;}
+    // Restore ST
+    ST.results=d.results||[];
+    ST.refPower=d.refPower||null;
+    ST.anlageKw=d.anlageKw||null; ST.anlageFak=d.anlageFak||1; ST.anlageBase=d.anlageBase||null;
+    ST.wandler=d.wandler||1; ST.impConst=d.impConst||1000; ST.numImpulse=d.numImpulse||10;
+    ST.gpsCoords=d.gpsCoords||null; ST.gpsAddr=d.gpsAddr||'';
+    ST.anlageNr=d.anlageNr||''; ST.faeCode=d.faeCode||'';
+    // Show protocol
+    renderProto();
+    if(d.prAdresse)$('p-adr').value=d.prAdresse;
+    if(d.prPruefer)$('p-pruefer').value=d.prPruefer;
+    if(d.datum)$('p-datum').value=d.datum;
+    show('proto');
+  }catch(e){alert('Fehler beim Laden: '+e.message);}
+}
+
+function deleteTest(){
+  if(!confirm('Gespeicherte Testdaten wirklich löschen?'))return;
+  try{localStorage.removeItem(LS+'test');}catch{}
+  // Remove "letzten Test laden" button if present
+  document.querySelectorAll('.load-test-btn').forEach(b=>b.remove());
+  alert('Daten gelöscht.');
+}
+
+// Render protocol from ST (used by loadSavedTest and showProto)
+function renderProto(){
+  const meta=$('p-meta');meta.innerHTML='';
+  const mdata=[
+    ['Anlagenleistung', ST.anlageKw?ST.anlageKw.toFixed(1)+' kWp':'—'],
+    ['Ertragsfaktor',   ST.anlageFak?(ST.anlageFak.toFixed(2)+' → '+(ST.anlageBase||0).toFixed(1)+' kW'):'—'],
+    ['Impulskonstante', ST.impConst+' imp/kWh'],
+    ['Wandlerfaktor',   ST.wandler>1?ST.wandler.toFixed(2):'Direkt'],
+    ['Ref. 100 % (gem.)',ST.refPower?ST.refPower.toFixed(3)+' kW':'—'],
+    ['Basis Teststufen', ST.anlageBase?ST.anlageBase.toFixed(1)+' kW':'—'],
+  ];
+  mdata.forEach(([l,v])=>{
+    const d=document.createElement('div');d.className='p-meta-item';
+    d.innerHTML=`<span class="ml">${l}</span><span class="mv">${v}</span>`;
+    meta.appendChild(d);
+  });
+  if(ST.gpsCoords){
+    const{lat,lng,acc}=ST.gpsCoords;
+    $('gps-pa').textContent=ST.gpsAddr||'Adresse nicht ermittelbar';
+    $('gps-pc').textContent=`${lat.toFixed(6)}° N, ${lng.toFixed(6)}° E · ±${Math.round(acc)} m`;
+    $('gps-proto').style.display='block';
+    $('p-adr').value=ST.gpsAddr;
+  }else{
+    $('gps-proto').style.display='none';
+  }
+  const tb=$('rtbody');tb.innerHTML='';
+  ST.results.forEach(r=>{
+    const tr=document.createElement('tr');
+    const sollStr=r.pct===100?'Referenz':r.pct===0?'0.000':f(r.tgt,3);
+    tr.innerHTML=`<td>${r.lbl}</td><td>${sollStr}</td><td>${f(r.pwr,3)}</td><td>${f(r.amps,2)}</td>`
+      +`<td style="text-align:center">${r.pass?'<span class="pi">✓</span>':'<span class="fi">✗</span>'}</td>`;
+    tb.appendChild(tr);
+  });
+  $('p-nr').value=ST.anlageNr;
+  $('p-fae').value=ST.faeCode;
+}
+
+// ── SETUP LOGIC ──────────────────────────────────────────────
+function onAnlageKwChange(){
+  const kw=parseFloat($('anlage-kw').value);
+  if(isNaN(kw)||kw<=0){$('anlage-eff').textContent='= — kW';return;}
+  // Auto-set factor to 0.70 for systems < 100 kW
+  const fak=parseFloat($('anlage-fak').value)||1;
+  if(kw<100){
+    // only auto-set if user hasn't manually changed it (still default)
+    if(parseFloat($('anlage-fak').value)===1.00||parseFloat($('anlage-fak').value)===1){
+      $('anlage-fak').value='0.70';
+    }
+  } else {
+    if(parseFloat($('anlage-fak').value)===0.70){
+      $('anlage-fak').value='1.00';
+    }
+  }
+  onFaktorChange();
+}
+function onFaktorChange(){
+  const kw=parseFloat($('anlage-kw').value);
+  const fak=parseFloat($('anlage-fak').value)||1;
+  if(!isNaN(kw)&&kw>0){
+    $('anlage-eff').textContent='= '+(kw*fak).toFixed(1)+' kW';
+  }
+}
+function onImpChange(){
+  const v=$('imp-sel').value;
+  $('imp-custom').style.display=v==='custom'?'flex':'none';
+}
+function onMessart(){
+  const v=document.querySelector('input[name=mtyp]:checked').value;
+  $('wand-fields').classList.toggle('visible',v==='wandler');
+  if(v==='direkt'){ST.wandler=1;$('wfak-display').textContent='Wandlerfaktor: —';}
+}
+function calcWandler(){
+  const prim=parseFloat($('ct-prim').value);
+  const sec=parseFloat($('ct-sec').value);
+  if(!isNaN(prim)&&!isNaN(sec)&&sec>0){
+    ST.wandler=prim/sec;
+    $('wfak-display').textContent=`Wandlerfaktor: ${ST.wandler.toFixed(2)}`;
+  } else {
+    ST.wandler=1;
+    $('wfak-display').textContent='Wandlerfaktor: —';
+  }
+}
+
+function startTest(){
+  saveSetup(); // persist setup fields + emails to localStorage
+  $('imp-n').textContent=ST.numImpulse; // sync pulse counter display
+  const impSel=$('imp-sel').value;
+  ST.impConst=impSel==='custom'?parseInt($('imp-custom').value)||1000:parseInt(impSel);
+  if(document.querySelector('input[name=mtyp]:checked').value==='direkt') ST.wandler=1;
+  ST.anlageKw=parseFloat($('anlage-kw').value)||null;
+  ST.anlageFak=parseFloat($('anlage-fak').value)||1;
+  // Effective base power used for all step tolerance calculations
+  ST.anlageBase=ST.anlageKw?ST.anlageKw*ST.anlageFak:null;
+  ST.anlageNr=$('anlage-nr').value.trim();
+  ST.faeCode=$('fae-code').value.trim();
+  ST.step=0;ST.refPower=null;ST.results=[];
+  initTestCam();
+  show('test');
+}
+
+// ── GPS ──────────────────────────────────────────────────────
+async function captureGPS(){
+  const btn=$('gps-btn'),st=$('gps-st');
+  btn.textContent='⏳ Ortung …';btn.disabled=true;
+  st.className='gps-status';st.textContent='GPS-Signal wird gesucht …';
+  try{
+    const pos=await new Promise((ok,err)=>
+      navigator.geolocation.getCurrentPosition(ok,err,{enableHighAccuracy:true,timeout:20000,maximumAge:0})
+    );
+    const{latitude:lat,longitude:lng,accuracy:acc}=pos.coords;
+    ST.gpsCoords={lat,lng,acc};
+    st.textContent='📍 Adresse wird ermittelt …';
+    try{
+      const r=await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=de`,
+        {headers:{'User-Agent':'FAE-Test-App/1.0'}}
+      );
+      const d=await r.json();
+      const a=d.address||{};
+      const road=a.road?(a.road+(a.house_number?' '+a.house_number:'')):'' ;
+      const city=a.city||a.town||a.village||'';
+      const plz=a.postcode||'';
+      ST.gpsAddr=[road,plz&&city?plz+' '+city:''].filter(Boolean).join(', ')||d.display_name||'';
+    }catch{ST.gpsAddr='';}
+    const aline=ST.gpsAddr||'Adresse nicht ermittelbar';
+    st.className='gps-status ok';
+    st.innerHTML=`✓ ${aline}<br><small style="color:var(--muted)">${lat.toFixed(6)}° N, ${lng.toFixed(6)}° E · ±${Math.round(acc)} m</small>`;
+    btn.textContent='📍 Erneut erfassen';
+  }catch(e){
+    st.className='gps-status err';
+    st.textContent='Fehler: '+(e.message||'Standort nicht verfügbar. HTTPS erforderlich.');
+    btn.textContent='📍 GPS erfassen';
+  }
+  btn.disabled=false;
+}
+
+// ── QR SCANNER ───────────────────────────────────────────────
+async function openQR(){
+  $('qr-modal').classList.add('open');
+  $('qr-status').className='';$('qr-inp').value='';
+  $('qr-status').textContent='Kamera wird gestartet …';
+  try{
+    ST.qrStream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:{ideal:'environment'},width:{ideal:1280}}
+    });
+    const v=$('qr-video');v.srcObject=ST.qrStream;await v.play();
+    if('BarcodeDetector' in window){
+      try{
+        ST.bdector=new BarcodeDetector({
+          formats:['qr_code','code_128','code_39','ean_13','ean_8','data_matrix','upc_a','upc_e']
+        });
+        $('qr-status').textContent='QR / Barcode in den Rahmen halten …';
+        ST.qrRunning=true;
+        qrLoopNative();
+      }catch{
+        $('qr-status').textContent='Kamera aktiv — BarcodeDetector nicht verfügbar. Manuell eingeben.';
+      }
+    } else {
+      $('qr-status').textContent='Kamera aktiv — Automatische Erkennung nicht unterstützt. Bitte manuell eingeben.';
+    }
+  }catch(e){
+    $('qr-status').textContent='Kamera nicht verfügbar: '+(e.message||'Fehler')+'<br>Bitte manuell eingeben.';
+  }
+}
+async function qrLoopNative(){
+  if(!ST.qrRunning) return;
+  try{
+    const v=$('qr-video');
+    if(v.readyState>=2&&ST.bdector){
+      const codes=await ST.bdector.detect(v);
+      if(codes&&codes.length>0){applyQR(codes[0].rawValue);return;}
+    }
+  }catch{}
+  ST.qrRaf=requestAnimationFrame(qrLoopNative);
+}
+function applyQR(val){
+  ST.qrRunning=false;cancelAnimationFrame(ST.qrRaf);
+  $('qr-status').className='found';$('qr-status').textContent='✓ '+val;
+  $('anlage-nr').value=val;ST.anlageNr=val;
+  if(navigator.vibrate)navigator.vibrate(80);
+  setTimeout(closeQR,700);
+}
+function applyQRManual(){const v=$('qr-inp').value.trim();if(v)applyQR(v);}
+function closeQR(){
+  ST.qrRunning=false;cancelAnimationFrame(ST.qrRaf);
+  if(ST.qrStream){ST.qrStream.getTracks().forEach(t=>t.stop());ST.qrStream=null;}
+  $('qr-modal').classList.remove('open');
+}
+
+// ── TEST CAMERA ──────────────────────────────────────────────
+async function initTestCam(){
+  resetPulse();updateStepUI();
+  if(ST.stream)return;
+  try{
+    ST.stream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:{ideal:'environment'}}
+    });
+    const v=$('tvid');
+    v.srcObject=ST.stream;
+    v.play().catch(()=>{});
+    // Start loop immediately – loop itself waits for readyState
+    startDetection();
+    $('cam-hint').textContent='Kamera aktiv – LED antippen zum Positionieren';
+  }catch(e){
+    $('cam-hint').textContent='Kamera: '+(e.message||'Nicht verfügbar');
+    if(STEPS[ST.step].isZero){$('btn-zero').style.display='block';}
+  }
+}
+
+// Tap overlay → set ROI with correct object-fit:cover coordinate mapping
+const ovl=$('tovl');
+ovl.addEventListener('click',e=>{
+  const vid=$('tvid');
+  const rc=ovl.getBoundingClientRect();
+  const vw=vid.videoWidth||640, vh=vid.videoHeight||360;
+  const dw=rc.width, dh=rc.height;
+  // object-fit:cover: find scale so video fills display in both axes
+  const s=Math.max(dw/vw, dh/vh);
+  // video content offset within display box (negative = cropped outside)
+  const offX=(dw-vw*s)/2, offY=(dh-vh*s)/2;
+  // map tap → video pixel
+  const tx=Math.round((e.clientX-rc.left-offX)/s);
+  const ty=Math.round((e.clientY-rc.top-offY)/s);
+  ST.roi={x:Math.max(0,Math.min(vw,tx)), y:Math.max(0,Math.min(vh,ty)), r:30};
+  ST.darkBase=null; ST.inPulse=false;
+  $('cam-hint').textContent='Messung läuft – LED markiert';
+  resetPulseData();
+});
+
+function startDetection(){
+  const vid=$('tvid'),fbuf=document.createElement('canvas');
+  const fctx=fbuf.getContext('2d'),ovlc=$('tovl'),oc=ovlc.getContext('2d');
+  let lastW=0,lastH=0;
+
+  function loop(){
+    if(!ST.stream)return;
+    // Wait until video has actual frame data
+    if(vid.readyState<2){ST.raf=requestAnimationFrame(loop);return;}
+
+    const vw=vid.videoWidth, vh=vid.videoHeight;
+    // Resize canvases only when resolution changes
+    if(vw!==lastW||vh!==lastH){
+      fbuf.width=vw; fbuf.height=vh;
+      ovlc.width=vw; ovlc.height=vh;
+      lastW=vw; lastH=vh;
+      // Default ROI: screen center on first valid frame
+      if(!ST.roi) ST.roi={x:Math.round(vw/2), y:Math.round(vh/2), r:30};
+    }
+
+    fctx.drawImage(vid,0,0);
+    oc.clearRect(0,0,vw,vh);
+
+    if(ST.roi){
+      const roi=ST.roi;
+      // Draw target ring – orange when pulse active, white otherwise
+      oc.beginPath();oc.arc(roi.x,roi.y,roi.r,0,Math.PI*2);
+      oc.strokeStyle=ST.inPulse?'#f0a500':'rgba(255,255,255,.75)';
+      oc.lineWidth=3; oc.stroke();
+      // Crosshair centre dot
+      oc.beginPath();oc.arc(roi.x,roi.y,5,0,Math.PI*2);
+      oc.fillStyle=ST.inPulse?'#f0a500':'rgba(255,255,255,.9)'; oc.fill();
+
+      // Sample brightness in circular ROI area
+      const r=roi.r;
+      const x0=Math.max(0,roi.x-r|0), y0=Math.max(0,roi.y-r|0);
+      const w=Math.min(vw-x0,r*2), h=Math.min(vh-y0,r*2);
+      if(w>0&&h>0){
+        const px=fctx.getImageData(x0,y0,w,h).data;
+        let lum=0;
+        for(let i=0;i<px.length;i+=4)
+          lum+=0.299*px[i]+0.587*px[i+1]+0.114*px[i+2];
+        lum/=(px.length/4);
+
+        // Dark baseline: very slow EMA, only adapts when LED is off
+        if(ST.darkBase===null) ST.darkBase=lum;
+        else if(!ST.inPulse) ST.darkBase=ST.darkBase*0.994+lum*0.006;
+
+        // Threshold: 15 % above dark baseline (was 28% – too insensitive)
+        const thr=ST.darkBase*1.15;
+
+        if(!ST.inPulse&&lum>thr){
+          ST.inPulse=true;
+          const now=Date.now();
+          // Min 80ms between pulses to filter noise
+          const last=ST.pulses[ST.pulses.length-1]||0;
+          if(now-last>80){
+            ST.pulses.push(now);
+            if(ST.pulses.length>32)ST.pulses.shift();
+          }
+        }else if(ST.inPulse&&lum<thr*0.92){
+          ST.inPulse=false;
+        }
+      }
+    }
+
+    updatePwrDisplay();
+    ST.raf=requestAnimationFrame(loop);
+  }
+  ST.raf=requestAnimationFrame(loop);
+}
+
+function adjImp(d){
+  ST.numImpulse=Math.max(2,Math.min(30,ST.numImpulse+d));
+  $('imp-n').textContent=ST.numImpulse;
+}
+function calcPwr(){
+  const n=ST.numImpulse;
+  if(ST.pulses.length<2)return null;
+  const rec=ST.pulses.slice(-Math.min(n,ST.pulses.length));
+  if(rec.length<2)return null;
+  let tot=0;for(let i=1;i<rec.length;i++)tot+=rec[i]-rec[i-1];
+  const avgMs=tot/(rec.length-1);
+  return (3600000/(avgMs*ST.impConst))*ST.wandler;
+}
+function isStable(){
+  const n=ST.numImpulse;
+  if(ST.pulses.length<Math.min(n,3))return false;
+  const arr=ST.pulses.slice(-Math.min(n,ST.pulses.length)),ints=[];
+  for(let i=1;i<arr.length;i++)ints.push(arr[i]-arr[i-1]);
+  if(ints.length<1)return false;
+  const mean=ints.reduce((a,b)=>a+b,0)/ints.length;
+  const cv=Math.sqrt(ints.reduce((s,x)=>s+(x-mean)**2,0)/ints.length)/mean;
+  return cv<0.13;
+}
+
+function updatePwrDisplay(){
+  const step=STEPS[ST.step];
+  const pwr=calcPwr();ST.curPwr=pwr;ST.stable=isStable();
+
+  // Wandlerfaktor hint
+  $('pwfak').textContent=ST.wandler>1?`× ${ST.wandler.toFixed(2)} (Wandler)`:'';
+
+  if(pwr===null){
+    $('pkw').className='dim';$('pkw').textContent='---';
+    $('pamps').textContent='--- A @ 400V/√3';
+    if(!step.isZero)setBadge('wait','⏳ Warte auf Impuls …');
+    $('btn-ok').disabled=true;return;
+  }
+  $('pkw').className='';$('pkw').textContent=f(pwr,3);
+  $('pamps').textContent=f(toA(pwr),2)+' A @ 400V/√3';
+
+  if(step.isRef){
+    if(ST.stable){setBadge('ref','✓ Referenz stabil – bereit');$('btn-ok').disabled=false;}
+    else{setBadge('wait','⌛ Stabilisierung …');$('btn-ok').disabled=true;}
+  }else if(!step.isZero){
+    // Base = Anlagenleistung × Faktor (nominal); refPower = actual measured at 100%
+    const base=ST.anlageBase||ST.refPower;
+    const pNom=base*step.pct/100;           // nominal target
+    const pMaxAbs=base*(step.pct+step.tol)/100; // upper hard limit
+    const pMinNom=base*(step.pct-step.tol)/100; // lower nominal limit
+    // If sun already limits below nominal lower bound → lower bound = refPower (sun-limited pass)
+    const pMin=Math.min(ST.refPower, pMinNom);
+    const pMax=pMaxAbs;
+    const inB=pwr>=pMin&&pwr<=pMax;
+    const sunLimited=ST.refPower<pMinNom; // inverter already below limit → note it
+    updateTolBar(pwr,pMin,pMax,pNom);
+    if(!ST.stable){setBadge('wait','⌛ Stabilisierung …');$('btn-ok').disabled=true;}
+    else if(inB){
+      setBadge('ok', sunLimited&&pwr<pMinNom?'✓ SONNEN-LIMITIERT – OK':'✓ IN BEREICH');
+      $('btn-ok').disabled=false;
+    }
+    else{setBadge('fail','✗ AUSSERHALB TOLERANZ');$('btn-ok').disabled=false;}
+  }else{
+    if(ST.stable&&ST.refPower){
+      const base=ST.anlageBase||ST.refPower;
+      const pass=pwr<=base*0.01;
+      setBadge(pass?'ok':'fail',pass?'✓ ≤ 1 % – BESTANDEN':'✗ ZU HOCH');
+      $('btn-ok').disabled=false;
+    }
+  }
+}
+
+function updateTolBar(pwr,pMin,pMax,pNom){
+  const range=pMax*1.4;
+  $('tol-band').style.left=(pMin/range*100)+'%';
+  $('tol-band').style.width=((pMax-pMin)/range*100)+'%';
+  $('tol-ndl').style.display='block';
+  $('tol-ndl').style.left=Math.min(100,pwr/range*100)+'%';
+  $('tn-min').textContent=f(pMin,2)+' kW';
+  $('tn-max').textContent=f(pMax,2)+' kW (Soll: '+f(pNom,2)+')';
+  $('tv-min').textContent=f(pMin,3)+' kW / '+f(toA(pMin),2)+' A';
+  $('tv-max').textContent=f(pMax,3)+' kW / '+f(toA(pMax),2)+' A';
+}
+
+function setBadge(type,txt){const el=$('badge');el.className='badge '+type;el.textContent=txt;}
+
+// ── TEST FLOW ────────────────────────────────────────────────
+function updateStepUI(){
+  const s=STEPS[ST.step];
+  $('step-n').textContent=`Schritt ${ST.step+1} / ${STEPS.length}`;
+  $('step-l').textContent=s.lbl;
+  $('instr').innerHTML=s.instr;
+  const pips=$('pips');pips.innerHTML='';
+  STEPS.forEach((_,i)=>{
+    const p=document.createElement('div');
+    p.className='pip'+(i<ST.step?' done':i===ST.step?' cur':'');
+    pips.appendChild(p);
+  });
+  $('tol-sec').style.display=(!s.isRef&&!s.isZero)?'block':'none';
+  $('btn-zero').style.display=s.isZero?'block':'none';
+  $('btn-ok').disabled=true;
+  $('btn-ok').textContent=s.isZero?'✓ Messwert bestätigen':'✓ Bestätigen';
+  $('cam-hint').textContent=s.isZero?'Kein Impuls erwartet – LED still':'Auf Impuls-LED tippen';
+  if(s.isZero)setBadge('wait','👁 Einspeisung gesperrt – kein Impuls erwartet');
+}
+function resetPulse(){
+  resetPulseData();
+  setBadge('wait','⏳ Warte auf Impuls …');
+  $('pkw').className='dim';$('pkw').textContent='---';
+  $('pamps').textContent='--- A @ 400V/√3';
+  $('btn-ok').disabled=true;
+}
+function resetPulseData(){ST.pulses=[];ST.darkBase=null;ST.inPulse=false;ST.stable=false;ST.curPwr=null;}
+
+function confirmStep(){
+  const s=STEPS[ST.step],pwr=ST.curPwr||0;
+  if(s.isRef){
+    ST.refPower=pwr;addResult(pwr,true);
+  }else if(!s.isZero){
+    const base=ST.anlageBase||ST.refPower;
+    const pMin=Math.min(ST.refPower, base*(s.pct-s.tol)/100);
+    const pMax=base*(s.pct+s.tol)/100;
+    addResult(pwr,pwr>=pMin&&pwr<=pMax);
+  }else{
+    const base=ST.anlageBase||ST.refPower;
+    addResult(pwr,!ST.curPwr||ST.curPwr<=base*0.01); // 1% Schwelle
+  }
+  advance();
+}
+function confirmZero(){addResult(0,true);advance();}
+function addResult(pwr,pass){
+  const s=STEPS[ST.step];
+  // tgt = display target based on anlageBase (not refPower)
+  const base=ST.anlageBase||ST.refPower;
+  const tgt=s.pct===100?pwr:(base?base*s.pct/100:pwr);
+  ST.results.push({lbl:s.lbl,pct:s.pct,tgt,pwr,amps:toA(pwr),pass});
+}
+function advance(){
+  ST.step++;
+  if(ST.step>=STEPS.length)showProto();
+  else{resetPulse();updateStepUI();}
+}
+
+// ── PROTOCOL ────────────────────────────────────────────────
+function showProto(){
+  if(ST.stream){ST.stream.getTracks().forEach(t=>t.stop());ST.stream=null;}
+  cancelAnimationFrame(ST.raf);
+  renderProto();
+  $('p-datum').value=new Date().toLocaleDateString('de-DE');
+  saveTest();
+  show('proto');
+}
+
+// ── PDF & EMAIL ───────────────────────────────────────────────
+function buildPDF(){
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'mm',format:'a4'});
+  const pw=210,lm=15,rw=pw-lm*2;
+  let y=15;
+
+  // Header
+  doc.setFontSize(14);doc.setFont('helvetica','bold');
+  doc.text('FAE Prüfprotokoll – PV Anlage',lm,y);y+=7;
+  doc.setFontSize(9);doc.setFont('helvetica','normal');
+  doc.setTextColor(100);
+  doc.text(`Datum: ${$('p-datum').value}   Prüfer: ${$('p-pruefer').value||'—'}`,lm,y);
+  y+=5;doc.setTextColor(0);
+  doc.line(lm,y,lm+rw,y);y+=5;
+
+  // Anlage info
+  doc.setFontSize(9);doc.setFont('helvetica','bold');doc.text('Anlage',lm,y);y+=4;
+  doc.setFont('helvetica','normal');
+  const info=[
+    ['Anlagen-Nr.',$('p-nr').value||'—'],
+    ['FAE-Code',$('p-fae').value||'—'],
+    ['Adresse',$('p-adr').value||'—'],
+    ['Anlagenleistung',ST.anlageKw?(ST.anlageKw+' kWp × '+ST.anlageFak+' = '+ST.anlageBase?.toFixed(1)+' kW'):'—'],
+    ['Impulskonstante',ST.impConst+' imp/kWh'],
+    ['Wandlerfaktor',ST.wandler>1?ST.wandler.toFixed(2):'Direktmessung'],
+    ['Impuls-Mittelung',ST.numImpulse+' Impulse'],
+  ];
+  if(ST.gpsCoords){
+    const{lat,lng,acc}=ST.gpsCoords;
+    info.push(['GPS',`${lat.toFixed(6)}° N, ${lng.toFixed(6)}° E ±${Math.round(acc)}m`]);
+    if(ST.gpsAddr)info.push(['Adresse (GPS)',ST.gpsAddr]);
+  }
+  info.forEach(([l,v])=>{
+    doc.setFont('helvetica','bold');doc.text(l+':',lm,y);
+    doc.setFont('helvetica','normal');
+    const lines=doc.splitTextToSize(String(v),rw-40);
+    doc.text(lines,lm+38,y);
+    y+=4*lines.length;
+  });
+  y+=3;doc.line(lm,y,lm+rw,y);y+=5;
+
+  // Results table
+  doc.setFont('helvetica','bold');doc.text('Testergebnisse',lm,y);y+=5;
+  const cols=[38,28,28,28,18];
+  const hdrs=['Stufe','Soll (kW)','Ist (kW)','Strom (A)','Ergebnis'];
+  // Header row
+  doc.setFillColor(240,240,240);doc.rect(lm,y-4,rw,5,'F');
+  doc.setFontSize(8);doc.setFont('helvetica','bold');
+  let x=lm;
+  hdrs.forEach((h,i)=>{doc.text(h,x+1,y);x+=cols[i];});
+  y+=2;doc.line(lm,y,lm+rw,y);y+=3;
+  doc.setFont('helvetica','normal');
+  ST.results.forEach(r=>{
+    const sollStr=r.pct===100?'Referenz':r.pct===0?'0.000':f(r.tgt,3);
+    const row=[r.lbl,sollStr,f(r.pwr,3),f(r.amps,2),r.pass?'✓ OK':'✗ FEHLER'];
+    x=lm;
+    row.forEach((v,i)=>{
+      if(i===4){doc.setTextColor(r.pass?0:200,r.pass?150:0,0);}
+      doc.text(String(v),x+1,y);
+      doc.setTextColor(0);
+      x+=cols[i];
+    });
+    y+=5;
+    doc.line(lm,y-1,lm+rw,y-1);
+  });
+  y+=4;
+
+  // Signature line
+  doc.line(lm,y+10,lm+60,y+10);
+  doc.setFontSize(8);doc.text('Unterschrift Prüfer',lm,y+14);
+
+  return doc;
+}
+
+async function sendEmail(){
+  const emails=[$('email-1').value,$('email-2').value,$('email-3').value].filter(Boolean);
+  const subject=`FAE Prüfprotokoll – ${$('p-nr').value||'Anlage'} – ${$('p-datum').value}`;
+
+  let doc;
+  try{ doc=buildPDF(); }
+  catch(e){
+    alert('PDF-Erzeugung fehlgeschlagen: '+e.message+'\nBitte jsPDF-Skript laden (HTTPS erforderlich).');
+    return;
+  }
+
+  const blob=doc.output('blob');
+  const fname=`FAE-Protokoll-${($('p-nr').value||'Anlage').replace(/\s/g,'_')}.pdf`;
+  const file=new File([blob],fname,{type:'application/pdf'});
+
+  // Try Web Share API (Android / iOS – attaches PDF to email app)
+  if(navigator.canShare&&navigator.canShare({files:[file]})){
+    try{
+      await navigator.share({
+        title:subject,
+        text:'Im Anhang das FAE Prüfprotokoll.',
+        files:[file],
+      });
+      return;
+    }catch(e){
+      if(e.name==='AbortError')return; // user cancelled
+    }
+  }
+
+  // Fallback: download PDF + open mailto
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=fname;a.click();
+  setTimeout(()=>{
+    URL.revokeObjectURL(url);
+    if(emails.length>0){
+      const body=encodeURIComponent(`Guten Tag,\n\nim Anhang das FAE Prüfprotokoll für Anlage ${$('p-nr').value||'—'}.\n\nMit freundlichen Grüßen`);
+      window.open(`mailto:${emails.join(',')}?subject=${encodeURIComponent(subject)}&body=${body}`);
+    }
+  },500);
+}
+
+function restart(){
+  Object.assign(ST,{step:0,refPower:null,anlageBase:null,results:[],
+    pulses:[],darkBase:null,inPulse:false,stable:false,curPwr:null,roi:null,stream:null});
+  show('setup');
+}
+</script>
+</body>
+</html>
