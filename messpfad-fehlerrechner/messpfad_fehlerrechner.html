@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Messpfad-Fehlerrechner</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #222636;
+    --border: #2e3347;
+    --accent: #4fc3f7;
+    --accent2: #f7934c;
+    --warn: #f7c948;
+    --danger: #f74c4c;
+    --ok: #4cf79a;
+    --text: #e8eaf0;
+    --muted: #8b90a8;
+    --font-mono: 'Courier New', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 15px;
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 20px 12px;
+  }
+
+  header h1 {
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--accent);
+  }
+
+  header p {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 3px;
+  }
+
+  .tabs {
+    display: flex;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .tab {
+    flex: 1;
+    padding: 12px 8px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    letter-spacing: 0.03em;
+  }
+
+  .tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+    background: var(--surface2);
+  }
+
+  .page { display: none; padding: 16px; }
+  .page.active { display: block; }
+
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+
+  .section-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .field {
+    margin-bottom: 12px;
+  }
+
+  .field:last-child { margin-bottom: 0; }
+
+  label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+
+  select, input[type="number"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 9px 11px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+
+  select:focus, input[type="number"]:focus {
+    border-color: var(--accent);
+  }
+
+  .row2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .toggle-group {
+    display: flex;
+    gap: 6px;
+  }
+
+  .toggle-btn {
+    flex: 1;
+    padding: 8px 4px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+  }
+
+  .toggle-btn.active {
+    background: var(--accent);
+    color: #0f1117;
+    border-color: var(--accent);
+  }
+
+  .calc-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--accent);
+    color: #0f1117;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    margin-top: 4px;
+    transition: opacity 0.2s;
+  }
+
+  .calc-btn:active { opacity: 0.8; }
+
+  /* Results */
+  .result-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .result-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+  }
+
+  .result-card.full { grid-column: 1 / -1; }
+
+  .result-label {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 4px;
+    letter-spacing: 0.05em;
+  }
+
+  .result-value {
+    font-size: 22px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+  }
+
+  .result-unit {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .ok    { color: var(--ok); }
+  .warn  { color: var(--warn); }
+  .danger{ color: var(--danger); }
+
+  .status-bar {
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 14px;
+  }
+
+  .status-ok     { background: #0d2e1e; border: 1px solid var(--ok);    color: var(--ok); }
+  .status-warn   { background: #2e2700; border: 1px solid var(--warn);  color: var(--warn); }
+  .status-danger { background: #2e0d0d; border: 1px solid var(--danger);color: var(--danger); }
+
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-key { color: var(--muted); }
+  .detail-val { font-family: var(--font-mono); font-weight: 600; }
+
+  .chart-wrap {
+    position: relative;
+    width: 100%;
+    height: 240px;
+    margin-top: 8px;
+  }
+
+  .note {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.5;
+    margin-top: 10px;
+    padding: 10px;
+    background: var(--surface2);
+    border-radius: 6px;
+    border-left: 3px solid var(--accent);
+  }
+
+  .info-badge {
+    display: inline-block;
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 20px;
+    font-weight: 700;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .badge-ok     { background: #0d2e1e; color: var(--ok); }
+  .badge-warn   { background: #2e2700; color: var(--warn); }
+  .badge-danger { background: #2e0d0d; color: var(--danger); }
+
+  #noResult {
+    text-align: center;
+    color: var(--muted);
+    padding: 40px 20px;
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚡ Messpfad-Fehlerrechner</h1>
+  <p>Spannungswandler · Sekundärleitung · Phasenfehler</p>
+</header>
+
+<div class="tabs">
+  <div class="tab active" data-tab="eingabe" onclick="showTab('eingabe')">Eingabe</div>
+  <div class="tab" data-tab="ergebnis" onclick="showTab('ergebnis')">Ergebnis</div>
+  <div class="tab" data-tab="diagramm" onclick="showTab('diagramm')">Diagramm</div>
+</div>
+
+<!-- ═══════════════════════════════ EINGABE ═══════════════════════════════ -->
+<div id="tab-eingabe" class="page active">
+
+  <div class="section">
+    <div class="section-title">Zähler / Versorgung</div>
+
+    <div class="field">
+      <label>Zählertyp</label>
+      <select id="zaehlerTyp" onchange="updateZaehlerTyp()">
+        <option value="" disabled selected>– wählen –</option>
+        <option value="eigen">Keine Hilfsversorgung (Ø 1,0 VA)</option>
+        <option value="hilf">Mit Hilfsversorgung (Ø 0,02 VA)</option>
+      </select>
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>Eigenverbrauch U-Pfad (VA)</label>
+        <input type="number" id="eigenverbrauch" step="0.001" min="0.0001" placeholder="– Zählertyp wählen –">
+        <div style="font-size:10px;color:var(--muted);margin-top:4px">Vorbelegt · bei Zusatzlast Summe eintragen</div>
+      </div>
+      <div class="field">
+        <label>Genauigkeitsklasse Zähler</label>
+        <select id="zaehlerKlasse">
+          <option value="" disabled selected>– wählen –</option>
+          <option value="B">Klasse B – EN 50470-3 (≤ ±1,0% / ±2,0%)</option>
+          <option value="0.5S">Klasse 0,5S – IEC 62053-22 (≤ ±0,5% / ±0,7%)</option>
+          <option value="0.2S">Klasse 0,2S – IEC 62053-22 (≤ ±0,2% / ±0,3%)</option>
+          <option value="0.2">Klasse 0,2 – IEC 62053-22 (≤ ±0,2% / ±0,2%)</option>
+        </select>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px">je nach Bestellung / Eichschein</div>
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>Sekundärspannung (fest)</label>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:9px 11px;font-size:14px;font-family:var(--font-mono);color:var(--accent)">
+          57,74 V · L-E
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px;line-height:1.4">
+          Sternschaltung · Leiter–Erde · 20 kV / 110 kV → 100/√3 V
+        </div>
+      </div>
+      <div class="field" style="display:flex;align-items:flex-end">
+        <div style="font-size:11px;color:var(--muted);line-height:1.5;padding-bottom:4px">
+          L+G Quelle: D000030106<br>EMH Quelle: LZQJXC-DAB-D-3.30
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Spannungswandler</div>
+    <div class="row2">
+      <div class="field">
+        <label>Genauigkeitsklasse Wandler</label>
+        <select id="wandlerKlasse">
+          <option value="" disabled selected>– wählen –</option>
+          <option value="0.5">0,5</option>
+          <option value="0.2">0,2</option>
+          <option value="0.1">0,1</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Nennbürde Wandler (VA)</label>
+        <input type="number" id="nennBuerde" value="15" step="5" min="1">
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Sekundärleitung</div>
+
+    <div class="field">
+      <label>Kabeltyp</label>
+      <select id="kabelTyp" onchange="updateKabelDefaults()">
+        <option value="" disabled selected>– wählen –</option>
+        <option value="nycy">NYCY (konzentrisch, beidseitig geerdet)</option>
+        <option value="nycy_ein">NYCY (konzentrisch, einseitig geerdet)</option>
+        <option value="liycy">LIYCY (geschirmt, verdrillt)</option>
+        <option value="nym">NYM-J (Mantelleitung)</option>
+        <option value="einzelader">Einzeladern (H07V)</option>
+        <option value="custom">Benutzerdefiniert</option>
+      </select>
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>Querschnitt (mm²)</label>
+        <select id="querschnitt" onchange="updateKabelDefaults()">
+          <option value="" disabled selected>– wählen –</option>
+          <option value="1.5">1,5 mm²</option>
+          <option value="2.5">2,5 mm²</option>
+          <option value="4">4 mm²</option>
+          <option value="6">6 mm²</option>
+          <option value="10">10 mm²</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Länge (m)</label>
+        <input type="number" id="laenge" placeholder="z.B. 200" step="10" min="1">
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>Kapazität (pF/m)</label>
+        <input type="number" id="kapazitaet" placeholder="autom. oder manuell" step="10" min="1">
+      </div>
+      <div class="field">
+        <label>Erdung Schirm</label>
+        <select id="erdung">
+          <option value="" disabled selected>– wählen –</option>
+          <option value="2">Beidseitig</option>
+          <option value="1">Einseitig</option>
+          <option value="0">Kein Schirm</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <button class="calc-btn" onclick="berechnen()">BERECHNEN →</button>
+</div>
+
+<!-- ═══════════════════════════════ ERGEBNIS ═══════════════════════════════ -->
+<div id="tab-ergebnis" class="page">
+  <div id="noResult">
+    <p>Noch keine Berechnung durchgeführt.</p>
+    <p style="margin-top:8px;font-size:12px">→ Eingaben machen und „Berechnen" tippen</p>
+  </div>
+  <div id="resultContent" style="display:none"></div>
+</div>
+
+<!-- ═══════════════════════════════ DIAGRAMM ═══════════════════════════════ -->
+<div id="tab-diagramm" class="page">
+  <div id="noChart" style="text-align:center;color:var(--muted);padding:40px 20px;font-size:14px">
+    <p>Noch keine Berechnung durchgeführt.</p>
+  </div>
+  <div id="chartContent" style="display:none">
+    <div class="section">
+      <div class="section-title">Kabelfehler vs. cos(φ) – mit Normgrenzen (IEC 62053-22)</div>
+      <div class="chart-wrap">
+        <canvas id="fehlerChart"></canvas>
+      </div>
+      <div class="note" style="margin-top:8px">
+        Normgrenze 0,2S: ±0,4% unter 5% In, ±0,3% bei cos φ=0,5, ±0,2% bei cos φ=1,0 und 0,8 · Als Treppenkurve dargestellt
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">Systemgesamtfehler (Wandler + Kabel) vs. Zählerklassengrenze</div>
+      <div class="chart-wrap">
+        <canvas id="systemChart"></canvas>
+      </div>
+      <div class="note" style="margin-top:8px">
+        Wandler-Wirkleistungsfehler an Klassengrenze (konstant) + Kabelfehler · Rote Linie = Zählerklassengrenze · Systemfehler muss darunter bleiben
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">Kabelfehler vs. Leitungslänge</div>
+      <div class="chart-wrap">
+        <canvas id="laengenChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let versorgung = 'normal';
+let chartFehler = null;
+let chartSystem = null;
+let chartLaenge = null;
+
+function renderCharts(r) {
+  document.getElementById('noChart').style.display = 'none';
+  document.getElementById('chartContent').style.display = 'block';
+
+  // Stützpunkte cos(φ) von 1.0 bis 0.05
+  const cosWerte = [];
+  for (let c = 100; c >= 5; c -= 5) cosWerte.push(c / 100);
+  const labels = cosWerte.map(c => c.toFixed(2));
+
+  // Kabelfehler
+  const kabelFehler = cosWerte.map(cp => Math.abs(r.fehlerBei(cp)));
+
+  // Normgrenze 0,2S als Treppenkurve nach IEC 62053-22:
+  // cos φ = 1,0 und 0,8: ±0,2% (ab 5% In)
+  // cos φ = 0,5 ind/kap: ±0,3% (ab 5% In)
+  // Übergang fließend zwischen 0,8 und 0,5
+  // cos φ < 0,5: Norm schweigt, wir verlängern die 0,3%-Linie
+  function normGrenze02S(cosPhi) {
+    if (cosPhi >= 0.8) return 0.20;
+    if (cosPhi >= 0.5) return 0.20 + (0.8 - cosPhi) / (0.8 - 0.5) * 0.10;
+    return 0.30;
+  }
+  function normGrenze05S(cosPhi) {
+    if (cosPhi >= 0.8) return 0.50;
+    if (cosPhi >= 0.5) return 0.50 + (0.8 - cosPhi) / (0.8 - 0.5) * 0.20;
+    return 0.70;
+  }
+  // Klasse B nach EN 50470-3:
+  // cos φ = 1,0: ±1,0% · cos φ = 0,5 ind/kap: ±2,0% · cos φ = 0,8: ±1,5%
+  function normGrenzeB(cosPhi) {
+    if (cosPhi >= 0.8) return 1.00 + (1.0 - cosPhi) / (1.0 - 0.8) * 0.50;
+    if (cosPhi >= 0.5) return 1.50 + (0.8 - cosPhi) / (0.8 - 0.5) * 0.50;
+    return 2.00;
+  }
+
+  const grenzeFn = r.zaehKl === 'B'    ? normGrenzeB
+                 : r.zaehKl === '0.5S' ? normGrenze05S
+                 : normGrenze02S; // gilt für 0,2S und 0,2
+  const normGrenzeWerte = cosWerte.map(cp => grenzeFn(cp));
+
+  // ── Chart 1: Kabelfehler + Normgrenze ──────────────────────────────────
+  if (chartFehler) chartFehler.destroy();
+  chartFehler = new Chart(document.getElementById('fehlerChart').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Kabelfehler (%)',
+          data: kabelFehler.map(v => v.toFixed(5)),
+          borderColor: '#4fc3f7',
+          backgroundColor: 'rgba(79,195,247,0.08)',
+          borderWidth: 2, pointRadius: 3, tension: 0.2,
+        },
+        {
+          label: `Normgrenze Klasse ${r.zaehKl}`,
+          data: normGrenzeWerte.map(v => v.toFixed(4)),
+          borderColor: '#f74c4c',
+          borderWidth: 2,
+          borderDash: [6, 3],
+          pointRadius: 0,
+          tension: 0,
+        }
+      ]
+    },
+    options: chartOptions('Fehler (%)')
+  });
+
+  // ── Chart 2: Systemgesamtfehler Worst Case ─────────────────────────────
+  // Wandlerfehler nach IEC 61869-3: Wirkleistungsfehler direkt begrenzt
+  // Klasse 0,1: ±0,1% · Klasse 0,2: ±0,2% · Klasse 0,5: ±0,5%
+  // (das ist der direkte Wirkleistungsfehler, NICHT über tan(φ) zu berechnen)
+  const wandlerWirkFehler = r.wandKl; // direkt in % – z.B. 0,2%
+
+  const systemFehler = cosWerte.map(cp => {
+    const f_wandler = wandlerWirkFehler;   // konstant, normiert in %
+    const f_kabel   = Math.abs(r.fehlerBei(cp));
+    return f_wandler + f_kabel;
+  });
+
+  const systemGrenze = cosWerte.map(cp => grenzeFn(cp)); // Zählerklassen-Grenze als Referenz
+
+  if (chartSystem) chartSystem.destroy();
+  chartSystem = new Chart(document.getElementById('systemChart').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Wandler + Kabel Worst Case (%)',
+          data: systemFehler.map(v => v.toFixed(4)),
+          borderColor: '#f7934c',
+          backgroundColor: 'rgba(247,147,76,0.08)',
+          borderWidth: 2, pointRadius: 3, tension: 0.2,
+        },
+        {
+          label: 'Nur Kabelfehler (%)',
+          data: kabelFehler.map(v => v.toFixed(5)),
+          borderColor: '#4fc3f7',
+          backgroundColor: 'rgba(79,195,247,0.05)',
+          borderWidth: 1.5, borderDash: [4,3], pointRadius: 0, tension: 0.2,
+        },
+        {
+          label: `Normgrenze Klasse ${r.zaehKl}`,
+          data: normGrenzeWerte.map(v => v.toFixed(4)),
+          borderColor: '#f74c4c',
+          borderWidth: 2, borderDash: [6,3], pointRadius: 0, tension: 0,
+        }
+      ]
+    },
+    options: chartOptions('Fehler (%)')
+  });
+
+  // ── Chart 3: Kabelfehler vs Länge ──────────────────────────────────────
+  const laengen = [10, 25, 50, 75, 100, 150, 200, 250, 300, 400, 500];
+  const phFehler_05 = [], phFehler_025 = [];
+
+  laengen.forEach(l => {
+    const C_l = r.C_pm * l * r.C_faktor;
+    const X_C_l = 1 / (r.omega * C_l);
+    const delta_RC_l = r.omega * C_l * r.R * (l / r.L);
+    const delta_ZC_l = r.Z_ein / X_C_l;
+    const delta_l = delta_RC_l + delta_ZC_l;
+    const tanD = Math.tan(delta_l);
+    phFehler_05.push( Math.abs(tanD * Math.tan(Math.acos(0.5))  * 100).toFixed(5));
+    phFehler_025.push(Math.abs(tanD * Math.tan(Math.acos(0.25)) * 100).toFixed(5));
+  });
+
+  if (chartLaenge) chartLaenge.destroy();
+  chartLaenge = new Chart(document.getElementById('laengenChart').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: laengen.map(l => l + 'm'),
+      datasets: [
+        {
+          label: 'Fehler bei cos φ=0,5 (%)',
+          data: phFehler_05,
+          borderColor: '#f7934c',
+          backgroundColor: 'rgba(247,147,76,0.08)',
+          borderWidth: 2, pointRadius: 3, tension: 0.3,
+        },
+        {
+          label: 'Fehler bei cos φ=0,25 (%)',
+          data: phFehler_025,
+          borderColor: '#4fc3f7',
+          backgroundColor: 'rgba(79,195,247,0.08)',
+          borderWidth: 2, pointRadius: 3, tension: 0.3,
+        },
+        {
+          label: `Normgrenze Klasse ${r.zaehKl} bei cos φ=0,5`,
+          data: Array(laengen.length).fill(normGrenze02S(0.5).toFixed(4)),
+          borderColor: '#f74c4c',
+          borderWidth: 1.5, borderDash: [5,4], pointRadius: 0,
+        }
+      ]
+    },
+    options: chartOptions('Fehler (%)', laengen.map(l => l + 'm'))
+  });
+}
+
+function chartOptions(yLabel) {
+  return {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { labels: { color: '#8b90a8', font: { size: 11 } } } },
+    scales: {
+      x: { ticks: { color: '#8b90a8', font: { size: 10 } }, grid: { color: '#2e3347' } },
+      y: {
+        title: { display: true, text: yLabel, color: '#8b90a8', font: { size: 11 } },
+        ticks: { color: '#8b90a8', font: { size: 10 } },
+        grid: { color: '#2e3347' },
+        min: 0,
+      }
+    }
+  };
+}
+let lastResult = null;
+
+function showTab(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  // Tab-Button per data-Attribut finden, nicht über event
+  document.querySelectorAll('.tab').forEach(t => {
+    if (t.getAttribute('data-tab') === name) t.classList.add('active');
+  });
+}
+
+const zaehlerDB = {
+  'eigen': { va: 1.0,  label: 'Keine Hilfsversorgung' },  // Ø L+G 0,8 VA + EMH 1,2 VA
+  'hilf':  { va: 0.02, label: 'Mit Hilfsversorgung' },     // beide Hersteller 0,02 VA
+};
+
+function updateZaehlerTyp() {
+  const typ = document.getElementById('zaehlerTyp').value;
+  const d = zaehlerDB[typ];
+  if (!d) return;
+  document.getElementById('eigenverbrauch').value = d.va;
+}
+
+function updateZaehlerDefaults() {}
+function setVersorgung() {}
+
+function validate() {
+  if (!document.getElementById('zaehlerTyp').value) {
+    alert('Bitte Zählertyp wählen.');
+    return false;
+  }
+  const felder = [
+    { id: 'eigenverbrauch', label: 'Eigenverbrauch U-Pfad' },
+    { id: 'zaehlerKlasse', label: 'Genauigkeitsklasse Zähler' },
+    { id: 'wandlerKlasse', label: 'Genauigkeitsklasse Wandler' },
+    { id: 'nennBuerde',    label: 'Nennbürde Wandler' },
+    { id: 'kabelTyp',      label: 'Kabeltyp' },
+    { id: 'querschnitt',   label: 'Querschnitt' },
+    { id: 'laenge',        label: 'Kabellänge' },
+    { id: 'kapazitaet',    label: 'Kapazität' },
+    { id: 'erdung',        label: 'Erdung Schirm' },
+  ];
+  const fehlend = felder.filter(f => {
+    const el = document.getElementById(f.id);
+    return !el || el.value === '' || el.value === null;
+  });
+  if (fehlend.length > 0) {
+    alert('Bitte ausfüllen:\n' + fehlend.map(f => '• ' + f.label).join('\n'));
+    return false;
+  }
+  return true;
+}
+
+const kabelMatrix = {
+  //            1.5   2.5   4     6    10
+  nycy:        [280,  300,  310,  330, 360],
+  nycy_ein:    [140,  150,  155,  165, 180],
+  liycy:       [180,  200,  220,  250, 290],
+  nym:         [100,  130,  150,  180, 220],
+  einzelader:  [ 30,   40,   50,   60,  80],
+  custom:      null,
+};
+
+const querschnittIdx = { '1.5':0, '2.5':1, '4':2, '6':3, '10':4 };
+
+function updateKabelDefaults() {
+  const typ = document.getElementById('kabelTyp').value;
+  if (typ === 'custom') return;
+  const q = document.getElementById('querschnitt').value;
+  const idx = querschnittIdx[q] ?? 2;
+  const pf = kabelMatrix[typ]?.[idx];
+  if (pf) document.getElementById('kapazitaet').value = pf;
+
+  // Erdung default
+  const erdSel = document.getElementById('erdung');
+  if (typ === 'nycy') erdSel.value = '2';
+  else if (typ === 'nycy_ein') erdSel.value = '1';
+  else if (typ === 'liycy') erdSel.value = '1';
+  else erdSel.value = '0';
+}
+
+function berechnen() {
+  if (!validate()) return;
+  const U2      = 57.74; // fest: Sternschaltung L-E, 100/√3 V
+  const S_Z     = parseFloat(document.getElementById('eigenverbrauch').value);
+  const C_pm    = parseFloat(document.getElementById('kapazitaet').value) * 1e-12; // F/m
+  const L       = parseFloat(document.getElementById('laenge').value);
+  const A       = parseFloat(document.getElementById('querschnitt').value);
+  const nennBu  = parseFloat(document.getElementById('nennBuerde').value);
+  const wandKl  = parseFloat(document.getElementById('wandlerKlasse').value);
+  const zaehKl  = document.getElementById('zaehlerKlasse').value;
+  const erdFak  = parseFloat(document.getElementById('erdung').value);
+
+  const rho = 0.0175; // Ω·mm²/m Kupfer
+  const f   = 50;
+  const omega = 2 * Math.PI * f;
+
+  // Leitungswiderstand (Hin + Rück)
+  const R = (rho * 2 * L) / A;
+
+  // Kapazität gesamt (Erdungsfaktor: beidseitig = volle C, einseitig = halbe C)
+  const C_faktor = erdFak === 2 ? 1.0 : erdFak === 1 ? 0.5 : 0.1;
+  const C_ges = C_pm * L * C_faktor;
+
+  // Eingangsimpedanz Zähler
+  const Z_ein = (U2 * U2) / S_Z;
+
+  // Kapazitiver Blindwiderstand
+  const X_C = 1 / (omega * C_ges);
+
+  // Phasenfehler Spannungspfad
+  // C_Leitung liegt parallel zu Z_ein (Zählereingang).
+  // Der kapazitive Blindstrom durch C erzeugt am Leitungswiderstand R einen Spannungsabfall
+  // der phasenverschoben ist → Phasendrehung der gemessenen Spannung.
+  // Korrekte Näherung (gilt für X_C >> R, was hier immer der Fall ist):
+  // δ [rad] ≈ ω · C_ges · R_Leitung   (Phasenfehler durch RC-Tiefpass)
+  // ZUSÄTZLICH: kapazitiver Strom durch Z_ein → weiterer Phasenfehler:
+  // δ_Z [rad] ≈ Z_ein / X_C   (wenn Z_ein << X_C, also klein)
+  // Gesamtphasenfehler: beide addieren sich
+  const delta_RC  = omega * C_ges * R;          // RC-Tiefpass-Anteil
+  const delta_ZC  = Z_ein / X_C;                // Lastanteil (dominiert bei hohem Z_ein)
+  const delta_U_rad = delta_RC + delta_ZC;       // Gesamtphasenfehler [rad]
+  const delta_U_deg = delta_U_rad * 180 / Math.PI;
+
+  // Verhältnisfehler durch Leitungswiderstand
+  const I_mess = S_Z / U2; // Strom Zählereingang
+  const delta_U_ratio = (I_mess * R) / U2 * 100; // %
+
+  // Bürdenauslastung
+  const S_kap = (U2 * U2) / X_C; // kapazitive Bürde
+  const S_ges = S_Z + S_kap;
+  const buerde_pct = (S_ges / nennBu) * 100;
+
+  // Fehler bei verschiedenen cos(phi)
+  // Korrekte Formel: ΔP/P = -tan(δ_U) · tan(φ)
+  // Bei cos(φ)=1 → φ=0 → tan(φ)=0 → kein Fehler (physikalisch korrekt)
+  // Bei cos(φ)→0 → Fehler maximal
+  function fehlerBei(cosPhi) {
+    if (cosPhi <= 0) return 0;
+    if (cosPhi >= 1.0) return -delta_U_ratio; // bei cos φ=1 wirkt nur Verhältnisfehler
+    const phi_rad = Math.acos(cosPhi);
+    const tanPhi = Math.tan(phi_rad);
+    const tanDelta = Math.tan(delta_U_rad);
+    // Phasenfehler: -tan(δ)·tan(φ)·100
+    // Verhältnisfehler: wirkt direkt als Spannungsabfall, cos(φ)-unabhängig
+    return -tanDelta * tanPhi * 100 - delta_U_ratio;
+  }
+
+  // Klassengrenze
+  const klassenGrenze = { 'B': 1.0, 'C': 1.0, '0.5S': 0.5, '0.2S': 0.2, '0.2': 0.2 };
+  const grenze = klassenGrenze[zaehKl] || 0.2;
+
+  // Worst case: cos(phi) = 0.25
+  const fehler_025 = Math.abs(fehlerBei(0.25));
+  const fehler_05  = Math.abs(fehlerBei(0.5));
+  const fehler_10  = Math.abs(fehlerBei(1.0));
+
+  lastResult = { U2, S_Z, C_ges, R, Z_ein, X_C, delta_U_deg, delta_U_ratio,
+                 buerde_pct, nennBu, fehler_025, fehler_05, fehler_10, grenze,
+                 zaehKl, wandKl, L, A, C_pm, C_faktor, omega, fehlerBei };
+
+  renderErgebnis(lastResult);
+  renderCharts(lastResult);
+  showTab('ergebnis');
+}
+
+function renderErgebnis(r) {
+  document.getElementById('noResult').style.display = 'none';
+  const el = document.getElementById('resultContent');
+  el.style.display = 'block';
+
+  const worstErr = r.fehler_025;
+  const statusKl = worstErr < r.grenze * 0.25 ? 'ok' :
+                   worstErr < r.grenze        ? 'warn' : 'danger';
+  const statusTxt = worstErr < r.grenze * 0.5
+    ? `✓ Klasse ${r.zaehKl} eingehalten – Fehler unkritisch`
+    : worstErr < r.grenze
+    ? `⚠ Grenzwertig – Klasse ${r.zaehKl} noch eingehalten`
+    : `✗ Klassengrenze ${r.grenze}% überschritten!`;
+
+  const buerde_kl = r.buerde_pct < 10 ? 'danger' : r.buerde_pct < 25 ? 'warn' : 'ok';
+
+  // Fehlertabelle für verschiedene cos(φ)-Werte
+  const cosTabelle = [1.0, 0.99, 0.95, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.25];
+
+  function farbKlasse(fehler, grenze) {
+    if (fehler < grenze * 0.25) return 'ok';
+    if (fehler < grenze)        return 'warn';
+    return 'danger';
+  }
+
+  const tabellenZeilen = cosTabelle.map(cp => {
+    const f_raw = r.fehlerBei(cp); // vorzeichenbehaftet
+    const f_abs = Math.abs(f_raw);
+    const kl = farbKlasse(f_abs, r.grenze);
+    const symbol = kl === 'ok' ? '✓' : kl === 'warn' ? '⚠' : '✗';
+    const sign = f_raw <= 0 ? '−' : '+';
+    const signTip = f_raw <= 0 ? 'zu wenig' : 'zu viel';
+    return `
+      <div class="detail-row">
+        <span class="detail-key">cos φ = ${cp.toFixed(2)}</span>
+        <span class="detail-val ${kl}">${symbol} ${sign}${f_abs.toFixed(4)} % <span style="font-size:10px;color:var(--muted);font-weight:400">(${signTip})</span></span>
+      </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="status-bar status-${statusKl}">${statusTxt}</div>
+
+    <div class="result-grid">
+      <div class="result-card">
+        <div class="result-label">Phasenfehler</div>
+        <div class="result-value ${statusKl === 'ok' ? 'ok' : statusKl === 'warn' ? 'warn' : 'danger'}">${r.delta_U_deg.toFixed(4)}°</div>
+        <div class="result-unit">durch Kabelkapazität</div>
+      </div>
+      <div class="result-card">
+        <div class="result-label">Verhältnisfehler</div>
+        <div class="result-value">${r.delta_U_ratio.toFixed(4)}%</div>
+        <div class="result-unit">durch Leitungswiderstand</div>
+      </div>
+      <div class="result-card full">
+        <div class="result-label">Wandlerbürde-Auslastung</div>
+        <div class="result-value ${buerde_kl}">${r.buerde_pct.toFixed(1)}%</div>
+        <div class="result-unit">von ${r.nennBu} VA Nennbürde (Soll: 25–100%)</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Kabelfehler je cos(φ) · Grenze: ${r.grenze}%</div>
+      ${tabellenZeilen}
+    </div>
+
+    <div class="section">
+      <div class="section-title">Berechnungsdetails</div>
+      <div class="detail-row"><span class="detail-key">Leitungswiderstand (Hin+Rück)</span><span class="detail-val">${r.R.toFixed(3)} Ω</span></div>
+      <div class="detail-row"><span class="detail-key">Kapazität gesamt</span><span class="detail-val">${(r.C_ges*1e9).toFixed(1)} nF</span></div>
+      <div class="detail-row"><span class="detail-key">Kap. Blindwiderstand X_C</span><span class="detail-val">${(r.X_C/1000).toFixed(1)} kΩ</span></div>
+      <div class="detail-row"><span class="detail-key">Eingangsimpedanz Zähler</span><span class="detail-val">${(r.Z_ein/1000).toFixed(0)} kΩ</span></div>
+      <div class="detail-row"><span class="detail-key">Strom auf Sekundärleitung</span><span class="detail-val">${((r.S_Z/r.U2)*1000).toFixed(3)} mA</span></div>
+      <div class="detail-row"><span class="detail-key">Kapazitive Bürde</span><span class="detail-val">${((r.U2*r.U2/r.X_C)*1000).toFixed(2)} mVA</span></div>
+      <div class="detail-row"><span class="detail-key">Spannungsfall absolut</span><span class="detail-val">${((r.S_Z/r.U2)*r.R*1000).toFixed(2)} mV</span></div>
+    </div>
+
+    <div class="note">
+      ✓ = unter 25% der Grenze · ⚠ = 25–100% der Grenze · ✗ = Grenze überschritten<br>
+      − = Zähler misst zu wenig (Energie geht verloren) · + = Zähler misst zu viel
+    </div>
+
+    <div class="section">
+      <div class="section-title" onclick="
+        var b = document.getElementById('rechenweg_body');
+        var a = document.getElementById('rechenweg_arrow');
+        b.style.display = b.style.display === 'none' ? 'block' : 'none';
+        a.textContent = b.style.display === 'none' ? '▶' : '▼';
+      " style="cursor:pointer;user-select:none">
+        <span id="rechenweg_arrow">▶</span> RECHENWEG (tippen zum Öffnen)
+      </div>
+      <div id="rechenweg_body" style="display:none;margin-top:10px">
+
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">
+          Alle Formeln mit eingesetzten Werten · U₂ = ${r.U2} V · f = 50 Hz
+        </div>
+
+        <div style="font-size:12px;line-height:2;font-family:var(--font-mono)">
+
+          <div style="color:var(--accent);margin:10px 0 4px;font-size:11px;letter-spacing:0.1em">① LEITUNGSWIDERSTAND</div>
+          <div>R = ρ · 2L / A</div>
+          <div style="color:var(--muted)">R = 0,0175 · 2·${r.L} / ${r.A}</div>
+          <div style="color:var(--ok)">R = <b>${r.R.toFixed(4)} Ω</b></div>
+
+          <div style="color:var(--accent);margin:10px 0 4px;font-size:11px;letter-spacing:0.1em">② KABELKAPAZITÄT GESAMT</div>
+          <div>C = C/m · L · Erdungsfaktor</div>
+          <div style="color:var(--muted)">C = ${(r.C_pm*1e12).toFixed(0)} pF/m · ${r.L} m · ${r.C_faktor}</div>
+          <div style="color:var(--ok)">C = <b>${(r.C_ges*1e9).toFixed(2)} nF</b></div>
+
+          <div style="color:var(--accent);margin:10px 0 4px;font-size:11px;letter-spacing:0.1em">③ KAP. BLINDWIDERSTAND</div>
+          <div>X_C = 1 / (2π · f · C)</div>
+          <div style="color:var(--muted)">X_C = 1 / (2π · 50 · ${(r.C_ges*1e9).toFixed(2)}·10⁻⁹)</div>
+          <div style="color:var(--ok)">X_C = <b>${(r.X_C/1000).toFixed(2)} kΩ</b></div>
+
+          <div style="color:var(--accent);margin:10px 0 4px;font-size:11px;letter-spacing:0.1em">④ EINGANGSIMPEDANZ ZÄHLER</div>
+          <div>Z_ein = U₂² / S_Z</div>
+          <div style="color:var(--muted)">Z_ein = ${r.U2}² / ${r.S_Z}</div>
+          <div style="color:var(--ok)">Z_ein = <b>${(r.Z_ein/1000).toFixed(1)} kΩ</b></div>
+
+          <div style="color:var(--accent);margin:10px 0 4px;font-size:11px;letter-spacing:0.1em">⑤ PHASENFEHLER</div>
+          <div>δ_RC = ω · C · R &nbsp;&nbsp;(RC-Tiefpass)</div>
+          <div style="color:var(--muted)">δ_RC = 2π·50 · ${(r.C_ges*1e9).toFixed(2)}·10⁻⁹ · ${r.R.toFixed(4)}</div>
+          <div style="color:var(--ok)">δ_RC = <b>${(r.omega * r.C_ges * r.R * 1000).toFixed(4)} m°</b></div>
+          <div style="margin-top:4px">δ_ZC = Z_ein / X_C &nbsp;&nbsp;(Lastanteil)</div>
+          <div style="color:var(--muted)">δ_ZC = ${(r.Z_ein/1000).toFixed(1)} kΩ / ${(r.X_C/1000).toFixed(2)} kΩ</div>
+          <div style="color:var(--ok)">δ_ZC = <b>${(r.Z_ein/r.X_C * 1000).toFixed(4)} m°</b></div>
+          <div style="margin-top:4px">δ_ges = δ_RC + δ_ZC</div>
+          <div style="color:var(--ok)">δ_ges = <b>${r.delta_U_deg.toFixed(6)}°</b></div>
+
+          <div style="color:var(--accent);margin:10px 0 4px;font-size:11px;letter-spacing:0.1em">⑥ VERHÄLTNISFEHLER</div>
+          <div>ε_u = (I · R) / U₂ · 100%</div>
+          <div style="color:var(--muted)">I = ${r.S_Z} VA / ${r.U2} V = ${((r.S_Z/r.U2)*1000).toFixed(3)} mA</div>
+          <div style="color:var(--muted)">ε_u = (${((r.S_Z/r.U2)*1000).toFixed(3)}·10⁻³ · ${r.R.toFixed(4)}) / ${r.U2} · 100%</div>
+          <div style="color:var(--ok)">ε_u = <b>${r.delta_U_ratio.toFixed(5)} %</b></div>
+
+          <div style="color:var(--accent);margin:10px 0 4px;font-size:11px;letter-spacing:0.1em">⑦ WIRKLEISTUNGSFEHLER (je cos φ)</div>
+          <div>ΔP/P = −tan(δ) · tan(φ) − ε_u</div>
+          <div style="color:var(--muted)">tan(δ) = tan(${r.delta_U_deg.toFixed(6)}°) = ${Math.tan(r.delta_U_rad).toExponential(3)}</div>
+          <div style="margin-top:4px">
+            cos φ = 1,00 → <span style="color:var(--ok)"><b>${Math.abs(r.fehlerBei(1.0)).toFixed(5)} %</b></span><br>
+            cos φ = 0,80 → <span style="color:var(--ok)"><b>${Math.abs(r.fehlerBei(0.8)).toFixed(5)} %</b></span><br>
+            cos φ = 0,50 → <span style="color:var(--ok)"><b>${Math.abs(r.fehlerBei(0.5)).toFixed(5)} %</b></span><br>
+            cos φ = 0,25 → <span style="color:var(--ok)"><b>${Math.abs(r.fehlerBei(0.25)).toFixed(5)} %</b></span>
+          </div>
+
+          <div style="color:var(--accent);margin:10px 0 4px;font-size:11px;letter-spacing:0.1em">⑧ WANDLERBÜRDE</div>
+          <div>S_kap = U₂² / X_C &nbsp;&nbsp;(Kabelkapazität)</div>
+          <div style="color:var(--muted)">S_kap = ${r.U2}² / ${(r.X_C/1000).toFixed(2)} kΩ = ${((r.U2*r.U2/r.X_C)*1000).toFixed(2)} mVA</div>
+          <div>S_ges = S_Z + S_kap = ${r.S_Z} + ${((r.U2*r.U2/r.X_C)*1000).toFixed(2)}·10⁻³</div>
+          <div style="color:var(--ok)">Auslastung = S_ges / S_nenn = <b>${r.buerde_pct.toFixed(2)} %</b></div>
+
+        </div>
+      </div>
+    </div>
+  `;
+}
+</script>
+</body>
+</html>
