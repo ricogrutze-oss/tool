@@ -1,5 +1,5 @@
 {
-  "title": "P Zähler",
+  "title": "Blinkzähler-Reader",
   "description": "Erfasst die Blink-LED eines Zählers per Kamera und berechnet die Leistung.",
-  "icon": "⚡"
+  "icon": "icon.svg"
 }
