@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bürde-Rechner | Rico Grzenda</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root { --primary-blue: #003366; --light-bg: #f0f4f8; }
+        body { background-color: var(--light-bg); padding: 20px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        /* App Card */
+        .card { border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: none; max-width: 650px; margin: auto; overflow: hidden; }
+        .header-bg { background: var(--primary-blue); color: white; padding: 20px; text-align: center; }
+        
+        /* Navigation */
+        .nav-mode { background: #e9ecef; border-radius: 8px; padding: 5px; margin: 20px; display: flex; }
+        .nav-mode button { flex: 1; border: none; padding: 10px; border-radius: 6px; font-weight: bold; transition: 0.3s; }
+        .nav-mode button.active { background: var(--primary-blue); color: white; }
+        
+        .btn-calc { background-color: var(--primary-blue); color: white; font-weight: bold; width: 100%; border-radius: 8px; padding: 12px; border: none; margin-top: 15px; }
+        .center-input-box { background: #f8f9fa; border-radius: 10px; padding: 15px; border: 1px solid #dee2e6; margin-bottom: 20px; }
+
+        /* Ergebnis-Protokoll */
+        .result-card { background-color: #ffffff; display: none; padding: 0; border-radius: 12px; margin-top: 20px; max-width: 700px; margin: 20px auto; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .res-content { padding: 30px; }
+        
+        /* Tabellen Styling */
+        .summary-table { width: 100%; margin-bottom: 20px; border-collapse: collapse; }
+        .summary-table td { padding: 12px; border-bottom: 1px solid #eee; }
+        .summary-table td:first-child { font-weight: bold; color: var(--primary-blue); width: 40%; }
+        .res-highlight-row { background-color: #e7eff6; border-left: 5px solid var(--primary-blue); }
+        
+        /* Farbklassen für Abweichung */
+        .text-danger-bold { color: #dc3545; font-weight: bold; }
+        .text-success-bold { color: #198754; font-weight: bold; }
+
+        .error-note { padding: 15px; border-radius: 8px; margin: 15px 0; font-weight: 500; }
+        .table-ref { font-size: 0.8rem; width: 100%; margin-top: 20px; }
+        .table-ref th { background-color: #f8f9fa; color: var(--primary-blue); }
+
+        /* Footer */
+        .app-footer { font-size: 0.75rem; text-align: center; color: #777; margin-top: 20px; padding-bottom: 20px; }
+
+        @media print {
+            body { background: white; padding: 0; }
+            .no-print { display: none !important; }
+            .result-card { display: block !important; box-shadow: none; border: 1px solid #eee; max-width: 100%; width: 100%; margin: 0; }
+            .header-print { display: block !important; background: var(--primary-blue) !important; color: white !important; padding: 20px; text-align: center; -webkit-print-color-adjust: exact; }
+            .res-highlight-row { background-color: #e7eff6 !important; -webkit-print-color-adjust: exact; }
+            .print-footer { display: block !important; text-align: right; font-size: 0.75rem; margin-top: 40px; padding-top: 10px; border-top: 1px solid #ddd; }
+        }
+        .header-print { display: none; }
+        .print-footer { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="card no-print">
+        <div class="header-bg">
+            <h4 class="mb-0">Bürde-Rechner</h4>
+        </div>
+        
+        <div class="nav-mode">
+            <button id="btn-forward" class="active" onclick="setMode('forward')">Länge → Bürde</button>
+            <button id="btn-backward" onclick="setMode('backward')">Ist-Bürde → Länge</button>
+        </div>
+
+        <div class="p-4 pt-0">
+            <div class="center-input-box text-center">
+                <label id="main-label" class="fw-bold mb-2">Abstand (m)</label>
+                <input type="number" id="main-input" class="form-control form-control-lg text-center mx-auto" style="max-width: 200px;" placeholder="0.00">
+            </div>
+
+            <div class="row g-3">
+                <div class="col-6">
+                    <label class="small fw-bold text-muted">Nennbürde (S<sub>n</sub>)</label>
+                    <select id="nenn" class="form-select" onchange="updateInfo()">
+                        <option value="5">5 VA</option>
+                        <option value="10">10 VA</option>
+                    </select>
+                </div>
+                <div class="col-6">
+                    <label class="small fw-bold text-muted">Querschnitt (A)</label>
+                    <select id="querschnitt" class="form-select" onchange="updateInfo()">
+                        <option value="1.5">1,5 mm²</option>
+                        <option value="2.5" selected>2,5 mm²</option>
+                        <option value="4">4 mm²</option>
+                        <option value="6">6 mm²</option>
+                    </select>
+                </div>
+                <div class="col-6">
+                    <label class="small fw-bold text-muted">Sekundärstrom (I<sub>sec</sub>)</label>
+                    <select id="isec" class="form-select" onchange="updateInfo()">
+                        <option value="5">5 A</option>
+                        <option value="1">1 A</option>
+                    </select>
+                </div>
+                <div class="col-6">
+                    <label class="small fw-bold text-muted">Genauigkeitsklasse</label>
+                    <select id="w_class" class="form-select" onchange="updateInfo()">
+                        <option value="0.5">0,5S</option>
+                        <option value="0.2">0,2S</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div id="q-limits" class="q-badge text-center my-3"></div>
+
+            <button onclick="calculate()" class="btn btn-calc shadow-sm">BERECHNUNG STARTEN</button>
+            <div class="app-footer">Entwickelt von Rico Grzenda</div>
+        </div>
+    </div>
+
+    <div id="result_box" class="result-card">
+        <div class="header-print">
+            <h2 class="mb-1" id="pdf_title">Messprotokoll Bürde</h2>
+            <p class="mb-0 small" id="pdf_date"></p>
+        </div>
+
+        <div class="res-content">
+            <h5 class="text-uppercase fw-bold mb-3 no-print" style="color:var(--primary-blue); border-bottom: 2px solid #eee; padding-bottom: 10px;">
+                Ergebnis-Protokoll
+            </h5>
+
+            <table class="summary-table">
+                <tr><td>Eingabewert:</td><td id="sum_val">-</td></tr>
+                <tr><td>Konfiguration:</td><td id="sum_params">-</td></tr>
+                <tr><td>Auslastung / Abweichung:</td><td id="sum_deviation">-</td></tr>
+                <tr class="res-highlight-row">
+                    <td id="sum_res_label">Berechnetes Ergebnis:</td>
+                    <td id="sum_result" class="fs-5">-</td>
+                </tr>
+            </table>
+
+            <div id="res_ampel" class="text-center p-3 mb-4 rounded-3 fw-bold text-white shadow-sm"></div>
+            
+            <div class="row mb-4">
+                <div class="col-6">
+                    <div class="p-3 border rounded bg-light">
+                        <small class="text-muted d-block text-uppercase">Ist-Leistung (S)</small>
+                        <span id="prot_sist" class="fw-bold fs-5">-</span>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="p-3 border rounded bg-light">
+                        <small class="text-muted d-block text-uppercase">Widerstand (R)</small>
+                        <span id="prot_res" class="fw-bold fs-5">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="res_error_display" class="error-note shadow-sm"></div>
+            
+            <div id="norm_table_container"></div>
+
+            <div class="print-footer">
+                Erstellt mit Bürde-Rechner | <strong>Software erstellt durch Rico Grzenda</strong>
+            </div>
+
+            <div class="mt-4 no-print text-center">
+                <button onclick="window.print()" class="btn btn-danger btn-lg px-5 shadow">Als PDF speichern</button>
+                <button onclick="clearAll()" class="btn btn-link d-block mt-3 text-danger text-decoration-none fw-bold">Eingaben löschen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentMode = 'forward';
+
+function setMode(mode) {
+    currentMode = mode;
+    document.getElementById('btn-forward').className = (mode === 'forward' ? 'active' : '');
+    document.getElementById('btn-backward').className = (mode === 'backward' ? 'active' : '');
+    document.getElementById('main-label').innerText = (mode === 'forward' ? 'Abstand (m)' : 'Ist-Bürde (VA)');
+    updateInfo();
+}
+
+function updateInfo() {
+    const q = parseFloat(document.getElementById('querschnitt').value);
+    const sn = parseFloat(document.getElementById('nenn').value);
+    const i = parseFloat(document.getElementById('isec').value);
+    const R_ue = (2 * 1) / (56 * 2.5); 
+    const L_max = ((sn / Math.pow(i, 2)) - R_ue) * 56 * q / 2;
+    const L_min = (((sn * 0.25) / Math.pow(i, 2)) - R_ue) * 56 * q / 2;
+    document.getElementById('q-limits').innerHTML = `Gültiger Bereich (25-100%): <strong>${Math.max(0, L_min).toFixed(1)}m - ${Math.max(0, L_max).toFixed(1)}m</strong>`;
+}
+
+function clearAll() {
+    document.getElementById('main-input').value = '';
+    document.getElementById('result_box').style.display = 'none';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function calculate() {
+    const val = parseFloat(document.getElementById('main-input').value);
+    const q = parseFloat(document.getElementById('querschnitt').value);
+    const i = parseFloat(document.getElementById('isec').value);
+    const sn = parseFloat(document.getElementById('nenn').value);
+    const wc = parseFloat(document.getElementById('w_class').value);
+    const R_ue = (2 * 1) / (56 * 2.5);
+
+    if (isNaN(val)) return alert("Bitte Wert eingeben.");
+
+    let sIst, dist, last;
+
+    if (currentMode === 'forward') {
+        dist = val;
+        const R_ges = ((2 * dist) / (56 * q)) + R_ue;
+        sIst = Math.pow(i, 2) * R_ges;
+        document.getElementById('pdf_title').innerText = "Protokoll: Theoretische Bürde";
+        document.getElementById('sum_val').innerText = val + " m";
+        document.getElementById('sum_res_label').innerText = "Berechnete Bürde:";
+        document.getElementById('sum_result').innerText = sIst.toLocaleString('de-DE', {minimumFractionDigits: 2}) + " VA";
+    } else {
+        sIst = val;
+        const R_ges = sIst / Math.pow(i, 2);
+        dist = (R_ges - R_ue) * 56 * q / 2;
+        document.getElementById('pdf_title').innerText = "Protokoll: Theoretische Länge";
+        document.getElementById('sum_val').innerText = val + " VA";
+        document.getElementById('sum_res_label').innerText = "Berechnete Länge:";
+        document.getElementById('sum_result').innerText = dist.toLocaleString('de-DE', {maximumFractionDigits: 1}) + " m";
+    }
+
+    document.getElementById('sum_params').innerText = `${sn}VA | ${q}mm² | ${i}A | Kl. ${wc}S`;
+    document.getElementById('pdf_date').innerText = "Erstellt am " + new Date().toLocaleString('de-DE');
+    document.getElementById('prot_sist').innerText = sIst.toLocaleString('de-DE', {minimumFractionDigits: 2}) + " VA";
+    document.getElementById('prot_res').innerText = ((sIst/Math.pow(i, 2))*1000).toLocaleString('de-DE', {maximumFractionDigits: 0}) + " mΩ";
+
+    last = (sIst / sn) * 100;
+    
+    // Abweichung anzeigen und einfärben
+    const devElement = document.getElementById('sum_deviation');
+    devElement.innerText = last.toLocaleString('de-DE', {maximumFractionDigits: 1}) + "%";
+    if(last < 25 || last > 100) {
+        devElement.className = "text-danger-bold";
+    } else {
+        devElement.className = "text-success-bold";
+    }
+
+    showResult(sIst, last, wc);
+}
+
+function showResult(sIst, last, wc) {
+    document.getElementById('result_box').style.display = 'block';
+    const amp = document.getElementById('res_ampel');
+    const errDisp = document.getElementById('res_error_display');
+
+    let color = (last > 100) ? "#d9534f" : (last < 25) ? "#f0ad4e" : "#5cb85c";
+    let statusText = (last > 100) ? "ÜBERLASTET" : (last < 25) ? "UNTERBÜRDET" : "KONFORM";
+    
+    amp.style.backgroundColor = color;
+    amp.innerText = `${statusText} (${last.toLocaleString('de-DE', {maximumFractionDigits: 1})}%)`;
+
+    if (last > 100) {
+        errDisp.innerHTML = "<strong>Warnung:</strong> Der Wandler wird überlastet (>100%). Dies kann zu Messfehlern und Sättigung führen.";
+        errDisp.className = "error-note bg-danger text-white";
+    } else if (last < 25) {
+        errDisp.innerHTML = "<strong>Hinweis:</strong> Die Bürde liegt unter 25%. Die Genauigkeitsklasse ist laut Norm nicht mehr garantiert.";
+        errDisp.className = "error-note bg-warning text-dark";
+    } else {
+        errDisp.innerHTML = "<strong>Optimal:</strong> Der Wandler arbeitet im spezifizierten Leistungsbereich (25-100%).";
+        errDisp.className = "error-note bg-success text-white";
+    }
+
+    document.getElementById('norm_table_container').innerHTML = `
+        <table class="table table-bordered table-ref text-center">
+            <thead><tr><th colspan="5">Grenzwerte DIN EN 61869-2 (Kl. ${wc}S)</th></tr></thead>
+            <tbody>
+                <tr><td>Strom (%)</td><td>1%</td><td>5%</td><td>20%</td><td>100%</td></tr>
+                <tr><td>± Fehler (%)</td><td>${(wc*3.75).toLocaleString('de-DE')}</td><td>${(wc*1.5).toLocaleString('de-DE')}</td><td>${wc.toLocaleString('de-DE')}</td><td>${wc.toLocaleString('de-DE')}</td></tr>
+            </tbody>
+        </table>`;
+    
+    document.getElementById('result_box').scrollIntoView({ behavior: 'smooth' });
+}
+
+updateInfo();
+</script>
+</body>
+</html>
