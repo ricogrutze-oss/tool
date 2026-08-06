@@ -140,11 +140,18 @@
           const metaRes = await fetch(`https://raw.githubusercontent.com/${OWNER}/${REPO}/main/${d.name}/meta.json`);
           if(metaRes.ok) meta = await metaRes.json();
         }catch(e){ /* kein meta.json vorhanden, egal */ }
+        let icon = meta.icon || '🔧';
+        // Relativer Bildname (z.B. "icon.svg") -> auf den Tool-Ordner beziehen
+        const looksLikeImage = /\.(svg|png|jpe?g|webp|gif)$/i.test(icon);
+        const isAbsolute = /^(https?:\/\/|\.\/|\/)/.test(icon);
+        if(looksLikeImage && !isAbsolute){
+          icon = `${d.name}/${icon}`;
+        }
         return {
           folder: d.name,
           title: meta.title || d.name,
           description: meta.description || '',
-          icon: meta.icon || '🔧',
+          icon,
           url: `./${d.name}/`
         };
       }));
