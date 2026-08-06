@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elektro Toolbox PRO - Full Calculation</title>
+    <style>
+        :root { --bg: #121212; --card: #1e1e1e; --accent: #2d8a1e; --orange: #e67e22; --text: #eee; }
+        body { font-family: sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; }
+        header { background: #000; padding: 20px; text-align: center; border-bottom: 3px solid var(--accent); }
+        .container { padding: 15px; max-width: 600px; margin: auto; }
+        .calc-card { background: var(--card); padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #333; }
+        h2 { color: var(--orange); margin-top: 0; font-size: 1.2em; border-bottom: 1px solid #444; padding-bottom: 10px; }
+        label { display: block; margin: 12px 0 5px; font-size: 0.85em; color: #bbb; }
+        input, select { width: 100%; padding: 12px; border-radius: 5px; border: 1px solid #444; background: #2c2c2c; color: white; box-sizing: border-box; font-size: 1em; }
+        button { width: 100%; padding: 15px; background: var(--accent); border: none; color: white; font-weight: bold; border-radius: 5px; margin-top: 20px; cursor: pointer; }
+        .result-box { margin-top: 20px; padding: 15px; background: #000; border-radius: 5px; border-left: 4px solid var(--orange); }
+        .vde-note { font-size: 0.75em; color: #f1c40f; margin-top: 5px; display: block; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    </style>
+</head>
+<body>
+
+<header><strong>ELEKTRO TOOLBOX PRO</strong></header>
+
+<div class="container">
+    <div class="calc-card">
+        <h2>Leitungsberechnung & Spannungsfall</h2>
+        <span class="vde-note">Gemäß DIN VDE 0100-520 / DIN 18015</span>
+        
+        <label>Stromkreis-Typ:</label>
+        <select id="sys">
+            <option value="230">Wechselstrom (230V / 1~)</option>
+            <option value="400">Drehstrom (400V / 3~)</option>
+        </select>
+
+        <label>Leistung (P) in Watt:</label>
+        <input type="number" id="power" value="11000" placeholder="z.B. 11000">
+
+        <div class="grid-2">
+            <div>
+                <label>cos φ:</label>
+                <input type="number" id="cos" value="1.0" step="0.01">
+            </div>
+            <div>
+                <label>Länge (m):</label>
+                <input type="number" id="length" value="25">
+            </div>
+        </div>
+
+        <label>Querschnitt (A) in mm²:</label>
+        <select id="area">
+            <option value="1.5">1,5</option>
+            <option value="2.5">2,5</option>
+            <option value="4">4,0</option>
+            <option value="6">6,0</option>
+            <option value="10">10,0</option>
+            <option value="16">16,0</option>
+            <option value="25">25,0</option>
+            <option value="35">35,0</option>
+            <option value="50">50,0</option>
+            <option value="70">70,0</option>
+            <option value="95">95,0</option>
+            <option value="120">120,0</option>
+            <option value="150">150,0</option>
+            <option value="185">185,0</option>
+            <option value="240">240,0</option>
+        </select>
+
+        <label>Material:</label>
+        <select id="mat">
+            <option value="56">Kupfer (Cu)</option>
+            <option value="35">Aluminium (Al)</option>
+        </select>
+
+        <button onclick="calculateAll()">BERECHNEN</button>
+
+        <div id="results" class="result-box" style="display:none;">
+            <strong>Ergebnisse:</strong>
+            <div id="out-i">Strom (Ib): -</div>
+            <div id="out-u">Spannungsfall (ΔU): -</div>
+            <div id="out-p">Prozent (%): -</div>
+            <div id="out-status" style="font-weight:bold; margin-top:10px;"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+function calculateAll() {
+    const P = parseFloat(document.getElementById('power').value);
+    const U = parseFloat(document.getElementById('sys').value);
+    const cosPhi = parseFloat(document.getElementById('cos').value);
+    const L = parseFloat(document.getElementById('length').value);
+    const A = parseFloat(document.getElementById('area').value);
+    const kappa = parseFloat(document.getElementById('mat').value);
+    
+    let Ib, deltaU, deltaU_pct;
+
+    // 1. Stromstärke berechnen (Ib)
+    if (U == 400) {
+        // Drehstrom: Ib = P / (U * sqrt(3) * cosPhi)
+        Ib = P / (U * Math.sqrt(3) * cosPhi);
+    } else {
+        // Wechselstrom: Ib = P / (U * cosPhi)
+        Ib = P / (U * cosPhi);
+    }
+
+    // 2. Spannungsfall berechnen (dU)
+    if (U == 400) {
+        // Drehstrom dU = (sqrt(3) * L * Ib * cosPhi) / (kappa * A)
+        // Vereinfacht für ohmsche/induktive Lasten im Handwerk:
+        deltaU = (Math.sqrt(3) * L * Ib * cosPhi) / (kappa * A);
+    } else {
+        // Wechselstrom dU = (2 * L * Ib * cosPhi) / (kappa * A)
+        deltaU = (2 * L * Ib * cosPhi) / (kappa * A);
+    }
+
+    deltaU_pct = (deltaU / U) * 100;
+
+    // Anzeige
+    document.getElementById('results').style.display = 'block';
+    document.getElementById('out-i').innerHTML = `Betriebsstrom (Ib): <strong>${Ib.toFixed(2)} A</strong>`;
+    document.getElementById('out-u').innerHTML = `Spannungsfall (ΔU): <strong>${deltaU.toFixed(2)} V</strong>`;
+    document.getElementById('out-p').innerHTML = `Verlust in %: <strong>${deltaU_pct.toFixed(2)} %</strong>`;
+
+    const status = document.getElementById('out-status');
+    if (deltaU_pct <= 3.0) {
+        status.innerHTML = "✅ VDE-KONFORM (≤ 3%)";
+        status.style.color = "#00ff00";
+    } else {
+        status.innerHTML = "❌ NICHT KONFORM (> 3%)";
+        status.style.color = "#ff4444";
+    }
+}
+</script>
+</body>
+</html>
