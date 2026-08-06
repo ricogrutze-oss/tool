@@ -69,7 +69,7 @@
   .card .icon{
     width:48px; height:48px; border-radius:12px; background:var(--panel2);
     border:1px solid var(--edge); display:flex; align-items:center; justify-content:center;
-    font-size:24px; flex-shrink:0;
+    font-size:24px; flex-shrink:0; overflow:hidden;
   }
   .card .cardhead{display:flex; align-items:center; gap:10px;}
   .card .name{font-weight:700; font-size:15px;}
@@ -278,7 +278,7 @@
   function renderIcon(icon){
     const isImage = /^(https?:\/\/|\.\/|\/)/.test(icon) || /\.(svg|png|jpe?g|webp|gif)$/i.test(icon);
     if(isImage){
-      return `<img src="${icon}" alt="" style="width:28px;height:28px;object-fit:contain;" onerror="this.parentElement.textContent='🔧'">`;
+      return `<img src="${icon}" alt="" style="width:100%;height:100%;object-fit:contain;display:block;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"><span style="display:none;align-items:center;justify-content:center;width:100%;height:100%;font-size:22px;">🔧</span>`;
     }
     return icon;
   }
