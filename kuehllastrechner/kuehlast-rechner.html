@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kühllast-Rechner · VDI 2078</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+  :root {
+    --bg:#0f1117;--surface:#181c27;--card:#1e2335;--border:#2a3050;
+    --accent:#3d8ef0;--accent2:#00c9a7;--warn:#f0923d;
+    --text:#d6dff5;--muted:#6b7a9e;
+    --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;min-height:100vh;}
+  header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:12px;}
+  .logo{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:2px;background:rgba(61,142,240,.1);border:1px solid rgba(61,142,240,.3);padding:3px 9px;border-radius:3px;}
+  header h1{font-size:15px;font-weight:500;}
+  header small{font-size:11px;color:var(--muted);font-family:var(--mono);}
+  .wrap{max-width:1060px;margin:0 auto;padding:18px 13px 60px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:13px;}
+  @media(max-width:660px){.grid2{grid-template-columns:1fr;}}
+  .full{grid-column:1/-1;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:16px;}
+  .ctitle{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:2px;text-transform:uppercase;margin-bottom:13px;padding-bottom:8px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px;}
+  .badge{background:rgba(61,142,240,.15);color:var(--accent);border-radius:50%;width:19px;height:19px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;}
+  .f{margin-bottom:11px;}
+  label{display:block;font-size:11px;color:var(--muted);margin-bottom:3px;}
+  .u{color:var(--accent2);font-family:var(--mono);}
+  input,select{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--sans);font-size:13px;padding:6px 10px;outline:none;transition:border-color .15s;}
+  input:focus,select:focus{border-color:var(--accent);}
+  input[type=range]{padding:3px 0;background:none;border:none;accent-color:var(--accent);}
+  .rrow{display:flex;align-items:center;gap:7px;}
+  .rrow input[type=range]{flex:1;}
+  .rv{font-family:var(--mono);font-size:12px;color:var(--accent);width:62px;text-align:right;}
+  .hint{font-size:10px;color:var(--muted);margin-top:3px;line-height:1.5;}
+  .hintok{color:var(--accent2)!important;}
+  .hintwarn{color:var(--warn)!important;}
+  .sh{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin:20px 0 10px;display:flex;align-items:center;gap:9px;}
+  .sh::after{content:'';flex:1;height:1px;background:var(--border);}
+
+  /* Wandblock */
+  .wb{border:1px solid var(--border);border-radius:5px;padding:13px;margin-bottom:9px;background:var(--bg);}
+  .wb-head{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+  .wb-name{background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--accent);font-family:var(--mono);font-size:11px;flex:1;padding:2px 0;outline:none;}
+  .wb-name:focus{border-bottom-color:var(--accent);}
+  /* Wand-Grid: Typ | Wandfl | U-Wert | Ausrichtung | Fensterfl | U-Fen | g | Sonnenschutz */
+  .wg{display:grid;gap:9px;margin-top:4px;}
+  .wg-aussen{grid-template-columns:1.6fr 0.8fr 0.9fr 0.8fr 0.8fr 0.9fr 0.8fr 1fr;}
+  .wg-innen {grid-template-columns:1.6fr 0.8fr 0.9fr 1fr;}
+  @media(max-width:900px){.wg-aussen,.wg-innen{grid-template-columns:1fr 1fr;}}
+  .fen-section{border-left:2px solid rgba(240,146,61,.3);padding-left:9px;display:contents;}
+  .fen-label{font-size:10px;color:var(--warn);font-family:var(--mono);letter-spacing:.5px;margin-bottom:2px;}
+  .wb-info{font-size:10px;margin-top:6px;padding:5px 8px;border-radius:3px;border:1px solid var(--border);}
+
+  /* Ergebnis */
+  .rp{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:20px;margin-top:16px;position:relative;overflow:hidden;display:none;}
+  .rp::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));}
+  .rtitle{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:16px;}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:9px;margin-bottom:18px;}
+  .kpi{background:var(--card);border:1px solid var(--border);border-radius:5px;padding:12px 13px;}
+  .kpi.btu{background:rgba(240,146,61,.06);border-color:rgba(240,146,61,.3);}
+  .kl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;}
+  .kv{font-family:var(--mono);font-size:19px;font-weight:600;color:var(--accent);}
+  .kv.ok{color:var(--accent2);}.kv.warn{color:var(--warn);}
+  .kpi.btu .kv{color:var(--warn);}
+  .ks{font-size:10px;color:var(--muted);margin-top:2px;}
+  table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px;}
+  th{text-align:left;font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;padding:6px 9px;border-bottom:1px solid var(--border);}
+  td{padding:6px 9px;border-bottom:1px solid rgba(42,48,80,.4);}
+  td.r{font-family:var(--mono);text-align:right;}
+  td.neg{color:var(--accent2)!important;}
+  tr.tot td{font-weight:600;border-top:1px solid var(--border);background:rgba(61,142,240,.05);}
+  tr.tot td.r{color:var(--warn);font-size:13px;}
+  .br{display:flex;align-items:center;gap:7px;margin-bottom:5px;}
+  .bl{width:150px;font-size:10px;color:var(--muted);text-align:right;flex-shrink:0;}
+  .bt{flex:1;height:8px;background:var(--bg);border-radius:4px;overflow:hidden;}
+  .bf{height:100%;border-radius:4px;transition:width .4s;}
+  .bw{width:60px;font-family:var(--mono);font-size:10px;}
+  .emp{background:rgba(0,201,167,.07);border:1px solid rgba(0,201,167,.25);border-radius:5px;padding:13px;margin-top:13px;}
+  .etitle{font-family:var(--mono);font-size:10px;color:var(--accent2);letter-spacing:1px;text-transform:uppercase;margin-bottom:7px;}
+  .egrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-top:7px;}
+  .ei{font-size:11px;line-height:1.6;}
+  .ei strong{color:var(--accent2);font-family:var(--mono);font-size:13px;display:block;}
+  .normbar{background:rgba(240,146,61,.06);border-left:3px solid var(--warn);padding:8px 12px;margin-top:13px;font-size:11px;color:var(--muted);line-height:1.7;}
+  .normbar strong{color:var(--warn);}
+  .btn{width:100%;margin-top:16px;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:5px;font-family:var(--mono);font-size:12px;letter-spacing:1px;cursor:pointer;text-transform:uppercase;transition:background .2s;}
+  .btn:hover{background:#5ba0ff;}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">VDI 2078</div>
+  <div>
+    <h1>Kühllast-Rechner</h1>
+    <small>Wohnung / Büro · Wände & Fenster einzeln · kW + BTU/h</small>
+  </div>
+</header>
+
+<div class="wrap">
+
+<!-- 01 KLIMA -->
+<div class="sh"><span>01 · Außenklima & Raumsoll</span></div>
+<div class="grid2">
+  <div class="card">
+    <div class="ctitle"><span class="badge">A</span>Auslegungsklima</div>
+    <div class="f">
+      <label>Klimazone</label>
+      <select id="klima" onchange="applyKlima()">
+        <option value="32">Deutschland Nord/Ost – Magdeburg, Berlin (32 °C)</option>
+        <option value="34">Deutschland Mitte (34 °C)</option>
+        <option value="36">Deutschland Süd – München, Freiburg (36 °C)</option>
+        <option value="38">Österreich/Schweiz warm (38 °C)</option>
+        <option value="0">Manuell</option>
+      </select>
+    </div>
+    <div class="f">
+      <label>Außentemperatur Auslegung <span class="u">[°C]</span></label>
+      <div class="rrow"><input type="range" id="ta" min="28" max="42" step=".5" value="32" oninput="sv('ta','tav',1,'°C')"><span class="rv" id="tav">32.0 °C</span></div>
+    </div>
+    <div class="f">
+      <label>Geschätzte Nachbar-Raumtemperatur ohne Klima <span class="u">[°C]</span></label>
+      <div class="rrow"><input type="range" id="tnachbar" min="22" max="38" step=".5" value="30" oninput="sv('tnachbar','tnbv',1,'°C');updateWandHints()"><span class="rv" id="tnbv">30.0 °C</span></div>
+      <div class="hint">Bei 34 °C Außen ist eine unklimatisierte Wohnung oft 28–32 °C → Wärmefluss durch Innenwände!</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ctitle"><span class="badge">B</span>Raum & Zieltemperatur</div>
+    <div class="f">
+      <label>Innentemperatur Soll <span class="u">[°C]</span></label>
+      <div class="rrow"><input type="range" id="ti" min="20" max="28" step=".5" value="26" oninput="sv('ti','tiv',1,'°C');updateWandHints()"><span class="rv" id="tiv">26.0 °C</span></div>
+    </div>
+    <div class="f">
+      <label>Raumfläche <span class="u">[m²]</span></label>
+      <input type="number" id="fl" value="40" min="5" max="2000">
+    </div>
+    <div class="f">
+      <label>Raumhöhe <span class="u">[m]</span></label>
+      <input type="number" id="ho" value="2.6" min="2" max="5" step=".05">
+    </div>
+    <div class="f">
+      <label>Bauweise</label>
+      <select id="bauweise">
+        <option value="1.15">Leichtbau (Gipskarton, Holz, Fertigbau)</option>
+        <option value="1.00" selected>Mittelschwer (Kalksandstein, Hohlblockstein)</option>
+        <option value="0.85">Massivbau (Vollziegel 30 cm, Beton)</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<!-- 02 DECKE/BODEN -->
+<div class="sh"><span>02 · Decke & Boden</span></div>
+<div class="grid2">
+  <div class="card">
+    <div class="ctitle"><span class="badge">C</span>Decke – was ist darüber?</div>
+    <div class="f">
+      <label>Deckensituation</label>
+      <select id="decke_typ" onchange="updateDecke()">
+        <option value="nachbar_klima">Wohnung mit Klimaanlage (gleiche Temp.) → kein Fluss</option>
+        <option value="nachbar_noklima" selected>Wohnung OHNE Klimaanlage → wärmer, Wärmefluss!</option>
+        <option value="dachboden">Unbeheizter Dachboden</option>
+        <option value="aussen">Direkt Außenluft / Dach (oberste Etage)</option>
+      </select>
+    </div>
+    <div class="f">
+      <label>U-Wert Decke <span class="u">[W/m²K]</span></label>
+      <select id="u_decke">
+        <option value="0.0">– kein Wärmefluss</option>
+        <option value="0.5" selected>0,5 – Stahlbetondecke Standard (Altbau)</option>
+        <option value="0.35">0,35 – Betondecke mit Estrich</option>
+        <option value="0.20">0,20 – Gedämmte Decke</option>
+        <option value="0.80">0,80 – Holzbalkendecke</option>
+      </select>
+    </div>
+    <div class="hint hintok" id="decke_hint">→ Nachbar ohne Klima: Wärmefluss über Decke wird berechnet</div>
+  </div>
+  <div class="card">
+    <div class="ctitle"><span class="badge">D</span>Boden – was ist darunter?</div>
+    <div class="f">
+      <label>Bodensituation</label>
+      <select id="boden_typ" onchange="updateBoden()">
+        <option value="nachbar_klima">Wohnung mit Klimaanlage → kein Fluss</option>
+        <option value="nachbar_noklima" selected>Wohnung OHNE Klimaanlage → wärmer</option>
+        <option value="keller">Unbeheizter Keller (kühler!) → Kühlgewinn</option>
+        <option value="erdreich">Erdreich direkt</option>
+      </select>
+    </div>
+    <div class="f">
+      <label>U-Wert Boden <span class="u">[W/m²K]</span></label>
+      <select id="u_boden">
+        <option value="0.0">– kein Wärmefluss</option>
+        <option value="0.5" selected>0,5 – Stahlbetondecke Standard</option>
+        <option value="0.35">0,35 – mit Estrich/Dämmung</option>
+        <option value="0.80">0,80 – Holzbalkendecke</option>
+        <option value="0.40">0,40 – Bodenplatte auf Erdreich</option>
+      </select>
+    </div>
+    <div class="hint hintok" id="boden_hint">→ Nachbar ohne Klima: Wärmefluss über Boden</div>
+  </div>
+</div>
+
+<!-- 03 WÄNDE -->
+<div class="sh"><span>03 · Wände & Fenster (bis zu 4 Wände)</span></div>
+<div class="card full" id="wcard">
+  <div class="ctitle"><span class="badge">E</span>Wandkonfiguration – Fenster direkt an der jeweiligen Wand</div>
+  <div id="wc"></div>
+</div>
+
+<!-- 04 INTERNE LASTEN -->
+<div class="sh"><span>04 · Interne Lasten & Lüftung</span></div>
+<div class="grid2">
+  <div class="card">
+    <div class="ctitle"><span class="badge">F</span>Personen & Beleuchtung</div>
+    <div class="f"><label>Personen <span class="u">[–]</span></label><input type="number" id="pers" value="2" min="0" max="200"></div>
+    <div class="f">
+      <label>Aktivität</label>
+      <select id="akt">
+        <option value="75">Schlafen/Ruhe – 75 W/P</option>
+        <option value="90" selected>Wohnen/Sitzen – 90 W/P</option>
+        <option value="100">Büroarbeit – 100 W/P</option>
+        <option value="130">Leichte Steharbeit – 130 W/P</option>
+      </select>
+    </div>
+    <div class="f">
+      <label>Beleuchtung <span class="u">[W/m²]</span></label>
+      <select id="bel">
+        <option value="3">3 W/m² – LED sparsam (Wohnung)</option>
+        <option value="6" selected>6 W/m² – LED Standard</option>
+        <option value="12">12 W/m² – Leuchtstoffröhren</option>
+      </select>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ctitle"><span class="badge">G</span>Geräte & Lüftung</div>
+    <div class="f">
+      <label>Geräte / Elektro gesamt <span class="u">[W]</span></label>
+      <input type="number" id="ger" value="250" min="0" max="20000" step="50">
+      <div class="hint">TV ~150W · Kühlschrank ~100W · PC ~100W · Herd nicht einrechnen</div>
+    </div>
+    <div class="f">
+      <label>Frischluft pro Person <span class="u">[m³/h·P]</span></label>
+      <select id="luft_pro_person" onchange="calcLueft()">
+        <option value="20">20 – Schlafen/Minimalst</option>
+        <option value="30" selected>30 – Wohnen Standard (DIN EN 13779)</option>
+        <option value="40">40 – Büro / erhöhter Bedarf</option>
+        <option value="60">60 – Stark belastet / Sport</option>
+      </select>
+      <div class="hint">Personenanzahl kommt von Feld F (wird automatisch übernommen)</div>
+    </div>
+    <div class="f">
+      <label>Fensterdichtheit / Gebäudedichtheit</label>
+      <select id="infiltration" onchange="calcLueft()">
+        <option value="0.03">Neubau sehr dicht – KfW/Passivhaus (n₅₀≤1,0)</option>
+        <option value="0.08" selected>Neubau normal – Kunststofffenster neu</option>
+        <option value="0.15">Altbau saniert – Holzfenster neu / gute Dichtungen</option>
+        <option value="0.25">Altbau unsaniert – ältere Fenster</option>
+        <option value="0.40">Sehr undicht – Kastenfenster, alte Holzfenster</option>
+      </select>
+    </div>
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:9px 11px;margin-bottom:11px;">
+      <div style="font-size:10px;color:var(--muted);letter-spacing:.5px;margin-bottom:5px;">BERECHNETE LÜFTUNGSMENGE</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+        <div><div style="font-size:10px;color:var(--muted);">Hygiene (Personen)</div><div style="font-family:var(--mono);font-size:13px;color:var(--accent2);" id="luft_hygiene">–</div></div>
+        <div><div style="font-size:10px;color:var(--muted);">Infiltration</div><div style="font-family:var(--mono);font-size:13px;color:var(--muted);" id="luft_infil">–</div></div>
+        <div><div style="font-size:10px;color:var(--muted);">Gesamt</div><div style="font-family:var(--mono);font-size:13px;color:var(--warn);" id="luft_ges">–</div></div>
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;" id="luft_hint_n">–</div>
+    </div>
+    <div class="f">
+      <label>Wärmerückgewinnung</label>
+      <select id="luef">
+        <option value="1.0" selected>Keine WRG (natürliche Lüftung / Fenster)</option>
+        <option value="0.25">Mechanisch mit WRG η=75%</option>
+        <option value="0.0">Zentralklimaanlage (Zuluft vorgekühlt)</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<button class="btn" onclick="calc()">⟶ KÜHLLAST BERECHNEN</button>
+
+<!-- ERGEBNIS -->
+<div class="rp" id="res">
+  <div class="rtitle">Ergebnis · Kühllastberechnung nach VDI 2078</div>
+  <div class="kpis" id="kpis"></div>
+  <table><thead><tr><th>Komponente</th><th>Detail</th><th class="r">W</th><th class="r">BTU/h</th></tr></thead>
+  <tbody id="tb"></tbody></table>
+  <div id="bars"></div>
+  <div class="emp" id="emp"></div>
+  <div class="normbar"><strong>Norm-Hinweis:</strong> Berechnung nach Prinzip <strong>VDI 2078</strong> (Kühllast) + <strong>DIN EN 12831</strong> (Transmission). Strahlungswerte vereinfacht nach TRY Referenzjahr Deutschland. Für Anlagen &gt;12 kW qualifizierte Fachplanung empfohlen.</div>
+</div>
+
+</div>
+
+<script>
+// ── Helpers ──────────────────────────────────────────────────
+const g = id => document.getElementById(id);
+const nv = id => parseFloat(g(id)?.value) || 0;
+const sv2 = id => g(id)?.value || '';
+function sv(id,vid,d,u){ const v=parseFloat(g(id).value); g(vid).textContent=v.toFixed(d)+' '+u; }
+function applyKlima(){ const v=sv2('klima'); if(v!=='0'){g('ta').value=v;sv('ta','tav',1,'°C');} }
+
+// Strahlungswerte W/m² auf Glasfläche, Sommer Mitteleuropa Spitze
+const STR={N:100,NO:290,O:450,SO:510,S:530,SW:560,W:500,NW:260};
+
+// ── Nachbar-ΔT berechnen ─────────────────────────────────────
+// Nachbar ohne Klima: im Sommer typisch (ta+ti)/2 + Offset
+function dtNachbar(){ return nv('tnachbar') - nv('ti'); }
+function dtKeller(){ return -(nv('ti') - 18); } // Keller ~18°C im Sommer
+
+function dtDecke(){
+  const typ=sv2('decke_typ'), dta=nv('ta')-nv('ti');
+  if(typ==='nachbar_klima') return 0;
+  if(typ==='nachbar_noklima') return dtNachbar();
+  if(typ==='dachboden') return dta*0.6;
+  if(typ==='aussen') return dta;
+  return 0;
+}
+function dtBoden(){
+  const typ=sv2('boden_typ');
+  if(typ==='nachbar_klima') return 0;
+  if(typ==='nachbar_noklima') return dtNachbar();
+  if(typ==='keller') return dtKeller();
+  if(typ==='erdreich') return (nv('ta')-nv('ti'))*0.3;
+  return 0;
+}
+
+function updateDecke(){
+  const typ=sv2('decke_typ'), dt=dtDecke().toFixed(1);
+  const hints={
+    nachbar_klima:'→ Gleiche Temperatur wie deine Wohnung → kein Wärmefluss (ΔT = 0 K)',
+    nachbar_noklima:`→ Nachbar ohne Klima: ΔT ≈ ${dt} K → Wärme fließt durch Decke!`,
+    dachboden:`→ Dachboden aufgeheizt: ΔT ≈ ${dt} K`,
+    aussen:`→ Direkt Außendach: volle ΔT ≈ ${dt} K`,
+  };
+  g('decke_hint').textContent = hints[typ]||'';
+  g('decke_hint').className='hint '+(typ==='nachbar_klima'?'':'hintwarn');
+}
+function updateBoden(){
+  const typ=sv2('boden_typ'), dt=dtBoden().toFixed(1);
+  const hints={
+    nachbar_klima:'→ Gleiche Temperatur → kein Wärmefluss',
+    nachbar_noklima:`→ Nachbar ohne Klima: ΔT ≈ ${dt} K → Wärme fließt durch Boden!`,
+    keller:`→ Keller kühler: ΔT ≈ ${dt} K → Kühlgewinn (negativ = hilft dir)`,
+    erdreich:`→ Erdreich ca. ΔT ≈ ${dt} K`,
+  };
+  g('boden_hint').textContent = hints[typ]||'';
+  g('boden_hint').className='hint '+(typ.includes('keller')?'hintok':'hintwarn');
+}
+function updateWandHints(){ updateDecke(); updateBoden(); rebuildWandHints(); }
+
+// ── Wand-Konfiguration ───────────────────────────────────────
+const WAENDE=[
+  {name:'Wand 1 – Außenwand Süd',       typ:'aussen',          u:'0.28', fl:12, orient:'S',  fen:3},
+  {name:'Wand 2 – Außenwand West',       typ:'aussen',          u:'0.28', fl:10, orient:'W',  fen:2},
+  {name:'Wand 3 – Innenwand Nachbar li.',typ:'nachbar_noklima', u:'0.5',  fl:12, orient:'',   fen:0},
+  {name:'Wand 4 – Innenwand Treppenh.',  typ:'nachbar_noklima', u:'0.5',  fl:8,  orient:'',   fen:0},
+];
+
+// U-Optionen für Außen vs. Innen
+const U_AUSSEN=[
+  ['0.0','– (kein Fluss)'],['0.15','0,15 – KfW55/Passivhaus'],['0.20','0,20 – GEG Neubau'],
+  ['0.28','0,28 – WDVS saniert'],['0.45','0,45 – teilsaniert'],
+  ['0.80','0,80 – Altbau unsaniert'],['1.20','1,20 – Vollziegel unsaniert'],['custom','Manuell →'],
+];
+const U_INNEN=[
+  ['0.0','– kein Fluss (Nachbar klimatisiert)'],['0.3','0,30 – gedämmte Innenwand'],
+  ['0.5','0,50 – Standard Innenwand Beton/KS'],['0.8','0,80 – leichte Innenwand'],
+  ['1.2','1,20 – alte Ziegelwand'],['custom','Manuell →'],
+];
+const ORIENT=['N','NO','O','SO','S','SW','W','NW'];
+const TYP_OPTS=[
+  ['aussen','Außenwand (→ Außenluft)'],
+  ['nachbar_klima','Innenwand – Nachbar MIT Klimaanlage (ΔT≈0)'],
+  ['nachbar_noklima','Innenwand – Nachbar OHNE Klimaanlage (warm!)'],
+  ['treppenhaus','Innenwand – Treppenhaus / Flur (unbeheizt/ungekühlt)'],
+  ['keller_wand','Innenwand – Keller (kühler)'],
+  ['keine','Nicht vorhanden / ignorieren'],
+];
+
+function buildWaende(){
+  const c=g('wc'); c.innerHTML='';
+  WAENDE.forEach((w,i)=>{
+    const uOpts = (w.typ==='aussen')? U_AUSSEN : U_INNEN;
+    const uSel = uOpts.map(([v,l])=>`<option value="${v}" ${v===w.u?'selected':''}>${l}</option>`).join('');
+    const typSel = TYP_OPTS.map(([v,l])=>`<option value="${v}" ${v===w.typ?'selected':''}>${l}</option>`).join('');
+    const orientSel = ORIENT.map(o=>`<option value="${o}" ${o===w.orient?'selected':''}>${o}</option>`).join('');
+
+    const isAussen = w.typ==='aussen';
+    c.innerHTML+=`
+    <div class="wb" id="wb${i}">
+      <div class="wb-head">
+        <span class="badge">${i+1}</span>
+        <input class="wb-name" id="wn${i}" value="${w.name}">
+      </div>
+      <div class="wg ${isAussen?'wg-aussen':'wg-innen'}" id="wg${i}">
+        <div class="f" style="min-width:0">
+          <label>Wandtyp</label>
+          <select id="wt${i}" onchange="changeWandTyp(${i})">${typSel}</select>
+        </div>
+        <div class="f">
+          <label>Fläche brutto <span class="u">[m²]</span></label>
+          <input type="number" id="wf${i}" value="${w.fl}" min="0" max="300" step=".5">
+        </div>
+        <div class="f" id="wu_wrap${i}">
+          <label>U-Wert <span class="u">[W/m²K]</span></label>
+          <select id="wu${i}" onchange="toggleCustomU(${i})">${uSel}</select>
+          <input type="number" id="wuc${i}" placeholder="U manuell" style="margin-top:4px;display:none;" step=".01" min="0">
+        </div>
+        <div class="f" id="worient_wrap${i}" style="${isAussen?'':'display:none'}">
+          <label>Ausrichtung</label>
+          <select id="wo${i}">${orientSel}</select>
+        </div>
+        <!-- Fenster nur bei Außenwand -->
+        <div class="f" id="wfen_fl${i}" style="${isAussen?'':'display:none'}">
+          <label class="fen-label">↳ Fensterfläche <span class="u">[m²]</span></label>
+          <input type="number" id="wff${i}" value="${w.fen}" min="0" max="50" step=".25">
+        </div>
+        <div class="f" id="wfen_u${i}" style="${isAussen?'':'display:none'}">
+          <label class="fen-label">U-Wert Fenster <span class="u">[W/m²K]</span></label>
+          <select id="wfu${i}">
+            <option value="0.6">0,6 – Dreischeibe Passivhaus</option>
+            <option value="0.9">0,9 – Dreischeibe Standard</option>
+            <option value="1.1" selected>1,1 – 2-Scheibe WS neu</option>
+            <option value="1.4">1,4 – 2-Scheibe älter</option>
+            <option value="2.8">2,8 – Einfachverglasung</option>
+          </select>
+        </div>
+        <div class="f" id="wfen_g${i}" style="${isAussen?'':'display:none'}">
+          <label class="fen-label">g-Wert <span class="u">[–]</span></label>
+          <select id="wfg${i}">
+            <option value="0.20">0,20 – SonnSchutz++</option>
+            <option value="0.30">0,30 – Sonnenschutz</option>
+            <option value="0.40" selected>0,40 – WS-ISO Standard</option>
+            <option value="0.55">0,55 – Klar 2-Scheibe</option>
+            <option value="0.72">0,72 – Einfachglas</option>
+          </select>
+        </div>
+        <div class="f" id="wfen_ss${i}" style="${isAussen?'':'display:none'}">
+          <label class="fen-label">Sonnenschutz</label>
+          <select id="wfss${i}">
+            <option value="1.0">Kein</option>
+            <option value="0.75">Innen hell (Rollo)</option>
+            <option value="0.50" selected>Außen hell (Raffstore)</option>
+            <option value="0.25">Außen dunkel</option>
+            <option value="0.10">Verschattung &gt;90%</option>
+          </select>
+        </div>
+      </div>
+      <div class="wb-info hint" id="winfo${i}"></div>
+    </div>`;
+  });
+  for(let i=0;i<4;i++) { updateWandInfo(i); }
+}
+
+function changeWandTyp(i){
+  const typ=sv2(`wt${i}`);
+  const isAussen = typ==='aussen';
+  const ids=['worient_wrap','wfen_fl','wfen_u','wfen_g','wfen_ss'];
+  ids.forEach(id=>{ const el=g(`${id}${i}`); if(el) el.style.display=isAussen?'':'none'; });
+  g(`wg${i}`).className='wg '+(isAussen?'wg-aussen':'wg-innen');
+  // U-Wert Optionen tauschen
+  const uSel = isAussen ? U_AUSSEN : U_INNEN;
+  g(`wu${i}`).innerHTML = uSel.map(([v,l])=>`<option value="${v}">${l}</option>`).join('');
+  updateWandInfo(i);
+}
+function toggleCustomU(i){
+  g(`wuc${i}`).style.display = sv2(`wu${i}`)===`custom`?'block':'none';
+}
+function getU(i){
+  return sv2(`wu${i}`)===`custom` ? nv(`wuc${i}`) : parseFloat(sv2(`wu${i}`)||'0');
+}
+function getDtWand(i){
+  const typ=sv2(`wt${i}`), ta=nv('ta'), ti=nv('ti');
+  if(typ==='aussen') return ta-ti;
+  if(typ==='nachbar_klima') return 0;
+  if(typ==='nachbar_noklima') return dtNachbar();
+  if(typ==='treppenhaus') return (ta-ti)*0.35;
+  if(typ==='keller_wand') return -(ti-18);
+  return 0;
+}
+function updateWandInfo(i){
+  if(!g(`wt${i}`)) return;
+  const typ=sv2(`wt${i}`), dt=getDtWand(i).toFixed(1);
+  const msgs={
+    aussen:`→ Außenwand: ΔT = ${dt} K (volle Außen-Innen-Differenz)`,
+    nachbar_klima:'→ Nachbar klimatisiert: ΔT ≈ 0 K – kein Wärmefluss',
+    nachbar_noklima:`→ Nachbar OHNE Klimaanlage: ΔT ≈ ${dt} K – Wärme fließt rein!`,
+    treppenhaus:`→ Treppenhaus unklimatisiert: ΔT ≈ ${dt} K`,
+    keller_wand:`→ Kellerwand kühler: ΔT ≈ ${dt} K (Kühlgewinn)`,
+    keine:'→ Diese Wand wird ignoriert',
+  };
+  const el=g(`winfo${i}`);
+  el.textContent=msgs[typ]||'';
+  el.className='wb-info hint '+(typ==='nachbar_klima'||typ==='keller_wand'?'hintok':typ==='keine'?'':'hintwarn');
+}
+function rebuildWandHints(){ for(let i=0;i<4;i++) updateWandInfo(i); }
+
+// ── Hauptberechnung ───────────────────────────────────────────
+function calc(){
+  const ta=nv('ta'), ti=nv('ti'), dT=ta-ti;
+  const fl=nv('fl'), ho=nv('ho');
+  const sf=parseFloat(sv2('bauweise'));
+
+  // Decke & Boden
+  const Q_decke = parseFloat(sv2('u_decke')||'0') * fl * dtDecke();
+  const Q_boden = parseFloat(sv2('u_boden')||'0') * fl * dtBoden();
+
+  // Wände
+  let rows=[];
+  let Q_wsum=0, Q_fsum=0, Q_ssum=0;
+
+  for(let i=0;i<4;i++){
+    const typ=sv2(`wt${i}`);
+    if(typ==='keine') continue;
+    const wfl=nv(`wf${i}`), u=getU(i), dt=getDtWand(i);
+    const fenfl=typ==='aussen'?nv(`wff${i}`):0;
+    const wNetto=Math.max(0,wfl-fenfl);
+    const qW=u*wNetto*dt;
+    Q_wsum+=qW;
+
+    let qFT=0, qSol=0;
+    if(typ==='aussen' && fenfl>0){
+      const uF=parseFloat(sv2(`wfu${i}`)||'1.1');
+      const gV=parseFloat(sv2(`wfg${i}`)||'0.4');
+      const ssV=parseFloat(sv2(`wfss${i}`)||'0.5');
+      const orient=sv2(`wo${i}`);
+      const glasfl=fenfl*0.8; // 20% Rahmen
+      qFT=uF*fenfl*dT;
+      qSol=STR[orient]*glasfl*gV*ssV;
+      Q_fsum+=qFT; Q_ssum+=qSol;
+    }
+    const name=g(`wn${i}`)?.value||`Wand ${i+1}`;
+    if(Math.abs(qW)>0.1||qFT>0.1||qSol>0.1)
+      rows.push({name, typ, qW, qFT, qSol, fenfl, dt});
+  }
+
+  // Intern
+  const Q_per = nv('pers')*parseFloat(sv2('akt'));
+  const Q_bel = parseFloat(sv2('bel'))*fl*0.8;
+  const Q_ger = nv('ger');
+  const wrg      = parseFloat(sv2('luef'));
+  const lueftM3h = getLueftung(); // m³/h gesamt
+  const Q_luef   = (lueftM3h * 1.2 / 3600) * 1005 * dT * wrg;
+
+  const Q_raw = Q_decke+Q_boden+Q_wsum+Q_fsum+Q_ssum+Q_per+Q_bel+Q_ger+Q_luef;
+  const Q_ges = Q_raw*sf;
+  const Q_kW  = Q_ges/1000;
+  const Q_btu = Q_ges*3.41214;
+  const Q_m2  = Q_ges/fl;
+
+  const btuK=[5000,7000,9000,12000,18000,24000,36000,48000,60000];
+  const empBtu=btuK.find(b=>b>=Q_btu*1.15)||Math.ceil(Q_btu*1.15/1000)*1000;
+  const empKw=empBtu/3412;
+  const elA=Q_kW/3.5;
+  const kl=Q_m2<80?'ok':Q_m2>140?'warn':'';
+
+  // KPIs
+  g('kpis').innerHTML=`
+    <div class="kpi"><div class="kl">Kühllast gesamt</div><div class="kv ${kl}">${Q_kW.toFixed(2)}</div><div class="ks">kW</div></div>
+    <div class="kpi btu"><div class="kl">BTU/h</div><div class="kv">${Math.round(Q_btu).toLocaleString('de')}</div><div class="ks">British Thermal Units/h</div></div>
+    <div class="kpi btu"><div class="kl">Empf. Gerätegröße</div><div class="kv">${empBtu.toLocaleString('de')}</div><div class="ks">BTU/h (+15%) = ${empKw.toFixed(1)} kW</div></div>
+    <div class="kpi"><div class="kl">W/m²</div><div class="kv ${kl}">${Q_m2.toFixed(0)}</div><div class="ks">Flächenbezogen</div></div>
+    <div class="kpi"><div class="kl">Elektr. Aufnahme</div><div class="kv">${elA.toFixed(2)}</div><div class="ks">kW (COP 3,5)</div></div>
+  `;
+
+  // Tabelle
+  const toB=w=>Math.round(w*3.41214);
+  const trow=(n,d,v,neg=false)=>`<tr><td>${n}</td><td style="color:var(--muted);font-size:10px;">${d}</td>
+    <td class="r ${neg?'neg':''}">${Math.round(v*sf).toLocaleString('de')}</td>
+    <td class="r ${neg?'neg':''}">${toB(v*sf).toLocaleString('de')}</td></tr>`;
+
+  let tb='';
+  const deckeTypTxt={'nachbar_klima':'Nachbar klimatisiert','nachbar_noklima':'Nachbar ohne Klima','dachboden':'Dachboden','aussen':'Außendach'};
+  if(Math.abs(Q_decke)>0.5) tb+=trow('Decke',`U=${sv2('u_decke')} · ${fl} m² · ΔT=${dtDecke().toFixed(1)} K (${deckeTypTxt[sv2('decke_typ')]||''})`,Q_decke,Q_decke<0);
+  if(Math.abs(Q_boden)>0.5) tb+=trow('Boden',`U=${sv2('u_boden')} · ${fl} m² · ΔT=${dtBoden().toFixed(1)} K`,Q_boden,Q_boden<0);
+
+  rows.forEach(r=>{
+    tb+=trow(r.name+' (Wand)',`U·A·ΔT, ΔT=${r.dt.toFixed(1)} K`,r.qW,r.qW<0);
+    if(r.fenfl>0){
+      tb+=trow(r.name+' (Fenster Transm.)','',r.qFT);
+      tb+=trow(r.name+' (Solar)','Strahlung × g × Sonnenschutz',r.qSol);
+    }
+  });
+  tb+=trow('Personen',`${nv('pers')} P × ${sv2('akt')} W`,Q_per);
+  tb+=trow('Beleuchtung',`${sv2('bel')} W/m² × ${fl} m²`,Q_bel);
+  tb+=trow('Geräte/Elektro','',Q_ger);
+  if(Math.abs(Q_luef)>0.5) tb+=trow('Lüftung',`${Math.round(lueftM3h)} m³/h (${nv('pers')}P + Infiltration)`,Q_luef);
+  tb+=`<tr class="tot"><td colspan="2">Gesamtkühllast (Speicherfaktor ×${sf})</td>
+    <td class="r">${Math.round(Q_ges).toLocaleString('de')} W</td>
+    <td class="r">${Math.round(Q_btu).toLocaleString('de')} BTU/h</td></tr>`;
+  g('tb').innerHTML=tb;
+
+  // Balken
+  const allVals=[
+    ['Decke',Q_decke*sf],['Boden',Q_boden*sf],
+    ...rows.flatMap(r=>[
+      [r.name+' Wand',r.qW*sf],[r.name+' Solar',r.qSol*sf],[r.name+' Fenster',r.qFT*sf]
+    ]),
+    ['Personen',Q_per*sf],['Beleuchtung',Q_bel*sf],['Geräte',Q_ger*sf],['Lüftung',Q_luef*sf],
+  ].filter(([,v])=>v>10);
+  const mx=Math.max(...allVals.map(([,v])=>v));
+  const cols=['#3d8ef0','#5ba0ff','#f0923d','#ff6b35','#f0923d','#00c9a7','#00c9a7','#9b80f0','#6b7a9e'];
+  g('bars').innerHTML=allVals.map(([n,v],i)=>`
+    <div class="br">
+      <div class="bl">${n.length>22?n.substring(0,21)+'…':n}</div>
+      <div class="bt"><div class="bf" style="width:${(v/mx*100).toFixed(1)}%;background:${cols[i%cols.length]};"></div></div>
+      <div class="bw">${Math.round(v)} W</div>
+    </div>`).join('');
+
+  // Empfehlung
+  let gt=Q_kW<2.5?'Kleinsplit/Monoblock Einzel':Q_kW<4?'Monosplit (1:1)':Q_kW<8?'Multisplit 1:2 oder 1:3':Q_kW<20?'Multi-Split / VRF-Einstieg':'VRF-Anlage – Fachplanung';
+  g('emp').innerHTML=`<div class="etitle">✓ Planungsempfehlung</div>
+  <div class="egrid">
+    <div class="ei"><strong>${Math.round(Q_btu).toLocaleString('de')} BTU/h</strong>Berechnete Kühllast</div>
+    <div class="ei"><strong>${empBtu.toLocaleString('de')} BTU/h</strong>Empfohlene Gerätegröße (+15%)</div>
+    <div class="ei"><strong>${empKw.toFixed(1)} kW</strong>= ${empBtu.toLocaleString('de')} BTU/h</div>
+    <div class="ei"><strong>${gt}</strong>Bauart-Empfehlung</div>
+    <div class="ei"><strong>${elA.toFixed(2)} kW</strong>Anschlussleistung el. (COP 3,5)</div>
+    <div class="ei"><strong>${Q_m2.toFixed(0)} W/m²</strong>${Q_m2<80?'✓ Sehr gut gedämmt':Q_m2<100?'✓ Gut':Q_m2<130?'~ Mittel':Q_m2<160?'⚠ Hoch':'⚠ Sehr hoch!'}</div>
+  </div>
+  <div style="margin-top:9px;font-size:11px;color:var(--muted);">
+    Handelsübliche Split-Klassen: 5.000 · 7.000 · 9.000 · 12.000 · 18.000 · 24.000 BTU/h – nächstgrößere Klasse wählen!
+  </div>`;
+
+  g('res').style.display='block';
+  g('res').scrollIntoView({behavior:'smooth'});
+}
+
+// ── Lüftungsberechnung ───────────────────────────────────────
+function getLueftung(){
+  const pers   = nv('pers');
+  const lpp    = parseFloat(sv2('luft_pro_person')||'30');
+  const infil  = parseFloat(sv2('infiltration')||'0.08');
+  const fl     = nv('fl'), ho = nv('ho');
+  const hygiene = pers * lpp;              // m³/h Hygiene
+  const infiltM3h = infil * fl * ho;       // m³/h Infiltration
+  return hygiene + infiltM3h;
+}
+function calcLueft(){
+  const pers   = nv('pers');
+  const lpp    = parseFloat(sv2('luft_pro_person')||'30');
+  const infil  = parseFloat(sv2('infiltration')||'0.08');
+  const fl     = nv('fl'), ho = nv('ho');
+  const hygiene   = pers * lpp;
+  const infiltM3h = infil * fl * ho;
+  const ges       = hygiene + infiltM3h;
+  const n_eff     = ho > 0 && fl > 0 ? ges / (fl * ho) : 0;
+  if(g('luft_hygiene')) g('luft_hygiene').textContent = Math.round(hygiene)+' m³/h';
+  if(g('luft_infil'))   g('luft_infil').textContent   = Math.round(infiltM3h)+' m³/h';
+  if(g('luft_ges'))     g('luft_ges').textContent     = Math.round(ges)+' m³/h';
+  if(g('luft_hint_n'))  g('luft_hint_n').textContent  = `entspricht n = ${n_eff.toFixed(2)} /h (Luftwechselrate)`;
+}
+
+// Init
+buildWaende();
+g('decke_typ').addEventListener('change',updateDecke);
+g('boden_typ').addEventListener('change',updateBoden);
+g('pers').addEventListener('input', calcLueft);
+g('fl').addEventListener('input', calcLueft);
+g('ho').addEventListener('input', calcLueft);
+updateDecke(); updateBoden(); calcLueft();
+</script>
+</body>
+</html>
