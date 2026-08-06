@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rico's Toolbox</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0b0f14">
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#121821; --panel2:#182130; --edge:#243044;
+    --amber:#ffb020; --text:#e7edf5; --text-dim:#8ea0b8; --green:#37e08a;
+    --mono:'SF Mono',ui-monospace,Consolas,monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    min-height:100vh;
+  }
+  header{ padding:32px 20px 20px; text-align:center; border-bottom:1px solid var(--edge); }
+  header h1{margin:0 0 6px; font-size:22px; letter-spacing:.02em;}
+  header h1 b{color:var(--amber);}
+  header p{margin:0; color:var(--text-dim); font-size:13px; font-family:var(--mono);}
+
+  main{max-width:900px; margin:0 auto; padding:24px 16px 60px;}
+
+  .searchbar{ display:flex; gap:10px; margin-bottom:18px; }
+  .searchbar input{
+    flex:1; background:var(--panel); border:1px solid var(--edge); color:var(--text);
+    padding:10px 14px; border-radius:10px; font-size:14px; font-family:inherit;
+  }
+  .searchbar button{
+    background:var(--panel2); border:1px solid var(--edge); color:var(--text-dim);
+    padding:10px 14px; border-radius:10px; cursor:pointer; font-family:var(--mono); font-size:16px;
+  }
+
+  .overlay-bg{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1000;
+    align-items:center; justify-content:center; padding:20px;
+  }
+  .overlay-bg.open{ display:flex; }
+  .share-box{
+    background:var(--panel); border:1px solid var(--edge); border-radius:16px; padding:24px;
+    display:flex; flex-direction:column; align-items:center; gap:14px; max-width:320px; width:100%;
+  }
+  .share-title{font-size:16px; font-weight:700;}
+  .share-box img{ background:#fff; border-radius:10px; padding:10px; }
+  .share-url{
+    font-family:var(--mono); font-size:12px; color:var(--text-dim); text-align:center;
+    word-break:break-all; background:var(--panel2); padding:8px 12px; border-radius:8px; width:100%;
+  }
+  .share-buttons{ display:flex; gap:10px; width:100%; }
+  .share-buttons button{
+    flex:1; padding:10px; border-radius:10px; border:1px solid var(--edge); background:var(--panel2);
+    color:var(--text); font-size:13px; cursor:pointer;
+  }
+  .share-buttons button.primary{ background:var(--amber); color:#1a1300; border-color:var(--amber); font-weight:700; }
+
+  .status{color:var(--text-dim); font-size:13px; font-family:var(--mono); text-align:center; padding:30px 0;}
+
+  .grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:14px; }
+  .card{
+    background:var(--panel); border:1px solid var(--edge); border-radius:14px; padding:16px;
+    text-decoration:none; color:var(--text); display:flex; flex-direction:column; gap:8px;
+    transition:.15s; position:relative; overflow:hidden;
+  }
+  .card:hover{ border-color:var(--amber); transform:translateY(-2px); }
+  .card .icon{
+    width:48px; height:48px; border-radius:12px; background:var(--panel2);
+    border:1px solid var(--edge); display:flex; align-items:center; justify-content:center;
+    font-size:24px; flex-shrink:0;
+  }
+  .card .cardhead{display:flex; align-items:center; gap:10px;}
+  .card .name{font-weight:700; font-size:15px;}
+  .card .desc{font-size:12.5px; color:var(--text-dim); line-height:1.4; min-height:34px;}
+  .card .meta{
+    display:flex; justify-content:flex-end; align-items:center;
+    font-family:var(--mono); font-size:10.5px; color:var(--text-dim); margin-top:auto; padding-top:8px;
+    border-top:1px solid var(--edge);
+  }
+  .card .arrow{color:var(--amber); font-size:16px;}
+
+  .pin{position:absolute; top:10px; right:10px; font-size:11px; color:var(--amber); cursor:pointer; opacity:.6;}
+  .pin.active{opacity:1;}
+
+  footer{
+    text-align:center; color:var(--text-dim); font-size:11px; font-family:var(--mono);
+    padding:20px; border-top:1px solid var(--edge);
+  }
+  footer a{color:var(--amber); text-decoration:none;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🧰 <b>Rico's</b> Toolbox</h1>
+  <p id="countLabel">lädt …</p>
+</header>
+
+<main>
+  <div class="searchbar">
+    <input type="text" id="search" placeholder="Tool suchen…">
+    <button id="refreshBtn">↻</button>
+    <button id="shareBtn">📤</button>
+  </div>
+
+  <div id="status" class="status">Lade Tools …</div>
+  <div class="grid" id="grid"></div>
+</main>
+
+<div class="overlay-bg" id="shareOverlay">
+  <div class="share-box">
+    <div class="share-title">Toolbox teilen</div>
+    <img id="qrImg" alt="QR-Code" width="240" height="240">
+    <div class="share-url" id="shareUrl"></div>
+    <div class="share-buttons">
+      <button id="copyUrlBtn">Link kopieren</button>
+      <button id="closeShareBtn" class="primary">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<footer>
+  Neuer Ordner mit <code>index.html</code> in diesem Repo → taucht automatisch hier auf.<br>
+  Optional: <code>meta.json</code> im Ordner für Titel/Beschreibung/Icon.
+</footer>
+
+<script>
+(() => {
+  // ---- Repo-Konfiguration: hier anpassen falls Name/Owner abweicht ----
+  const OWNER = 'ricogrutze-oss';
+  const REPO  = 'Tool';
+  // -----------------------------------------------------------------
+
+  const CACHE_KEY = 'toolbox_cache_v1';
+  const CACHE_TTL_MS = 10 * 60 * 1000;
+  const PIN_KEY = 'toolbox_pins_v1';
+
+  const els = {
+    grid: document.getElementById('grid'),
+    status: document.getElementById('status'),
+    countLabel: document.getElementById('countLabel'),
+    search: document.getElementById('search'),
+    refreshBtn: document.getElementById('refreshBtn'),
+  };
+
+  let allTools = [];
+  let pins = JSON.parse(localStorage.getItem(PIN_KEY) || '[]');
+
+  async function loadTools(force){
+    if(!force){
+      const cached = localStorage.getItem(CACHE_KEY);
+      if(cached){
+        try{
+          const {ts, data} = JSON.parse(cached);
+          if(Date.now() - ts < CACHE_TTL_MS){ allTools = data; render(); return; }
+        }catch(e){}
+      }
+    }
+    // Cache-Busting: bei manuellem Refresh Zeitstempel anhängen, damit
+    // GitHub-Raw-Server und Browser wirklich neu laden statt Alt-Version zu liefern
+    const bust = force ? `?t=${Date.now()}` : '';
+    els.status.textContent = 'Lade Tools …';
+    els.status.style.display = 'block';
+    try{
+      const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/`);
+      if(!res.ok){
+        if(res.status === 403) throw new Error('GitHub API Rate-Limit erreicht — später erneut versuchen.');
+        throw new Error('GitHub API Fehler: ' + res.status);
+      }
+      const items = await res.json();
+      const dirs = items.filter(i => i.type === 'dir');
+
+      const folderTools = await Promise.all(dirs.map(async (d) => {
+        let meta = {};
+        try{
+          const metaRes = await fetch(`https://raw.githubusercontent.com/${OWNER}/${REPO}/main/${encodeURIComponent(d.name)}/meta.json${bust}`);
+          if(metaRes.ok) meta = await metaRes.json();
+        }catch(e){ /* kein meta.json vorhanden, egal */ }
+        let icon = meta.icon || '🔧';
+        // Relativer Bildname (z.B. "icon.svg") -> auf den Tool-Ordner beziehen
+        const looksLikeImage = /\.(svg|png|jpe?g|webp|gif)$/i.test(icon);
+        const isAbsolute = /^(https?:\/\/|\.\/|\/)/.test(icon);
+        if(looksLikeImage && !isAbsolute){
+          icon = `${encodeURIComponent(d.name)}/${icon}${bust}`;
+        } else if(looksLikeImage && isAbsolute && force){
+          icon = icon + (icon.includes('?') ? '&' : '?') + `t=${Date.now()}`;
+        }
+        return {
+          folder: d.name,
+          title: meta.title || d.name,
+          description: meta.description || '',
+          icon,
+          url: `./${encodeURIComponent(d.name)}/`
+        };
+      }));
+
+      // Externe Tools (eigene Repos/URLs), optional aus external-tools.json
+      let externalTools = [];
+      try{
+        const extRes = await fetch(`https://raw.githubusercontent.com/${OWNER}/${REPO}/main/external-tools.json${bust}`);
+        if(extRes.ok){
+          const ext = await extRes.json();
+          externalTools = ext.map(t => ({
+            folder: t.url,
+            title: t.title,
+            description: t.description || '',
+            icon: t.icon || '🔗',
+            url: t.url
+          }));
+        }
+      }catch(e){ /* keine externe Liste vorhanden, egal */ }
+
+      allTools = [...folderTools, ...externalTools];
+
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ts: Date.now(), data: allTools}));
+      render();
+    }catch(err){
+      els.status.textContent = '⚠ ' + err.message;
+      const cached = localStorage.getItem(CACHE_KEY);
+      if(cached){ try{ allTools = JSON.parse(cached).data; render(); }catch(e){} }
+    }
+  }
+
+  function render(){
+    const q = els.search.value.trim().toLowerCase();
+    let list = allTools.filter(t =>
+      !q || t.title.toLowerCase().includes(q) || t.description.toLowerCase().includes(q)
+    );
+    list.sort((a,b) => {
+      const pa = pins.includes(a.folder), pb = pins.includes(b.folder);
+      if(pa !== pb) return pa ? -1 : 1;
+      return a.title.localeCompare(b.title);
+    });
+
+    els.countLabel.textContent = list.length + (list.length===1 ? ' Tool' : ' Tools');
+    els.status.style.display = list.length ? 'none' : 'block';
+    if(!list.length && !els.status.textContent.startsWith('⚠')){
+      els.status.textContent = q ? 'Keine Treffer.' : 'Noch keine Tool-Ordner gefunden.';
+      els.status.style.display = 'block';
+    }
+
+    els.grid.innerHTML = '';
+    list.forEach(t => {
+      const card = document.createElement('a');
+      card.className = 'card';
+      card.href = `viewer.html?url=${encodeURIComponent(t.url)}&title=${encodeURIComponent(t.title)}`;
+      const pinned = pins.includes(t.folder);
+      card.innerHTML = `
+        <span class="pin ${pinned?'active':''}" title="Anheften" data-name="${t.folder}">📌</span>
+        <div class="cardhead">
+          <div class="icon">${renderIcon(t.icon)}</div>
+          <div class="name">${escapeHtml(t.title)}</div>
+        </div>
+        <div class="desc">${escapeHtml(t.description || 'Keine Beschreibung')}</div>
+        <div class="meta"><span class="arrow">→</span></div>
+      `;
+      card.querySelector('.pin').addEventListener('click', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        togglePin(t.folder);
+      });
+      els.grid.appendChild(card);
+    });
+  }
+
+  function togglePin(name){
+    if(pins.includes(name)) pins = pins.filter(n => n !== name);
+    else pins.push(name);
+    localStorage.setItem(PIN_KEY, JSON.stringify(pins));
+    render();
+  }
+
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function renderIcon(icon){
+    const isImage = /^(https?:\/\/|\.\/|\/)/.test(icon) || /\.(svg|png|jpe?g|webp|gif)$/i.test(icon);
+    if(isImage){
+      return `<img src="${icon}" alt="" style="width:28px;height:28px;object-fit:contain;" onerror="this.parentElement.textContent='🔧'">`;
+    }
+    return icon;
+  }
+
+  els.search.addEventListener('input', render);
+  els.refreshBtn.addEventListener('click', () => loadTools(true));
+
+  // ---- Teilen / QR-Code ----
+  const shareOverlay = document.getElementById('shareOverlay');
+  const shareBtn = document.getElementById('shareBtn');
+  const closeShareBtn = document.getElementById('closeShareBtn');
+  const copyUrlBtn = document.getElementById('copyUrlBtn');
+  const qrImg = document.getElementById('qrImg');
+  const shareUrl = document.getElementById('shareUrl');
+
+  shareBtn.addEventListener('click', () => {
+    const url = location.origin + location.pathname;
+    shareUrl.textContent = url;
+    qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(url)}`;
+    shareOverlay.classList.add('open');
+  });
+  closeShareBtn.addEventListener('click', () => shareOverlay.classList.remove('open'));
+  shareOverlay.addEventListener('click', (e) => {
+    if(e.target === shareOverlay) shareOverlay.classList.remove('open');
+  });
+  copyUrlBtn.addEventListener('click', async () => {
+    try{
+      await navigator.clipboard.writeText(shareUrl.textContent);
+      copyUrlBtn.textContent = '✓ Kopiert';
+      setTimeout(() => { copyUrlBtn.textContent = 'Link kopieren'; }, 1500);
+    }catch(e){
+      alert('Kopieren nicht möglich, Link manuell markieren: ' + shareUrl.textContent);
+    }
+  });
+
+  loadTools(false);
+
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(()=>{});
+    });
+  }
+})();
+</script>
+</body>
+</html>
