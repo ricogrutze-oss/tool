@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PV-Ertragsrechner</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{
+  --bg:#0f1219;--surf:#1a1f2e;--surf2:#222840;--bord:#2d3452;
+  --sol:#f59e0b;--sol2:#7c5004;--sky:#38bdf8;--grn:#22c55e;
+  --red:#f87171;--pur:#a78bfa;--ora:#fb923c;
+  --txt:#e8eaf0;--mut:#8892b0;--r:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;line-height:1.5}
+
+/* HEADER */
+header{display:flex;align-items:center;gap:12px;padding:12px 24px;background:var(--surf);border-bottom:1px solid var(--bord);flex-wrap:wrap}
+header h1{font-size:1.05rem;font-weight:700;color:var(--sol)}
+header p{font-size:.73rem;color:var(--mut)}
+#hdr-loc{color:var(--sky);font-weight:600}
+.hdr-print{margin-left:auto;padding:7px 14px;background:var(--sol2);border:1px solid var(--sol);border-radius:6px;color:var(--sol);font-size:.78rem;cursor:pointer;font-weight:600}
+.hdr-print:hover{background:#a06905}
+
+/* TABS */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--bord);background:var(--surf);padding:0 20px}
+.tab{padding:10px 18px;font-size:.8rem;color:var(--mut);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
+.tab.active{color:var(--sol);border-bottom-color:var(--sol)}
+.tab:hover:not(.active){color:var(--txt)}
+
+/* PANELS */
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* LAYOUT */
+.page{max-width:1200px;margin:0 auto;padding:18px 16px 60px;display:grid;grid-template-columns:340px 1fr;gap:18px;align-items:start}
+
+/* SIDE PANEL */
+.panel{background:var(--surf);border:1px solid var(--bord);border-radius:var(--r);padding:18px 15px;position:sticky;top:14px;max-height:calc(100vh - 110px);overflow-y:auto}
+.panel::-webkit-scrollbar{width:4px}
+.panel::-webkit-scrollbar-thumb{background:var(--bord);border-radius:2px}
+.sec{font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:var(--sky);margin:14px 0 8px;opacity:.85}
+.divider{border:none;border-top:1px solid var(--bord);margin:13px 0}
+
+/* FIELDS */
+.field{margin-bottom:12px}
+.field>label{display:flex;justify-content:space-between;font-size:.75rem;color:var(--mut);margin-bottom:3px}
+.num-row{display:flex;gap:5px;align-items:center}
+.num-row .ul{font-size:.7rem;color:var(--mut);white-space:nowrap;min-width:26px}
+input[type=number],input[type=text],select{width:100%;background:var(--surf2);border:1px solid var(--bord);border-radius:6px;color:var(--txt);font-size:.84rem;padding:6px 8px;outline:none;transition:border-color .15s;-moz-appearance:textfield}
+input::-webkit-inner-spin-button{-webkit-appearance:none}
+input:focus,select:focus{border-color:var(--sol)}
+select{cursor:pointer}
+option{background:var(--surf2)}
+.loc-row{display:flex;gap:6px}
+.loc-row input{flex:1}
+.btn{padding:6px 11px;background:var(--surf2);border:1px solid var(--bord);border-radius:6px;color:var(--txt);font-size:.77rem;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn:hover{border-color:var(--sol);color:var(--sol)}
+.btn.primary{background:var(--sol2);border-color:var(--sol);color:var(--sol);font-weight:600}
+.btn.primary:hover{background:#a06905}
+.btn.danger{border-color:var(--red);color:var(--red)}
+.info-box{font-size:.7rem;margin-top:3px}
+.info-box.ok{color:var(--grn)}.info-box.err{color:var(--red)}.info-box.hint{color:var(--mut)}
+
+/* MAP */
+#map-wrap{position:relative}
+#map{height:420px;border-radius:var(--r);border:1px solid var(--bord);z-index:1}
+.map-toolbar{display:flex;gap:6px;padding:8px 0;flex-wrap:wrap}
+.map-hint{font-size:.71rem;color:var(--mut);padding:4px 0}
+
+/* DRAWN ROOFS LIST */
+.roof-list{display:flex;flex-direction:column;gap:7px;margin-bottom:10px}
+.roof-card{background:var(--surf2);border:1px solid var(--bord);border-radius:var(--r);padding:9px 11px}
+.roof-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.roof-swatch{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.roof-title{font-size:.8rem;font-weight:600;flex:1}
+.roof-del{background:none;border:none;color:var(--mut);cursor:pointer;font-size:.95rem;padding:0}
+.roof-del:hover{color:var(--red)}
+.roof-meta{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:.71rem;color:var(--mut)}
+.roof-meta span{display:flex;flex-direction:column}
+.roof-meta b{color:var(--txt);font-size:.82rem}
+.roof-tilt-row{display:flex;gap:6px;align-items:center;margin-top:6px}
+.roof-tilt-row label{font-size:.72rem;color:var(--mut);white-space:nowrap}
+
+/* STRINGS (manual) */
+.strings-list{display:flex;flex-direction:column;gap:9px;margin-bottom:9px}
+.string-card{border:1px solid var(--bord);border-radius:var(--r);overflow:hidden}
+.string-head{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surf2);cursor:pointer;user-select:none}
+.string-swatch{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.string-title{font-size:.79rem;font-weight:600;flex:1}
+.string-summary{font-size:.68rem;color:var(--mut)}
+.string-del{margin-left:auto;background:none;border:none;color:var(--mut);cursor:pointer;font-size:.95rem}
+.string-del:hover{color:var(--red)}
+.string-body{padding:11px 10px;display:flex;flex-direction:column;gap:9px;border-top:1px solid var(--bord)}
+.string-body.collapsed{display:none}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.row2 .field,.row3 .field{margin-bottom:0}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
+
+/* COMPASS MINI */
+.compass-mini{position:relative;width:54px;height:54px;flex-shrink:0}
+.compass-mini-ring{width:54px;height:54px;border-radius:50%;border:1.5px solid var(--bord);background:var(--surf)}
+.cml{position:absolute;font-size:.5rem;color:var(--mut);font-weight:700}
+.cml.N{top:1px;left:50%;transform:translateX(-50%)}
+.cml.S{bottom:1px;left:50%;transform:translateX(-50%)}
+.cml.O{right:1px;top:50%;transform:translateY(-50%)}
+.cml.W{left:1px;top:50%;transform:translateY(-50%)}
+.cma{position:absolute;top:50%;left:50%;width:3px;height:20px;margin-left:-1.5px;margin-top:-18px;border-radius:1.5px;transform-origin:bottom center;transition:transform .2s}
+
+/* RESULT CARDS */
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:14px}
+.card{background:var(--surf);border:1px solid var(--bord);border-radius:var(--r);padding:12px 9px;text-align:center}
+.card .lbl{font-size:.59rem;letter-spacing:.07em;text-transform:uppercase;color:var(--mut);margin-bottom:4px}
+.card .val{font-size:1.3rem;font-weight:700;line-height:1.1}
+.card .unt{font-size:.65rem;color:var(--mut);margin-top:2px}
+.ca .val{color:var(--sol)}.cb .val{color:var(--sky)}.cc .val{color:var(--grn)}
+.cd .val{color:var(--pur)}.ce .val{color:var(--ora)}.cf .val{color:var(--red)}.cg .val{color:#e879f9}
+
+/* STRING RESULTS */
+.str-results{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.str-res{display:flex;align-items:center;gap:9px;background:var(--surf);border:1px solid var(--bord);border-radius:var(--r);padding:9px 12px}
+.str-res-sw{width:7px;height:36px;border-radius:3px;flex-shrink:0}
+.str-res-name{font-size:.78rem;font-weight:600;min-width:80px}
+.str-res-nums{display:flex;gap:14px;flex:1;flex-wrap:wrap}
+.sri{text-align:center}
+.sri .v{font-size:.9rem;font-weight:700}
+.sri .u{font-size:.61rem;color:var(--mut)}
+
+/* CHARTS */
+.charts{display:flex;flex-direction:column;gap:14px}
+.cbox{background:var(--surf);border:1px solid var(--bord);border-radius:var(--r);padding:15px 15px 11px}
+.cbox h3{font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin-bottom:9px}
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:7px}
+.li{display:flex;align-items:center;gap:4px;font-size:.69rem;color:var(--mut)}
+.ld{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* BUILDING 3D */
+#building3d{display:block;width:100%;border-radius:var(--r)}
+
+/* TABLE */
+.bil-table{width:100%;border-collapse:collapse;font-size:.76rem}
+.bil-table th{font-size:.59rem;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);text-align:left;padding:5px 6px;border-bottom:1px solid var(--bord)}
+.bil-table td{padding:5px 6px;border-bottom:1px solid rgba(45,52,82,.35)}
+.bil-table tfoot td{color:var(--sol);font-weight:600;border-top:1px solid var(--bord);border-bottom:none}
+
+/* ADD-STRING BTN */
+.btn-add{width:100%;padding:8px;background:transparent;border:1px dashed var(--bord);border-radius:var(--r);color:var(--mut);font-size:.78rem;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px}
+.btn-add:hover{border-color:var(--sol);color:var(--sol)}
+
+/* PRINT */
+@media print{
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  body{background:#fff!important;color:#111!important}
+  header{background:#1a1f2e!important;padding:8px 18px}
+  header h1{color:#f59e0b!important}
+  header p,#hdr-loc{color:#8892b0!important}
+  .hdr-print,.tabs,.panel,#map-wrap,.map-toolbar,.map-hint{display:none!important}
+  .page{display:block!important;padding:0}
+  .tab-content{display:block!important}
+  .cards{display:grid!important;grid-template-columns:repeat(4,1fr)!important;gap:5px!important;margin-bottom:8px!important}
+  .card{background:#f5f5f5!important;border:1px solid #ddd!important;padding:7px!important}
+  .card .lbl{color:#666!important}.card .val{font-size:13pt!important}.card .unt{color:#888!important}
+  .ca .val{color:#b87a0a!important}.cb .val{color:#0369a1!important}.cc .val{color:#15803d!important}
+  .cd .val{color:#6d28d9!important}.ce .val{color:#c2410c!important}.cf .val{color:#dc2626!important}
+  .charts{gap:8px!important}
+  .cbox{background:#fff!important;border:1px solid #ccc!important;padding:8px!important;page-break-inside:avoid}
+  .cbox h3{color:#555!important}
+  .str-res{background:#f5f5f5!important;border:1px solid #ddd!important}
+  .sri .u{color:#888!important}
+  .bil-table th{color:#666!important}
+  .bil-table td{border-bottom-color:#eee!important}
+  .bil-table tfoot td{color:#b87a0a!important}
+}
+
+@media(max-width:860px){
+  .page{grid-template-columns:1fr}
+  .panel{position:static;max-height:none}
+  .cards{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+    <circle cx="14" cy="14" r="13" stroke="#f59e0b" stroke-width="1.5" opacity=".3"/>
+    <circle cx="14" cy="6.5" r="3" fill="#f59e0b"/>
+    <line x1="14" y1="9.5" x2="14" y2="21" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="14" y1="14" x2="8" y2="19" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>
+    <line x1="14" y1="14" x2="20" y2="19" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>
+  </svg>
+  <div><h1>PV-Ertragsrechner</h1><p>Standort: <span id="hdr-loc">–</span></p></div>
+  <button class="hdr-print" onclick="window.print()">⎙ Als PDF drucken</button>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('karte')">🗺 Karte & Dachflächen</div>
+  <div class="tab" onclick="switchTab('manuell')">⚡ Manuelle Eingabe</div>
+  <div class="tab" onclick="switchTab('ergebnis')">📊 Ergebnisse</div>
+</div>
+
+<!-- ══════════ TAB: KARTE ══════════ -->
+<div class="tab-content active" id="tab-karte">
+<div class="page">
+
+  <div class="panel">
+    <div class="sec">📍 Adresse / Koordinaten</div>
+    <div class="field">
+      <div class="loc-row">
+        <input type="text" id="inp-addr" placeholder="Adresse, PLZ oder Ort" value="39104 Magdeburg">
+        <button class="btn primary" onclick="geocode()">Suchen</button>
+      </div>
+      <div class="info-box hint" id="addr-info">Enter drücken oder Suchen klicken</div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="sec">✏️ Dachflächen einzeichnen</div>
+    <div class="map-toolbar">
+      <button class="btn primary" id="btn-draw" onclick="startDraw()">+ Neue Fläche zeichnen</button>
+      <button class="btn" id="btn-finish" onclick="finishDraw()" style="display:none">✓ Fläche abschließen</button>
+      <button class="btn danger" id="btn-cancel" onclick="cancelDraw()" style="display:none">✕ Abbrechen</button>
+    </div>
+    <div class="info-box hint" id="draw-hint">Fläche zeichnen: Button klicken, dann Ecken auf der Karte anklicken. Doppelklick zum Abschließen.</div>
+
+    <div class="divider"></div>
+    <div class="sec">🏠 Eingezeichnete Dachflächen</div>
+    <div class="roof-list" id="roof-list">
+      <div class="info-box hint">Noch keine Flächen eingezeichnet.</div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="sec">🔧 Systemparameter</div>
+    <div class="row2">
+      <div class="field"><label>Strompreis</label><div class="num-row"><input type="number" id="kp-price" value="0.30" min="0.05" max="0.80" step="0.01"><span class="ul">€/kWh</span></div></div>
+      <div class="field"><label>Einspeisung</label><div class="num-row"><input type="number" id="kp-feed" value="0.082" min="0.01" max="0.25" step="0.001"><span class="ul">€/kWh</span></div></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Eigenverbr.</label><div class="num-row"><input type="number" id="kp-self" value="30" min="5" max="95"><span class="ul">%</span></div></div>
+      <div class="field"><label>Systemverl.</label><div class="num-row"><input type="number" id="kp-loss" value="14" min="3" max="30"><span class="ul">%</span></div></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Degradation</label><div class="num-row"><input type="number" id="kp-deg" value="0.5" min="0.1" max="1.5" step="0.1"><span class="ul">%/a</span></div></div>
+      <div class="field"><label>Anlagenalter</label><div class="num-row"><input type="number" id="kp-age" value="0" min="0" max="30"><span class="ul">J.</span></div></div>
+    </div>
+    <div class="field"><label>Gesamtkosten (Anlage)</label><div class="num-row"><input type="number" id="kp-capex" placeholder="auto. geschätzt" min="0" step="500"><span class="ul">€</span></div></div>
+
+    <div class="divider"></div>
+    <button class="btn primary" style="width:100%;padding:9px" onclick="switchTab('ergebnis')">→ Zu den Ergebnissen</button>
+  </div>
+
+  <div>
+    <div id="map-wrap">
+      <div id="map"></div>
+    </div>
+    <div style="font-size:.71rem;color:var(--mut);margin-top:6px;padding:0 2px">
+      🛰 Kartendaten © <a href="https://www.openstreetmap.org" target="_blank" style="color:var(--sky)">OpenStreetMap</a> · Satellitenbilder © Esri, Maxar, Earthstar Geographics
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ══════════ TAB: MANUELL ══════════ -->
+<div class="tab-content" id="tab-manuell">
+<div class="page">
+
+  <div class="panel">
+    <div class="sec">📍 Standort</div>
+    <div class="field">
+      <div class="loc-row">
+        <input type="text" id="mp-addr" placeholder="PLZ oder Ort" value="39104 Magdeburg">
+        <button class="btn primary" onclick="geocodeManual()">Suchen</button>
+      </div>
+      <div class="info-box hint" id="mp-info">–</div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="sec">🔧 Systemparameter</div>
+    <div class="row2">
+      <div class="field"><label>Strompreis</label><div class="num-row"><input type="number" id="mp-price" value="0.30" min="0.05" max="0.80" step="0.01"><span class="ul">€/kWh</span></div></div>
+      <div class="field"><label>Einspeisung</label><div class="num-row"><input type="number" id="mp-feed" value="0.082" min="0.01" max="0.25" step="0.001"><span class="ul">€/kWh</span></div></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Eigenverbr.</label><div class="num-row"><input type="number" id="mp-self" value="30" min="5" max="95"><span class="ul">%</span></div></div>
+      <div class="field"><label>Systemverl.</label><div class="num-row"><input type="number" id="mp-loss" value="14" min="3" max="30"><span class="ul">%</span></div></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Degradation</label><div class="num-row"><input type="number" id="mp-deg" value="0.5" min="0.1" max="1.5" step="0.1"><span class="ul">%/a</span></div></div>
+      <div class="field"><label>Anlagenalter</label><div class="num-row"><input type="number" id="mp-age" value="0" min="0" max="30"><span class="ul">J.</span></div></div>
+    </div>
+    <div class="field"><label>Gesamtkosten (Anlage)</label><div class="num-row"><input type="number" id="mp-capex" placeholder="auto. geschätzt" min="0" step="500"><span class="ul">€</span></div></div>
+
+    <div class="divider"></div>
+    <div class="sec">⚡ Modulgruppen (Strings)</div>
+    <div class="strings-list" id="strings-list"></div>
+    <button class="btn-add" onclick="addString()">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><line x1="6.5" y1="1" x2="6.5" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="1" y1="6.5" x2="12" y2="6.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      Modulgruppe hinzufügen
+    </button>
+    <div style="margin-top:10px">
+      <button class="btn primary" style="width:100%;padding:9px" onclick="switchTab('ergebnis')">→ Zu den Ergebnissen</button>
+    </div>
+  </div>
+
+  <div>
+    <div class="charts">
+      <div class="cbox">
+        <h3>Ausrichtung — Gebäudevisualisierung</h3>
+        <canvas id="building3d" height="260"></canvas>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ══════════ TAB: ERGEBNISSE ══════════ -->
+<div class="tab-content" id="tab-ergebnis">
+<div style="max-width:1200px;margin:0 auto;padding:18px 16px 60px">
+
+  <div class="cards">
+    <div class="card ca"><div class="lbl">Installierte Leistung</div><div class="val" id="v-kwp">–</div><div class="unt">kWp gesamt</div></div>
+    <div class="card cb"><div class="lbl">Jahresertrag</div><div class="val" id="v-yield">–</div><div class="unt">kWh / Jahr</div></div>
+    <div class="card cc"><div class="lbl">Spez. Ertrag</div><div class="val" id="v-spec">–</div><div class="unt">kWh / kWp</div></div>
+    <div class="card cd"><div class="lbl">Performance Ratio</div><div class="val" id="v-pr">–</div><div class="unt">Jahresmittel</div></div>
+  </div>
+  <div class="cards">
+    <div class="card ce"><div class="lbl">Eigenverbr. Einsparung</div><div class="val" id="v-self">–</div><div class="unt">€ / Jahr</div></div>
+    <div class="card cg"><div class="lbl">Einspeisevergütung</div><div class="val" id="v-feede">–</div><div class="unt">€ / Jahr</div></div>
+    <div class="card cc"><div class="lbl">Jahreserlös gesamt</div><div class="val" id="v-total">–</div><div class="unt">€ / Jahr</div></div>
+    <div class="card cf"><div class="lbl">Amortisation</div><div class="val" id="v-amort">–</div><div class="unt">Jahre</div></div>
+  </div>
+  <div class="cards" style="grid-template-columns:repeat(3,1fr)">
+    <div class="card cc"><div class="lbl">CO₂-Einsparung</div><div class="val" id="v-co2">–</div><div class="unt">kg / Jahr</div></div>
+    <div class="card cb"><div class="lbl">Volllaststunden</div><div class="val" id="v-flh">–</div><div class="unt">h / Jahr</div></div>
+    <div class="card cd"><div class="lbl">Ertrag alterskorr.</div><div class="val" id="v-aged">–</div><div class="unt">kWh (nach <span id="v-age-l">0</span> J.)</div></div>
+  </div>
+
+  <div class="str-results" id="str-results"></div>
+
+  <div class="charts">
+    <div class="cbox">
+      <h3>Monatlicher Ertrag pro Modulgruppe</h3>
+      <canvas id="chartJahr" height="190"></canvas>
+      <div class="legend" id="legend-jahr"></div>
+    </div>
+    <div class="cbox">
+      <h3>Leistung im Tagesverlauf — Sommer / Frühling / Winter</h3>
+      <canvas id="chartTag" height="200"></canvas>
+      <div class="legend">
+        <div class="li"><div class="ld" style="background:#f59e0b"></div><span>Sommer (21. Jun)</span></div>
+        <div class="li"><div class="ld" style="background:#a78bfa"></div><span>Frühling (21. Mär)</span></div>
+        <div class="li"><div class="ld" style="background:#38bdf8"></div><span>Winter (21. Dez)</span></div>
+      </div>
+    </div>
+    <div class="cbox">
+      <h3>Ertragsentwicklung 25 Jahre (Degradation)</h3>
+      <canvas id="chartDeg" height="130"></canvas>
+    </div>
+    <div class="cbox">
+      <h3>Vollständige Jahresbilanz</h3>
+      <table class="bil-table">
+        <thead><tr><th>Monat</th><th>Ertrag kWh</th><th>kWh/kWp</th><th>PR %</th><th>Eigenverbr.</th><th>Einspeisung</th><th>CO₂ kg</th><th>Erlös €</th></tr></thead>
+        <tbody id="tbl-body"></tbody>
+        <tfoot><tr><td>Gesamt</td><td id="tf-yield">–</td><td id="tf-spec">–</td><td id="tf-pr">–</td><td id="tf-self">–</td><td id="tf-feed">–</td><td id="tf-co2">–</td><td id="tf-eur">–</td></tr></tfoot>
+      </table>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+//  KONSTANTEN & DATEN
+// ═══════════════════════════════════════════
+
+const REGIONS=[
+  {name:'Norddeutschland',     lat:53.5,lon:10.0,ghi:[0.75,1.20,2.50,3.80,5.00,5.40,5.20,4.50,3.00,1.75,0.82,0.58],temp:[-0.5,0.5,4,9,14,17,19,18,14,9,4,0]},
+  {name:'Magdeburg/Mitte',     lat:52.1,lon:11.6,ghi:[0.82,1.30,2.60,3.90,5.10,5.60,5.40,4.70,3.20,1.90,0.90,0.65],temp:[-1,1,5,10,15,19,21,20,16,10,5,1]},
+  {name:'Berlin/Brandenburg',  lat:52.5,lon:13.4,ghi:[0.80,1.28,2.55,3.85,5.05,5.50,5.35,4.65,3.10,1.85,0.85,0.60],temp:[-0.8,0.8,4.5,9.5,14.5,18,20,19,15,9.5,4.5,0.5]},
+  {name:'Thüringen/Sachsen',   lat:51.0,lon:12.5,ghi:[0.88,1.40,2.75,4.00,5.20,5.65,5.45,4.80,3.30,2.00,0.95,0.70],temp:[-0.5,1,5,10,15,19,21,20,16,10,5,1]},
+  {name:'Rhein-Main/Hessen',   lat:50.1,lon:8.7, ghi:[0.95,1.55,2.95,4.20,5.40,5.80,5.65,5.00,3.55,2.20,1.05,0.78],temp:[1,2,6,10,15,18,20,19,15,10,5,2]},
+  {name:'Bayern',              lat:48.2,lon:11.6,ghi:[1.10,1.80,3.20,4.50,5.65,6.00,5.90,5.30,3.80,2.45,1.18,0.88],temp:[0,2,6,11,16,19,21,20,16,11,5,1]},
+  {name:'Baden-Württemberg',   lat:48.5,lon:9.0, ghi:[1.05,1.70,3.10,4.40,5.55,5.95,5.80,5.20,3.70,2.38,1.12,0.84],temp:[1,2,6,11,15,19,21,20,16,11,5,1]},
+  {name:'NRW/West',            lat:51.5,lon:7.5, ghi:[0.80,1.30,2.65,3.90,5.05,5.40,5.20,4.60,3.15,1.88,0.88,0.62],temp:[2,3,6,10,14,17,19,19,15,10,6,3]},
+  {name:'Alpenrand/Oberbayern',lat:47.5,lon:11.0,ghi:[1.20,1.95,3.40,4.70,5.80,6.20,6.10,5.50,3.95,2.60,1.30,0.95],temp:[-1,1,5,10,14,18,20,19,15,10,4,0]},
+];
+
+const MODULES={
+  'mono-400':{wp:400,label:'Mono 400 Wp',tc:0.0035},
+  'mono-500':{wp:500,label:'Mono 500 Wp',tc:0.0035},
+  'mono-600':{wp:600,label:'Mono 600 Wp Bifazial',tc:0.0032},
+  'half-420':{wp:420,label:'Half-Cell 420 Wp',tc:0.0034},
+  'hjt-430': {wp:430,label:'HJT 430 Wp',tc:0.0030},
+  'perc-380':{wp:380,label:'PERC 380 Wp',tc:0.0038},
+  'bkw-350': {wp:350,label:'Balkon 350 Wp',tc:0.0036},
+  'bkw-300': {wp:300,label:'Balkon 300 Wp',tc:0.0036},
+};
+// ca. Modulfläche m² pro Modul (für Dachflächenberechnung)
+const MOD_AREA={'mono-400':1.95,'mono-500':2.35,'mono-600':2.65,'half-420':2.00,'hjt-430':1.98,'perc-380':1.92,'bkw-350':1.75,'bkw-300':1.65};
+
+const DAYS_IN_MONTH=[31,28,31,30,31,30,31,31,30,31,30,31];
+const MONTH_NAMES=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+const COLORS=['#f59e0b','#38bdf8','#22c55e','#a78bfa','#fb923c','#f472b6','#34d399','#60a5fa'];
+
+let activeRegion=REGIONS[1], activeLat=52.13, activeLon=11.62;
+
+// ═══════════════════════════════════════════
+//  TABS
+// ═══════════════════════════════════════════
+
+function switchTab(id){
+  document.querySelectorAll('.tab').forEach((t,i)=>{
+    const ids=['karte','manuell','ergebnis'];
+    t.classList.toggle('active',ids[i]===id);
+  });
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  if(id==='ergebnis') recalc();
+  if(id==='karte'&&map) setTimeout(()=>map.invalidateSize(),100);
+}
+
+// ═══════════════════════════════════════════
+//  LEAFLET KARTE
+// ═══════════════════════════════════════════
+
+let map=null, drawingMode=false, currentPoints=[], currentMarkers=[], currentPolyline=null;
+let roofs=[], nextRoofId=1;
+const roofLayers={};
+
+function initMap(){
+  map=L.map('map',{center:[52.13,11.62],zoom:17});
+
+  // Satellitenbilder via Esri (kostenlos, kein API-Key nötig)
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
+    attribution:'Tiles © Esri, Maxar, Earthstar Geographics',maxZoom:20
+  }).addTo(map);
+
+  // OSM-Overlay (Straßennamen/Beschriftungen)
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'© OpenStreetMap',opacity:0.3,maxZoom:20
+  }).addTo(map);
+
+  map.on('click', onMapClick);
+  map.on('dblclick', e=>{ e.originalEvent.preventDefault(); finishDraw(); });
+}
+
+function onMapClick(e){
+  if(!drawingMode) return;
+  currentPoints.push(e.latlng);
+
+  // Marker setzen
+  const m=L.circleMarker(e.latlng,{radius:5,color:'#f59e0b',fillColor:'#f59e0b',fillOpacity:1,weight:2});
+  m.addTo(map);
+  currentMarkers.push(m);
+
+  // Vorschau-Linie
+  if(currentPolyline) map.removeLayer(currentPolyline);
+  if(currentPoints.length>1){
+    currentPolyline=L.polyline(currentPoints,{color:'#f59e0b',weight:2,dashArray:'5,5'}).addTo(map);
+  }
+
+  document.getElementById('draw-hint').textContent=
+    `${currentPoints.length} Punkt(e) gesetzt. Noch mind. ${Math.max(0,3-currentPoints.length)} weitere, dann „Fläche abschließen" oder Doppelklick.`;
+
+  if(currentPoints.length>=3){
+    document.getElementById('btn-finish').style.display='inline-block';
+  }
+}
+
+function startDraw(){
+  drawingMode=true;
+  currentPoints=[]; currentMarkers=[]; currentPolyline=null;
+  map.getContainer().style.cursor='crosshair';
+  document.getElementById('btn-draw').style.display='none';
+  document.getElementById('btn-finish').style.display='none';
+  document.getElementById('btn-cancel').style.display='inline-block';
+  document.getElementById('draw-hint').textContent='Auf die Karte klicken um Eckpunkte des Dachs zu setzen. Mindestens 3 Punkte. Doppelklick zum Abschließen.';
+}
+
+function cancelDraw(){
+  cleanupDraw();
+  document.getElementById('draw-hint').textContent='Abgebrochen.';
+}
+
+function cleanupDraw(){
+  drawingMode=false;
+  currentMarkers.forEach(m=>map.removeLayer(m));
+  if(currentPolyline) map.removeLayer(currentPolyline);
+  currentPoints=[]; currentMarkers=[]; currentPolyline=null;
+  map.getContainer().style.cursor='';
+  document.getElementById('btn-draw').style.display='inline-block';
+  document.getElementById('btn-finish').style.display='none';
+  document.getElementById('btn-cancel').style.display='none';
+}
+
+function finishDraw(){
+  if(currentPoints.length<3){ alert('Mindestens 3 Punkte benötigt!'); return; }
+
+  const id=nextRoofId++;
+  const color=COLORS[(roofs.length)%COLORS.length];
+  const pts=[...currentPoints];
+
+  // Fläche berechnen (m² aus GPS-Koordinaten)
+  const areaM2=calcPolygonArea(pts);
+  // Ausrichtung berechnen (Azimut der längsten Kante)
+  const azimut=calcMainAzimut(pts);
+  // Nutzbare Modulfläche (ca. 85% der Bruttofläche)
+  const usableM2=areaM2*0.85;
+
+  const roof={
+    id, color, pts, areaM2, usableM2, azimut,
+    tilt:35,          // Default Neigung, kann angepasst werden
+    modKey:'mono-400',
+    name:`Dachfläche ${id}`,
+  };
+  roof.count=Math.floor(usableM2/MOD_AREA[roof.modKey]);
+
+  roofs.push(roof);
+
+  // Polygon auf Karte zeichnen
+  const poly=L.polygon(pts,{color,fillColor:color,fillOpacity:0.35,weight:2}).addTo(map);
+  const label=L.tooltip({permanent:true,direction:'center',className:'roof-label'})
+    .setContent(`<b style="color:${color}">${roof.name}</b><br>${areaM2.toFixed(0)} m²`)
+    .setLatLng(polygonCenter(pts));
+  label.addTo(map);
+  roofLayers[id]={poly,label};
+
+  cleanupDraw();
+  renderRoofList();
+  syncRoofsToStrings();
+  document.getElementById('draw-hint').textContent=`✓ ${roof.name}: ${areaM2.toFixed(0)} m² · Azimut ${azimut}° · ~${roof.count} Module`;
+}
+
+// ═══════════════════════════════════════════
+//  GEOMETRIE-HELFER
+// ═══════════════════════════════════════════
+
+function toRad(d){return d*Math.PI/180}
+function toDeg(r){return r*180/Math.PI}
+
+// Fläche eines Polygons aus GPS-Koordinaten (Shoelace + Haversine-Skalierung)
+function calcPolygonArea(pts){
+  const n=pts.length;
+  if(n<3) return 0;
+  const cx=pts.reduce((a,p)=>a+p.lat,0)/n;
+  // m pro Grad
+  const mPerLatDeg=111320;
+  const mPerLonDeg=111320*Math.cos(toRad(cx));
+  let area=0;
+  for(let i=0;i<n;i++){
+    const j=(i+1)%n;
+    const xi=pts[i].lng*mPerLonDeg, yi=pts[i].lat*mPerLatDeg;
+    const xj=pts[j].lng*mPerLonDeg, yj=pts[j].lat*mPerLatDeg;
+    area+=xi*yj-xj*yi;
+  }
+  return Math.abs(area/2);
+}
+
+// Azimut der längsten Kante (in Grad, 0=Süd, -90=Ost, +90=West)
+function calcMainAzimut(pts){
+  let maxLen=0, bestAz=0;
+  for(let i=0;i<pts.length;i++){
+    const j=(i+1)%pts.length;
+    const dlat=pts[j].lat-pts[i].lat;
+    const dlon=pts[j].lng-pts[i].lng;
+    const len=Math.sqrt(dlat*dlat+dlon*dlon);
+    if(len>maxLen){
+      maxLen=len;
+      // Azimut relativ zu Süd: 0=Süd, +90=West, -90=Ost
+      // Geographischer Azimut: 0=Nord, 90=Ost → Süd=180
+      // Unser System: 0=Süd, +90=West, -90=Ost
+      let azGeo=toDeg(Math.atan2(dlon,dlat));
+      // Modulausrichtung senkrecht zur Dachkante
+      let azModule=azGeo+90;
+      // Konvertieren: Süd=0, West=+90, Ost=-90
+      let azSolar=azModule-180;
+      while(azSolar>180) azSolar-=360;
+      while(azSolar<-180) azSolar+=360;
+      // Wähle die Seite die mehr Richtung Süd zeigt
+      let alt=azSolar>0?azSolar-180:azSolar+180;
+      bestAz=Math.abs(azSolar)<Math.abs(alt)?azSolar:alt;
+    }
+  }
+  return Math.round(bestAz);
+}
+
+function polygonCenter(pts){
+  return L.latLng(
+    pts.reduce((a,p)=>a+p.lat,0)/pts.length,
+    pts.reduce((a,p)=>a+p.lng,0)/pts.length
+  );
+}
+
+// ═══════════════════════════════════════════
+//  DACHFLÄCHEN-LISTE RENDERN
+// ═══════════════════════════════════════════
+
+function renderRoofList(){
+  const el=document.getElementById('roof-list');
+  if(!roofs.length){el.innerHTML='<div class="info-box hint">Noch keine Flächen eingezeichnet.</div>';return;}
+  el.innerHTML='';
+  roofs.forEach(r=>{
+    const div=document.createElement('div');
+    div.className='roof-card';
+    div.innerHTML=`
+      <div class="roof-head">
+        <div class="roof-swatch" style="background:${r.color}"></div>
+        <div class="roof-title">${r.name}</div>
+        <button class="roof-del" onclick="removeRoof(${r.id})" title="Entfernen">✕</button>
+      </div>
+      <div class="roof-meta">
+        <span>Bruttofläche<b>${r.areaM2.toFixed(0)} m²</b></span>
+        <span>Nutzbar<b>${r.usableM2.toFixed(0)} m²</b></span>
+        <span>Azimut (auto)<b>${r.azimut}°</b></span>
+      </div>
+      <div class="roof-tilt-row">
+        <label>Neigung:</label>
+        <input type="number" value="${r.tilt}" min="0" max="90" style="width:70px"
+          onchange="updateRoof(${r.id},'tilt',+this.value)">
+        <span style="font-size:.7rem;color:var(--mut)">°</span>
+        <label style="margin-left:10px">Modultyp:</label>
+        <select style="flex:1" onchange="updateRoof(${r.id},'modKey',this.value)">
+          ${Object.entries(MODULES).map(([k,v])=>`<option value="${k}" ${k===r.modKey?'selected':''}>${v.label}</option>`).join('')}
+        </select>
+      </div>
+      <div style="font-size:.7rem;color:var(--mut);margin-top:5px">
+        → ~<b style="color:var(--sky)">${r.count}</b> Module · <b style="color:var(--sol)">${(r.count*MODULES[r.modKey].wp/1000).toFixed(2)} kWp</b>
+      </div>`;
+    el.appendChild(div);
+  });
+}
+
+function updateRoof(id,key,val){
+  const r=roofs.find(r=>r.id===id);
+  if(!r) return;
+  r[key]=val;
+  if(key==='modKey') r.count=Math.floor(r.usableM2/MOD_AREA[val]);
+  renderRoofList();
+  syncRoofsToStrings();
+}
+
+function removeRoof(id){
+  roofs=roofs.filter(r=>r.id!==id);
+  if(roofLayers[id]){
+    map.removeLayer(roofLayers[id].poly);
+    map.removeLayer(roofLayers[id].label);
+    delete roofLayers[id];
+  }
+  renderRoofList();
+  syncRoofsToStrings();
+}
+
+// Synchronisiert Dachflächen → Strings für Berechnung
+function syncRoofsToStrings(){
+  strings=roofs.map(r=>({
+    id:r.id, color:r.color, name:r.name,
+    modKey:r.modKey, count:r.count,
+    tilt:r.tilt, azimut:r.azimut, collapsed:true,
+  }));
+  // Sync system params from Karte-Panel
+  syncSystemParams('kp');
+  if(document.getElementById('tab-ergebnis').classList.contains('active')) recalc();
+}
+
+function syncSystemParams(prefix){
+  ['price','feed','self','loss','deg','age','capex'].forEach(k=>{
+    const src=document.getElementById(prefix+'-'+k);
+    const dst=document.getElementById('mp-'+k);
+    if(src&&dst) dst.value=src.value;
+  });
+}
+
+// ═══════════════════════════════════════════
+//  GEOCODING
+// ═══════════════════════════════════════════
+
+async function geocodeGeneric(query, infoId, callback){
+  const info=document.getElementById(infoId);
+  info.className='info-box hint'; info.textContent='Suche läuft…';
+  try{
+    const url=`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query+' Deutschland')}&format=json&limit=1&countrycodes=de`;
+    const d=await(await fetch(url,{headers:{'Accept-Language':'de'}})).json();
+    if(!d.length) throw new Error('Nicht gefunden');
+    const{lat,lon,display_name}=d[0];
+    activeLat=parseFloat(lat); activeLon=parseFloat(lon);
+    let best=REGIONS[0],bd=1e9;
+    for(const r of REGIONS){const dd=Math.hypot(r.lat-activeLat,r.lon-activeLon);if(dd<bd){bd=dd;best=r;}}
+    activeRegion=best;
+    const short=display_name.split(',').slice(0,2).join(', ');
+    info.className='info-box ok'; info.textContent=`✓ ${short} → ${best.name} (${activeLat.toFixed(3)}°N)`;
+    document.getElementById('hdr-loc').textContent=`${short} · ${activeLat.toFixed(2)}°N`;
+    if(callback) callback(activeLat,activeLon,short);
+  } catch(e){
+    info.className='info-box err'; info.textContent='⚠ '+e.message;
+  }
+}
+
+function geocode(){
+  const q=document.getElementById('inp-addr').value.trim();
+  geocodeGeneric(q,'addr-info',(lat,lon)=>{
+    if(map){ map.setView([lat,lon],18); }
+  });
+}
+function geocodeManual(){
+  const q=document.getElementById('mp-addr').value.trim();
+  geocodeGeneric(q,'mp-info',()=>{ draw3D(); });
+}
+
+// ═══════════════════════════════════════════
+//  PHYSIK
+// ═══════════════════════════════════════════
+
+function declination(n){return 23.45*Math.sin(toRad(360*(284+n)/365))*Math.PI/180;}
+function sunriseSunset(n,lat){
+  const d=declination(n),arg=-Math.tan(lat)*Math.tan(d);
+  if(arg>1)return{rise:12,set:12};if(arg<-1)return{rise:0,set:24};
+  const H=Math.acos(arg)*180/Math.PI/15;return{rise:12-H,set:12+H};
+}
+function sunPos(n,h,lat){
+  const d=declination(n),omega=toRad((h-12)*15);
+  const sinA=Math.sin(lat)*Math.sin(d)+Math.cos(lat)*Math.cos(d)*Math.cos(omega);
+  const alt=Math.asin(Math.max(sinA,0));
+  if(alt<=0)return{alt:0,az:0};
+  const cosAz=(Math.sin(d)-Math.sin(lat)*sinA)/(Math.cos(lat)*Math.cos(alt));
+  const az=(omega<0?-1:1)*Math.acos(Math.max(-1,Math.min(1,cosAz)));
+  return{alt,az};
+}
+function incAngle(alt,azSun,tilt,azSurf){
+  const c=Math.cos(alt)*Math.cos(azSun-azSurf)*Math.sin(tilt)+Math.sin(alt)*Math.cos(tilt);
+  return Math.acos(Math.max(0,Math.min(1,c)));
+}
+function transFactor(n,tilt,azSurf,lat){
+  let sG=0,sH=0;
+  for(let h=3.5;h<=21;h+=0.25){
+    const p=sunPos(n,h,lat);if(p.alt<=0)continue;
+    const ghi=Math.sin(p.alt);
+    sH+=ghi;sG+=Math.max(0,Math.cos(incAngle(p.alt,p.az,tilt,azSurf)))+0.08*(1+Math.cos(tilt))/2*ghi;
+  }
+  return sH>0?sG/sH:0;
+}
+
+function calcString(s,GHI,lat,lossP){
+  const mod=MODULES[s.modKey];
+  const tilt=toRad(s.tilt), az=toRad(s.azimut);
+  const kWp=s.count*mod.wp/1000;
+  const temp=activeRegion.temp;
+  const monthly=[],monthlyPR=[];
+  for(let m=0;m<12;m++){
+    const day=Math.round(DAYS_IN_MONTH.slice(0,m).reduce((a,b)=>a+b,0)+DAYS_IN_MONTH[m]/2);
+    const tf=transFactor(day,tilt,az,lat);
+    const tMod=temp[m]+25;
+    const tF=1-mod.tc*Math.max(0,tMod-25);
+    const eta=tf*tF*(1-lossP);
+    monthly.push(GHI[m]*eta*kWp*DAYS_IN_MONTH[m]);
+    monthlyPR.push(eta*100);
+  }
+  return{monthly,monthlyPR,kWp};
+}
+
+// ═══════════════════════════════════════════
+//  STRINGS (manuelle Eingabe)
+// ═══════════════════════════════════════════
+
+let strings=[];
+let nextStringId=1;
+
+function addString(preset){
+  const id=nextStringId++;
+  const color=COLORS[(strings.length)%COLORS.length];
+  const s=preset||{id,color,name:`Gruppe ${id}`,modKey:'mono-400',count:10,tilt:35,azimut:0,collapsed:false};
+  s.id=id;s.color=color;
+  strings.push(s);
+  renderStrings();
+}
+function removeString(id){strings=strings.filter(s=>s.id!==id);renderStrings();recalcIfActive();}
+function toggleString(id){const s=strings.find(s=>s.id===id);if(s){s.collapsed=!s.collapsed;renderStrings();}}
+function updateString(id,key,val){
+  const s=strings.find(s=>s.id===id);if(!s)return;
+  s[key]=val;renderStrings();recalcIfActive();
+}
+function updateCompass(id,az){
+  const a=document.getElementById('cma-'+id);
+  const l=document.getElementById('az-l-'+id);
+  if(a)a.style.transform=`rotate(${az}deg)`;
+  if(l)l.textContent=azLabel(az);
+}
+function azLabel(d){
+  if(d<-157)return'Nord';if(d<-112)return'Nordost';if(d<-67)return'Ost';if(d<-22)return'Südost';
+  if(d<22)return'Süd ☀️';if(d<67)return'Südwest';if(d<112)return'West';if(d<157)return'Nordwest';return'Nord';
+}
+function recalcIfActive(){
+  if(document.getElementById('tab-ergebnis').classList.contains('active')) recalc();
+}
+
+function renderStrings(){
+  const list=document.getElementById('strings-list');
+  list.innerHTML='';
+  strings.forEach(s=>{
+    const kWp=(s.count*MODULES[s.modKey].wp/1000).toFixed(2);
+    const div=document.createElement('div');
+    div.className='string-card';
+    div.innerHTML=`
+      <div class="string-head" onclick="toggleString(${s.id})">
+        <div class="string-swatch" style="background:${s.color}"></div>
+        <div>
+          <div class="string-title">${s.name}</div>
+          <div class="string-summary">${s.count}× ${MODULES[s.modKey].label} · ${kWp} kWp · ${s.tilt}° · ${azLabel(s.azimut)}</div>
+        </div>
+        <button class="string-del" onclick="event.stopPropagation();removeString(${s.id})">✕</button>
+      </div>
+      <div class="string-body ${s.collapsed?'collapsed':''}">
+        <div class="field"><label>Name</label>
+          <input type="text" value="${s.name}" onchange="updateString(${s.id},'name',this.value)">
+        </div>
+        <div class="field"><label>Modultyp</label>
+          <select onchange="updateString(${s.id},'modKey',this.value)">
+            ${Object.entries(MODULES).map(([k,v])=>`<option value="${k}" ${k===s.modKey?'selected':''}>${v.label}</option>`).join('')}
+          </select>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Anzahl</label>
+            <div class="num-row"><input type="number" value="${s.count}" min="1" max="200" step="1"
+              onchange="updateString(${s.id},'count',+this.value)"><span class="ul">Stk.</span></div>
+          </div>
+          <div class="field"><label>Neigung</label>
+            <div class="num-row"><input type="number" value="${s.tilt}" min="0" max="90" step="1"
+              onchange="updateString(${s.id},'tilt',+this.value)"><span class="ul">°</span></div>
+          </div>
+        </div>
+        <div class="field"><label>Azimut (0°=Süd, −90°=Ost, +90°=West)</label>
+          <div style="display:flex;gap:9px;align-items:center">
+            <div class="compass-mini">
+              <div class="compass-mini-ring"></div>
+              <span class="cml N">N</span><span class="cml S">S</span>
+              <span class="cml O">O</span><span class="cml W">W</span>
+              <div class="cma" id="cma-${s.id}" style="background:${s.color};transform:rotate(${s.azimut}deg)">
+                <div style="position:absolute;top:-4px;left:50%;transform:translateX(-50%);border-left:3px solid transparent;border-right:3px solid transparent;border-bottom:6px solid ${s.color}"></div>
+              </div>
+            </div>
+            <div style="flex:1">
+              <div class="num-row">
+                <input type="number" value="${s.azimut}" min="-180" max="180" step="5"
+                  onchange="updateString(${s.id},'azimut',+this.value);updateCompass(${s.id},+this.value)"
+                  oninput="updateCompass(${s.id},+this.value)">
+                <span class="ul">°</span>
+              </div>
+              <div style="font-size:.67rem;color:var(--mut);margin-top:3px" id="az-l-${s.id}">${azLabel(s.azimut)}</div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    list.appendChild(div);
+  });
+  draw3D();
+}
+
+// ═══════════════════════════════════════════
+//  CHARTS
+// ═══════════════════════════════════════════
+
+const CD={responsive:true,animation:{duration:250},
+  plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1f2e',borderColor:'#2d3452',borderWidth:1,titleColor:'#e8eaf0',bodyColor:'#8892b0'}},
+  scales:{x:{grid:{color:'#1a2040'},ticks:{color:'#8892b0',font:{size:10}}},y:{grid:{color:'#1a2040'},ticks:{color:'#8892b0',font:{size:10}}}}};
+
+let chartJahr=null,chartTag=null,chartDeg=null;
+function initCharts(){
+  chartJahr=new Chart(document.getElementById('chartJahr').getContext('2d'),{
+    type:'bar',data:{labels:MONTH_NAMES,datasets:[]},
+    options:{...CD,scales:{...CD.scales,y:{...CD.scales.y,stacked:true,title:{display:true,text:'kWh',color:'#8892b0',font:{size:10}}},x:{...CD.scales.x,stacked:true}}}
+  });
+  const HOURS=[];for(let h=3;h<=22;h+=.5)HOURS.push(h);
+  const HL=HOURS.map(h=>{const hh=Math.floor(h).toString().padStart(2,'0');const mm=(h%1===0.5)?'30':'00';return`${hh}:${mm}`;});
+  chartTag=new Chart(document.getElementById('chartTag').getContext('2d'),{
+    type:'line',data:{labels:HL,datasets:[
+      {label:'Sommer',data:[],borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,.12)',fill:true,tension:.4,pointRadius:0,borderWidth:2.5},
+      {label:'Frühling',data:[],borderColor:'#a78bfa',backgroundColor:'rgba(167,139,250,.08)',fill:true,tension:.4,pointRadius:0,borderWidth:2},
+      {label:'Winter',data:[],borderColor:'#38bdf8',backgroundColor:'rgba(56,189,248,.08)',fill:true,tension:.4,pointRadius:0,borderWidth:2.5},
+    ]},
+    options:{...CD,plugins:{...CD.plugins,legend:{display:false}},scales:{...CD.scales,y:{...CD.scales.y,min:0,title:{display:true,text:'% Nennleistung',color:'#8892b0',font:{size:10}}}}}
+  });
+  chartDeg=new Chart(document.getElementById('chartDeg').getContext('2d'),{
+    type:'line',data:{labels:Array.from({length:26},(_,i)=>`J.${i}`),datasets:[{label:'Ertrag',data:[],borderColor:'#fb923c',backgroundColor:'rgba(251,146,60,.1)',fill:true,tension:.3,pointRadius:0,borderWidth:2}]},
+    options:{...CD,scales:{...CD.scales,y:{...CD.scales.y,title:{display:true,text:'kWh/a',color:'#8892b0',font:{size:10}}}}}
+  });
+}
+
+// ═══════════════════════════════════════════
+//  3D-GEBÄUDE
+// ═══════════════════════════════════════════
+
+function draw3D(){
+  const canvas=document.getElementById('building3d');
+  if(!canvas) return;
+  const W=canvas.width||canvas.parentElement.clientWidth-30,H=260;
+  canvas.width=W;canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+
+  // Isometrische Projektion
+  function proj(x,y,z){
+    return{
+      px:W/2+(x-y)*Math.cos(toRad(30))*42,
+      py:H*0.55-z*32+(x+y)*Math.sin(toRad(30))*22
+    };
+  }
+
+  // Gebäude-Box
+  const bx=2.6,by=2.6,bz=1.8;
+  const V=[
+    proj(-bx,-by,0),proj(bx,-by,0),proj(-bx,by,0),proj(bx,by,0),
+    proj(-bx,-by,bz),proj(bx,-by,bz),proj(-bx,by,bz),proj(bx,by,bz)
+  ];
+  function face(idx,fill,stroke){
+    ctx.beginPath();ctx.moveTo(V[idx[0]].px,V[idx[0]].py);
+    idx.slice(1).forEach(i=>ctx.lineTo(V[i].px,V[i].py));ctx.closePath();
+    ctx.fillStyle=fill;ctx.fill();ctx.strokeStyle=stroke;ctx.lineWidth=1;ctx.stroke();
+  }
+  face([0,1,3,2],'#141928','#2d3452');  // Boden
+  face([0,1,5,4],'#1e2848','#2d3452');  // Vorne
+  face([1,3,7,5],'#232d56','#2d3452');  // Rechts
+  face([0,2,6,4],'#1a2240','#2d3452');  // Links
+  face([4,5,7,6],'#1c2644','#2d3452');  // Oben (flaches Dach)
+
+  // Dachmodule je String/Roof zeichnen
+  const allStr=strings.length?strings:(roofs.length?roofs.map(r=>({...r})):[]);
+
+  allStr.forEach((s,idx)=>{
+    const az=s.azimut;
+    const tiltN=s.tilt/90;
+    const color=s.color;
+    const normAz=((az%360)+360)%360;
+    const sc=0.75-tiltN*0.35;
+
+    let fp;
+    if(normAz<=45||normAz>=315){
+      fp=[proj(-bx*.88,-by*.92,bz),proj(bx*.88,-by*.92,bz),
+          proj(bx*.88*sc,-by*.92+by*(1-sc),bz+1.1*tiltN),proj(-bx*.88*sc,-by*.92+by*(1-sc),bz+1.1*tiltN)];
+    } else if(normAz<135){
+      fp=[proj(bx*.92,-by*.88,bz),proj(bx*.92,by*.88,bz),
+          proj(bx*.92-bx*(1-sc),by*.88*sc,bz+1.1*tiltN),proj(bx*.92-bx*(1-sc),-by*.88*sc,bz+1.1*tiltN)];
+    } else if(normAz<225){
+      fp=[proj(bx*.88,by*.92,bz),proj(-bx*.88,by*.92,bz),
+          proj(-bx*.88*sc,by*.92-by*(1-sc),bz+1.1*tiltN),proj(bx*.88*sc,by*.92-by*(1-sc),bz+1.1*tiltN)];
+    } else {
+      fp=[proj(-bx*.92,by*.88,bz),proj(-bx*.92,-by*.88,bz),
+          proj(-bx*.92+bx*(1-sc),-by*.88*sc,bz+1.1*tiltN),proj(-bx*.92+bx*(1-sc),by*.88*sc,bz+1.1*tiltN)];
+    }
+
+    ctx.beginPath();ctx.moveTo(fp[0].px,fp[0].py);fp.slice(1).forEach(p=>ctx.lineTo(p.px,p.py));ctx.closePath();
+    ctx.globalAlpha=.68;ctx.fillStyle=color;ctx.fill();
+    ctx.globalAlpha=1;ctx.strokeStyle=color;ctx.lineWidth=1.5;ctx.stroke();
+
+    // Modulraster
+    const rows=Math.max(2,Math.ceil(Math.sqrt(Math.min(s.count||10,40))));
+    ctx.globalAlpha=.22;ctx.strokeStyle='#fff';ctx.lineWidth=.5;
+    for(let r=1;r<rows;r++){
+      const t=r/rows;
+      const p1={px:fp[0].px+(fp[1].px-fp[0].px)*t,py:fp[0].py+(fp[1].py-fp[0].py)*t};
+      const p2={px:fp[3].px+(fp[2].px-fp[3].px)*t,py:fp[3].py+(fp[2].py-fp[3].py)*t};
+      ctx.beginPath();ctx.moveTo(p1.px,p1.py);ctx.lineTo(p2.px,p2.py);ctx.stroke();
+    }
+    for(let c=1;c<rows;c++){
+      const t=c/rows;
+      const p1={px:fp[0].px+(fp[3].px-fp[0].px)*t,py:fp[0].py+(fp[3].py-fp[0].py)*t};
+      const p2={px:fp[1].px+(fp[2].px-fp[1].px)*t,py:fp[1].py+(fp[2].py-fp[1].py)*t};
+      ctx.beginPath();ctx.moveTo(p1.px,p1.py);ctx.lineTo(p2.px,p2.py);ctx.stroke();
+    }
+    ctx.globalAlpha=1;
+
+    // Label
+    const cx=fp.reduce((a,p)=>a+p.px,0)/4;
+    const cy=fp.reduce((a,p)=>a+p.py,0)/4;
+    ctx.font='bold 10px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillText(s.name,cx+1,cy+1);
+    ctx.fillStyle='#fff';ctx.fillText(s.name,cx,cy);
+    const kWpStr=(((s.count||0)*MODULES[s.modKey].wp/1000)).toFixed(1);
+    ctx.font='8.5px system-ui';
+    ctx.fillStyle='rgba(0,0,0,.4)';ctx.fillText(kWpStr+' kWp',cx+1,cy+11);
+    ctx.fillStyle='rgba(255,255,255,.85)';ctx.fillText(kWpStr+' kWp',cx,cy+11);
+  });
+
+  // Kompass
+  const cx2=W-44,cy2=H-44,cr=24;
+  ctx.globalAlpha=.75;
+  ctx.beginPath();ctx.arc(cx2,cy2,cr,0,2*Math.PI);ctx.fillStyle='#1a1f2e';ctx.fill();ctx.strokeStyle='#2d3452';ctx.lineWidth=1;ctx.stroke();
+  ctx.globalAlpha=1;
+  [['N',0,'#f87171'],['S',180,'#8892b0'],['O',90,'#8892b0'],['W',270,'#8892b0']].forEach(([l,a,col])=>{
+    const r2=toRad(a-90);
+    ctx.font='bold 8px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillStyle=col;ctx.fillText(l,cx2+Math.cos(r2)*(cr-8),cy2+Math.sin(r2)*(cr-8));
+  });
+  ctx.font='9px system-ui';ctx.fillStyle='rgba(245,158,11,.6)';ctx.textAlign='center';ctx.fillText('☀',cx2,cy2-3);
+}
+
+// ═══════════════════════════════════════════
+//  TAGESVERLAUF
+// ═══════════════════════════════════════════
+
+function calcDayProfile(dayN,monthIdx){
+  if(!strings.length)return[];
+  const lat=toRad(activeLat);
+  const lossP=+getSysParam('loss')/100;
+  const{rise,set}=sunriseSunset(dayN,lat);
+  const HOURS=[];for(let h=3;h<=22;h+=.5)HOURS.push(h);
+  return HOURS.map(h=>{
+    if(h<rise||h>set)return 0;
+    const p=sunPos(dayN,h,lat);if(p.alt<=0)return 0;
+    let tot=0,totKwp=0;
+    strings.forEach(s=>{
+      const mod=MODULES[s.modKey];
+      const tilt=toRad(s.tilt),az=toRad(s.azimut);
+      const kWp=s.count*mod.wp/1000;
+      const theta=incAngle(p.alt,p.az,tilt,az);
+      const raw=Math.max(0,Math.cos(theta))*Math.sin(p.alt);
+      const tMod=activeRegion.temp[monthIdx]+25+raw*10;
+      const tF=1-mod.tc*Math.max(0,tMod-25);
+      tot+=raw*tF*(1-lossP)*100*kWp;totKwp+=kWp;
+    });
+    return totKwp>0?+(tot/totKwp).toFixed(1):0;
+  });
+}
+
+// ═══════════════════════════════════════════
+//  SYSTEM-PARAMETER HELPER
+// ═══════════════════════════════════════════
+
+function getSysParam(key){
+  // Aktiver Tab bestimmt welches Panel
+  const isKarte=document.getElementById('tab-karte').classList.contains('active');
+  const prefix=isKarte?'kp':'mp';
+  const el=document.getElementById(prefix+'-'+key)||document.getElementById('mp-'+key)||document.getElementById('kp-'+key);
+  return el?el.value:0;
+}
+
+// ═══════════════════════════════════════════
+//  HAUPTBERECHNUNG
+// ═══════════════════════════════════════════
+
+function recalc(){
+  if(!strings.length){
+    ['v-kwp','v-yield','v-spec','v-pr','v-self','v-feede','v-total','v-amort','v-co2','v-flh','v-aged']
+      .forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='–';});
+    return;
+  }
+  const lat=toRad(activeLat);
+  const GHI=activeRegion.ghi;
+  const lossP=+getSysParam('loss')/100;
+  const price=+getSysParam('price')||0.30;
+  const feedT=+getSysParam('feed')||0.082;
+  const selfQ=+getSysParam('self')/100||0.30;
+  const degP =+getSysParam('deg')/100||0.005;
+  const age  =+getSysParam('age')||0;
+
+  const strR=strings.map(s=>({...s,...calcString(s,GHI,lat,lossP)}));
+  const totalKwp=strR.reduce((a,s)=>a+s.kWp,0);
+  const monthly=MONTH_NAMES.map((_,m)=>strR.reduce((a,s)=>a+s.monthly[m],0));
+  const monthlyPR=MONTH_NAMES.map((_,m)=>{
+    const w=strR.reduce((a,s)=>a+s.monthlyPR[m]*s.kWp,0);
+    return totalKwp>0?w/totalKwp:0;
+  });
+  const totalYield=monthly.reduce((a,b)=>a+b,0);
+  const specYield=totalKwp>0?totalYield/totalKwp:0;
+  const avgPR=monthlyPR.reduce((a,b)=>a+b,0)/12;
+  const co2=totalYield*0.366;
+  const ageFact=Math.pow(1-degP,age);
+  const agedYield=totalYield*ageFact;
+  const selfKwh=totalYield*selfQ,feedKwh=totalYield*(1-selfQ);
+  const selfEur=selfKwh*price,feedEur=feedKwh*feedT,totalEur=selfEur+feedEur;
+  const capexInp=+getSysParam('capex')||0;
+  const capex=capexInp||totalKwp*1400;
+  const amort=totalEur>0?capex/totalEur:null;
+
+  const fmt=(n,d=0)=>n.toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d});
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  set('v-kwp',fmt(totalKwp,2));set('v-yield',fmt(totalYield));set('v-spec',fmt(specYield));
+  set('v-pr',fmt(avgPR,1)+'%');set('v-self',fmt(selfEur));set('v-feede',fmt(feedEur));
+  set('v-total',fmt(totalEur));set('v-amort',amort?fmt(amort,1):'–');
+  set('v-co2',fmt(co2));set('v-flh',fmt(specYield));set('v-aged',fmt(agedYield));
+  const ageLbl=document.getElementById('v-age-l');if(ageLbl)ageLbl.textContent=age;
+
+  // String-Einzelergebnisse
+  const strDiv=document.getElementById('str-results');
+  if(strDiv){
+    strDiv.innerHTML='';
+    strR.forEach(s=>{
+      const y=s.monthly.reduce((a,b)=>a+b,0);
+      const sp=s.kWp>0?y/s.kWp:0;
+      const pr=s.monthlyPR.reduce((a,b)=>a+b,0)/12;
+      const row=document.createElement('div');row.className='str-res';
+      row.innerHTML=`<div class="str-res-sw" style="background:${s.color}"></div>
+        <div class="str-res-name">${s.name}</div>
+        <div class="str-res-nums">
+          <div class="sri"><div class="v" style="color:${s.color}">${fmt(s.kWp,2)}</div><div class="u">kWp</div></div>
+          <div class="sri"><div class="v" style="color:${s.color}">${fmt(y)}</div><div class="u">kWh/a</div></div>
+          <div class="sri"><div class="v">${fmt(sp)}</div><div class="u">kWh/kWp</div></div>
+          <div class="sri"><div class="v">${fmt(pr,1)}%</div><div class="u">PR</div></div>
+          <div class="sri"><div class="v">${s.tilt}°</div><div class="u">Neig.</div></div>
+          <div class="sri"><div class="v">${azLabel(s.azimut)}</div><div class="u">Azimut</div></div>
+        </div>`;
+      strDiv.appendChild(row);
+    });
+  }
+
+  // Charts
+  if(chartJahr){
+    chartJahr.data.datasets=strR.map(s=>({
+      label:s.name,data:s.monthly.map(v=>+v.toFixed(0)),
+      backgroundColor:s.color+'cc',borderColor:s.color,borderWidth:1,borderRadius:3
+    }));
+    chartJahr.update();
+    const lj=document.getElementById('legend-jahr');
+    if(lj)lj.innerHTML=strR.map(s=>`<div class="li"><div class="ld" style="background:${s.color}"></div><span>${s.name}</span></div>`).join('');
+  }
+  if(chartTag){
+    chartTag.data.datasets[0].data=calcDayProfile(172,5);
+    chartTag.data.datasets[1].data=calcDayProfile(80,2);
+    chartTag.data.datasets[2].data=calcDayProfile(355,11);
+    chartTag.update();
+  }
+  if(chartDeg){
+    chartDeg.data.datasets[0].data=Array.from({length:26},(_,i)=>+(totalYield*Math.pow(1-degP,i)).toFixed(0));
+    chartDeg.update();
+  }
+
+  // Tabelle
+  const tbody=document.getElementById('tbl-body');
+  if(tbody){
+    tbody.innerHTML='';
+    let tY=0,tS=0,tF2=0,tC=0,tE=0;
+    monthly.forEach((y,i)=>{
+      const sK=y*selfQ,fK=y*(1-selfQ),co2m=y*0.366,eur=sK*price+fK*feedT;
+      tY+=y;tS+=sK;tF2+=fK;tC+=co2m;tE+=eur;
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td>${MONTH_NAMES[i]}</td><td>${fmt(y)}</td><td>${fmt(totalKwp>0?y/totalKwp:0,1)}</td>
+        <td>${fmt(monthlyPR[i],1)}</td><td>${fmt(sK)}</td><td>${fmt(fK)}</td><td>${fmt(co2m)}</td><td>${fmt(eur,2)} €</td>`;
+      tbody.appendChild(tr);
+    });
+    const s=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+    s('tf-yield',fmt(tY)+' kWh');s('tf-spec',fmt(totalKwp>0?tY/totalKwp:0,1));s('tf-pr',fmt(avgPR,1)+'%');
+    s('tf-self',fmt(tS)+' kWh');s('tf-feed',fmt(tF2)+' kWh');s('tf-co2',fmt(tC)+' kg');s('tf-eur',fmt(tE,2)+' €');
+  }
+  draw3D();
+}
+
+// ═══════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════
+
+initCharts();
+
+// Karte initialisieren
+setTimeout(()=>{
+  initMap();
+  // Anfangs-Geocode
+  geocode();
+},100);
+
+// Canvas resize
+function resizeCanvas(){
+  const c=document.getElementById('building3d');
+  if(!c)return;
+  c.width=c.parentElement.clientWidth-30||400;
+  draw3D();
+}
+window.addEventListener('resize',resizeCanvas);
+setTimeout(resizeCanvas,200);
+
+// System-Input Events
+['kp-price','kp-feed','kp-self','kp-loss','kp-deg','kp-age','kp-capex',
+ 'mp-price','mp-feed','mp-self','mp-loss','mp-deg','mp-age','mp-capex'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(el)el.addEventListener('input',()=>{recalcIfActive();});
+});
+
+document.getElementById('inp-addr').addEventListener('keydown',e=>{if(e.key==='Enter')geocode();});
+document.getElementById('mp-addr').addEventListener('keydown',e=>{if(e.key==='Enter')geocodeManual();});
+
+// Start-Strings für manuelle Eingabe
+document.getElementById('hdr-loc').textContent='Magdeburg · 52.13°N';
+addString({name:'Südseite',  modKey:'mono-400',count:12,tilt:35,azimut:0,   collapsed:false});
+addString({name:'Ostseite',  modKey:'mono-400',count:6, tilt:30,azimut:-90, collapsed:true});
+</script>
+</body>
+</html>
