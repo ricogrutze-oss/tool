@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Aufmaß · Glaser</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f3f5f7;
+  --panel:#ffffff;
+  --ink:#1a2430;
+  --ink-soft:#5c6b7a;
+  --line:#dde3e8;
+  --blue:#1d4e6b;
+  --blue-deep:#12374d;
+  --blue-tint:#e8f0f4;
+  --amber:#d98a2b;
+  --amber-tint:#fbf1e2;
+  --glass:#bcd8e6;
+  --glass-edge:#5c93ab;
+  --danger:#b3492f;
+  --danger-tint:#fbebe6;
+  --radius:10px;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --sans:'Inter',system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:var(--sans);}
+body{padding-bottom:40px;}
+h1,h2,h3{margin:0;font-family:var(--sans);}
+button{font-family:var(--sans);cursor:pointer;}
+input,select{font-family:var(--sans);}
+.mono{font-family:var(--mono);}
+
+/* ---- header ---- */
+header.app{
+  position:sticky;top:0;z-index:20;
+  background:var(--blue-deep);
+  color:#fff;
+  padding:12px 14px;
+}
+.header-row{display:flex;align-items:center;gap:10px;}
+.back-btn{
+  background:rgba(255,255,255,.12);border:none;color:#fff;
+  width:36px;height:36px;border-radius:8px;font-size:18px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.back-btn:active{background:rgba(255,255,255,.25);}
+.header-title{flex:1;min-width:0;}
+.header-title .eyebrow{
+  font-family:var(--mono);font-size:11px;letter-spacing:.08em;
+  text-transform:uppercase;color:#9fc2d4;margin-bottom:1px;
+}
+.header-title h1{font-size:17px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.header-actions{display:flex;gap:6px;flex-shrink:0;}
+.icon-btn{
+  background:rgba(255,255,255,.12);border:none;color:#fff;
+  width:36px;height:36px;border-radius:8px;font-size:15px;
+  display:flex;align-items:center;justify-content:center;
+}
+.icon-btn:active{background:rgba(255,255,255,.25);}
+
+main{max-width:640px;margin:0 auto;padding:14px;}
+
+/* ---- cards / lists ---- */
+.card{
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:14px 16px;margin-bottom:10px;
+}
+.card-btn{width:100%;text-align:left;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;display:flex;
+  align-items:center;gap:12px;}
+.card-btn:active{background:#f7f9fa;}
+.card-btn .chev{color:#a9b6c1;font-size:18px;flex-shrink:0;}
+.item-title{font-weight:600;font-size:15px;color:var(--ink);}
+.item-sub{font-size:12.5px;color:var(--ink-soft);margin-top:2px;}
+.item-meta{font-family:var(--mono);font-size:12px;color:var(--blue);margin-top:4px;}
+.card-icon{
+  width:38px;height:38px;border-radius:8px;background:var(--blue-tint);color:var(--blue);
+  display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;
+}
+
+.empty{
+  text-align:center;padding:40px 20px;color:var(--ink-soft);
+}
+.empty .glyph{font-size:32px;margin-bottom:10px;}
+.empty p{margin:4px 0;font-size:13.5px;}
+
+.fab{
+  display:block;width:100%;background:var(--blue);color:#fff;border:none;
+  border-radius:var(--radius);padding:14px;font-size:15px;font-weight:600;
+  margin-top:6px;
+}
+.fab:active{background:var(--blue-deep);}
+.fab.secondary{background:var(--panel);color:var(--blue);border:1.5px solid var(--blue);}
+.fab.secondary:active{background:var(--blue-tint);}
+
+/* ---- forms ---- */
+.field{margin-bottom:12px;}
+.field label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:5px;text-transform:uppercase;letter-spacing:.03em;}
+.field input[type=text],.field input[type=number],.field select,.field textarea{
+  width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:8px;
+  font-size:15px;background:#fff;color:var(--ink);
+}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--blue);}
+.field-row{display:flex;gap:10px;}
+.field-row .field{flex:1;}
+.hint{font-size:12px;color:var(--ink-soft);margin-top:4px;}
+
+.section-title{
+  font-size:12.5px;font-weight:700;color:var(--blue);text-transform:uppercase;
+  letter-spacing:.05em;margin:22px 0 10px;display:flex;align-items:center;gap:8px;
+}
+.section-title:first-child{margin-top:0;}
+.section-title .n{background:var(--blue-tint);color:var(--blue);width:20px;height:20px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;}
+
+/* ---- glass build (Scheibenaufbau) ---- */
+.aufbau-panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;}
+.aufbau-layers{display:flex;align-items:stretch;gap:0;margin-bottom:14px;overflow-x:auto;padding-bottom:4px;}
+.layer-pane{
+  min-width:74px;flex-shrink:0;
+  background:linear-gradient(180deg,var(--glass) 0%,#a9cbdc 100%);
+  border-left:2px solid var(--glass-edge);border-right:2px solid var(--glass-edge);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:8px 4px;position:relative;
+}
+.layer-gap{
+  min-width:54px;flex-shrink:0;background:repeating-linear-gradient(45deg,#eef1f3,#eef1f3 4px,#e3e7eb 4px,#e3e7eb 8px);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 4px;
+}
+.layer-label{font-size:10px;color:var(--blue-deep);font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px;opacity:.75;}
+.layer-gap .layer-label{color:var(--ink-soft);}
+.layer-input{
+  width:56px;text-align:center;border:1.5px solid var(--glass-edge);border-radius:6px;
+  padding:5px 2px;font-family:var(--mono);font-size:13px;font-weight:600;background:rgba(255,255,255,.7);
+}
+.layer-gap .layer-input{border-color:var(--line);background:#fff;}
+.aufbau-formula{
+  font-family:var(--mono);font-size:13px;color:var(--blue-deep);background:var(--blue-tint);
+  border-radius:6px;padding:8px 10px;text-align:center;letter-spacing:.02em;margin-bottom:12px;
+}
+.aufbau-controls{display:flex;gap:8px;}
+.chip-btn{
+  flex:1;background:var(--bg);border:1.5px solid var(--line);border-radius:8px;
+  padding:9px;font-size:13px;font-weight:600;color:var(--ink);
+}
+.chip-btn:active{background:var(--blue-tint);border-color:var(--blue);}
+.chip-btn.danger{color:var(--danger);}
+.chip-btn:disabled{opacity:.35;}
+
+/* ---- sprossen ---- */
+.sprossen-block{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:12px;}
+.sprossen-head{display:flex;align-items:center;justify-content:between;gap:10px;}
+.sprossen-head .item-title{flex:1;}
+.switch{
+  position:relative;width:44px;height:26px;flex-shrink:0;background:var(--line);border-radius:20px;border:none;
+}
+.switch.on{background:var(--blue);}
+.switch::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;background:#fff;border-radius:50%;
+  transition:transform .15s;}
+.switch.on::after{transform:translateX(18px);}
+.sprossen-body{margin-top:12px;}
+.mode-toggle{display:flex;gap:8px;margin-bottom:12px;}
+.mode-opt{flex:1;text-align:center;padding:9px;border:1.5px solid var(--line);border-radius:8px;font-size:12.5px;font-weight:600;background:var(--bg);}
+.mode-opt.active{background:var(--blue);color:#fff;border-color:var(--blue);}
+.sprossen-preview{
+  font-family:var(--mono);font-size:12px;color:var(--blue-deep);background:var(--blue-tint);
+  border-radius:6px;padding:7px 10px;margin-top:8px;
+}
+
+/* window schematic preview */
+.win-schema{background:#eef2f4;border:1px solid var(--line);border-radius:var(--radius);padding:16px;display:flex;justify-content:center;}
+
+/* ---- window list summary card ---- */
+.fenster-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:13px 14px;margin-bottom:9px;display:flex;gap:12px;align-items:center;}
+.fenster-swatch{
+  width:44px;height:38px;border-radius:6px;flex-shrink:0;
+  background:linear-gradient(180deg,var(--glass) 0%,#a9cbdc 100%);border:2px solid var(--glass-edge);
+}
+.fenster-info{flex:1;min-width:0;}
+.fenster-actions{display:flex;gap:4px;flex-shrink:0;}
+.mini-btn{width:32px;height:32px;border-radius:7px;border:1px solid var(--line);background:var(--bg);
+  display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--ink-soft);}
+.mini-btn:active{background:var(--blue-tint);}
+
+/* ---- modal ---- */
+.modal-backdrop{position:fixed;inset:0;background:rgba(18,24,32,.5);z-index:50;display:flex;align-items:flex-end;justify-content:center;}
+.modal{background:#fff;border-radius:16px 16px 0 0;padding:20px 18px 24px;width:100%;max-width:640px;max-height:88vh;overflow-y:auto;}
+.modal h2{font-size:17px;margin-bottom:16px;}
+.modal-actions{display:flex;gap:10px;margin-top:18px;}
+.modal-actions .fab{margin-top:0;}
+
+/* misc */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--blue-deep);
+  color:#fff;padding:10px 18px;border-radius:20px;font-size:13.5px;z-index:100;box-shadow:0 4px 16px rgba(0,0,0,.2);}
+
+/* print report */
+#printArea{display:none;}
+@media print{
+  header.app,main,.modal-backdrop{display:none !important;}
+  #printArea{display:block !important;}
+}
+#printArea{font-family:var(--sans);color:#111;padding:20px;}
+#printArea h1{font-size:20px;border-bottom:2px solid #111;padding-bottom:8px;margin-bottom:4px;}
+#printArea .obj-meta{font-size:13px;color:#444;margin-bottom:18px;}
+#printArea h2{font-size:15px;background:#eee;padding:6px 10px;margin:18px 0 8px;}
+#printArea table{width:100%;border-collapse:collapse;margin-bottom:6px;font-size:12.5px;}
+#printArea td,#printArea th{border:1px solid #ccc;padding:5px 7px;text-align:left;}
+#printArea th{background:#f4f4f4;}
+
+.footer-note{text-align:center;font-size:11px;color:#9aa7b2;margin-top:24px;padding:0 20px;}
+</style>
+</head>
+<body>
+
+<header class="app">
+  <div class="header-row" id="headerRow"></div>
+</header>
+<main id="main"></main>
+<div id="modalRoot"></div>
+<div id="printArea"></div>
+
+<script>
+/* ============== DATA LAYER ============== */
+const STORAGE_KEY = 'glaser-aufmass-db-v1';
+function loadDB(){
+  try{ const raw = localStorage.getItem(STORAGE_KEY); if(raw) return JSON.parse(raw); }catch(e){}
+  return { objekte: [] };
+}
+function saveDB(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); }
+let db = loadDB();
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+/* ============== APP STATE ============== */
+let state = { view:'objekte', objektId:null, etageId:null, fensterId:null, editFensterId:null };
+
+function findObjekt(id){ return db.objekte.find(o=>o.id===id); }
+function findEtage(obj,id){ return obj.etagen.find(e=>e.id===id); }
+function findFenster(et,id){ return et.fenster.find(f=>f.id===id); }
+
+/* ============== NAV ============== */
+function goto(view, params={}){
+  state = Object.assign(state, {view}, params);
+  render();
+}
+function goBack(){
+  if(state.view==='fenster-edit'){ goto('etage', {editFensterId:null}); }
+  else if(state.view==='etage'){ goto('objekt', {etageId:null}); }
+  else if(state.view==='objekt'){ goto('objekte', {objektId:null}); }
+}
+
+/* ============== TOAST ============== */
+function toast(msg){
+  const t = document.createElement('div');
+  t.className='toast'; t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 2200);
+}
+
+/* ============== RENDER ROOT ============== */
+function render(){
+  renderHeader();
+  const main = document.getElementById('main');
+  main.innerHTML = '';
+  if(state.view==='objekte') renderObjekteList(main);
+  else if(state.view==='objekt') renderObjektDetail(main);
+  else if(state.view==='etage') renderEtageDetail(main);
+  else if(state.view==='fenster-edit') renderFensterEdit(main);
+}
+
+function renderHeader(){
+  const row = document.getElementById('headerRow');
+  let backBtn = '', title='', eyebrow='', actions='';
+  if(state.view==='objekte'){
+    eyebrow='AUFMASS'; title='Objekte';
+    actions = `<button class="icon-btn" onclick="exportJSON()" title="Sicherung exportieren">&#8681;</button>
+               <button class="icon-btn" onclick="triggerImport()" title="Sicherung importieren">&#8679;</button>`;
+  } else if(state.view==='objekt'){
+    const o = findObjekt(state.objektId);
+    backBtn = `<button class="back-btn" onclick="goBack()">&#8592;</button>`;
+    eyebrow='OBJEKT'; title = o ? o.name : '';
+    actions = `<button class="icon-btn" onclick="printObjekt('${state.objektId}')" title="Aufmaß drucken / PDF">&#128438;</button>
+               <button class="icon-btn" onclick="emailObjekt('${state.objektId}')" title="Per E-Mail versenden">&#9993;</button>`;
+  } else if(state.view==='etage'){
+    const o = findObjekt(state.objektId); const e = findEtage(o, state.etageId);
+    backBtn = `<button class="back-btn" onclick="goBack()">&#8592;</button>`;
+    eyebrow = o.name; title = e ? e.name : '';
+    actions = `<button class="icon-btn" onclick="printEtage('${state.objektId}','${state.etageId}')" title="Etage drucken / PDF">&#128438;</button>
+               <button class="icon-btn" onclick="emailEtage('${state.objektId}','${state.etageId}')" title="Per E-Mail versenden">&#9993;</button>`;
+  } else if(state.view==='fenster-edit'){
+    const o = findObjekt(state.objektId); const e = findEtage(o, state.etageId);
+    backBtn = `<button class="back-btn" onclick="goBack()">&#8592;</button>`;
+    eyebrow = e.name; title='Fenster-Aufmaß';
+  }
+  row.innerHTML = `${backBtn}<div class="header-title"><div class="eyebrow">${eyebrow}</div><h1>${title}</h1></div><div class="header-actions">${actions}</div>`;
+}
+
+/* ============== VIEW: OBJEKTE LIST ============== */
+function renderObjekteList(main){
+  if(db.objekte.length===0){
+    main.innerHTML = `<div class="empty"><div class="glyph">&#127970;</div>
+      <p><strong>Noch keine Objekte</strong></p>
+      <p>Leg ein Objekt an (Baustelle / Kunde), um mit dem Aufmaß zu starten.</p></div>`;
+  } else {
+    main.innerHTML = db.objekte.map(o=>{
+      const fensterCount = o.etagen.reduce((s,e)=>s+e.fenster.length,0);
+      const adresse = [o.strasse, o.hausnummer].filter(Boolean).join(' ') + (o.ort?(', '+o.plz+' '+o.ort):'');
+      return `<button class="card-btn" onclick="goto('objekt',{objektId:'${o.id}',etageId:null})">
+        <div class="card-icon">&#127970;</div>
+        <div class="fenster-info">
+          <div class="item-title">${esc(o.name)}</div>
+          <div class="item-sub">${esc(adresse) || 'Keine Adresse hinterlegt'}${o.kunde?(' · '+esc(o.kunde)):''}</div>
+          <div class="item-meta">${o.etagen.length} Etage${o.etagen.length!==1?'n':''} · ${fensterCount} Fenster</div>
+        </div>
+        <div class="chev">&#8250;</div>
+      </button>`;
+    }).join('');
+  }
+  main.innerHTML += `<button class="fab" onclick="showObjektForm()">+ Neues Objekt</button>`;
+}
+
+function showObjektForm(existing){
+  const isEdit = !!existing;
+  openModal(`
+    <h2>${isEdit?'Objekt bearbeiten':'Neues Objekt'}</h2>
+    <div class="field"><label>Objektbezeichnung</label>
+      <input type="text" id="f-name" placeholder="z. B. Wohnhaus Familie Meyer" value="${isEdit?esc(existing.name):''}"></div>
+    <div class="field-row">
+      <div class="field"><label>Straße</label><input type="text" id="f-strasse" value="${isEdit?esc(existing.strasse||''):''}"></div>
+      <div class="field" style="max-width:90px;"><label>Nr.</label><input type="text" id="f-hnr" value="${isEdit?esc(existing.hausnummer||''):''}"></div>
+    </div>
+    <div class="field-row">
+      <div class="field" style="max-width:110px;"><label>PLZ</label><input type="text" id="f-plz" value="${isEdit?esc(existing.plz||''):''}"></div>
+      <div class="field"><label>Ort</label><input type="text" id="f-ort" value="${isEdit?esc(existing.ort||''):''}"></div>
+    </div>
+    <div class="field"><label>Kundenname</label><input type="text" id="f-kunde" value="${isEdit?esc(existing.kunde||''):''}"></div>
+    <div class="field"><label>Notizen</label><textarea id="f-notizen" rows="2">${isEdit?esc(existing.notizen||''):''}</textarea></div>
+    <div class="modal-actions">
+      <button class="fab secondary" onclick="closeModal()">Abbrechen</button>
+      <button class="fab" onclick="saveObjektForm(${isEdit?`'${existing.id}'`:'null'})">Speichern</button>
+    </div>
+  `);
+}
+function saveObjektForm(id){
+  const name = document.getElementById('f-name').value.trim();
+  if(!name){ toast('Bitte eine Bezeichnung eingeben'); return; }
+  const data = {
+    name,
+    strasse: document.getElementById('f-strasse').value.trim(),
+    hausnummer: document.getElementById('f-hnr').value.trim(),
+    plz: document.getElementById('f-plz').value.trim(),
+    ort: document.getElementById('f-ort').value.trim(),
+    kunde: document.getElementById('f-kunde').value.trim(),
+    notizen: document.getElementById('f-notizen').value.trim(),
+  };
+  if(id){
+    Object.assign(findObjekt(id), data);
+  } else {
+    db.objekte.push(Object.assign({id:uid(), etagen:[]}, data));
+  }
+  saveDB(); closeModal(); render();
+}
+function deleteObjekt(id){
+  if(!confirm('Objekt inkl. aller Etagen und Fenster wirklich löschen?')) return;
+  db.objekte = db.objekte.filter(o=>o.id!==id);
+  saveDB(); goto('objekte');
+}
+
+/* ============== VIEW: OBJEKT DETAIL (Etagen) ============== */
+function renderObjektDetail(main){
+  const o = findObjekt(state.objektId);
+  if(!o){ goto('objekte'); return; }
+  const adresse = [o.strasse, o.hausnummer].filter(Boolean).join(' ') + (o.ort?(', '+o.plz+' '+o.ort):'');
+  main.innerHTML = `
+    <div class="card">
+      <div class="item-title">${esc(o.name)}</div>
+      ${adresse?`<div class="item-sub">${esc(adresse)}</div>`:''}
+      ${o.kunde?`<div class="item-sub">Kunde: ${esc(o.kunde)}</div>`:''}
+      ${o.notizen?`<div class="item-sub" style="margin-top:6px;">${esc(o.notizen)}</div>`:''}
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button class="chip-btn" onclick='showObjektForm(${JSON.stringify(o).replace(/'/g,"&#39;")})'>Bearbeiten</button>
+        <button class="chip-btn danger" onclick="deleteObjekt('${o.id}')">Löschen</button>
+      </div>
+    </div>
+    <div class="section-title">Etagen</div>
+    <div id="etagenList"></div>
+    <button class="fab" onclick="showEtageForm()">+ Etage hinzufügen</button>
+  `;
+  const list = document.getElementById('etagenList');
+  if(o.etagen.length===0){
+    list.innerHTML = `<div class="empty" style="padding:24px 10px;"><p>Noch keine Etage angelegt.</p></div>`;
+  } else {
+    list.innerHTML = o.etagen.map(e=>`
+      <button class="card-btn" onclick="goto('etage',{etageId:'${e.id}'})">
+        <div class="card-icon">&#128199;</div>
+        <div class="fenster-info">
+          <div class="item-title">${esc(e.name)}</div>
+          <div class="item-meta">${e.fenster.length} Fenster</div>
+        </div>
+        <div class="chev">&#8250;</div>
+      </button>`).join('');
+  }
+}
+function showEtageForm(){
+  openModal(`
+    <h2>Neue Etage</h2>
+    <div class="field"><label>Bezeichnung</label>
+      <input type="text" id="f-etage-name" placeholder="z. B. EG, 1. OG, Dachgeschoss" autofocus></div>
+    <div class="modal-actions">
+      <button class="fab secondary" onclick="closeModal()">Abbrechen</button>
+      <button class="fab" onclick="saveEtageForm()">Anlegen</button>
+    </div>
+  `);
+}
+function saveEtageForm(){
+  const name = document.getElementById('f-etage-name').value.trim();
+  if(!name){ toast('Bitte eine Bezeichnung eingeben'); return; }
+  const o = findObjekt(state.objektId);
+  const e = {id:uid(), name, fenster:[]};
+  o.etagen.push(e);
+  saveDB(); closeModal();
+  goto('etage', {etageId:e.id});
+}
+function deleteEtage(id){
+  if(!confirm('Etage inkl. aller Fenster wirklich löschen?')) return;
+  const o = findObjekt(state.objektId);
+  o.etagen = o.etagen.filter(e=>e.id!==id);
+  saveDB(); goto('objekt');
+}
+
+/* ============== VIEW: ETAGE DETAIL (Fenster-Liste) ============== */
+function renderEtageDetail(main){
+  const o = findObjekt(state.objektId); const e = findEtage(o, state.etageId);
+  if(!e){ goto('objekt'); return; }
+  main.innerHTML = `
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <button class="chip-btn" onclick="renameEtage('${e.id}')">Etage umbenennen</button>
+      <button class="chip-btn danger" onclick="deleteEtage('${e.id}')">Etage löschen</button>
+    </div>
+    <div class="section-title">Fenster / Aufmaß</div>
+    <div id="fensterList"></div>
+    <button class="fab" onclick="addFenster()">+ Fenster hinzufügen</button>
+  `;
+  const list = document.getElementById('fensterList');
+  if(e.fenster.length===0){
+    list.innerHTML = `<div class="empty" style="padding:24px 10px;"><p>Noch kein Fenster aufgenommen.</p></div>`;
+  } else {
+    list.innerHTML = e.fenster.map(f=>{
+      const istFenster = f.aufmassTyp==='fenster';
+      const massText = formMassText(f);
+      const formName = (FENSTERFORMEN.find(x=>x.id===f.form)||{}).name || 'Rechteckig';
+      const subline = istFenster
+        ? [f.rahmen&&f.rahmen.material, (TEILUNGEN.find(t=>t.id===(f.rahmen&&f.rahmen.teilung))||{}).name].filter(Boolean).join(' · ')
+        : aufbauFormula(f);
+      const spr = sprossenSummary(f);
+      return `<div class="fenster-card">
+        <div class="fenster-swatch" onclick="goto('fenster-edit',{editFensterId:'${f.id}'})">${istFenster?'<span style="font-size:16px;">&#128736;</span>':''}</div>
+        <div class="fenster-info" onclick="goto('fenster-edit',{editFensterId:'${f.id}'})">
+          <div class="item-title">${esc(f.name)} ${istFenster?'<span style="font-size:11px;color:var(--amber);font-weight:700;">· KOMPLETTFENSTER</span>':''}</div>
+          <div class="item-sub mono">${massText}${f.form!=='rechteck'?(' · '+esc(formName)):''}</div>
+          <div class="item-sub">${esc(subline)}</div>
+          ${spr?`<div class="item-sub">${spr}</div>`:''}
+        </div>
+        <div class="fenster-actions">
+          <button class="mini-btn" onclick="duplicateFenster('${f.id}')" title="Als Vorlage für neues Fenster">&#10697;</button>
+          <button class="mini-btn" onclick="deleteFenster('${f.id}')" title="Löschen">&#10005;</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+}
+function renameEtage(id){
+  const o = findObjekt(state.objektId); const e = findEtage(o,id);
+  const name = prompt('Etage umbenennen:', e.name);
+  if(name && name.trim()){ e.name = name.trim(); saveDB(); render(); }
+}
+function deleteFenster(id){
+  if(!confirm('Fenster wirklich löschen?')) return;
+  const o = findObjekt(state.objektId); const e = findEtage(o, state.etageId);
+  e.fenster = e.fenster.filter(f=>f.id!==id);
+  saveDB(); render();
+}
+
+const DEFAULT_TOLERANZ = 5; // mm je Seite, ringsum abgezogen für Bestellmaß
+const DEFAULT_SPROSSENBREITE = 18; // mm, Breite/Stärke der Sprosse selbst
+
+const STANDARD_AUFBAUTEN = [
+  { id:'einfach',        name:'Einfachverglasung',                    desc:'4 mm',                   glasdicken:[4],       spaltbreiten:[],       fuellung:'Luft' },
+  { id:'iso2-4-12-4',    name:'2-fach Isolierglas (schmaler SZR)',    desc:'4/12/4 mm',              glasdicken:[4,4],     spaltbreiten:[12],      fuellung:'Argon' },
+  { id:'iso2-4-16-4',    name:'2-fach Wärmeschutzverglasung Standard',desc:'4/16/4 mm, Ug ≈ 1,1',    glasdicken:[4,4],     spaltbreiten:[16],      fuellung:'Argon' },
+  { id:'iso3-4-12-4-12-4', name:'3-fach Wärmeschutzverglasung (kompakt)', desc:'4/12/4/12/4 mm',    glasdicken:[4,4,4],   spaltbreiten:[12,12],   fuellung:'Argon' },
+  { id:'iso3-4-16-4-16-4', name:'3-fach Wärmeschutzverglasung',       desc:'4/16/4/16/4 mm, Ug ≈ 0,6',glasdicken:[4,4,4], spaltbreiten:[16,16],   fuellung:'Argon' },
+  { id:'schall-6-16-4',  name:'Schallschutzglas (asymmetrisch)',      desc:'6/16/4 mm',               glasdicken:[6,4],     spaltbreiten:[16],      fuellung:'Argon' },
+  { id:'schall-8-16-4',  name:'Schallschutzglas verstärkt',           desc:'8/16/4 mm',                glasdicken:[8,4],     spaltbreiten:[16],      fuellung:'Argon' },
+];
+
+const FENSTERFORMEN = [
+  { id:'rechteck',  name:'Rechteckig' },
+  { id:'rundbogen', name:'Rundbogen / oben abgerundet' },
+  { id:'halbkreis', name:'Halbkreis (Sonnenfenster)' },
+  { id:'kreis',     name:'Kreisrund (Ochsenauge)' },
+  { id:'dreieck',   name:'Dreieckig' },
+  { id:'trapez',    name:'Trapez / schräg (z. B. Giebel, Dachschräge)' },
+];
+const FORM_LABELS = {
+  rechteck:  { b:'Breite (mm)', h:'Höhe (mm)' },
+  rundbogen: { b:'Breite (mm)', h:'Gesamthöhe inkl. Bogen (mm)' },
+  halbkreis: { b:'Breite / Durchmesser unten (mm)', h:'Höhe des Bogens (mm)' },
+  dreieck:   { b:'Breite / Basis (mm)', h:'Höhe (mm)' },
+  trapez:    { b:'Breite unten (mm)', h:'Höhe (mm)' },
+};
+
+const MATERIALIEN = ['Kunststoff','Holz','Aluminium','Holz-Aluminium','Kunststoff-Aluminium'];
+const PROFIL_VORSCHLAEGE = [
+  'Kunststoff 70 mm, 5-Kammer','Kunststoff 76 mm, 6-Kammer','Kunststoff 82 mm, 6-Kammer',
+  'Holz 68 mm','Holz 78 mm','Holz-Alu 78 mm','Aluminium thermisch getrennt'
+];
+const TEILUNGEN = [
+  { id:'einteilig',        name:'Einteilig / Festverglasung' },
+  { id:'einfluegelig-dk',  name:'Einflügelig, Dreh-Kipp' },
+  { id:'einfluegelig-d',   name:'Einflügelig, Dreh' },
+  { id:'zweifluegelig-k',  name:'Zweiflügelig mit Kämpfer' },
+  { id:'zweifluegelig-s',  name:'Zweiflügelig mit Stulp' },
+  { id:'dreifluegelig',    name:'Dreiflügelig' },
+  { id:'hebeschiebe',      name:'Hebe-Schiebe-Tür' },
+  { id:'sonder',           name:'Sonderteilung / individuell' },
+];
+
+
+function blankFensterTemplate(){
+  return {
+    aufmassTyp:'scheibe', // 'scheibe' = Glasscheibe, 'fenster' = komplettes Fenster
+    form:'rechteck',
+    stichhoehe:'', breiteOben:'', // je nach Form ergänzende Maße
+    glasdicken:[4,4], spaltbreiten:[16],
+    fuellung:'Argon',
+    toleranz: DEFAULT_TOLERANZ,
+    rahmen:{ material:'Kunststoff', profil:'', teilung:'einfluegelig-dk' },
+    sprossen:{
+      horizontal:{aktiv:false, anzahl:1, modus:'gleichmaessig', sprossenbreite:DEFAULT_SPROSSENBREITE, abstaende:[]},
+      vertikal:{aktiv:false, anzahl:1, modus:'gleichmaessig', sprossenbreite:DEFAULT_SPROSSENBREITE, abstaende:[]}
+    },
+    notizen:''
+  };
+}
+function nextName(name){
+  const m = name.match(/^(.*?)(\d+)(\s*)$/);
+  if(m){ return m[1] + (parseInt(m[2],10)+1) + m[3]; }
+  return name.trim() + ' 2';
+}
+// Neues Fenster: übernimmt Scheibenaufbau + Sprossen des letzten Fensters dieser Etage, NICHT die Maße.
+function addFenster(){
+  const o = findObjekt(state.objektId); const e = findEtage(o, state.etageId);
+  const last = e.fenster[e.fenster.length-1];
+  let f;
+  if(last){
+    f = {
+      id:uid(),
+      name: nextName(last.name),
+      aufmassTyp: last.aufmassTyp || 'scheibe',
+      form: last.form || 'rechteck',
+      breite:'', hoehe:'', stichhoehe:'', breiteOben:'',
+      glasdicken: JSON.parse(JSON.stringify(last.glasdicken)),
+      spaltbreiten: JSON.parse(JSON.stringify(last.spaltbreiten)),
+      toleranz: last.toleranz!=null ? last.toleranz : DEFAULT_TOLERANZ,
+      fuellung: last.fuellung || 'Argon',
+      rahmen: JSON.parse(JSON.stringify(last.rahmen || blankFensterTemplate().rahmen)),
+      sprossen: JSON.parse(JSON.stringify(last.sprossen)),
+      notizen:''
+    };
+  } else {
+    f = Object.assign({id:uid(), name:'Fenster 1', breite:'', hoehe:''}, blankFensterTemplate());
+  }
+  e.fenster.push(f);
+  saveDB();
+  goto('fenster-edit', {editFensterId:f.id});
+}
+// Vorlage: wie addFenster, aber explizit über Button an einzelnem Fenster ausgelöst
+function duplicateFenster(id){
+  const o = findObjekt(state.objektId); const e = findEtage(o, state.etageId);
+  const src = findFenster(e, id);
+  const f = {
+    id:uid(), name: nextName(src.name),
+    aufmassTyp: src.aufmassTyp || 'scheibe',
+    form: src.form || 'rechteck',
+    breite:'', hoehe:'', stichhoehe:'', breiteOben:'',
+    glasdicken: JSON.parse(JSON.stringify(src.glasdicken)),
+    spaltbreiten: JSON.parse(JSON.stringify(src.spaltbreiten)),
+    toleranz: src.toleranz!=null ? src.toleranz : DEFAULT_TOLERANZ,
+    fuellung: src.fuellung || 'Argon',
+    rahmen: JSON.parse(JSON.stringify(src.rahmen || blankFensterTemplate().rahmen)),
+    sprossen: JSON.parse(JSON.stringify(src.sprossen)),
+    notizen:''
+  };
+  e.fenster.push(f);
+  saveDB();
+  toast('Aufbau übernommen — Maße eintragen');
+  goto('fenster-edit', {editFensterId:f.id});
+}
+
+/* helpers for summary */
+function formMassText(f){
+  const form = f.form || 'rechteck';
+  if(form==='kreis') return 'Ø '+(f.breite||'?')+' mm';
+  if(form==='rundbogen') return (f.breite||'?')+' × '+(f.hoehe||'?')+' mm'+(f.stichhoehe?(', Stich '+f.stichhoehe+' mm'):'');
+  if(form==='trapez') return 'oben '+(f.breiteOben||'?')+' / unten '+(f.breite||'?')+' × '+(f.hoehe||'?')+' mm';
+  return (f.breite||'?')+' × '+(f.hoehe||'?')+' mm';
+}
+function aufbauFormula(f){
+  const parts=[];
+  f.glasdicken.forEach((g,i)=>{
+    parts.push(g+'');
+    if(i<f.spaltbreiten.length) parts.push('/'+f.spaltbreiten[i]+'/');
+  });
+  let txt = parts.join('')+' mm';
+  if(f.spaltbreiten.length>0 && f.fuellung && f.fuellung!=='Luft') txt += ' ('+f.fuellung+')';
+  return txt;
+}
+function bestellmass(f){
+  const b = parseFloat(f.breite), h = parseFloat(f.hoehe), t = parseFloat(f.toleranz);
+  if(isNaN(b)||isNaN(h)) return null;
+  const tol = isNaN(t) ? DEFAULT_TOLERANZ : t;
+  return { b: Math.round((b - 2*tol)*10)/10, h: Math.round((h - 2*tol)*10)/10, tol };
+}
+function bestellmassText(f){
+  const bm = bestellmass(f);
+  if(!bm) return 'Breite/Höhe eintragen';
+  return bm.b + ' × ' + bm.h + ' mm  (−' + bm.tol + ' mm je Seite)';
+}
+function refreshBestellmass(f){
+  const el = document.getElementById('bestellmassPreview');
+  if(el) el.textContent = bestellmassText(f);
+}
+
+/* ============== VIEW: FENSTER EDIT ============== */
+function measurementFieldsHTML(f){
+  const form = f.form || 'rechteck';
+  if(form==='kreis'){
+    return `<div class="field"><label>Durchmesser (mm)</label>
+      <input type="number" inputmode="decimal" id="fe-durchmesser" value="${f.breite}" placeholder="0"></div>`;
+  }
+  const lbl = FORM_LABELS[form] || FORM_LABELS.rechteck;
+  let html = `<div class="field-row">
+      <div class="field"><label>${lbl.b}</label><input type="number" inputmode="decimal" id="fe-breite" value="${f.breite}" placeholder="0"></div>
+      <div class="field"><label>${lbl.h}</label><input type="number" inputmode="decimal" id="fe-hoehe" value="${f.hoehe}" placeholder="0"></div>
+    </div>`;
+  if(form==='rundbogen'){
+    html += `<div class="field" style="max-width:220px;"><label>Stichhöhe (Bogenhöhe, mm)</label>
+      <input type="number" inputmode="decimal" id="fe-stichhoehe" value="${f.stichhoehe||''}" placeholder="z. B. 250"></div>
+      <div class="hint" style="margin-top:-6px;">Höhe des Bogens ab der Kämpferlinie (Übergang gerade → rund).</div>`;
+  }
+  if(form==='trapez'){
+    html += `<div class="field" style="max-width:220px;"><label>Breite oben (mm)</label>
+      <input type="number" inputmode="decimal" id="fe-breiteOben" value="${f.breiteOben||''}" placeholder="z. B. 600"></div>
+      <div class="hint" style="margin-top:-6px;">Für Giebel-/Dachschrägenfenster: Breite oben weicht von Breite unten ab.</div>`;
+  }
+  return html;
+}
+function renderFensterEdit(main){
+  const o = findObjekt(state.objektId); const e = findEtage(o, state.etageId);
+  const f = findFenster(e, state.editFensterId);
+  if(!f){ goto('etage'); return; }
+  if(!f.rahmen) f.rahmen = { material:'Kunststoff', profil:'', teilung:'einfluegelig-dk' };
+  const istFenster = f.aufmassTyp==='fenster';
+  let n = 1;
+
+  main.innerHTML = `
+    <div class="section-title"><span class="n">${n++}</span>Bezeichnung &amp; Aufmaß-Typ</div>
+    <div class="field"><label>Bezeichnung</label>
+      <input type="text" id="fe-name" value="${esc(f.name)}" placeholder="z. B. Schlafzimmerfenster 1"></div>
+    <div class="mode-toggle">
+      <div class="mode-opt ${!istFenster?'active':''}" onclick="setAufmassTyp('scheibe')">Glasscheibe</div>
+      <div class="mode-opt ${istFenster?'active':''}" onclick="setAufmassTyp('fenster')">Komplettes Fenster</div>
+    </div>
+    <div class="hint" style="margin-bottom:14px;">${istFenster?'Gesamtes Fenster/Flügel mit Rahmen — kein Scheibenaufbau nötig.':'Nur die Glasscheibe — mit Scheibenaufbau für die Glaserei.'}</div>
+
+    <div class="section-title"><span class="n">${n++}</span>Form &amp; Maße</div>
+    <div class="field"><label>Fensterform</label>
+      <select id="fe-form" onchange="setForm(this.value)">
+        ${FENSTERFORMEN.map(ff=>`<option value="${ff.id}" ${f.form===ff.id?'selected':''}>${esc(ff.name)}</option>`).join('')}
+      </select>
+    </div>
+    <div id="massFields">${measurementFieldsHTML(f)}</div>
+    <div class="field-row">
+      <div class="field" style="max-width:150px;"><label>Toleranz (mm, je Seite)</label>
+        <input type="number" inputmode="decimal" id="fe-toleranz" value="${f.toleranz!=null?f.toleranz:DEFAULT_TOLERANZ}"></div>
+      <div class="field">
+        <label>Bestellmaß (für PDF)</label>
+        <div class="aufbau-formula" id="bestellmassPreview" style="margin:0;">${bestellmassText(f)}</div>
+      </div>
+    </div>
+    <div class="hint" style="margin-top:-6px;margin-bottom:14px;">Aufmaß minus Toleranz ringsum, z. B. 5 mm je Seite = 10 mm weniger pro Richtung. Wird auf dem PDF als Bestellmaß ausgewiesen, damit nichts klemmt. Bei runden/schrägen Formen bezieht sich das auf das umschließende Maß.</div>
+
+    ${istFenster ? `
+    <div class="section-title"><span class="n">${n++}</span>Rahmen &amp; Material</div>
+    <div class="field-row">
+      <div class="field"><label>Material</label>
+        <select id="fe-material" onchange="updateRahmen('material',this.value)">
+          ${MATERIALIEN.map(m=>`<option value="${m}" ${f.rahmen.material===m?'selected':''}>${m}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field"><label>Flügelteilung</label>
+        <select id="fe-teilung" onchange="updateRahmen('teilung',this.value)">
+          ${TEILUNGEN.map(t=>`<option value="${t.id}" ${f.rahmen.teilung===t.id?'selected':''}>${esc(t.name)}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="field"><label>Profil</label>
+      <input type="text" id="fe-profil" list="profil-liste" value="${esc(f.rahmen.profil||'')}" placeholder="auswählen oder frei eintragen">
+      <datalist id="profil-liste">${PROFIL_VORSCHLAEGE.map(p=>`<option value="${esc(p)}">`).join('')}</datalist>
+    </div>
+    ` : `
+    <div class="section-title"><span class="n">${n++}</span>Scheibenaufbau</div>
+    <div class="aufbau-panel">
+      <div class="field"><label>Standardaufbau wählen</label>
+        <select id="fe-standard" onchange="applyAufbauPreset(this.value)">
+          <option value="">— manuell / eigener Aufbau —</option>
+          ${STANDARD_AUFBAUTEN.map(p=>`<option value="${p.id}">${esc(p.name)} (${esc(p.desc)})</option>`).join('')}
+        </select>
+        <div class="hint">Füllt Scheibendicken, SZR und Gasfüllung vor — danach unten wie gewohnt anpassbar.</div>
+      </div>
+      <div class="aufbau-formula" id="aufbauFormula"></div>
+      <div class="aufbau-layers" id="aufbauLayers"></div>
+      <div class="aufbau-controls">
+        <button class="chip-btn" id="btnAddPane" onclick="addPane()">+ Scheibe</button>
+        <button class="chip-btn danger" id="btnRemovePane" onclick="removePane()">− Scheibe</button>
+      </div>
+      <div class="field" style="margin-top:12px;"><label>Gasfüllung SZR</label>
+        <select id="fe-fuellung" onchange="updateFuellung(this.value)">
+          <option value="Luft" ${((f.fuellung||'Luft')==='Luft')?'selected':''}>Luft</option>
+          <option value="Argon" ${(f.fuellung==='Argon')?'selected':''}>Argon</option>
+          <option value="Krypton" ${(f.fuellung==='Krypton')?'selected':''}>Krypton</option>
+        </select>
+      </div>
+      <div class="hint">Aufbau von außen nach innen: Scheibendicke – Scheibenzwischenraum (SZR) – Scheibendicke ... Für Zweifach- oder Dreifachverglasung einfach Scheiben hinzufügen.</div>
+    </div>
+    `}
+
+    <div class="section-title"><span class="n">${n++}</span>Sprossen</div>
+    ${renderSprossenBlock('vertikal', f, 'Sprossen längs', 'senkrechte Sprossen, teilen die Breite')}
+    ${renderSprossenBlock('horizontal', f, 'Sprossen quer', 'waagerechte Sprossen, teilen die Höhe')}
+
+    <div class="section-title"><span class="n">${n++}</span>Vorschau</div>
+    <div class="win-schema" id="winSchema"></div>
+
+    <div class="field" style="margin-top:20px;"><label>Notizen</label>
+      <textarea id="fe-notizen" rows="2" placeholder="Besonderheiten, z. B. Beschlag, Farbe...">${esc(f.notizen||'')}</textarea></div>
+
+    <div style="display:flex;gap:10px;margin-top:18px;">
+      <button class="fab secondary" onclick="goto('etage',{editFensterId:null})">Fertig</button>
+      <button class="fab" style="background:var(--danger);" onclick="deleteFenster('${f.id}');goto('etage')">Fenster löschen</button>
+    </div>
+  `;
+
+  // wire up live fields
+  document.getElementById('fe-name').oninput = ev=>{ f.name=ev.target.value; saveDB(); };
+  wireMeasurementFields(f);
+  document.getElementById('fe-toleranz').oninput = ev=>{ f.toleranz=ev.target.value===''?DEFAULT_TOLERANZ:parseFloat(ev.target.value); saveDB(); refreshBestellmass(f); };
+  document.getElementById('fe-notizen').oninput = ev=>{ f.notizen=ev.target.value; saveDB(); };
+  if(istFenster){
+    document.getElementById('fe-profil').oninput = ev=>{ f.rahmen.profil=ev.target.value; saveDB(); };
+  } else {
+    renderAufbau(f);
+  }
+
+  renderSchema(f);
+}
+function wireMeasurementFields(f){
+  const form = f.form || 'rechteck';
+  if(form==='kreis'){
+    document.getElementById('fe-durchmesser').oninput = ev=>{
+      f.breite = ev.target.value; f.hoehe = ev.target.value;
+      saveDB(); renderSchema(f); refreshSprossenPreviews(f); refreshBestellmass(f);
+    };
+    return;
+  }
+  document.getElementById('fe-breite').oninput = ev=>{ f.breite=ev.target.value; saveDB(); renderSchema(f); refreshSprossenPreviews(f); refreshBestellmass(f); };
+  document.getElementById('fe-hoehe').oninput = ev=>{ f.hoehe=ev.target.value; saveDB(); renderSchema(f); refreshSprossenPreviews(f); refreshBestellmass(f); };
+  if(form==='rundbogen'){
+    const el = document.getElementById('fe-stichhoehe');
+    if(el) el.oninput = ev=>{ f.stichhoehe=ev.target.value; saveDB(); renderSchema(f); };
+  }
+  if(form==='trapez'){
+    const el = document.getElementById('fe-breiteOben');
+    if(el) el.oninput = ev=>{ f.breiteOben=ev.target.value; saveDB(); renderSchema(f); };
+  }
+}
+function setAufmassTyp(typ){
+  const f = currentFenster(); f.aufmassTyp = typ; saveDB();
+  renderFensterEdit(document.getElementById('main'));
+}
+function setForm(val){
+  const f = currentFenster(); f.form = val; saveDB();
+  document.getElementById('massFields').innerHTML = measurementFieldsHTML(f);
+  wireMeasurementFields(f);
+  renderSchema(f);
+  refreshSprossenPreviews(f);
+  refreshBestellmass(f);
+}
+function updateRahmen(field,val){
+  const f = currentFenster(); if(!f.rahmen) f.rahmen={material:'Kunststoff',profil:'',teilung:'einfluegelig-dk'};
+  f.rahmen[field] = val; saveDB();
+}
+
+/* ---- Scheibenaufbau rendering ---- */
+function renderAufbau(f){
+  const layersEl = document.getElementById('aufbauLayers');
+  let html='';
+  f.glasdicken.forEach((g,i)=>{
+    html += `<div class="layer-pane">
+      <div class="layer-label">Glas ${i+1}</div>
+      <input class="layer-input" type="number" inputmode="decimal" value="${g}" onchange="updatePane(${i},this.value)">
+    </div>`;
+    if(i<f.spaltbreiten.length){
+      html += `<div class="layer-gap">
+        <div class="layer-label">SZR ${i+1}</div>
+        <input class="layer-input" type="number" inputmode="decimal" value="${f.spaltbreiten[i]}" onchange="updateGap(${i},this.value)">
+      </div>`;
+    }
+  });
+  layersEl.innerHTML = html;
+  document.getElementById('aufbauFormula').textContent = aufbauFormula(f);
+  document.getElementById('btnRemovePane').disabled = f.glasdicken.length<=1;
+  document.getElementById('btnAddPane').disabled = f.glasdicken.length>=4;
+}
+function currentFenster(){
+  const o = findObjekt(state.objektId); const e = findEtage(o, state.etageId);
+  return findFenster(e, state.editFensterId);
+}
+function applyAufbauPreset(id){
+  if(!id) return; // "manuell / eigener Aufbau" gewählt -> nichts ändern
+  const preset = STANDARD_AUFBAUTEN.find(p=>p.id===id);
+  if(!preset) return;
+  const f = currentFenster();
+  f.glasdicken = JSON.parse(JSON.stringify(preset.glasdicken));
+  f.spaltbreiten = JSON.parse(JSON.stringify(preset.spaltbreiten));
+  f.fuellung = preset.fuellung || 'Luft';
+  saveDB();
+  renderAufbau(f);
+  const sel = document.getElementById('fe-fuellung');
+  if(sel) sel.value = f.fuellung;
+  toast('Standardaufbau übernommen — bei Bedarf oben anpassen');
+}
+function updateFuellung(val){
+  const f = currentFenster(); f.fuellung = val; saveDB();
+  document.getElementById('aufbauFormula').textContent = aufbauFormula(f);
+}
+function updatePane(i,val){ const f=currentFenster(); f.glasdicken[i]=parseFloat(val)||0; saveDB(); renderAufbau(f); }
+function updateGap(i,val){ const f=currentFenster(); f.spaltbreiten[i]=parseFloat(val)||0; saveDB(); renderAufbau(f); }
+function addPane(){
+  const f=currentFenster();
+  if(f.glasdicken.length>=4) return;
+  f.spaltbreiten.push(16);
+  f.glasdicken.push(4);
+  saveDB(); renderAufbau(f);
+}
+function removePane(){
+  const f=currentFenster();
+  if(f.glasdicken.length<=1) return;
+  f.glasdicken.pop();
+  f.spaltbreiten.pop();
+  saveDB(); renderAufbau(f);
+}
+
+/* ---- Sprossen rendering ---- */
+// Liefert die Abstände zwischen Rand/Sprossen als Array der Länge (anzahl+1).
+// Im Modus 'individuell' die manuell eingetragenen Werte, sonst automatisch gleichmäßig berechnet.
+function computeAbstaende(dir, f){
+  const s = f.sprossen[dir];
+  const n = Math.max(1, s.anzahl||1);
+  if(s.modus==='individuell'){
+    const arr = (s.abstaende||[]).slice(0, n+1);
+    while(arr.length < n+1) arr.push(0);
+    return arr.map(v=>parseFloat(v)||0);
+  }
+  const dim = dir==='vertikal' ? parseFloat(f.breite) : parseFloat(f.hoehe);
+  const breite = parseFloat(s.sprossenbreite)||0;
+  if(!dim || dim<=0) return new Array(n+1).fill(0);
+  const usable = Math.max(dim - breite*n, 0);
+  const seg = Math.round((usable/(n+1))*10)/10;
+  return new Array(n+1).fill(seg);
+}
+function renderSprossenBlock(dir, f, label, desc){
+  const s = f.sprossen[dir];
+  let abstandFields = '';
+  if(s.aktiv && s.modus==='individuell'){
+    const arr = computeAbstaende(dir,f);
+    abstandFields = `<div id="abstandFields-${dir}">` + arr.map((v,i)=>{
+      let capt;
+      if(i===0) capt = 'Abstand 1 (Rand → Sprosse 1)';
+      else if(i===arr.length-1) capt = 'Abstand '+(i+1)+' (Sprosse '+i+' → Rand)';
+      else capt = 'Abstand '+(i+1)+' (Sprosse '+i+' → Sprosse '+(i+1)+')';
+      return `<div class="field"><label>${capt}</label>
+        <input type="number" inputmode="decimal" value="${v}" onchange="updateAbstandEinzeln('${dir}',${i},this.value)"></div>`;
+    }).join('') + `</div>`;
+  }
+  return `<div class="sprossen-block">
+    <div class="sprossen-head">
+      <div class="fenster-info">
+        <div class="item-title">${label}</div>
+        <div class="item-sub">${desc}</div>
+      </div>
+      <button class="switch ${s.aktiv?'on':''}" onclick="toggleSprossen('${dir}')"></button>
+    </div>
+    <div class="sprossen-body" id="sprossenBody-${dir}" style="${s.aktiv?'':'display:none;'}">
+      <div class="field-row">
+        <div class="field"><label>Anzahl Sprossen</label>
+          <input type="number" inputmode="numeric" min="1" value="${s.anzahl}" onchange="updateSprossenAnzahl('${dir}',this.value)"></div>
+        <div class="field"><label>Sprossenbreite (mm)</label>
+          <input type="number" inputmode="decimal" value="${s.sprossenbreite!=null?s.sprossenbreite:DEFAULT_SPROSSENBREITE}" onchange="updateSprossenBreite('${dir}',this.value)"></div>
+      </div>
+      <div class="mode-toggle">
+        <div class="mode-opt ${s.modus!=='individuell'?'active':''}" onclick="setSprossenModus('${dir}','gleichmaessig')">Gleichmäßig verteilt</div>
+        <div class="mode-opt ${s.modus==='individuell'?'active':''}" onclick="setSprossenModus('${dir}','individuell')">Maße einzeln eintragen</div>
+      </div>
+      ${abstandFields}
+      <div class="sprossen-preview" id="sprossenPreview-${dir}">${sprossenPreviewText(dir,f)}</div>
+    </div>
+  </div>`;
+}
+function toggleSprossen(dir){
+  const f=currentFenster(); f.sprossen[dir].aktiv = !f.sprossen[dir].aktiv;
+  saveDB(); renderFensterEdit(document.getElementById('main'));
+}
+function setSprossenModus(dir,modus){
+  const f=currentFenster(); const s=f.sprossen[dir];
+  if(modus==='individuell' && (!s.abstaende || s.abstaende.length!==(s.anzahl||1)+1)){
+    s.abstaende = computeAbstaende(dir,f);
+  }
+  s.modus = modus;
+  saveDB(); renderFensterEdit(document.getElementById('main'));
+}
+function updateSprossenAnzahl(dir,val){
+  const f=currentFenster(); const s=f.sprossen[dir];
+  s.anzahl = Math.max(1, parseInt(val,10)||1);
+  if(s.modus==='individuell'){
+    const needed = s.anzahl+1;
+    const old = s.abstaende||[];
+    const arr=[];
+    for(let i=0;i<needed;i++) arr.push(old[i]!=null?old[i]:0);
+    s.abstaende = arr;
+  }
+  saveDB(); renderFensterEdit(document.getElementById('main'));
+}
+function updateSprossenBreite(dir,val){
+  const f=currentFenster(); f.sprossen[dir].sprossenbreite = parseFloat(val)||0;
+  saveDB();
+  const el=document.getElementById('sprossenPreview-'+dir); if(el) el.textContent=sprossenPreviewText(dir,f);
+  renderSchema(f);
+}
+function updateAbstandEinzeln(dir,idx,val){
+  const f=currentFenster(); const s=f.sprossen[dir];
+  if(!s.abstaende) s.abstaende=[];
+  s.abstaende[idx] = parseFloat(val)||0;
+  saveDB();
+  const el=document.getElementById('sprossenPreview-'+dir); if(el) el.textContent=sprossenPreviewText(dir,f);
+  renderSchema(f);
+}
+function sprossenPreviewText(dir,f){
+  const s = f.sprossen[dir];
+  if(!s.aktiv) return '';
+  const dim = dir==='vertikal' ? parseFloat(f.breite) : parseFloat(f.hoehe);
+  const abst = computeAbstaende(dir,f);
+  const breite = parseFloat(s.sprossenbreite)||0;
+  const sum = abst.reduce((a,b)=>a+b,0) + breite*s.anzahl;
+  let txt = s.anzahl+' Sprosse(n) à '+breite+' mm — Abstände: '+abst.map(v=>Math.round(v*10)/10).join(' / ')+' mm';
+  if(dim && dim>0){
+    const diff = Math.round((dim-sum)*10)/10;
+    txt += Math.abs(diff)<0.5 ? ' · Summe stimmt mit Fenstermaß überein' : ' · Summe '+Math.round(sum)+' mm (Fenstermaß '+dim+' mm, Diff. '+(diff>0?'+':'')+diff+' mm)';
+  }
+  return txt;
+}
+function refreshSprossenPreviews(f){
+  ['horizontal','vertikal'].forEach(dir=>{
+    const el = document.getElementById('sprossenPreview-'+dir);
+    if(el) el.textContent = sprossenPreviewText(dir,f);
+  });
+}
+function sprossenSummary(f){
+  const parts=[];
+  if(f.sprossen.horizontal.aktiv) parts.push('Quer: '+f.sprossen.horizontal.anzahl+' · '+(f.sprossen.horizontal.sprossenbreite||0)+'mm');
+  if(f.sprossen.vertikal.aktiv) parts.push('Längs: '+f.sprossen.vertikal.anzahl+' · '+(f.sprossen.vertikal.sprossenbreite||0)+'mm');
+  return parts.join(' · ');
+}
+function sprossenDetailLines(f){
+  const lines=[];
+  [['vertikal','Sprossen längs (senkrecht)'],['horizontal','Sprossen quer (waagerecht)']].forEach(([dir,label])=>{
+    const s = f.sprossen[dir];
+    if(!s.aktiv) return;
+    const abst = computeAbstaende(dir,f);
+    const abstTxt = abst.map((v,i)=>'Abstand '+(i+1)+': '+(Math.round(v*10)/10)+' mm').join(', ');
+    lines.push(label+' — '+s.anzahl+' Stk., Sprossenbreite '+(s.sprossenbreite||0)+' mm, '+abstTxt);
+  });
+  return lines;
+}
+
+/* ---- window schematic (visual preview) ---- */
+function shapeMarkup(f, dw, dh){
+  const form = f.form || 'rechteck';
+  if(form==='kreis'){
+    return `<ellipse cx="${dw/2}" cy="${dh/2}" rx="${dw/2}" ry="${dh/2}" />`;
+  }
+  if(form==='halbkreis'){
+    const r = dw/2;
+    const archH = Math.min(dh, r);
+    return `<path d="M0,${dh} L0,${dh-archH} A ${r},${archH} 0 0 1 ${dw},${dh-archH} L${dw},${dh} Z" />`;
+  }
+  if(form==='rundbogen'){
+    const stichMM = parseFloat(f.stichhoehe)||0, hoeheMM = parseFloat(f.hoehe)||0;
+    let ratio = 0.25;
+    if(hoeheMM>0 && stichMM>0) ratio = Math.min(stichMM/hoeheMM, 0.9);
+    const archH = dh*ratio, r = dw/2;
+    return `<path d="M0,${dh} L0,${archH} A ${r},${archH} 0 0 1 ${dw},${archH} L${dw},${dh} Z" />`;
+  }
+  if(form==='dreieck'){
+    return `<polygon points="${dw/2},0 0,${dh} ${dw},${dh}" />`;
+  }
+  if(form==='trapez'){
+    const bUmm = parseFloat(f.breiteOben)||0, bLmm = parseFloat(f.breite)||dw;
+    const wOben = bLmm>0 ? dw*(bUmm/bLmm) : dw*0.6;
+    const offOben = Math.max((dw-wOben)/2, 0);
+    return `<polygon points="${offOben},0 ${offOben+wOben},0 ${dw},${dh} 0,${dh}" />`;
+  }
+  return `<rect x="0" y="0" width="${dw}" height="${dh}" rx="2" />`;
+}
+function renderSchema(f){
+  const el = document.getElementById('winSchema');
+  if(!el) return;
+  const w = parseFloat(f.breite)||1000, h = parseFloat(f.hoehe)||1200;
+  const maxW = 220, maxH = 200;
+  const scale = Math.min(maxW/w, maxH/h);
+  const dw = Math.max(40, w*scale), dh = Math.max(40, h*scale);
+  const shape = shapeMarkup(f, dw, dh);
+
+  let bars = '';
+  const v = f.sprossen.vertikal, hz = f.sprossen.horizontal;
+  if(v.aktiv && v.anzahl>0){
+    const abst = computeAbstaende('vertikal', f);
+    const bw = Math.max((parseFloat(v.sprossenbreite)||0)*scale, 2);
+    let x = 0;
+    for(let i=0;i<v.anzahl;i++){
+      x += abst[i]*scale;
+      bars += `<rect x="${x}" y="0" width="${bw}" height="${dh}" fill="#5c93ab" />`;
+      x += bw;
+    }
+  }
+  if(hz.aktiv && hz.anzahl>0){
+    const abst = computeAbstaende('horizontal', f);
+    const bh = Math.max((parseFloat(hz.sprossenbreite)||0)*scale, 2);
+    let y = 0;
+    for(let i=0;i<hz.anzahl;i++){
+      y += abst[i]*scale;
+      bars += `<rect x="0" y="${y}" width="${dw}" height="${bh}" fill="#5c93ab" />`;
+      y += bh;
+    }
+  }
+
+  el.innerHTML = `<svg width="${dw+6}" height="${dh+6}" viewBox="0 0 ${dw+6} ${dh+6}">
+    <defs>
+      <clipPath id="schemaClip">${shape}</clipPath>
+      <linearGradient id="schemaGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#bcd8e6"/>
+        <stop offset="100%" stop-color="#a9cbdc"/>
+      </linearGradient>
+    </defs>
+    <g transform="translate(3,3)">
+      <g fill="url(#schemaGrad)" stroke="#5c93ab" stroke-width="3">${shape}</g>
+      <g clip-path="url(#schemaClip)">${bars}</g>
+    </g>
+  </svg>`;
+}
+
+/* ============== MODAL ============== */
+function openModal(html){
+  document.getElementById('modalRoot').innerHTML = `<div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
+    <div class="modal">${html}</div></div>`;
+}
+function closeModal(){ document.getElementById('modalRoot').innerHTML=''; }
+
+/* ============== EXPORT / IMPORT (Backup) ============== */
+function exportJSON(){
+  const blob = new Blob([JSON.stringify(db,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'aufmass-sicherung-'+new Date().toISOString().slice(0,10)+'.json';
+  a.click(); URL.revokeObjectURL(url);
+  toast('Sicherung gespeichert');
+}
+function triggerImport(){
+  const input = document.createElement('input');
+  input.type='file'; input.accept='application/json';
+  input.onchange = ()=>{
+    const file = input.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      try{
+        const data = JSON.parse(reader.result);
+        if(!data.objekte) throw new Error('ungültig');
+        if(confirm('Bestehende Daten werden mit der Sicherung überschrieben. Fortfahren?')){
+          db = data; saveDB(); render(); toast('Sicherung geladen');
+        }
+      }catch(e){ toast('Datei konnte nicht gelesen werden'); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+/* ============== PRINT REPORT ============== */
+function fensterTableHeader(){
+  return `<table><tr><th>Bezeichnung</th><th>Form</th><th>Aufmaß</th><th>Toleranz</th><th>Bestellmaß</th><th>Aufbau / Rahmen</th><th>Sprossen</th><th>Notizen</th></tr>`;
+}
+function fensterRow(f){
+  const bm = bestellmass(f);
+  const bmText = bm ? (bm.b+' × '+bm.h) : '-';
+  const tolText = bm ? ('−'+bm.tol+' mm') : '-';
+  const sprDetail = sprossenDetailLines(f).map(esc).join('<br>') || '-';
+  const istFenster = f.aufmassTyp==='fenster';
+  const formName = (FENSTERFORMEN.find(x=>x.id===(f.form||'rechteck'))||{}).name || 'Rechteckig';
+  const aufbauCell = istFenster
+    ? ([f.rahmen&&f.rahmen.material, (TEILUNGEN.find(t=>t.id===(f.rahmen&&f.rahmen.teilung))||{}).name, f.rahmen&&f.rahmen.profil].filter(Boolean).map(esc).join('<br>') || '-')
+    : aufbauFormula(f);
+  return `<tr><td>${esc(f.name)}</td><td>${esc(formName)}</td><td>${esc(formMassText(f))}</td><td>${tolText}</td><td><strong>${bmText}</strong></td><td>${aufbauCell}</td><td>${sprDetail}</td><td>${esc(f.notizen||'')}</td></tr>`;
+}
+function objektMetaHTML(o){
+  const adresse = [o.strasse, o.hausnummer].filter(Boolean).join(' ') + (o.ort?(', '+o.plz+' '+o.ort):'');
+  return `<div class="obj-meta">${esc(adresse)}${o.kunde?(' · Kunde: '+esc(o.kunde)):''}${o.notizen?('<br>'+esc(o.notizen)):''}<br>Erstellt: ${new Date().toLocaleDateString('de-DE')}</div>`;
+}
+function printObjekt(id){
+  const o = findObjekt(id);
+  let html = `<h1>Aufmaß — ${esc(o.name)}</h1>` + objektMetaHTML(o);
+  if(o.etagen.length===0){ html += '<p>Keine Etagen erfasst.</p>'; }
+  o.etagen.forEach(e=>{
+    html += `<h2>${esc(e.name)}</h2>`;
+    if(e.fenster.length===0){ html += '<p>Keine Fenster erfasst.</p>'; return; }
+    html += fensterTableHeader();
+    e.fenster.forEach(f=>{ html += fensterRow(f); });
+    html += `</table>`;
+  });
+  document.getElementById('printArea').innerHTML = html;
+  window.print();
+}
+function printEtage(objId, etId){
+  const o = findObjekt(objId); const e = findEtage(o, etId);
+  let html = `<h1>Aufmaß — ${esc(o.name)} · ${esc(e.name)}</h1>` + objektMetaHTML(o);
+  if(e.fenster.length===0){
+    html += '<p>Keine Fenster erfasst.</p>';
+  } else {
+    html += fensterTableHeader();
+    e.fenster.forEach(f=>{ html += fensterRow(f); });
+    html += `</table>`;
+  }
+  document.getElementById('printArea').innerHTML = html;
+  window.print();
+}
+
+/* ============== E-MAIL VERSAND (öffnet Standard-Mailprogramm, z.B. Outlook) ============== */
+function fensterLine(f){
+  const bm = bestellmass(f);
+  const bmText = bm ? `Bestellmaß ${bm.b}×${bm.h} mm (−${bm.tol} mm)` : 'Maße fehlen';
+  const istFenster = f.aufmassTyp==='fenster';
+  const formName = (FENSTERFORMEN.find(x=>x.id===(f.form||'rechteck'))||{}).name || 'Rechteckig';
+  const aufbauTxt = istFenster
+    ? ([f.rahmen&&f.rahmen.material, (TEILUNGEN.find(t=>t.id===(f.rahmen&&f.rahmen.teilung))||{}).name, f.rahmen&&f.rahmen.profil].filter(Boolean).join(', ') || 'Rahmenangaben fehlen')
+    : 'Aufbau '+aufbauFormula(f);
+  const sprLines = sprossenDetailLines(f);
+  let line = `  - ${f.name} (${formName}${istFenster?', Komplettfenster':''}): Aufmaß ${formMassText(f)}, ${bmText}, ${aufbauTxt}${f.notizen?(' — '+f.notizen):''}`;
+  sprLines.forEach(l=>{ line += `\n      ${l}`; });
+  return line;
+}
+function objektMetaText(o){
+  const adresse = [o.strasse, o.hausnummer].filter(Boolean).join(' ') + (o.ort?(', '+o.plz+' '+o.ort):'');
+  let t = '';
+  if(adresse) t += adresse+'\n';
+  if(o.kunde) t += 'Kunde: '+o.kunde+'\n';
+  if(o.notizen) t += o.notizen+'\n';
+  t += 'Erstellt: '+new Date().toLocaleDateString('de-DE')+'\n';
+  return t;
+}
+function openMail(subject, body){
+  const link = 'mailto:?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+  window.location.href = link;
+  toast('Mailprogramm wird geöffnet — PDF vorher separat speichern & anhängen');
+}
+function emailObjekt(id){
+  const o = findObjekt(id);
+  let body = 'Aufmaß - '+o.name+'\n\n'+objektMetaText(o);
+  if(o.etagen.length===0){ body += '\nKeine Etagen erfasst.\n'; }
+  o.etagen.forEach(e=>{
+    body += '\n'+e.name+':\n';
+    if(e.fenster.length===0){ body += '  Keine Fenster erfasst.\n'; return; }
+    e.fenster.forEach(f=>{ body += fensterLine(f)+'\n'; });
+  });
+  openMail('Aufmaß - '+o.name, body);
+}
+function emailEtage(objId, etId){
+  const o = findObjekt(objId); const e = findEtage(o, etId);
+  let body = 'Aufmaß - '+o.name+' · '+e.name+'\n\n'+objektMetaText(o);
+  body += '\n'+e.name+':\n';
+  if(e.fenster.length===0){ body += '  Keine Fenster erfasst.\n'; }
+  else { e.fenster.forEach(f=>{ body += fensterLine(f)+'\n'; }); }
+  openMail('Aufmaß - '+o.name+' - '+e.name, body);
+}
+
+/* ============== UTIL ============== */
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ============== INIT ============== */
+render();
+</script>
+</body>
+</html>
