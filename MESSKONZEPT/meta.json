@@ -1,5 +1,5 @@
 {
   "title": "Messkonzept-Editor",
-  "description": "Metering-Diagramme nach VBEW/Avacon-Standard zeichnen und als PDF exportieren",
-  "icon": "📐"
+  "description": "Zähler-Diagramme nach VBEW/Avacon-Standard, PDF/SVG-Export",
+  "icon": "icon.svg"
 }
