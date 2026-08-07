@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Kabel-Manager Pro V22</title>
+    <style>
+        :root { --primary: #121821; --accent: #ffb020; --bg: #0b0f14; --panel: #121821; --edge: #243044; --text: #e7edf5; --text-dim: #8ea0b8; }
+        
+        /* Zwingt Browser zum Farbdruck */
+        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); color: var(--text); font-size: 13px; }
+        .tabs { display: flex; background: var(--primary); border-bottom: 1px solid var(--edge); position: sticky; top: 0; z-index: 1000; }
+        .tab { padding: 12px 5px; flex: 1; text-align: center; color: var(--text-dim); cursor: pointer; font-weight: bold; border-bottom: 4px solid transparent; }
+        .tab.active { border-bottom-color: var(--accent); background: rgba(255,176,32,0.08); color: var(--text); }
+        .container { padding: 10px; }
+        .card { background: var(--panel); padding: 12px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.4); margin-bottom: 15px; border: 1px solid var(--edge); }
+        
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        th, td { border: 1px solid var(--edge); padding: 6px 2px; text-align: left; color: var(--text); }
+        th { background: #182130; font-size: 11px; color: var(--text-dim); }
+        
+        .col-p { width: 30px; text-align: center; font-weight: bold; }
+        .col-wire { width: 75px; } /* Platz für Farbe + Kürzel */
+
+        .wire { 
+            width: 28px; height: 14px; border: 1px solid #000; border-radius: 2px; 
+            position: relative; display: inline-block; vertical-align: middle; margin-right: 4px;
+        }
+        .ring { position: absolute; background: #000; height: 100%; width: 2.5px; z-index: 2; }
+        .r-b { left: 45%; } 
+        .r-c1 { left: 15%; box-shadow: 10px 0 #000; } 
+        .r-d1 { left: 30%; box-shadow: 5px 0 #000; }
+
+        .f-txt { font-size: 11px; font-weight: bold; vertical-align: middle; }
+
+        input { width: 95%; padding: 6px; border: 1px solid var(--edge); border-radius: 4px; font-size: 13px; background: #0d1319; color: var(--text); }
+        .btn-pdf { background: var(--accent); color: #1a1300; padding: 12px; border: none; border-radius: 5px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 10px; }
+
+        @media print { 
+            .no-print, .tabs, button { display: none !important; } 
+            .container { padding: 0; }
+            body { background: #fff; color: #000; }
+            .card { background:#fff; box-shadow: none; border: 1.5px solid #000; page-break-inside: avoid; margin-bottom: 25px; }
+            th, td { color: #000; border-color: #000; }
+            input { border: none !important; background: transparent !important; color: black; font-weight: bold; }
+            .tab-panel { display: block !important; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="tabs no-print">
+    <div class="tab active" id="t1" onclick="showTab('planer')">1. Planer</div>
+    <div class="tab" id="t2" onclick="showTab('vergleich')">2. Vergleich</div>
+</div>
+
+<div class="container">
+    <div id="planer" class="tab-panel active">
+        <div class="card no-print">
+            <strong>Kabel-Planer</strong>
+            <div style="display:flex; gap:8px; margin-top: 8px;">
+                <select id="sizeSel" style="flex:1">
+                    <option value="2">2 DA</option><option value="4">4 DA</option>
+                    <option value="6">6 DA</option><option value="8">8 DA</option>
+                    <option value="10" selected>10 DA</option><option value="20">20 DA</option>
+                </select>
+                <button onclick="addKabel()" style="flex:1; background:var(--accent); color:#1a1300; border:none; border-radius:5px; font-weight:bold;">+ Neu</button>
+            </div>
+            <button class="btn-pdf" onclick="window.print()">📄 ALS FARB-PDF SPEICHERN</button>
+        </div>
+        <div id="kabelListe"></div>
+    </div>
+
+    <div id="vergleich" class="tab-panel" style="display:none;">
+        <div class="card">
+            <h3>Farb-Vergleich (rt/bl vs. Sternvierer)</h3>
+            <table>
+                <thead>
+                    <tr><th class="col-p">P</th><th>Lagen (Bild 1)</th><th>Sternvierer (Bild 3)</th></tr>
+                </thead>
+                <tbody id="compareBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    const farbenLagen = [
+        {a:"#FF0000", b:"#0000FF", tA:"rt", tB:"bl"}, {a:"#FFFFFF", b:"#FFFF00", tA:"ws", tB:"ge"},
+        {a:"#FFFFFF", b:"#00AA00", tA:"ws", tB:"gn"}, {a:"#FFFFFF", b:"#8B4513", tA:"ws", tB:"br"},
+        {a:"#FFFFFF", b:"#000000", tA:"ws", tB:"sw"}, {a:"#FFFFFF", b:"#0000FF", tA:"ws", tB:"bl"},
+        {a:"#FFFFFF", b:"#FFFF00", tA:"ws", tB:"ge"}, {a:"#FFFFFF", b:"#00AA00", tA:"ws", tB:"gn"},
+        {a:"#FFFFFF", b:"#8B4513", tA:"ws", tB:"br"}, {a:"#FF0000", b:"#000000", tA:"rt", tB:"sw"}
+    ];
+
+    let daten = JSON.parse(localStorage.getItem('kabelV22')) || [];
+
+    function showTab(id) {
+        document.getElementById('planer').style.display = id === 'planer' ? 'block' : 'none';
+        document.getElementById('vergleich').style.display = id === 'vergleich' ? 'block' : 'none';
+        document.getElementById('t1').classList.toggle('active', id==='planer');
+        document.getElementById('t2').classList.toggle('active', id==='vergleich');
+        if(id === 'vergleich') renderVergleich();
+    }
+
+    function addKabel() {
+        const s = parseInt(document.getElementById('sizeSel').value);
+        daten.push({ id:Date.now(), name:"Kabel "+(daten.length+1), size:s, rows:Array(s).fill().map(()=>({a:"",b:""})) });
+        save(); render();
+    }
+
+    function render() {
+        const list = document.getElementById('kabelListe'); list.innerHTML = "";
+        daten.forEach((k, ci) => {
+            let h = `<div class="card">
+                <input type="text" value="${k.name}" onchange="daten[${ci}].name=this.value;save()" style="font-weight:bold; font-size:15px; margin-bottom:10px; border:none; border-bottom:1px solid #ddd;">
+                <table><thead><tr><th class="col-p">P</th><th class="col-wire">Farbe</th><th>Beschriftung</th></tr></thead><tbody>`;
+            for(let i=0; i<k.size; i++){
+                let f = farbenLagen[i % 10];
+                h += `<tr><td rowspan="2" class="col-p">${i+1}</td>
+                    <td class="col-wire"><div class="wire" style="background-color:${f.a} !important;"></div><span class="f-txt">${f.tA}</span></td>
+                    <td><input type="text" value="${k.rows[i].a || ''}" onchange="daten[${ci}].rows[${i}].a=this.value;save()"></td></tr>
+                    <tr><td class="col-wire"><div class="wire" style="background-color:${f.b} !important;"></div><span class="f-txt">${f.tB}</span></td>
+                    <td><input type="text" value="${k.rows[i].b || ''}" onchange="daten[${ci}].rows[${i}].b=this.value;save()"></td></tr>`;
+            }
+            list.innerHTML += h + `</tbody></table><button class="no-print" onclick="daten.splice(${ci},1);save();render()" style="margin-top:10px; color:red; border:none; background:none;">Löschen</button></div>`;
+        });
+    }
+
+    function renderVergleich() {
+        const body = document.getElementById('compareBody'); body.innerHTML = "";
+        const sColors = ["#FF0000", "#00AA00", "#808080", "#FFFF00", "#FFFFFF"];
+        const sNames = ["rt", "gn", "gr", "ge", "ws"];
+        for(let i=0; i<20; i++) {
+            let fL = farbenLagen[i % 10];
+            let cV = sColors[Math.floor((i % 10) / 2)];
+            let tV = sNames[Math.floor((i % 10) / 2)];
+            let ring = "";
+            if(i%2===1 && Math.floor(i/2)%2===0) ring = '<div class="ring r-b"></div>';
+            if(i%2===0 && Math.floor(i/2)%2===1) ring = '<div class="ring r-c1"></div>';
+            if(i%2===1 && Math.floor(i/2)%2===1) ring = '<div class="ring r-d1"></div>';
+            body.innerHTML += `<tr><td class="col-p">${i+1}</td>
+                <td><div class="wire" style="background-color:${fL.a} !important;"></div>${fL.tA} / <div class="wire" style="background-color:${fL.b} !important;"></div>${fL.tB}</td>
+                <td><div class="wire" style="background-color:${cV} !important;"></div>${tV} / <div class="wire" style="background-color:${cV} !important;">${ring}</div>${tV}</td></tr>`;
+        }
+    }
+
+    function save() { localStorage.setItem('kabelV22', JSON.stringify(daten)); }
+    render();
+</script>
+</body>
+</html>
