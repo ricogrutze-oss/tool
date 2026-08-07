@@ -23,6 +23,7 @@
 
   const els = {};
   ['video','overlay','roiBox','camHint','camStart','startBtn','statusDot','pulseCount',
+   'camControls','camSelect','zoomRow','zoomSlider','zoomVal',
    'powerPrimary','powerRaw','freqVal','energyVal','chart','scope',
    'sensSlider','sensVal','refracSlider','refracVal','irToggle','torchToggle',
    'rateChips','rateCustom','avgChips','avgCustom','avgWindowLabel',
@@ -179,10 +180,77 @@
       els.statusDot.classList.add('live');
       computeROI();
       requestAnimationFrame(loop);
+      await populateCameraList();
+      setupZoom();
     }catch(err){
       alert('Kamera konnte nicht gestartet werden: ' + err.message);
     }
   }
+
+  async function populateCameraList(){
+    try{
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const cams = devices.filter(d => d.kind === 'videoinput');
+      if(cams.length <= 1) return; // nur eine Kamera gemeldet -> keine Auswahl nötig
+      els.camControls.style.display = 'flex';
+      els.camSelect.innerHTML = cams.map((c, i) =>
+        `<option value="${c.deviceId}">${c.label || 'Kamera ' + (i+1)}</option>`
+      ).join('');
+      if(videoTrack){
+        const currentId = videoTrack.getSettings().deviceId;
+        if(currentId) els.camSelect.value = currentId;
+      }
+    }catch(e){ /* enumerateDevices evtl. nicht verfügbar */ }
+  }
+
+  els.camSelect.addEventListener('change', async () => {
+    const deviceId = els.camSelect.value;
+    try{
+      if(stream) stream.getTracks().forEach(t => t.stop());
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          deviceId: { exact: deviceId },
+          width: { ideal: 640 }, height: { ideal: 480 },
+          frameRate: { ideal: 30, max: 60 }
+        },
+        audio: false
+      });
+      els.video.srcObject = stream;
+      await els.video.play();
+      videoTrack = stream.getVideoTracks()[0];
+      window._camTrack = videoTrack;
+      computeROI();
+      setupZoom();
+    }catch(err){
+      alert('Kamera konnte nicht gewechselt werden: ' + err.message);
+    }
+  });
+
+  function setupZoom(){
+    try{
+      const caps = videoTrack.getCapabilities ? videoTrack.getCapabilities() : {};
+      if(caps.zoom && caps.zoom.max > caps.zoom.min){
+        els.zoomRow.style.display = 'block';
+        els.zoomSlider.min = caps.zoom.min;
+        els.zoomSlider.max = caps.zoom.max;
+        els.zoomSlider.step = caps.zoom.step || 0.1;
+        els.zoomSlider.value = caps.zoom.min;
+        els.zoomVal.textContent = parseFloat(caps.zoom.min).toFixed(1) + 'x';
+      } else {
+        els.zoomRow.style.display = 'none';
+      }
+    }catch(e){
+      els.zoomRow.style.display = 'none';
+    }
+  }
+
+  els.zoomSlider.addEventListener('input', async () => {
+    const val = parseFloat(els.zoomSlider.value);
+    els.zoomVal.textContent = val.toFixed(1) + 'x';
+    try{
+      await videoTrack.applyConstraints({ advanced: [{ zoom: val }] });
+    }catch(e){ /* Zoom evtl. nicht unterstützt für diesen Wert */ }
+  });
 
   function computeROI(){
     const wrap = document.getElementById('camwrap');

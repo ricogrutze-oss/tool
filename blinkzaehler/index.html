@@ -22,12 +22,28 @@
     padding:14px 16px 10px; display:flex; align-items:center; justify-content:space-between;
     border-bottom:1px solid var(--edge); background:linear-gradient(180deg,#0e131a,#0b0f14);
   }
-  header h1{font-size:15px; margin:0; letter-spacing:.04em; font-weight:600; color:var(--text-dim); text-transform:uppercase;}
+  .backbtn{
+    display:flex; align-items:center; gap:5px; text-decoration:none; color:var(--text-dim);
+    font-size:12px; font-family:var(--mono); padding:6px 10px; border:1px solid var(--edge);
+    border-radius:8px; background:var(--panel2); flex-shrink:0;
+  }
+  .backbtn:active{ background:var(--edge); }
+  .headertitle{display:flex; align-items:center; gap:10px; min-width:0;}
+  header h1{font-size:14px; margin:0; letter-spacing:.04em; font-weight:600; color:var(--text-dim); text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; text-align:center;}
   header h1 b{color:var(--amber);}
   .dot{width:9px;height:9px;border-radius:50%;background:var(--red); box-shadow:0 0 8px var(--red);}
   .dot.live{background:var(--green); box-shadow:0 0 10px var(--green);}
 
   .camwrap{position:relative; width:100%; aspect-ratio:4/3; background:#000; overflow:hidden;}
+
+  .camcontrols{ display:flex; gap:10px; padding:10px 16px; background:var(--panel); border-bottom:1px solid var(--edge); }
+  .camcontrols select{
+    width:100%; background:#0d1319; border:1px solid var(--edge); color:var(--text);
+    font-family:var(--mono); font-size:13px; padding:8px 10px; border-radius:8px;
+  }
+  .zoomrow{ padding:10px 16px 14px; background:var(--panel); border-bottom:1px solid var(--edge); }
+  .zoomrow label{ font-size:11px; color:var(--text-dim); font-family:var(--mono); margin-bottom:4px; }
+  .zoomrow input[type=range]{ width:100%; accent-color:var(--amber); }
   video{width:100%; height:100%; object-fit:cover; display:block;}
   canvas.overlay{position:absolute; inset:0; width:100%; height:100%; pointer-events:none;}
   .roi{
@@ -103,11 +119,21 @@
 
   .footer-note{font-size:11px; color:var(--text-dim); text-align:center; padding:16px 24px; line-height:1.5;}
   .badge{display:inline-block; font-family:var(--mono); font-size:10px; padding:2px 6px; border-radius:4px; background:var(--panel2); color:var(--text-dim); margin-left:6px;}
+
+  .backhome{
+    position:fixed; top:10px; left:10px; z-index:9999;
+    background:rgba(11,15,20,0.85); color:var(--amber);
+    border:1px solid var(--edge); border-radius:20px;
+    padding:7px 14px; font-size:13px; font-weight:600;
+    text-decoration:none; backdrop-filter:blur(6px);
+    -webkit-backdrop-filter:blur(6px);
+  }
 </style>
 </head>
 <body>
 
 <header>
+  <a href="../" class="backbtn">← Toolbox</a>
   <h1><b>⚡</b> Blinkzähler-Reader</h1>
   <div style="display:flex;align-items:center;gap:8px;">
     <span id="pulseCount" class="badge">0 Pulse</span>
@@ -124,6 +150,19 @@
     <div style="font-size:14px;color:var(--text-dim);text-align:center;max-width:260px;">Kamera aktivieren, um Impulse der Zähler-LED zu erfassen</div>
     <button class="primary" id="startBtn" style="flex:none;">Kamera starten</button>
   </div>
+</div>
+
+<div class="camcontrols" id="camControls" style="display:none;">
+  <div class="field" style="flex:1;">
+    <label>Kamera-Objektiv</label>
+    <select id="camSelect"></select>
+  </div>
+</div>
+<div class="zoomrow" id="zoomRow" style="display:none;">
+  <label style="display:flex; justify-content:space-between;">
+    <span>Zoom (für Nahfokus z.B. Ultraweitwinkel)</span><span id="zoomVal">1.0x</span>
+  </label>
+  <input type="range" id="zoomSlider" min="1" max="1" step="0.1" value="1">
 </div>
 
 <main>
