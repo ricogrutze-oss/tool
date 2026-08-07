@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zähler-Pro v7 (Hochformat)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://unpkg.com/@zxing/library@0.20.0"></script>
+    <style>
+        :root{ --bg:#0b0f14; --panel:#121821; --panel2:#182130; --edge:#243044; --amber:#ffb020; --text:#e7edf5; --text-dim:#8ea0b8; }
+        body { font-family: sans-serif; padding: 15px; background-color: var(--bg); color: var(--text); padding-bottom: 100px; }
+        h2 { color: var(--amber); }
+        .zaehler-card { 
+            background: var(--panel); padding: 15px; margin-bottom: 15px; border-radius: 10px; 
+            border-left: 12px solid var(--edge); border-top: 1px solid var(--edge); border-right: 1px solid var(--edge); border-bottom: 1px solid var(--edge);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.4); 
+        }
+        .card-strom { border-left-color: #ffc107 !important; }
+        .card-wmz { border-left-color: #dc3545 !important; }
+        .card-wasser { border-left-color: #4dabf7 !important; }
+
+        label { font-size: 0.75rem; font-weight: bold; display: block; margin-top: 8px; color: var(--text-dim); }
+        input, select { padding: 12px; margin: 4px 0; border: 1px solid var(--edge); border-radius: 6px; box-sizing: border-box; font-size: 16px; width: 100%; background: #0d1319; color: var(--text); }
+        .row-flex { display: flex; gap: 8px; align-items: center; }
+        .stand-input { flex: 2; }
+        .einheit-select { flex: 1; min-width: 80px; }
+        .scan-btn { background: var(--panel2); color: var(--amber); border: 1px solid var(--edge); padding: 10px; border-radius: 6px; width: 55px; font-size: 22px; }
+        .btn-add { background: var(--panel2); color: var(--text); border: 1px solid var(--edge); padding: 16px; width: 100%; border-radius: 8px; font-weight: bold; margin-bottom: 10px; }
+        .btn-pdf { background: var(--amber); color: #1a1300; padding: 16px; border: none; width: 100%; border-radius: 8px; font-weight: bold; }
+        .btn-clear { background: #2a1414; color: #ff8a8a; border: 1px solid #5a2020; padding: 10px; width: 100%; border-radius: 6px; margin-top: 40px; }
+        .preview-img { width: 120px; height: 120px; object-fit: cover; margin-top: 10px; border-radius: 6px; display:none; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+    <h2 style="text-align:center;">Zähler-Erfassung</h2>
+    <div id="container"></div>
+
+    <button class="btn-add" onclick="createNewZaehler()">+ Neuer Zähler</button>
+    <button class="btn-pdf" onclick="generatePDF()">📄 PDF Erstellen (A4 Hoch)</button>
+    <button class="btn-clear" onclick="clearData()">⚠️ Daten löschen</button>
+
+    <script>
+        const container = document.getElementById('container');
+        const codeReader = new ZXing.BrowserMultiFormatReader();
+
+        window.onload = loadData;
+
+        function updateCardColor(selectElement, cardId) {
+            const card = document.getElementById(cardId);
+            const val = selectElement.value.toLowerCase();
+            card.classList.remove('card-strom', 'card-wmz', 'card-wasser');
+            if (val === 'strom') card.classList.add('card-strom');
+            if (val === 'wmz') card.classList.add('card-wmz');
+            if (val === 'wasser') card.classList.add('card-wasser');
+            saveAll();
+        }
+
+        function createNewZaehler(savedData = null) {
+            const id = savedData ? savedData.id : Date.now();
+            const div = document.createElement('div');
+            div.className = 'zaehler-card';
+            div.id = `card-${id}`;
+            
+            div.innerHTML = `
+                <div class="row-flex" style="justify-content: space-between;">
+                    <h4 style="margin:0">Zähler #${container.children.length + 1}</h4>
+                    <select class="typ" style="width: 120px; margin:0; font-weight:bold;" onchange="updateCardColor(this, 'card-${id}')">
+                        <option value="Strom" ${savedData && savedData.typ === 'Strom' ? 'selected' : ''}>Strom</option>
+                        <option value="WMZ" ${savedData && savedData.typ === 'WMZ' ? 'selected' : ''}>WMZ</option>
+                        <option value="Wasser" ${savedData && savedData.typ === 'Wasser' ? 'selected' : ''}>Wasser</option>
+                    </select>
+                </div>
+                <label>Datum</label>
+                <input type="date" class="datum" value="${savedData ? savedData.datum : new Date().toISOString().split('T')[0]}" onchange="saveAll()">
+                <label>Zählernummer</label>
+                <div class="row-flex">
+                    <input type="text" class="nummer" id="num-${id}" value="${savedData ? savedData.nummer : ''}" oninput="saveAll()">
+                    <button class="scan-btn" onclick="document.getElementById('scan-file-${id}').click()">📷</button>
+                    <input type="file" id="scan-file-${id}" class="hidden" accept="image/*" onchange="decodeBarcode(this, 'num-${id}')">
+                </div>
+                <label>Funktion (Ort)</label>
+                <input type="text" class="funktion" value="${savedData ? savedData.funktion : ''}" oninput="saveAll()">
+                <label>Zählerstand</label>
+                <div class="row-flex">
+                    <input type="number" class="stand stand-input" value="${savedData ? savedData.stand : ''}" oninput="saveAll()">
+                    <select class="einheit einheit-select" onchange="saveAll()">
+                        <option value="kWh" ${savedData && savedData.einheit === 'kWh' ? 'selected' : ''}>kWh</option>
+                        <option value="MWh" ${savedData && savedData.einheit === 'MWh' ? 'selected' : ''}>MWh</option>
+                        <option value="m³" ${savedData && savedData.einheit === 'm³' ? 'selected' : ''}>m³</option>
+                    </select>
+                </div>
+                <label>Foto</label>
+                <input type="file" class="foto" accept="image/*" onchange="compressAndShow(this, '${id}')">
+                <img id="prev-${id}" class="preview-img" src="${savedData && savedData.bild ? savedData.bild : ''}" style="display:${savedData && savedData.bild ? 'block' : 'none'}">
+            `;
+            container.appendChild(div);
+            updateCardColor(div.querySelector('.typ'), `card-${id}`);
+        }
+
+        function compressAndShow(input, id) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 500;
+                    let width = img.width; let height = img.height;
+                    if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+                    canvas.width = width; canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+                    const preview = document.getElementById(`prev-${id}`);
+                    preview.src = dataUrl;
+                    preview.style.display = 'block';
+                    saveAll();
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function decodeBarcode(input, targetId) {
+            const file = input.files[0];
+            if (!file) return;
+            const imgUrl = URL.createObjectURL(file);
+            try {
+                const result = await codeReader.decodeFromImageUrl(imgUrl);
+                document.getElementById(targetId).value = result.text;
+                saveAll();
+            } catch (err) { alert("Kein Barcode gefunden."); }
+        }
+
+        function saveAll() {
+            const data = [];
+            document.querySelectorAll('.zaehler-card').forEach(card => {
+                const id = card.id.replace('card-', '');
+                data.push({
+                    id: id,
+                    typ: card.querySelector('.typ').value,
+                    datum: card.querySelector('.datum').value,
+                    nummer: card.querySelector('.nummer').value,
+                    funktion: card.querySelector('.funktion').value,
+                    stand: card.querySelector('.stand').value,
+                    einheit: card.querySelector('.einheit').value,
+                    bild: card.querySelector('.preview-img').src.startsWith('data') ? card.querySelector('.preview-img').src : null
+                });
+            });
+            localStorage.setItem('zaehlerData', JSON.stringify(data));
+        }
+
+        function loadData() {
+            const saved = localStorage.getItem('zaehlerData');
+            if (saved && JSON.parse(saved).length > 0) {
+                JSON.parse(saved).forEach(item => createNewZaehler(item));
+            } else { createNewZaehler(); }
+        }
+
+        function clearData() {
+            if(confirm("Alle Daten löschen?")) { localStorage.removeItem('zaehlerData'); location.reload(); }
+        }
+
+        async function generatePDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4'); // 'p' für Hochformat
+            doc.text("Zähler-Erfassungsprotokoll", 14, 15);
+            
+            const rows = [];
+            document.querySelectorAll('.zaehler-card').forEach(card => {
+                const img = card.querySelector('.preview-img');
+                rows.push([
+                    card.querySelector('.typ').value,
+                    card.querySelector('.nummer').value,
+                    card.querySelector('.funktion').value,
+                    card.querySelector('.stand').value + " " + card.querySelector('.einheit').value,
+                    img.style.display === 'block' ? img.src : "" 
+                ]);
+            });
+
+            doc.autoTable({
+                startY: 22,
+                head: [['Typ', 'Nr.', 'Funktion', 'Stand', 'Bild']],
+                body: rows,
+                theme: 'grid',
+                styles: { minCellHeight: 35, verticalAlign: 'middle', fontSize: 9 },
+                columnStyles: { 4: { cellWidth: 35, fontSize: 0.1, textColor: [255,255,255] } },
+                didDrawCell: (data) => {
+                    // Fehlerbehebung: Nur in der Bilderspalte (Index 4) zeichnen
+                    if (data.column.index === 4 && data.cell.raw && data.cell.raw.startsWith('data')) {
+                        doc.addImage(data.cell.raw, 'JPEG', data.cell.x + 2, data.cell.y + 2, 31, 31);
+                    }
+                }
+            });
+            doc.save(`Zaehler_${new Date().toLocaleDateString()}.pdf`);
+        }
+    </script>
+</body>
+</html>
