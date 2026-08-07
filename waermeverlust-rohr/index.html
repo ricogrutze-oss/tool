@@ -1,0 +1,408 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Wärmeverlust Rohr – App v1.2 (Auto-Ø) + Persistenz (wie v1.3.1)</title>
+<style>
+  :root{ --bg:#0b0f14; --panel:#121821; --accent:#ffb020; --text:#e7edf5; --muted:#8ea0b8; --line:#243044; }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial;background:var(--bg);color:var(--text);} 
+  header{padding:16px 20px;background:linear-gradient(180deg,#0e131a,#0b0f14);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  header h1{margin:0;font-size:20px;font-weight:700;color:var(--accent)}
+  header .version{color:var(--muted);font-size:12px}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-left:auto}
+  main{padding:20px;display:grid;grid-template-columns:400px 1fr;gap:20px}
+  @media (max-width: 1000px){main{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.3)}
+  .card h2{margin:0;padding:12px 16px;border-bottom:1px solid var(--line);font-size:16px;color:var(--text)}
+  .content{padding:14px 16px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+  label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
+  input,select,button{width:100%;box-sizing:border-box}
+  input,select{padding:10px;border-radius:8px;border:1px solid var(--line);background:#0d1319;color:var(--text)}
+  input[type=number]{text-align:right}
+  button{padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:#182130;color:var(--text);cursor:pointer}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#1a1300;font-weight:700}
+  button.warn{background:#2a1414;border-color:#5a2020;color:#ff5d5d}
+  button.ghost{background:transparent;border-color:var(--line)}
+  table{width:100%;border-collapse:collapse}
+  th,td{border-bottom:1px solid var(--line);padding:10px;text-align:right}
+  th{text-align:center;color:var(--muted);font-size:12px}
+  td.left, th.left{text-align:left}
+  tfoot td{font-weight:700}
+  .note{font-size:12px;color:var(--muted)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  #diag{font-size:12px;color:#fca5a5}
+  @media print{ header, .no-print, section.input, section.table {display:none!important} body{background:#fff;color:#000} .report{display:block} .card{border:0;box-shadow:none} }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Wärmeverlust Rohr – App</h1>
+    <span class="version">v1.2 + Persistenz – Auto‑Ø aus Rohrtyp, erweitere Dämmstoffe, Speichern/Löschen (wie v1.3.1), PDF/Formeln</span>
+    <div class="toolbar">
+      <button id="btnPrint" class="ghost">PDF / Drucken</button>
+      <button id="btnSave" class="ghost">Manuell speichern</button>
+      <button id="btnClearSeg" class="ghost">Abschnitte löschen</button>
+      <button id="btnClearGen" class="ghost">Beschriftung & Allgemein löschen</button>
+      <button id="btnClearAll" class="warn">Alle Daten löschen</button>
+      <button id="btnExport" class="ghost">Projekt exportieren (JSON)</button>
+      <label class="badge no-print" for="fileImport" style="border:1px solid #334155;padding:6px 8px;border-radius:8px">Import</label>
+      <input type="file" id="fileImport" accept="application/json" class="no-print" style="max-width:200px" />
+      <span id="diag" class="no-print"></span>
+    </div>
+  </header>
+
+  <main>
+    <section class="card input">
+      <h2>Beschriftung & Allgemeine Eingaben</h2>
+      <div class="content">
+        <div class="row">
+          <div>
+            <label>Beschriftung (Projekt/Anlage)</label>
+            <input id="projectLabel" placeholder="z. B. Heizkreis EG – Leitung Nord" />
+          </div>
+          <div>
+            <label>Ort/Raum (optional)</label>
+            <input id="projectLocation" placeholder="z. B. Oschersleben, Raum 102" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>Betriebsstunden/Jahr [h/a]</label>
+            <input type="number" id="hoursYear" step="1" value="1500" />
+          </div>
+          <div>
+            <label>Preis pro kWh [€/kWh]</label>
+            <input type="number" id="priceKwh" step="0.01" value="0.35" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card input">
+      <h2>Abschnitt – Eingaben</h2>
+      <div class="content">
+        <div class="row">
+          <div>
+            <label>Abschnittsname (optional)</label>
+            <input id="segLabel" placeholder="z. B. Vorlauf Küche" />
+          </div>
+          <div>
+            <label>Rohrtyp</label>
+            <select id="pipeType"></select>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>Außen‑Ø [mm] (automatisch; editierbar)</label>
+            <input type="number" id="odMM" step="0.1" />
+          </div>
+          <div>
+            <label>Dämmstoff</label>
+            <select id="insulType"></select>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>Dämmstärke t [mm]</label>
+            <input type="number" id="thickMM" step="1" value="20" />
+          </div>
+          <div>
+            <label>Rohrlänge [m]</label>
+            <input type="number" id="lengthM" step="0.1" value="10" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>Medium‑Temperatur [°C]</label>
+            <input type="number" id="tMedium" step="1" value="70" />
+          </div>
+          <div>
+            <label>Umgebungstemperatur [°C]</label>
+            <input type="number" id="tAmbient" step="1" value="20" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>h_extern [W/m²·K] (nur bei 0 mm Dämmung)</label>
+            <input type="number" id="hExtern" step="0.1" value="8" />
+          </div>
+          <div>
+            <label>Mittlere Temperatur Tm [°C]</label>
+            <input type="number" id="tMean" step="0.1" value="45" disabled />
+          </div>
+        </div>
+        <div class="toolbar" style="margin-top:8px">
+          <button class="primary" id="btnAdd">Abschnitt hinzufügen</button>
+          <span class="note">Ø wird automatisch je Typ gesetzt; du kannst ihn manuell überschreiben.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card table">
+      <h2>Abschnitte & Ergebnisse</h2>
+      <div class="content">
+        <table id="tbl">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th class="left">Beschriftung</th>
+              <th class="left">Rohrtyp</th>
+              <th>Außen‑Ø [mm]</th>
+              <th class="left">Dämmstoff</th>
+              <th>t [mm]</th>
+              <th>Länge [m]</th>
+              <th>Medium [°C]</th>
+              <th>Umgebung [°C]</th>
+              <th>Tm [°C]</th>
+              <th>λ(Tm) [W/m·K]</th>
+              <th>q [W/m]</th>
+              <th>kWh/(m·a)</th>
+              <th>kWh/a</th>
+              <th>€/a</th>
+              <th class="left">Aktion</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+          <tfoot>
+            <tr>
+              <td colspan="12" class="left">Summe</td>
+              <td id="sumEnergy" style="text-align:right">0</td>
+              <td id="sumCost" style="text-align:right">0.00</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+
+    <section class="report card" id="report" style="display:none">
+      <h2>Bericht – Wärmeverlust Rohr</h2>
+      <div class="content">
+        <div class="grid2">
+          <div>
+            <strong>Beschriftung</strong><br>
+            <span id="r_proj"></span>
+          </div>
+          <div>
+            <strong>Ort/Raum</strong><br>
+            <span id="r_loc"></span>
+          </div>
+        </div>
+        <div class="grid2" style="margin-top:10px">
+          <div>
+            <strong>Eingaben</strong><br>
+            Preis/kWh: <span id="r_price"></span><br>
+            Betriebsstunden/Jahr: <span id="r_hours"></span> h/a
+          </div>
+          <div>
+            <strong>Summe</strong><br>
+            Energie gesamt: <span id="r_sumE"></span> kWh/a<br>
+            Kosten gesamt: <span id="r_sumC"></span> €/a
+          </div>
+        </div>
+        <h3 style="margin-top:16px">Abschnitte</h3>
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr>
+              <th style="text-align:left;border-bottom:1px solid var(--line)"># / Beschriftung</th>
+              <th style="text-align:left;border-bottom:1px solid var(--line)">Rohrtyp / Dämmstoff</th>
+              <th style="text-align:right;border-bottom:1px solid var(--line)">Ø [mm]</th>
+              <th style="text-align:right;border-bottom:1px solid var(--line)">t [mm]</th>
+              <th style="text-align:right;border-bottom:1px solid var(--line)">L [m]</th>
+              <th style="text-align:right;border-bottom:1px solid var(--line)">Tm [°C]</th>
+              <th style="text-align:right;border-bottom:1px solid var(--line)">λ [W/m·K]</th>
+              <th style="text-align:right;border-bottom:1px solid var(--line)">q [W/m]</th>
+              <th style="text-align:right;border-bottom:1px solid var(--line)">kWh/(m·a)</th>
+              <th style="text-align:right;border-bottom:1px solid var(--line)">kWh/a</th>
+              <th style="text-align:right;border-bottom:1px solid var(--line)">€/a</th>
+            </tr>
+          </thead>
+          <tbody id="r_body"></tbody>
+        </table>
+
+        <h3 style="margin-top:20px">Formeln</h3>
+        <div id="formulaBox" style="background:#0b1220;border:1px solid #334155;border-radius:8px;padding:12px">
+          <svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 900 240" preserveAspectRatio="xMidYMin meet" fill="#e5e7eb">
+            <style>.h{font:700 18px system-ui,Segoe UI,Roboto,Arial}.t{font:14px system-ui,Segoe UI,Roboto,Arial}.m{font:16px 'DejaVu Sans Mono',monospace}</style>
+            <text x="10" y="24" class="h">Leitungswärmeverlust (Zylinder, gedämmt)</text>
+            <text x="10" y="48" class="m">q = ( 2 · π · λ · ΔT ) / ln( r₂ / r₁ )</text>
+            <text x="10" y="72" class="t">r₁ = Rohr‑Außenradius, r₂ = r₁ + t, ΔT = T_medium − T_amb, λ = λ(Tₘ)</text>
+            <text x="10" y="108" class="h">Ungedämmt</text>
+            <text x="10" y="132" class="m">q = 2 · π · r₁ · h_extern · ΔT</text>
+            <text x="10" y="168" class="h">Jahresenergie (mit Betriebsstunden)</text>
+            <text x="10" y="192" class="m">E_m = q · h/a / 1000 \t[kWh/(m·a)],\tE_abschnitt = E_m · L</text>
+            <text x="10" y="216" class="m">Kosten_abschnitt = E_abschnitt · Preis_pro_kWh</text>
+          </svg>
+        </div>
+      </div>
+    </section>
+  </main>
+
+<script>
+// ---- Rohrtypen mit Ø im Dropdown (inkl. Stahl Zoll/DN) ----
+const PIPES = [
+  {name:"Stahl 1/4\" (DN8)", od:13.7},
+  {name:"Stahl 3/8\" (DN10)", od:17.2},
+  {name:"Stahl 1/2\" (DN15)", od:21.3},
+  {name:"Stahl 3/4\" (DN20)", od:26.9},
+  {name:"Stahl 1\" (DN25)", od:33.7},
+  {name:"Stahl 1 1/4\" (DN32)", od:42.4},
+  {name:"Stahl 1 1/2\" (DN40)", od:48.3},
+  {name:"Stahl 2\" (DN50)", od:60.3},
+  {name:"Stahl 2 1/2\" (DN65)", od:76.1},
+  {name:"Stahl 3\" (DN80)", od:88.9},
+  {name:"Stahl 4\" (DN100)", od:114.3},
+  {name:"Kupfer 12 mm", od:12.0}, {name:"Kupfer 15 mm", od:15.0}, {name:"Kupfer 18 mm", od:18.0}, {name:"Kupfer 22 mm", od:22.0}, {name:"Kupfer 28 mm", od:28.0}, {name:"Kupfer 35 mm", od:35.0}, {name:"Kupfer 42 mm", od:42.0}, {name:"Kupfer 54 mm", od:54.0},
+  {name:"Kunststoff 16 mm", od:16.0}, {name:"Kunststoff 20 mm", od:20.0}, {name:"Kunststoff 25 mm", od:25.0}, {name:"Kunststoff 32 mm", od:32.0}, {name:"Kunststoff 40 mm", od:40.0}, {name:"Kunststoff 50 mm", od:50.0},
+  {name:"Edelstahl 15 mm", od:15.0}, {name:"Edelstahl 18 mm", od:18.0}, {name:"Edelstahl 22 mm", od:22.0}, {name:"Edelstahl 28 mm", od:28.0}
+];
+
+// ---- Dämmstoffe (erweitert) mit λ(T) an Stützpunkten ----
+const LAMBDA_TABLE = {
+  temps: [10,40,80,120],
+  products: {
+    "Mineralwolle 035": [0.035,0.037,0.040,0.043],
+    "Mineralwolle 040": [0.040,0.041,0.043,0.045],
+    "ROCKWOOL 800 Rohrschale": [0.035,0.037,0.040,0.043],
+    "Elastomerschaum (Armaflex / Kaiflex)": [0.033,0.033,0.034,0.035],
+    "PUR/PIR Hartschaum": [0.025,0.026,0.027,0.028],
+    "Aerogel-Matte": [0.018,0.020,0.022,0.024]
+  }
+};
+
+// ---- UI ----
+const elProjectLabel = document.getElementById('projectLabel');
+const elProjectLocation = document.getElementById('projectLocation');
+const elHours = document.getElementById('hoursYear');
+const elPrice = document.getElementById('priceKwh');
+
+const elSegLabel = document.getElementById('segLabel');
+const elPipeType = document.getElementById('pipeType');
+const elOdMM = document.getElementById('odMM');
+const elInsulType = document.getElementById('insulType');
+const elThickMM = document.getElementById('thickMM');
+const elLengthM = document.getElementById('lengthM');
+const elTMed = document.getElementById('tMedium');
+const elTAmb = document.getElementById('tAmbient');
+const elTm = document.getElementById('tMean');
+const elHext = document.getElementById('hExtern');
+
+const elBtnAdd = document.getElementById('btnAdd');
+const elTblBody = document.querySelector('#tbl tbody');
+const elSumE = document.getElementById('sumEnergy');
+const elSumC = document.getElementById('sumCost');
+const elBtnPrint = document.getElementById('btnPrint');
+const elBtnSave = document.getElementById('btnSave');
+const elBtnClearSeg = document.getElementById('btnClearSeg');
+const elBtnClearGen = document.getElementById('btnClearGen');
+const elBtnClearAll = document.getElementById('btnClearAll');
+const elBtnExport = document.getElementById('btnExport');
+const elFileImport = document.getElementById('fileImport');
+const elDiag = document.getElementById('diag');
+
+// ---- Persistenz Keys ----
+const LS_GENERAL = 'rohrapp_general_v12p';
+const LS_SEGMENTS = 'rohrapp_segments_v12p';
+const LS_LASTINPUT = 'rohrapp_lastinput_v12p';
+
+// ---- Dropdowns füllen und Auto-Ø setzen ----
+function populateDropdowns(){
+  elPipeType.innerHTML = PIPES.map(p=>`<option value="${p.name}" data-od="${p.od}">${p.name} — ${p.od.toFixed(1)} mm</option>`).join('');
+  elPipeType.value = "Stahl 1\" (DN25)";
+  applySelectedOD();
+  const prodNames = Object.keys(LAMBDA_TABLE.products);
+  elInsulType.innerHTML = prodNames.map(n=>`<option value="${n}">${n}</option>`).join('');
+  elInsulType.value = prodNames[0];
+  updateTm();
+  elDiag.textContent = `Dropdown OK – Optionen: ${elPipeType.options.length}`;
+}
+
+function applySelectedOD(){ const opt = elPipeType.selectedOptions[0]; if(opt){ const od = parseFloat(opt.getAttribute('data-od')); if(isFinite(od)) elOdMM.value = od; } }
+elPipeType.addEventListener('change', applySelectedOD);
+elPipeType.addEventListener('input', applySelectedOD);
+
+function updateTm(){ const tmed = parseFloat(elTMed.value); const tamb = parseFloat(elTAmb.value); if(isFinite(tmed) && isFinite(tamb)) elTm.value = ((tmed+tamb)/2).toFixed(1); }
+elTMed.addEventListener('input', updateTm);
+elTAmb.addEventListener('input', updateTm);
+
+// ---- Physik ----
+function lerpLambda(productName, Tm){ const temps=LAMBDA_TABLE.temps, arr=LAMBDA_TABLE.products[productName]; if(!arr) return NaN; if(Tm<=temps[0]) return arr[0]; if(Tm>=temps[temps.length-1]) return arr[arr.length-1]; for(let i=0;i<temps.length-1;i++){ const t0=temps[i], t1=temps[i+1]; if(Tm>=t0 && Tm<=t1){ const l0=arr[i], l1=arr[i+1]; const f=(Tm-t0)/(t1-t0); return l0 + f*(l1-l0); } } return arr[0]; }
+function computeSegment(seg){ const r1=(seg.odMM/1000)/2; const d=Math.max(0, seg.thickMM/1000); const r2=r1+d; const dT=seg.tMed-seg.tAmb; const Tm=(seg.tMed+seg.tAmb)/2; const lambda=lerpLambda(seg.prodName, Tm); let q=NaN; if(d>0 && lambda>0){ q=(2*Math.PI*lambda*dT)/Math.log(r2/r1); } else { q=2*Math.PI*r1*seg.hExt*dT; } const hours=parseFloat(elHours.value||0)||0; const kwhPerM=q*hours/1000; const kwhSeg=kwhPerM*seg.lenM; const cost=kwhSeg*seg.price; return {r1,r2,dT,Tm,lambda,q,kwhPerM,kwhSeg,cost}; }
+
+// ---- Datenhaltung ----
+function fmt(x,d=2){ return isFinite(x)? Number(x).toFixed(d) : '' }
+function saveGeneral(){ const gen = { projectLabel: elProjectLabel.value||'', projectLocation: elProjectLocation.value||'', hoursYear: parseFloat(elHours.value||0)||0, priceKwh: parseFloat(elPrice.value||0)||0 }; localStorage.setItem(LS_GENERAL, JSON.stringify(gen)); }
+function loadGeneral(){ try{ const t=localStorage.getItem(LS_GENERAL); if(!t) return; const gen=JSON.parse(t); elProjectLabel.value=gen.projectLabel||''; elProjectLocation.value=gen.projectLocation||''; if(typeof gen.hoursYear==='number') elHours.value=gen.hoursYear; if(typeof gen.priceKwh==='number') elPrice.value=gen.priceKwh; }catch{} }
+function saveSegments(){ localStorage.setItem(LS_SEGMENTS, JSON.stringify(segments)); }
+function loadSegments(){ try{ const t=localStorage.getItem(LS_SEGMENTS); if(!t) return; const arr=JSON.parse(t); if(Array.isArray(arr)) { segments = arr; renderTable(); } }catch{} }
+function saveLastInput(){ const inp = { segLabel: elSegLabel.value||'', pipeType: elPipeType.value||'', odMM: parseFloat(elOdMM.value||0)||0, insulType: elInsulType.value||'', thickMM: parseFloat(elThickMM.value||0)||0, lengthM: parseFloat(elLengthM.value||0)||0, tMedium: parseFloat(elTMed.value||0)||0, tAmbient: parseFloat(elTAmb.value||0)||0, hExtern: parseFloat(elHext.value||0)||0 }; localStorage.setItem(LS_LASTINPUT, JSON.stringify(inp)); }
+function loadLastInput(){ try{ const t=localStorage.getItem(LS_LASTINPUT); if(!t) return; const inp=JSON.parse(t); elSegLabel.value=inp.segLabel||''; elPipeType.value=inp.pipeType||elPipeType.value; applySelectedOD(); elOdMM.value = isFinite(inp.odMM)&&inp.odMM>0 ? inp.odMM : elOdMM.value; elInsulType.value=inp.insulType||elInsulType.value; if(isFinite(inp.thickMM)) elThickMM.value=inp.thickMM; if(isFinite(inp.lengthM)) elLengthM.value=inp.lengthM; if(isFinite(inp.tMedium)) elTMed.value=inp.tMedium; if(isFinite(inp.tAmbient)) elTAmb.value=inp.tAmbient; if(isFinite(inp.hExtern)) elHext.value=inp.hExtern; updateTm(); }catch{} }
+
+function clearGeneral(){ localStorage.removeItem(LS_GENERAL); elProjectLabel.value=''; elProjectLocation.value=''; elHours.value='1500'; elPrice.value='0.35'; renderTable(); }
+function clearSegments(){ segments=[]; saveSegments(); renderTable(); }
+function clearAll(){ localStorage.removeItem(LS_GENERAL); localStorage.removeItem(LS_SEGMENTS); localStorage.removeItem(LS_LASTINPUT); segments=[]; populateDropdowns(); clearGeneral(); renderTable(); }
+
+// ---- Abschnitte ----
+let segments = [];
+function addSegment(){ const seg = { label:(elSegLabel.value||'').trim(), pipeName: elPipeType.value, odMM: parseFloat(elOdMM.value), prodName: elInsulType.value, thickMM: parseFloat(elThickMM.value), lenM: parseFloat(elLengthM.value), tMed: parseFloat(elTMed.value), tAmb: parseFloat(elTAmb.value), price: parseFloat(elPrice.value), hExt: parseFloat(elHext.value) }; if(!seg.pipeName){ alert('Bitte Rohrtyp wählen.'); return; } if(!isFinite(seg.odMM)){ alert('Außen‑Ø fehlt oder ungültig.'); return; } if(!isFinite(seg.thickMM)||!isFinite(seg.lenM)||!isFinite(seg.tMed)||!isFinite(seg.tAmb)){ alert('Bitte Eingaben prüfen.'); return; } segments.push(seg); saveSegments(); renderTable(); saveLastInput(); }
+
+function renderTable(){ elTblBody.innerHTML=''; let sumE=0,sumC=0; segments.forEach((seg,idx)=>{ const r=computeSegment(seg); sumE += r.kwhSeg||0; sumC += r.cost||0; const tr=document.createElement('tr'); tr.innerHTML = `
+  <td>${idx+1}</td>
+  <td class="left">${seg.label||'-'}</td>
+  <td class="left">${seg.pipeName}</td>
+  <td>${fmt(seg.odMM,1)}</td>
+  <td class="left">${seg.prodName}</td>
+  <td>${fmt(seg.thickMM,0)}</td>
+  <td>${fmt(seg.lenM,1)}</td>
+  <td>${fmt(seg.tMed,0)}</td>
+  <td>${fmt(seg.tAmb,0)}</td>
+  <td>${fmt(r.Tm,1)}</td>
+  <td>${fmt(r.lambda,3)}</td>
+  <td>${fmt(r.q,1)}</td>
+  <td>${fmt(r.kwhPerM,1)}</td>
+  <td>${fmt(r.kwhSeg,1)}</td>
+  <td>${fmt(r.cost,2)}</td>
+  <td class="left"><button class="ghost" onclick="editSeg(${idx})">Bearb.</button> <button class="ghost" onclick="delSeg(${idx})">Löschen</button></td>`; elTblBody.appendChild(tr); }); elSumE.textContent=fmt(sumE,1); elSumC.textContent=fmt(sumC,2); fillReport(sumE,sumC); saveGeneral(); }
+
+function editSeg(i){ const seg=segments[i]; if(!seg) return; elSegLabel.value=seg.label||''; elPipeType.value=seg.pipeName; applySelectedOD(); elOdMM.value=isFinite(seg.odMM)? seg.odMM : elOdMM.value; elInsulType.value=seg.prodName; elThickMM.value=seg.thickMM; elLengthM.value=seg.lenM; elTMed.value=seg.tMed; elTAmb.value=seg.tAmb; elPrice.value=seg.price; elHext.value=seg.hExt; updateTm(); saveLastInput(); }
+function delSeg(i){ segments.splice(i,1); saveSegments(); renderTable(); }
+
+// ---- Bericht ----
+function fillReport(sumE, sumC){ const report=document.getElementById('report'); report.style.display = segments.length? 'block':'none'; document.getElementById('r_proj').textContent = (elProjectLabel.value||'').trim(); document.getElementById('r_loc').textContent = (elProjectLocation.value||'').trim(); document.getElementById('r_price').textContent = fmt(parseFloat(elPrice.value||0),2)+' €/kWh'; document.getElementById('r_hours').textContent = fmt(parseFloat(elHours.value||0),0); document.getElementById('r_sumE').textContent = fmt(sumE,1); document.getElementById('r_sumC').textContent = fmt(sumC,2); const tbody=document.getElementById('r_body'); tbody.innerHTML=''; segments.forEach((seg,idx)=>{ const r=computeSegment(seg); const tr=document.createElement('tr'); function td(v,al='right'){ return `<td style=\"text-align:${al};padding:6px 8px;border-bottom:1px solid var(--line)\">${v}</td>` } tr.innerHTML = `
+  <td style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)">${idx+1} – ${seg.label||'-'}</td>
+  <td style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)">${seg.pipeName} / ${seg.prodName}</td>
+  ${td(fmt(seg.odMM,1))}
+  ${td(fmt(seg.thickMM,0))}
+  ${td(fmt(seg.lenM,1))}
+  ${td(fmt(r.Tm,1))}
+  ${td(fmt(r.lambda,3))}
+  ${td(fmt(r.q,1))}
+  ${td(fmt(r.kwhPerM,1))}
+  ${td(fmt(r.kwhSeg,1))}
+  ${td(fmt(r.cost,2))}
+  `; tbody.appendChild(tr); }); }
+
+// ---- Aktionen ----
+elBtnPrint.addEventListener('click', ()=> window.print());
+[elProjectLabel, elProjectLocation, elHours, elPrice].forEach(el=> el.addEventListener('input', ()=>{ saveGeneral(); renderTable(); }));
+[elSegLabel, elPipeType, elOdMM, elInsulType, elThickMM, elLengthM, elTMed, elTAmb, elHext].forEach(el=> el.addEventListener('input', saveLastInput));
+elBtnSave.addEventListener('click', ()=>{ saveGeneral(); saveLastInput(); saveSegments(); alert('Gespeichert.'); });
+elBtnClearSeg.addEventListener('click', ()=>{ if(confirm('Alle Abschnitte löschen?')) clearSegments(); });
+elBtnClearGen.addEventListener('click', ()=>{ if(confirm('Beschriftung & Allgemeine Eingaben löschen?')) clearGeneral(); });
+elBtnClearAll.addEventListener('click', ()=>{ if(confirm('Alle gespeicherten Daten (Allgemein + Abschnitte + letzte Eingaben) löschen?')) clearAll(); });
+
+document.getElementById('btnAdd').addEventListener('click', addSegment);
+
+// Export/Import
+elBtnExport.addEventListener('click', ()=>{ const data = {general: JSON.parse(localStorage.getItem(LS_GENERAL)||'{}'), segments, lastInput: JSON.parse(localStorage.getItem(LS_LASTINPUT)||'{}')}; const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='waermeverlust_rohr_projekt.json'; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1000); });
+elFileImport.addEventListener('change', async (ev)=>{ const f=ev.target.files[0]; if(!f) return; try{ const t=await f.text(); const d=JSON.parse(t); if(d.general){ localStorage.setItem(LS_GENERAL, JSON.stringify(d.general)); } if(Array.isArray(d.segments)){ segments=d.segments; } if(d.lastInput){ localStorage.setItem(LS_LASTINPUT, JSON.stringify(d.lastInput)); } loadGeneral(); loadLastInput(); renderTable(); }catch(err){ alert('Import fehlgeschlagen: '+err.message); } });
+
+// Init
+(function init(){ try{ populateDropdowns(); loadGeneral(); loadLastInput(); loadSegments(); renderTable(); }catch(err){ elDiag.textContent = 'Init-Fehler: '+err.message; console.error(err); } })();
+</script>
+</body>
+</html>
