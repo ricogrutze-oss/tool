@@ -682,19 +682,7 @@ input::placeholder{color:var(--muted);}
       <input type="text" id="p-bemerk" placeholder="Notizen, Besonderheiten …"/>
     </div>
 
-    <!-- Fotos – eigene Seite beim Drucken -->
-    <div class="pfield full photo-section">
-      <div class="s-lbl">Fotos (max. 4)</div>
-      <div id="photo-grid" class="photo-grid"></div>
-      <button class="btn sec" id="photo-btn" onclick="takePhoto()"
-        style="width:100%;margin-top:.5rem;display:flex;align-items:center;justify-content:center;gap:.5rem;">
-        📷 Foto aufnehmen
-      </button>
-      <input type="file" id="photo-inp" accept="image/*" capture="environment"
-        style="display:none" onchange="onPhotoTaken(this)">
-    </div>
-
-    <!-- Unterschrift Prüfer -->
+    <!-- Unterschrift Prüfer – Seite 1 -->
     <div class="pfield full sig-wrap no-print">
       <div class="s-lbl">Unterschrift Prüfer <span style="color:var(--muted);font-size:.6rem;">(dauerhaft gespeichert)</span></div>
       <canvas id="sig-pad" width="800" height="200"></canvas>
@@ -706,6 +694,18 @@ input::placeholder{color:var(--muted);}
     <div id="sig-display" class="pfield full">
       <img id="sig-img" alt="Unterschrift" style="max-height:70px;border-bottom:1px solid #555;display:block;"/>
       <p id="sig-name-print" style="font-family:var(--mono);font-size:.65rem;color:var(--muted);margin-top:.2rem;"></p>
+    </div>
+
+    <!-- Fotos – eigene Seite beim Drucken -->
+    <div class="pfield full photo-section">
+      <div class="s-lbl">Fotos (max. 4)</div>
+      <div id="photo-grid" class="photo-grid"></div>
+      <button class="btn sec no-print" id="photo-btn" onclick="takePhoto()"
+        style="width:100%;margin-top:.5rem;display:flex;align-items:center;justify-content:center;gap:.5rem;">
+        📷 Foto aufnehmen
+      </button>
+      <input type="file" id="photo-inp" accept="image/*" capture="environment"
+        style="display:none" onchange="onPhotoTaken(this)">
     </div>
   </div>
 
@@ -1689,23 +1689,21 @@ function updatePwrDisplay(){
       $('btn-ok').disabled=true;
     }
   }else if(!step.isZero){
-    // Base = Anlagenleistung × Faktor (nominal); refPower = actual measured at 100%
     const base=ST.anlageBase||ST.refPower;
-    const pNom=base*step.pct/100;           // nominal target
-    const pMaxAbs=base*(step.pct+step.tol)/100; // upper hard limit
-    const pMinNom=base*(step.pct-step.tol)/100; // lower nominal limit
-    // If sun already limits below nominal lower bound → lower bound = refPower (sun-limited pass)
-    const pMin=Math.min(ST.refPower, pMinNom);
-    const pMax=pMaxAbs;
-    const inB=pwr>=pMin&&pwr<=pMax;
-    const sunLimited=ST.refPower<pMinNom; // inverter already below limit → note it
-    updateTolBar(pwr,pMin,pMax,pNom);
+    const pNom=base*step.pct/100;
+    const pMax=base*(step.pct+step.tol)/100; // only upper limit matters
+    const pMinNom=base*(step.pct-step.tol)/100;
+    const overLimit=pwr>pMax;
+    const underNom=pwr<pMinNom; // below nominal but ≤ upper → still PASS (sun limited)
+    updateTolBar(pwr,pMinNom,pMax,pNom);
     if(!ST.stable){setBadge('wait','⌛ Stabilisierung …');$('btn-ok').disabled=true;}
-    else if(inB){
-      setBadge('ok', sunLimited&&pwr<pMinNom?'✓ SONNEN-LIMITIERT – OK':'✓ IN BEREICH');
-      $('btn-ok').disabled=false;
+    else if(overLimit){
+      setBadge('fail','✗ ÜBEREINSPEISUNG – FAE prüfen');$('btn-ok').disabled=false;
+    }else if(underNom){
+      setBadge('ok','⚠ SONNEN-LIMITIERT – BESTANDEN');$('btn-ok').disabled=false;
+    }else{
+      setBadge('ok','✓ IN BEREICH');$('btn-ok').disabled=false;
     }
-    else{setBadge('fail','✗ AUSSERHALB TOLERANZ');$('btn-ok').disabled=false;}
   }else{
     if(ST.stable&&ST.refPower){
       const base=ST.anlageBase||ST.refPower;
@@ -1767,9 +1765,8 @@ function confirmStep(){
     addResult(pwr,pass);
   }else if(!s.isZero){
     const base=ST.anlageBase||ST.refPower;
-    const pMin=Math.min(ST.refPower, base*(s.pct-s.tol)/100);
     const pMax=base*(s.pct+s.tol)/100;
-    addResult(pwr,pwr>=pMin&&pwr<=pMax);
+    addResult(pwr, pwr<=pMax); // PASS if ≤ upper limit; under-production always passes
   }else{
     const base=ST.anlageBase||ST.refPower;
     addResult(pwr,!ST.curPwr||ST.curPwr<=base*0.01); // 1% Schwelle
@@ -1784,14 +1781,10 @@ function addResult(pwr,pass){
   const tgt=s.isZero?0:(base?base*s.pct/100:pwr);
   const pMinNom=base&&s.tol?base*(s.pct-s.tol)/100:0;
   const pMaxNom=base?base*(s.pct+(s.tol||0))/100:Infinity;
-  // overLimit: too much feed-in (critical = RED)
-  // For 100% step: over if measured > 105% of basis (Überinstallation)
-  // For 60%/30%: over if measured > upper tolerance band
-  // For 0%: over if measured > 1% of basis
-  const overLimit=s.isRef
-    ?(base&&pwr>base)
-    :(s.isZero?pwr>(base||0)*0.01:pwr>pMaxNom);
-  const sunLimited=!s.isRef&&!s.isZero&&ST.refPower<pMinNom;
+  // overLimit: measured > upper limit → RED (FAE nicht aktiv)
+  const overLimit=s.isRef?(base&&pwr>base):(s.isZero?pwr>(base||0)*0.01:pwr>pMaxNom);
+  // sunLimited: measured < lower nominal but ≤ upper → YELLOW ⚠ but still PASS (Sonne)
+  const sunLimited=!s.isRef&&!s.isZero&&pwr<pMinNom&&!overLimit;
   const pctOfBase=base?(pwr/base*100):null;
   ST.results.push({lbl:s.lbl,pct:s.pct,tgt,pwr,pctOfBase,pass,sunLimited,overLimit});
 }
