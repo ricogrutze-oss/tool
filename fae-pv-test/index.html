@@ -216,6 +216,14 @@ input::placeholder{color:var(--muted);}
 .det-lbl{font-family:var(--mono);font-size:.62rem;color:var(--muted);white-space:nowrap;width:6.5rem;flex-shrink:0;}
 .det-row input[type=range]{flex:1;accent-color:var(--accent);height:3px;}
 .det-val{font-family:var(--mono);font-size:.68rem;color:var(--accent);width:3.5rem;text-align:right;flex-shrink:0;}
+.imp-chip{
+  background:var(--card);border:1px solid var(--border);color:var(--muted);
+  font-family:var(--mono);font-size:.65rem;padding:.2rem .5rem;
+  border-radius:10px;cursor:pointer;white-space:nowrap;
+}
+.imp-chip.active{background:rgba(240,165,0,.15);border-color:var(--accent);color:var(--accent);}
+.imp-chip:hover{border-color:var(--text);color:var(--text);}
+
 .ir-tog{
   width:38px;height:20px;border-radius:12px;background:var(--border);
   border:1px solid var(--border);cursor:pointer;position:relative;transition:.15s;flex-shrink:0;
@@ -356,9 +364,10 @@ input::placeholder{color:var(--muted);}
       <div class="s-lbl">Impulskonstante</div>
       <div class="s-row">
         <select id="imp-sel" style="flex:0 0 auto;width:auto;" onchange="onImpChange()">
-          <option value="1000">1 000 imp/kWh</option>
-          <option value="2000">2 000 imp/kWh</option>
-          <option value="10000">10 000 imp/kWh</option>
+          <option value="1000">1.000 imp/kWh</option>
+          <option value="5000">5.000 imp/kWh</option>
+          <option value="10000" selected>10.000 imp/kWh</option>
+          <option value="100000">100.000 imp/kWh</option>
           <option value="custom">Manuell</option>
         </select>
         <input type="number" id="imp-custom" placeholder="imp/kWh" min="1" style="display:none;flex:1;"/>
@@ -449,6 +458,14 @@ input::placeholder{color:var(--muted);}
   <div class="det-ctrl no-print">
     <canvas id="scope-cv" height="40" style="width:100%;height:40px;display:block;background:#0a0e14;"></canvas>
     <div class="det-rows">
+      <div class="det-row" style="flex-wrap:wrap;gap:.35rem;">
+        <span class="det-lbl" style="width:auto;">imp/kWh</span>
+        <button class="imp-chip" onclick="setImpLive(1000)">1.000</button>
+        <button class="imp-chip" onclick="setImpLive(5000)">5.000</button>
+        <button class="imp-chip" onclick="setImpLive(10000)">10.000</button>
+        <button class="imp-chip" onclick="setImpLive(100000)">100.000</button>
+        <span id="imp-live-val" style="font-family:var(--mono);font-size:.68rem;color:var(--accent);margin-left:.3rem;"></span>
+      </div>
       <div class="det-row">
         <span class="det-lbl">Empfindlichkeit</span>
         <input type="range" id="sens-sl" min="10" max="90" value="50" oninput="onSens(this)">
@@ -929,6 +946,8 @@ function calcWandler(){
 function startTest(){
   saveSetup(); // persist setup fields + emails to localStorage
   $('imp-n').textContent=ST.numImpulse; // sync pulse counter display
+  // Sync live imp/kWh chips
+  setTimeout(()=>setImpLive(ST.impConst),100);
   const impSel=$('imp-sel').value;
   ST.impConst=impSel==='custom'?parseInt($('imp-custom').value)||1000:parseInt(impSel);
   if(document.querySelector('input[name=mtyp]:checked').value==='direkt') ST.wandler=1;
@@ -1194,6 +1213,18 @@ function startDetection(){
   ST.raf=requestAnimationFrame(loop);
 }
 
+function setImpLive(val){
+  ST.impConst=val;
+  // Update chip active state
+  document.querySelectorAll('.imp-chip').forEach(c=>{
+    c.classList.toggle('active', parseInt(c.textContent.replace('.','')==='' ? 0 : c.textContent.replace(/\./g,''))==val);
+  });
+  const lv=$('imp-live-val');
+  if(lv) lv.textContent='→ '+val.toLocaleString('de-DE')+' imp/kWh aktiv';
+  // Clear pulses so next reading uses new constant from scratch
+  ST.pulses=[];ST.brightHist=[];ST.stable=false;ST.curPwr=null;
+}
+
 function adjImp(d){
   ST.numImpulse=Math.max(2,Math.min(30,ST.numImpulse+d));
   $('imp-n').textContent=ST.numImpulse;
@@ -1235,8 +1266,20 @@ function updatePwrDisplay(){
   $('pamps').textContent=f(toA(pwr),2)+' A @ 400V/√3';
 
   if(step.isRef){
-    if(ST.stable){setBadge('ref','✓ Referenz stabil – bereit');$('btn-ok').disabled=false;}
-    else{setBadge('wait','⌛ Stabilisierung …');$('btn-ok').disabled=true;}
+    const base=ST.anlageBase;
+    const over=base&&pwr>base;
+    if(ST.stable){
+      if(over){
+        setBadge('fail','✗ ÜBERINSTALLATION – Leistung > 100 % Basis');
+        $('btn-ok').disabled=false;
+      } else {
+        setBadge('ref','✓ Referenz stabil – bereit');
+        $('btn-ok').disabled=false;
+      }
+    } else {
+      setBadge('wait','⌛ Stabilisierung …');
+      $('btn-ok').disabled=true;
+    }
   }else if(!step.isZero){
     // Base = Anlagenleistung × Faktor (nominal); refPower = actual measured at 100%
     const base=ST.anlageBase||ST.refPower;
@@ -1310,7 +1353,10 @@ function resetPulseData(){ST.pulses=[];ST.brightHist=[];ST.inPulse=false;ST.stab
 function confirmStep(){
   const s=STEPS[ST.step],pwr=ST.curPwr||0;
   if(s.isRef){
-    ST.refPower=pwr;addResult(pwr,true);
+    ST.refPower=pwr; // always record as reference for subsequent steps
+    const base=ST.anlageBase;
+    const pass=!base||pwr<=base; // fail if > 100% of basis (Überinstallation)
+    addResult(pwr,pass);
   }else if(!s.isZero){
     const base=ST.anlageBase||ST.refPower;
     const pMin=Math.min(ST.refPower, base*(s.pct-s.tol)/100);
@@ -1330,9 +1376,13 @@ function addResult(pwr,pass){
   const tgt=s.isZero?0:(base?base*s.pct/100:pwr);
   const pMinNom=base&&s.tol?base*(s.pct-s.tol)/100:0;
   const pMaxNom=base?base*(s.pct+(s.tol||0))/100:Infinity;
-  // overLimit = too much feed-in (FAE not working = critical = RED)
-  // underLimit = too little feed-in (could be weather/sun = less critical = YELLOW)
-  const overLimit=!s.isRef&&(s.isZero?pwr>(base||0)*0.01:pwr>pMaxNom);
+  // overLimit: too much feed-in (critical = RED)
+  // For 100% step: over if measured > 105% of basis (Überinstallation)
+  // For 60%/30%: over if measured > upper tolerance band
+  // For 0%: over if measured > 1% of basis
+  const overLimit=s.isRef
+    ?(base&&pwr>base)
+    :(s.isZero?pwr>(base||0)*0.01:pwr>pMaxNom);
   const sunLimited=!s.isRef&&!s.isZero&&ST.refPower<pMinNom;
   const pctOfBase=base?(pwr/base*100):null;
   ST.results.push({lbl:s.lbl,pct:s.pct,tgt,pwr,pctOfBase,pass,sunLimited,overLimit});
