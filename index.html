@@ -23,7 +23,35 @@
   header h1 b{color:var(--amber);}
   header p{margin:0; color:var(--text-dim); font-size:13px; font-family:var(--mono);}
 
-  main{max-width:900px; margin:0 auto; padding:24px 16px 60px;}
+  main{max-width:900px; margin:0 auto; padding:20px 16px 60px;}
+
+  .tabbar{ display:flex; gap:8px; margin-bottom:16px; background:var(--panel); border:1px solid var(--edge); border-radius:12px; padding:4px; }
+  .tabbtn{
+    flex:1; text-align:center; padding:10px; border-radius:9px; border:none; background:transparent;
+    color:var(--text-dim); font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit;
+  }
+  .tabbtn.active{ background:var(--amber); color:#1a1300; }
+
+  .view{ display:none; }
+  .view.active{ display:block; }
+
+  .favgrid{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px 10px; }
+  .favtile{
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    text-decoration:none; color:var(--text); position:relative;
+    touch-action:none; user-select:none; -webkit-user-select:none;
+  }
+  .favtile .icon{
+    width:56px; height:56px; border-radius:16px; background:var(--panel2);
+    border:1px solid var(--edge); display:flex; align-items:center; justify-content:center;
+    font-size:28px; overflow:hidden; transition:transform .12s, box-shadow .12s;
+  }
+  .favtile .name{ font-size:11px; text-align:center; line-height:1.25; max-width:78px; }
+  .favtile.dragging{ z-index:50; opacity:.9; }
+  .favtile.dragging .icon{ transform:scale(1.12); box-shadow:0 8px 20px rgba(0,0,0,.5); border-color:var(--amber); }
+  .favtile.dropzone .icon{ outline:2px dashed var(--amber); outline-offset:3px; }
+  .favempty{ color:var(--text-dim); font-size:13px; text-align:center; padding:50px 20px; line-height:1.6; }
+  .favhint{ text-align:center; color:var(--text-dim); font-size:11px; font-family:var(--mono); margin:-8px 0 16px; }
 
   .searchbar{ display:flex; gap:10px; margin-bottom:18px; }
   .searchbar input{
@@ -99,14 +127,25 @@
 </header>
 
 <main>
-  <div class="searchbar">
-    <input type="text" id="search" placeholder="Tool suchen…">
-    <button id="refreshBtn">↻</button>
-    <button id="shareBtn">📤</button>
+  <div class="tabbar">
+    <button class="tabbtn active" id="tabFav">⭐ Favoriten</button>
+    <button class="tabbtn" id="tabAll">🧰 Alle Tools</button>
   </div>
 
-  <div id="status" class="status">Lade Tools …</div>
-  <div class="grid" id="grid"></div>
+  <div class="view active" id="viewFav">
+    <div class="favhint">Icon halten &amp; ziehen zum Sortieren</div>
+    <div class="favgrid" id="favgrid"></div>
+  </div>
+
+  <div class="view" id="viewAll">
+    <div class="searchbar">
+      <input type="text" id="search" placeholder="Tool suchen…">
+      <button id="refreshBtn">↻</button>
+      <button id="shareBtn">📤</button>
+    </div>
+    <div id="status" class="status">Lade Tools …</div>
+    <div class="grid" id="grid"></div>
+  </div>
 </main>
 
 <div class="overlay-bg" id="shareOverlay">
@@ -139,10 +178,15 @@
 
   const els = {
     grid: document.getElementById('grid'),
+    favgrid: document.getElementById('favgrid'),
     status: document.getElementById('status'),
     countLabel: document.getElementById('countLabel'),
     search: document.getElementById('search'),
     refreshBtn: document.getElementById('refreshBtn'),
+    tabFav: document.getElementById('tabFav'),
+    tabAll: document.getElementById('tabAll'),
+    viewFav: document.getElementById('viewFav'),
+    viewAll: document.getElementById('viewAll'),
   };
 
   let allTools = [];
@@ -224,6 +268,11 @@
   }
 
   function render(){
+    renderAllTools();
+    renderFavorites();
+  }
+
+  function renderAllTools(){
     const q = els.search.value.trim().toLowerCase();
     let list = allTools.filter(t =>
       !q || t.title.toLowerCase().includes(q) || t.description.toLowerCase().includes(q)
@@ -271,6 +320,100 @@
     render();
   }
 
+  // ---- Favoriten-Ansicht mit Drag-Sortierung (Touch + Maus via Pointer Events) ----
+  function renderFavorites(){
+    const favTools = pins
+      .map(folder => allTools.find(t => t.folder === folder))
+      .filter(Boolean);
+
+    els.favgrid.innerHTML = '';
+
+    if(!favTools.length){
+      els.favgrid.innerHTML = `<div class="favempty" style="grid-column:1/-1;">
+        Noch keine Favoriten.<br><br>
+        Unter <b>„🧰 Alle Tools"</b> bei einem Tool oben rechts auf <b>📌</b> tippen, um es hierher zu holen.
+      </div>`;
+      return;
+    }
+
+    favTools.forEach(t => {
+      const tile = document.createElement('a');
+      tile.className = 'favtile';
+      tile.href = `viewer.html?url=${encodeURIComponent(t.url)}&title=${encodeURIComponent(t.title)}`;
+      tile.dataset.folder = t.folder;
+      tile.innerHTML = `
+        <div class="icon">${renderIcon(t.icon)}</div>
+        <div class="name">${escapeHtml(t.title)}</div>
+      `;
+      attachDrag(tile);
+      els.favgrid.appendChild(tile);
+    });
+  }
+
+  function attachDrag(tile){
+    let dragging = false;
+    let startX = 0, startY = 0;
+    let origIndex = -1;
+    const THRESHOLD = 8; // px Bewegung bis Drag statt Tap erkannt wird
+
+    tile.addEventListener('pointerdown', (e) => {
+      startX = e.clientX; startY = e.clientY;
+      origIndex = [...els.favgrid.children].indexOf(tile);
+      const onMove = (ev) => {
+        const dx = ev.clientX - startX, dy = ev.clientY - startY;
+        if(!dragging && Math.hypot(dx, dy) > THRESHOLD){
+          dragging = true;
+          tile.setPointerCapture(e.pointerId);
+          tile.classList.add('dragging');
+          tile.style.position = 'relative';
+        }
+        if(dragging){
+          ev.preventDefault();
+          tile.style.transform = `translate(${ev.clientX-startX}px, ${ev.clientY-startY}px)`;
+          tile.style.pointerEvents = 'none';
+          const under = document.elementFromPoint(ev.clientX, ev.clientY);
+          tile.style.pointerEvents = '';
+          const overTile = under && under.closest('.favtile');
+          [...els.favgrid.children].forEach(c => c.classList.remove('dropzone'));
+          if(overTile && overTile !== tile){
+            overTile.classList.add('dropzone');
+          }
+        }
+      };
+      const onUp = (ev) => {
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onUp);
+        if(dragging){
+          tile.style.pointerEvents = '';
+          const under = document.elementFromPoint(ev.clientX, ev.clientY);
+          const overTile = under && under.closest('.favtile');
+          [...els.favgrid.children].forEach(c => c.classList.remove('dropzone'));
+          tile.classList.remove('dragging');
+          tile.style.transform = '';
+          tile.dataset.wasDrag = '1';
+          if(overTile && overTile !== tile){
+            const newIndex = [...els.favgrid.children].indexOf(overTile);
+            const folder = tile.dataset.folder;
+            pins = pins.filter(n => n !== folder);
+            const targetFolder = overTile.dataset.folder;
+            const targetPos = pins.indexOf(targetFolder);
+            pins.splice(targetPos, 0, folder);
+            localStorage.setItem(PIN_KEY, JSON.stringify(pins));
+            renderFavorites();
+          }
+          dragging = false;
+        }
+      };
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup', onUp);
+    });
+
+    // Verhindert, dass ein erkannter Drag als Klick das Tool öffnet
+    tile.addEventListener('click', (e) => {
+      if(tile.dataset.wasDrag === '1'){ e.preventDefault(); tile.dataset.wasDrag=''; }
+    });
+  }
+
   function escapeHtml(s){
     return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
@@ -283,8 +426,17 @@
     return icon;
   }
 
-  els.search.addEventListener('input', render);
+  els.search.addEventListener('input', renderAllTools);
   els.refreshBtn.addEventListener('click', () => loadTools(true));
+
+  els.tabFav.addEventListener('click', () => {
+    els.tabFav.classList.add('active'); els.tabAll.classList.remove('active');
+    els.viewFav.classList.add('active'); els.viewAll.classList.remove('active');
+  });
+  els.tabAll.addEventListener('click', () => {
+    els.tabAll.classList.add('active'); els.tabFav.classList.remove('active');
+    els.viewAll.classList.add('active'); els.viewFav.classList.remove('active');
+  });
 
   // ---- Teilen / QR-Code ----
   const shareOverlay = document.getElementById('shareOverlay');
