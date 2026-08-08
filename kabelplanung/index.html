@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kabelplanung — Netzplaner</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+  :root{ --bg:#0b0f14; --panel:#121821; --panel2:#182130; --edge:#243044; --amber:#ffb020; --text:#e7edf5; --text-dim:#8ea0b8; }
+  body { background-color: var(--bg); padding: 15px; font-family: sans-serif; font-size: 0.95rem; color: var(--text); }
+  .card { border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.4); border: 1px solid var(--edge); margin-bottom: 20px; background: var(--panel); }
+  .header-bg { background: var(--panel2); color: var(--amber); padding: 15px; text-align: center; border-radius: 12px 12px 0 0; border-bottom: 1px solid var(--edge); }
+  .header-bg h5{ margin:0; font-weight:700; }
+  .btn-calc { background-color: var(--amber); color: #1a1300; font-weight: bold; width: 100%; border-radius: 8px; padding: 12px; border: none; margin-top: 10px; }
+  .result-card { background-color: var(--panel); border-left: 6px solid var(--amber); display: none; padding: 25px; border-radius: 8px; margin-top: 20px; border-top:1px solid var(--edge); border-right:1px solid var(--edge); border-bottom:1px solid var(--edge); }
+  .output-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--edge); }
+  .output-val { font-weight: 700; color: var(--text); }
+  .math-box { background: #0d1319; border: 1px solid var(--edge); padding: 15px; border-radius: 8px; margin-top: 15px; font-family: monospace; font-size: 0.85rem; color: var(--text-dim); }
+  .form-control, .form-select { background:#0d1319; border:1px solid var(--edge); color:var(--text); }
+  .form-control:focus, .form-select:focus { background:#0d1319; border-color:var(--amber); color:var(--text); box-shadow:0 0 0 .25rem rgba(255,176,32,.2); }
+  label.fw-bold{ color: var(--text-dim); font-size:.85rem; }
+  .text-primary{ color: var(--amber) !important; }
+  .border-bottom{ border-color: var(--edge) !important; }
+  .btn-danger{ background:var(--panel2); border:1px solid var(--edge); color:var(--text); }
+  .backhome{
+    position:fixed; top:10px; left:10px; z-index:9999;
+    background:rgba(11,15,20,0.85); color:var(--amber);
+    border:1px solid var(--edge); border-radius:20px;
+    padding:7px 14px; font-size:13px; font-weight:600;
+    text-decoration:none; backdrop-filter:blur(6px);
+  }
+  @media print {
+    .no-print, .backhome { display: none !important; }
+    .result-card { display: block !important; border: none !important; box-shadow: none !important; }
+    .page-break { page-break-before: always; }
+    body { background: white; color:#000; }
+    .print-header { display: block !important; border-bottom: 2px solid #000; margin-bottom: 20px; }
+    .output-val, .math-box { color:#000 !important; }
+  }
+  .print-header { display: none; }
+</style>
+</head>
+<body>
+
+<a href="../" class="backhome no-print">← Toolbox</a>
+
+<div class="container" style="max-width: 750px;">
+    <div class="card no-print">
+        <div class="header-bg"><h5>Kabel-Dimensionierung</h5></div>
+        <div class="card-body">
+            <input type="text" id="anlage" class="form-control mb-3" placeholder="Projektbezeichnung">
+            <div class="row">
+                <div class="col-6 mb-3">
+                    <label class="fw-bold">Leistung</label>
+                    <input type="number" id="p_val" class="form-control" placeholder="Wert">
+                </div>
+                <div class="col-3 mb-3">
+                    <label class="fw-bold">Typ</label>
+                    <select id="input_type" class="form-select" onchange="document.getElementById('val_label').innerText = this.value==='S'?'kVA':'kW'">
+                        <option value="S">kVA</option><option value="P">kW</option>
+                    </select>
+                </div>
+                <div class="col-3 mb-3"><label class="fw-bold" id="val_label">kVA</label><input type="number" id="cos_phi" class="form-control" value="0.99" step="0.01"></div>
+            </div>
+            <div class="row">
+                <div class="col-6 mb-3">
+                    <label class="fw-bold">Betrieb</label>
+                    <select id="mode" class="form-select" onchange="document.getElementById('h_div').style.display = (this.value==='280'?'block':'none')">
+                        <option value="400">Normalbetrieb</option><option value="280">Dauerlast</option>
+                    </select>
+                </div>
+                <div class="col-6 mb-3" id="h_div" style="display:none;"><label class="fw-bold">h/a</label><input type="number" id="v_hours" class="form-control" value="1000"></div>
+            </div>
+            <div class="row">
+                <div class="col-6 mb-3"><label class="fw-bold">Länge (m)</label><input type="number" id="length" class="form-control"></div>
+                <div class="col-6 mb-3"><label class="fw-bold">Max ΔU (%)</label><input type="number" id="max_du" class="form-control" value="0.5" step="0.1"></div>
+            </div>
+            <button onclick="calculateKabel()" class="btn btn-calc">BERECHNEN</button>
+        </div>
+    </div>
+
+    <div id="result_kabel" class="result-card">
+        <div class="print-header"><h4>Kabelberechnungs-Protokoll</h4><b id="pr_anlage"></b></div>
+        <h5 class="text-primary border-bottom pb-2">1. Technische Daten</h5>
+        <div class="output-row"><span>Leistungswerte:</span><span id="out_powers" class="output-val">-</span></div>
+        <div class="output-row"><span>Kabel / Querschnitt:</span><span id="out_type" class="output-val">-</span></div>
+        <div class="output-row"><span>Systeme parallel:</span><span id="out_count" class="output-val">-</span></div>
+        <div class="output-row"><span>Sicherung:</span><span id="out_fuse" class="output-val">-</span></div>
+        <div class="output-row"><span>Messwandler:</span><span id="out_wandler" class="output-val">-</span></div>
+        <div class="output-row"><span>Spannungsfall (Ist):</span><span id="out_du" class="output-val">-</span></div>
+        <div class="output-row"><span>Max. Länge (L_max):</span><span id="out_maxl" class="output-val">-</span></div>
+        <div id="row_loss" class="output-row" style="display:none;"><span>Verlustrate:</span><span id="out_loss_pct" class="output-val text-danger">-</span></div>
+
+        <h5 class="text-primary border-bottom pb-2 mt-4">2. Berechnungsschritte</h5>
+        <div id="math_steps" class="math-box"></div>
+    </div>
+
+    <button id="pdfBtn" onclick="window.print()" class="btn btn-danger no-print mt-3 w-100 shadow" style="display:none;">ALS PDF SPEICHERN</button>
+</div>
+
+<script>
+function formatDE(num, decimals = 2) {
+    if (isNaN(num)) return "-";
+    return num.toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: decimals });
+}
+
+function calculateKabel() {
+    const anlage = document.getElementById('anlage').value || "Keine Angabe";
+    const type = document.getElementById('input_type').value;
+    const inputVal = parseFloat(document.getElementById('p_val').value);
+    const cosPhi = parseFloat(document.getElementById('cos_phi').value);
+    const mode = document.getElementById('mode').value;
+    const L = parseFloat(document.getElementById('length').value);
+    const maxDU_percent = parseFloat(document.getElementById('max_du').value);
+    const vHoursInput = parseFloat(document.getElementById('v_hours').value);
+    const U = 400;
+
+    if (!inputVal || inputVal <= 0) return alert("Bitte eine gültige Leistung eingeben!");
+    if (!L || L <= 0) return alert("Bitte eine gültige Kabellänge eingeben!");
+    if (!cosPhi || cosPhi <= 0 || cosPhi > 1) return alert("cos φ muss zwischen 0 und 1 liegen!");
+    if (!maxDU_percent || maxDU_percent <= 0) return alert("Bitte einen gültigen Grenzwert für ΔU eingeben!");
+
+    let S, P;
+    if (type === "S") { S = inputVal * 1000; P = S * cosPhi; }
+    else { P = inputVal * 1000; S = P / cosPhi; }
+
+    const I_ges = S / (Math.sqrt(3) * U);
+    const options = [
+        { name: "NAYY 4x150", q: 150, mat: 34, count: 1 },
+        { name: "NAYY 4x240", q: 240, mat: 34, count: 1 },
+        { name: "NAYY 2x 4x240", q: 240, mat: 34, count: 2 },
+        { name: "NYY 4x150", q: 150, mat: 56, count: 1 },
+        { name: "NYY 4x240", q: 240, mat: 56, count: 1 },
+        { name: "NYY 2x 4x240", q: 240, mat: 56, count: 2 }
+    ];
+
+    let bestOption = null;
+    for (let opt of options) {
+        const i_pro_ader = I_ges / opt.count;
+        const R_ader = L / (opt.mat * opt.q);
+        const dU_p = ((Math.sqrt(3) * L * I_ges) / (opt.mat * (opt.q * opt.count) * U)) * 100;
+        const Pv_kw = (3 * Math.pow(I_ges, 2) * (R_ader / opt.count)) / 1000;
+        const loss_rate = ((Pv_kw * vHoursInput) / ((S/1000) * vHoursInput)) * 100;
+
+        if (i_pro_ader <= parseFloat(mode) && dU_p <= maxDU_percent) {
+            if (mode === "280" && loss_rate > 1.0) continue;
+            bestOption = { ...opt, i_pro_ader, dU_p, R_ader, loss_rate, Pv_kw };
+            break;
+        }
+    }
+
+    if (bestOption) {
+        document.getElementById('result_kabel').style.display = 'block';
+        document.getElementById('pdfBtn').style.display = 'block';
+        document.getElementById('pr_anlage').innerText = "Anlage: " + anlage;
+        document.getElementById('out_powers').innerText = `P: ${formatDE(P/1000, 1)}kW | S: ${formatDE(S/1000, 1)}kVA | cos φ: ${formatDE(cosPhi, 2)}`;
+        document.getElementById('out_type').innerText = bestOption.name;
+        document.getElementById('out_count').innerText = bestOption.count;
+        document.getElementById('out_du').innerText = formatDE(bestOption.dU_p, 3) + " %";
+        document.getElementById('out_maxl').innerText = Math.floor(((maxDU_percent/100) * U * bestOption.mat * (bestOption.q * bestOption.count)) / (Math.sqrt(3) * I_ges)) + " m";
+
+        const f_val = [63,80,100,125,160,200,250,315,355,400,500,630].find(f => f >= bestOption.i_pro_ader) || "Sonder";
+        document.getElementById('out_fuse').innerText = bestOption.count > 1 ? `2x (3x NH2 ${f_val}A)` : `3x NH2 ${f_val}A`;
+        document.getElementById('out_wandler').innerText = I_ges > 63 ? (I_ges <= 250 ? "250/5 A" : (I_ges <= 500 ? "500/5 A" : "1000/5 A")) : "Keiner";
+
+        let formulaHTML = `<b>1. Betriebsstrom (I):</b><br>I = S / (√3 * U) = ${formatDE(S,0)} / (1,732 * 400) = <b>${formatDE(I_ges, 2)} A</b><br><br><b>2. Widerstand (R pro Leiter):</b><br>R = L / (κ * A) = ${L} / (${bestOption.mat} * ${bestOption.q}) = <b>${formatDE(bestOption.R_ader, 4)} Ω</b><br><br><b>3. Spannungsfall (ΔU):</b><br>ΔU = (√3 * L * I) / (κ * A_ges * U) * 100 = <b>${formatDE(bestOption.dU_p, 3)} %</b>`;
+
+        if (mode === "280") {
+            document.getElementById('row_loss').style.display = 'flex';
+            document.getElementById('out_loss_pct').innerText = formatDE(bestOption.loss_rate, 3) + " %";
+            formulaHTML += `<br><br><b>4. Wirtschaftlichkeit (${vHoursInput} h/a):</b><br>Pv = 3 * I² * (R/n) / 1000 = <b>${formatDE(bestOption.Pv_kw, 3)} kW</b><br>Verlustrate = (Pv * h) / (S * h) * 100 = <b>${formatDE(bestOption.loss_rate, 3)} %</b>`;
+        } else { document.getElementById('row_loss').style.display = 'none'; }
+        document.getElementById('math_steps').innerHTML = formulaHTML;
+    } else { alert("Keine passende Kabellösung gefunden! Länge reduzieren oder ΔU-Grenzwert lockern."); }
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
