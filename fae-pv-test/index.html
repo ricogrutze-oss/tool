@@ -839,6 +839,8 @@ function savePrueferFromCfg(){
   try{localStorage.setItem(LS+'pruefer',v);}catch{}
   alert('Name gespeichert: '+v);
 }
+
+function renderHistoryInline(){
   const list=$('hist-list-inline');
   if(!list)return;
   let hist=[];
