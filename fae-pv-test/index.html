@@ -27,7 +27,18 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);}
 .s-title h1{font-size:1.4rem;font-weight:700;color:var(--accent);letter-spacing:.07em;text-transform:uppercase;}
 .s-title p{font-size:.75rem;color:var(--muted);margin-top:.2rem;}
 
-.back-link{
+/* Tab nav */
+.tab-nav{display:flex;border:1px solid var(--border);border-radius:4px;overflow:hidden;flex-shrink:0;}
+.tab{
+  flex:1;background:var(--card);border:none;color:var(--muted);
+  font-family:var(--sans);font-size:.82rem;font-weight:600;
+  padding:.65rem .5rem;cursor:pointer;letter-spacing:.03em;
+  transition:background .15s,color .15s;
+}
+.tab:hover{color:var(--text);}
+.tab.active{background:rgba(240,165,0,.15);color:var(--accent);}
+
+/* Back link */
   display:flex;align-items:center;gap:.35rem;
   font-family:var(--mono);font-size:.68rem;color:var(--muted);
   text-decoration:none;padding:.3rem 0;
@@ -280,6 +291,41 @@ input::placeholder{color:var(--muted);}
   color:rgba(255,255,255,.7);background:rgba(0,0,0,.5);padding:.1rem .3rem;border-radius:2px;
 }
 
+/* ── HISTORY SCREEN ── */
+#history{padding:0;}
+.hist-item{
+  background:var(--card);border:1px solid var(--border);border-left:4px solid var(--border);
+  padding:.75rem 1rem;display:flex;align-items:center;gap:.75rem;cursor:pointer;
+  transition:background .15s;
+}
+.hist-item:hover{background:rgba(255,255,255,.04);}
+.hist-item.ok{border-left-color:var(--green);}
+.hist-item.warn{border-left-color:var(--accent);}
+.hist-item.fail{border-left-color:var(--red);}
+.hist-icon{font-size:1.3rem;flex-shrink:0;}
+.hist-info{flex:1;min-width:0;}
+.hist-title{font-weight:600;font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hist-sub{font-family:var(--mono);font-size:.65rem;color:var(--muted);margin-top:.15rem;}
+.hist-date{font-family:var(--mono);font-size:.62rem;color:var(--muted);flex-shrink:0;text-align:right;}
+.hist-del{
+  background:transparent;border:none;color:var(--muted);font-size:1rem;
+  cursor:pointer;padding:.2rem .4rem;flex-shrink:0;
+}
+.hist-del:hover{color:var(--red);}
+.hist-empty{padding:2rem;text-align:center;color:var(--muted);font-family:var(--mono);font-size:.8rem;}
+
+/* ── SIGNATURE ── */
+.sig-wrap{display:flex;flex-direction:column;gap:.4rem;}
+#sig-pad{
+  width:100%;height:120px;background:#fff;border:1px solid var(--border);
+  border-radius:2px;touch-action:none;display:block;cursor:crosshair;
+}
+#sig-pad.has-sig{cursor:default;}
+.sig-actions{display:flex;gap:.5rem;}
+#sig-display{display:none;}
+#sig-display img{max-height:60px;border-bottom:1px solid #ccc;display:block;}
+#sig-display p{font-size:.65rem;color:var(--muted);font-family:var(--mono);margin-top:.2rem;}
+
 /* ── PRINT ── */
 @media print{
   .no-print{display:none!important;}
@@ -296,6 +342,9 @@ input::placeholder{color:var(--muted);}
   .photo-section{page-break-before:always;margin-top:0;}
   .photo-grid{grid-template-columns:1fr 1fr;}
   .photo-item{aspect-ratio:4/3;break-inside:avoid;}
+  .sig-wrap{display:none!important;}
+  #sig-display{display:block!important;}
+  #sig-display img{max-height:70px;}
 }
 </style>
 </head>
@@ -306,6 +355,16 @@ input::placeholder{color:var(--muted);}
 <div class="s-inner">
 
   <a href="../" class="back-link no-print">Tool-Übersicht</a>
+
+  <!-- Tab Nav -->
+  <div class="tab-nav" style="width:100%;max-width:430px;">
+    <button class="tab active" id="tab-new" onclick="switchTab('new')">＋ Neuer Test</button>
+    <button class="tab" id="tab-hist" onclick="switchTab('hist')">📋 Historie</button>
+    <button class="tab" id="tab-cfg" onclick="switchTab('cfg')">⚙ Einstellungen</button>
+  </div>
+
+  <!-- TAB: Neuer Test -->
+  <div id="tab-content-new" style="width:100%;max-width:430px;display:flex;flex-direction:column;gap:.85rem;">
 
   <div class="s-title">
     <h1>FAE Test</h1>
@@ -408,13 +467,52 @@ input::placeholder{color:var(--muted);}
 
   <button class="btn" onclick="startTest()" style="margin-top:.25rem;">▶ Test starten</button>
 
-  <!-- E-Mail Empfänger -->
-  <div class="s-section" style="width:100%;max-width:430px;">
-    <div class="sec-hdr">E-Mail Empfänger (Protokoll)</div>
-    <input type="email" id="email-1" placeholder="E-Mail 1"/>
-    <input type="email" id="email-2" placeholder="E-Mail 2 (optional)" style="margin-top:.4rem;"/>
-    <input type="email" id="email-3" placeholder="E-Mail 3 (optional)" style="margin-top:.4rem;"/>
+  </div><!-- end tab-content-new -->
+
+  <!-- TAB: Historie -->
+  <div id="tab-content-hist" style="width:100%;max-width:430px;display:none;flex-direction:column;gap:.6rem;">
+    <div id="hist-list-inline" style="display:flex;flex-direction:column;gap:.5rem;"></div>
+    <button class="btn sec" style="width:100%;color:var(--red);border-color:var(--red);" onclick="clearAll()">
+      ⚠ Alles löschen (Historie, Unterschrift, Name)
+    </button>
   </div>
+
+  <!-- TAB: Einstellungen -->
+  <div id="tab-content-cfg" style="width:100%;max-width:430px;display:none;flex-direction:column;gap:1rem;">
+
+    <div class="s-section">
+      <div class="sec-hdr">Prüfer</div>
+      <div class="s-lbl">Name (dauerhaft gespeichert)</div>
+      <div class="s-row">
+        <input type="text" id="cfg-pruefer" placeholder="Vor- und Nachname" style="flex:1;"/>
+        <button class="btn sec" onclick="savePrueferFromCfg()">✓</button>
+      </div>
+    </div>
+
+    <div class="s-section">
+      <div class="sec-hdr">Unterschrift</div>
+      <div class="s-lbl">Einmal zeichnen – wird auf jedem Protokoll verwendet</div>
+      <canvas id="cfg-sig-pad" width="800" height="220"
+        style="width:100%;background:#fff;border:1px solid var(--border);border-radius:2px;touch-action:none;display:block;cursor:crosshair;margin-top:.3rem;"></canvas>
+      <div style="display:flex;gap:.5rem;margin-top:.5rem;">
+        <button class="btn sec" onclick="clearCfgSig()" style="flex:1;">Neu</button>
+        <button class="btn" onclick="saveCfgSig()" style="flex:2;background:var(--accent);color:#000;">✓ Speichern</button>
+      </div>
+      <div id="cfg-sig-preview" style="display:none;margin-top:.75rem;">
+        <div class="s-lbl">Gespeicherte Unterschrift:</div>
+        <img id="cfg-sig-img" style="max-height:65px;border-bottom:1px solid var(--border);display:block;margin-top:.3rem;"/>
+      </div>
+    </div>
+
+    <div class="s-section">
+      <div class="sec-hdr">E-Mail Empfänger (Protokoll)</div>
+      <input type="email" id="email-1" placeholder="E-Mail 1"/>
+      <input type="email" id="email-2" placeholder="E-Mail 2 (optional)" style="margin-top:.4rem;"/>
+      <input type="email" id="email-3" placeholder="E-Mail 3 (optional)" style="margin-top:.4rem;"/>
+      <button class="btn sec" onclick="saveSetup()" style="width:100%;margin-top:.5rem;">✓ Speichern</button>
+    </div>
+
+  </div><!-- end tab-content-cfg -->
 
 </div>
 </div>
@@ -595,11 +693,46 @@ input::placeholder{color:var(--muted);}
       <input type="file" id="photo-inp" accept="image/*" capture="environment"
         style="display:none" onchange="onPhotoTaken(this)">
     </div>
+
+    <!-- Unterschrift Prüfer -->
+    <div class="pfield full sig-wrap no-print">
+      <div class="s-lbl">Unterschrift Prüfer <span style="color:var(--muted);font-size:.6rem;">(dauerhaft gespeichert)</span></div>
+      <canvas id="sig-pad" width="800" height="200"></canvas>
+      <div class="sig-actions">
+        <button class="btn sec" onclick="clearSig()" style="flex:1;">Neu zeichnen</button>
+        <button class="btn" onclick="saveSig()" style="flex:2;background:var(--accent);color:#000;">✓ Speichern</button>
+      </div>
+    </div>
+    <div id="sig-display" class="pfield full">
+      <img id="sig-img" alt="Unterschrift" style="max-height:70px;border-bottom:1px solid #555;display:block;"/>
+      <p id="sig-name-print" style="font-family:var(--mono);font-size:.65rem;color:var(--muted);margin-top:.2rem;"></p>
+    </div>
   </div>
 
   <button class="btn no-print" onclick="window.print()">🖨 Protokoll drucken</button>
   <button class="btn email no-print" onclick="sendEmail()">✉ Per E-Mail senden</button>
-  <button class="btn sec no-print" style="width:100%;color:var(--red);border-color:var(--red);" onclick="deleteTest()">🗑 Testdaten löschen</button>
+  <button class="btn sec no-print" onclick="showHistory()" style="width:100%;">📋 Prüfhistorie ansehen</button>
+  <div style="display:flex;gap:.5rem;" class="no-print">
+    <button class="btn sec" style="flex:1;color:var(--accent);border-color:var(--accent);" onclick="deleteTest()">🗑 Test löschen</button>
+    <button class="btn sec" style="flex:1;color:var(--red);border-color:var(--red);" onclick="clearAll()">⚠ Alles löschen</button>
+  </div>
+</div>
+
+<!-- ═══ HISTORY ═══ -->
+<div id="history" class="screen">
+  <div class="step-hdr" style="flex-shrink:0;">
+    <div>
+      <div class="step-n">Prüfhistorie</div>
+      <div class="step-l">Letzte 10 Tests</div>
+    </div>
+    <button class="btn sec" onclick="show('setup')" style="width:auto;padding:.4rem .9rem;">← Zurück</button>
+  </div>
+  <div id="hist-list" style="flex:1;overflow-y:auto;padding:.75rem;display:flex;flex-direction:column;gap:.5rem;"></div>
+  <div style="padding:.6rem .75rem;flex-shrink:0;border-top:1px solid var(--border);">
+    <button class="btn sec" style="width:100%;color:var(--red);border-color:var(--red);" onclick="clearAll()">
+      ⚠ Gesamte Historie + Alles löschen
+    </button>
+  </div>
 </div>
 
 <script>
@@ -632,9 +765,281 @@ const ST={
   qrStream:null, qrRaf:null, qrRunning:false, bdector:null,
 };
 
-function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$(id).classList.add('active');}
+function switchTab(tab){
+  ['new','hist','cfg'].forEach(t=>{
+    $('tab-'+t).classList.toggle('active',t===tab);
+    const c=$('tab-content-'+t);
+    if(c) c.style.display=t===tab?'flex':'none';
+  });
+  if(tab==='hist') renderHistoryInline();
+  if(tab==='cfg') initCfgSigPad();
+}
+function showHistory(){show('setup');switchTab('hist');}
 
-// ── PHOTOS ───────────────────────────────────────────────────
+// ── CFG SIGNATURE PAD ────────────────────────────────────────
+let cfgSigCtx=null, cfgDrawing=false, cfgLastX=0, cfgLastY=0, cfgHasData=false;
+
+function initCfgSigPad(){
+  const c=$('cfg-sig-pad');
+  if(!c||cfgSigCtx)return;
+  cfgSigCtx=c.getContext('2d');
+  cfgSigCtx.strokeStyle='#000';cfgSigCtx.lineWidth=2.5;
+  cfgSigCtx.lineCap='round';cfgSigCtx.lineJoin='round';
+  function getPos(e){
+    const r=c.getBoundingClientRect();
+    const src=e.touches?e.touches[0]:e;
+    return{x:(src.clientX-r.left)*(c.width/r.width),y:(src.clientY-r.top)*(c.height/r.height)};
+  }
+  c.addEventListener('mousedown',e=>{cfgDrawing=true;const p=getPos(e);cfgLastX=p.x;cfgLastY=p.y;});
+  c.addEventListener('mousemove',e=>{
+    if(!cfgDrawing)return;
+    const p=getPos(e);
+    cfgSigCtx.beginPath();cfgSigCtx.moveTo(cfgLastX,cfgLastY);cfgSigCtx.lineTo(p.x,p.y);cfgSigCtx.stroke();
+    cfgLastX=p.x;cfgLastY=p.y;cfgHasData=true;
+  });
+  c.addEventListener('mouseup',()=>cfgDrawing=false);
+  c.addEventListener('touchstart',e=>{e.preventDefault();cfgDrawing=true;const p=getPos(e);cfgLastX=p.x;cfgLastY=p.y;},{passive:false});
+  c.addEventListener('touchmove',e=>{
+    e.preventDefault();if(!cfgDrawing)return;
+    const p=getPos(e);
+    cfgSigCtx.beginPath();cfgSigCtx.moveTo(cfgLastX,cfgLastY);cfgSigCtx.lineTo(p.x,p.y);cfgSigCtx.stroke();
+    cfgLastX=p.x;cfgLastY=p.y;cfgHasData=true;
+  },{passive:false});
+  c.addEventListener('touchend',()=>cfgDrawing=false);
+  // Load existing signature preview
+  loadCfgSigPreview();
+  // Load saved name
+  try{const v=localStorage.getItem(LS+'pruefer');if(v)$('cfg-pruefer').value=v;}catch{}
+}
+
+function clearCfgSig(){
+  if(!cfgSigCtx)return;
+  cfgSigCtx.clearRect(0,0,$('cfg-sig-pad').width,$('cfg-sig-pad').height);
+  cfgHasData=false;
+}
+
+function saveCfgSig(){
+  if(!cfgSigCtx||!cfgHasData){alert('Bitte zuerst unterschreiben.');return;}
+  const dataUrl=$('cfg-sig-pad').toDataURL('image/png');
+  try{localStorage.setItem(LS+'signature',dataUrl);}catch{}
+  loadCfgSigPreview();
+  alert('Unterschrift gespeichert ✓');
+}
+
+function loadCfgSigPreview(){
+  try{
+    const d=localStorage.getItem(LS+'signature');
+    const preview=$('cfg-sig-preview'), img=$('cfg-sig-img');
+    if(d&&preview&&img){img.src=d;preview.style.display='block';}
+  }catch{}
+}
+
+function savePrueferFromCfg(){
+  const v=$('cfg-pruefer').value.trim();
+  try{localStorage.setItem(LS+'pruefer',v);}catch{}
+  alert('Name gespeichert: '+v);
+}
+  const list=$('hist-list-inline');
+  if(!list)return;
+  let hist=[];
+  try{hist=JSON.parse(localStorage.getItem(LS+'history')||'[]');}catch{}
+  list.innerHTML='';
+  if(hist.length===0){
+    list.innerHTML='<div class="hist-empty">Noch keine Tests gespeichert.</div>';
+    return;
+  }
+  [...hist].reverse().forEach((e,ri)=>{
+    const i=hist.length-1-ri;
+    const icon=e.overall==='ok'?'✓':e.overall==='warn'?'⚠':'✗';
+    const item=document.createElement('div');
+    item.className='hist-item '+e.overall;
+    item.innerHTML=`
+      <div class="hist-icon">${icon}</div>
+      <div class="hist-info">
+        <div class="hist-title">${e.harnessId||e.zaehlerNr||'Anlage'}</div>
+        <div class="hist-sub">${e.anlageKw?e.anlageKw+' kWp':'—'} · ${e.gpsAddr||e.prAdresse||'Kein Standort'}</div>
+      </div>
+      <div class="hist-date">${e.datum||'—'}</div>
+      <button class="hist-del" onclick="event.stopPropagation();deleteHistEntry(${i});renderHistoryInline()">×</button>
+    `;
+    item.addEventListener('click',()=>loadHistoryEntry(e));
+    list.appendChild(item);
+  });
+}
+
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$(id).classList.add('active');}
+function showHistory(){show('setup');switchTab('hist');}
+
+// ── HISTORY ──────────────────────────────────────────────────
+const MAX_HISTORY=10;
+
+function saveToHistory(){
+  if(!ST.results||ST.results.length===0)return;
+  try{
+    const hist=JSON.parse(localStorage.getItem(LS+'history')||'[]');
+    const anyFail=ST.results.some(r=>!r.pass);
+    const anyWarn=ST.results.some(r=>r.sunLimited&&r.pass);
+    const overall=anyFail?(ST.results.some(r=>r.overLimit)?'fail':'warn'):anyWarn?'warn':'ok';
+    const entry={
+      ts:Date.now(),
+      datum:new Date().toLocaleDateString('de-DE'),
+      harnessId:ST.anlageNr,
+      zaehlerNr:ST.zaehlerNr,
+      fheNr:ST.fheNr,
+      faeCode:ST.faeCode,
+      anlageKw:ST.anlageKw,
+      anlageFak:ST.anlageFak,
+      anlageBase:ST.anlageBase,
+      refPower:ST.refPower,
+      wandler:ST.wandler,
+      impConst:ST.impConst,
+      numImpulse:ST.numImpulse,
+      gpsCoords:ST.gpsCoords,
+      gpsAddr:ST.gpsAddr,
+      results:ST.results,
+      overall,
+      prAdresse:$('p-adr').value,
+      prPruefer:$('p-pruefer').value,
+      prZaehler:$('p-zaehler').value,
+      prBemerk:$('p-bemerk').value,
+      prFhe:$('p-fhe').value,
+      prFae:$('p-fae').value,
+    };
+    hist.push(entry);
+    if(hist.length>MAX_HISTORY) hist.shift(); // remove oldest
+    localStorage.setItem(LS+'history', JSON.stringify(hist));
+  }catch(e){console.warn('History save:',e);}
+}
+
+function showHistory(){show('setup');switchTab('hist');}
+
+function renderHistoryList(){/* kept for compat */renderHistoryInline();}
+
+function loadHistoryEntry(e){
+  // Restore ST from history entry
+  ST.results=e.results||[];
+  ST.refPower=e.refPower||null;
+  ST.anlageKw=e.anlageKw||null; ST.anlageFak=e.anlageFak||1; ST.anlageBase=e.anlageBase||null;
+  ST.wandler=e.wandler||1; ST.impConst=e.impConst||1000; ST.numImpulse=e.numImpulse||10;
+  ST.gpsCoords=e.gpsCoords||null; ST.gpsAddr=e.gpsAddr||'';
+  ST.anlageNr=e.harnessId||''; ST.zaehlerNr=e.zaehlerNr||'';
+  ST.fheNr=e.fheNr||''; ST.faeCode=e.faeCode||'';
+  ST.photos=[];
+  renderProto();
+  renderPhotos();
+  if(e.prAdresse)$('p-adr').value=e.prAdresse;
+  if(e.prPruefer)$('p-pruefer').value=e.prPruefer;
+  if(e.prZaehler)$('p-zaehler').value=e.prZaehler;
+  if(e.prBemerk)$('p-bemerk').value=e.prBemerk;
+  if(e.prFhe)$('p-fhe').value=e.prFhe;
+  if(e.prFae)$('p-fae').value=e.prFae;
+  if(e.datum)$('p-datum').value=e.datum;
+  loadSig();
+  show('proto');
+}
+
+function deleteHistEntry(i){
+  if(!confirm('Diesen Eintrag löschen?'))return;
+  try{
+    const hist=JSON.parse(localStorage.getItem(LS+'history')||'[]');
+    hist.splice(i,1);
+    localStorage.setItem(LS+'history',JSON.stringify(hist));
+    renderHistoryList();
+  }catch{}
+}
+
+function clearAll(){
+  if(!confirm('Wirklich ALLES löschen?\n(Historie, Unterschrift, Prüfername, aktuelle Testdaten)'))return;
+  try{
+    [LS+'test',LS+'photos',LS+'history',LS+'signature',LS+'pruefer'].forEach(k=>{
+      try{localStorage.removeItem(k);}catch{}
+    });
+  }catch{}
+  ST.results=[];ST.photos=[];ST.refPower=null;
+  clearSigPad();
+  $('sig-display').style.display='none';
+  alert('Alles gelöscht.');
+  show('setup');
+}
+
+// ── PRÜFER NAME (persistent) ──────────────────────────────────
+function savePruefer(){
+  try{localStorage.setItem(LS+'pruefer',$('p-pruefer').value);}catch{}
+}
+function loadPruefer(){
+  try{
+    const v=localStorage.getItem(LS+'pruefer');
+    if(v)$('p-pruefer').value=v;
+  }catch{}
+}
+
+// ── SIGNATURE PAD ─────────────────────────────────────────────
+let sigDrawing=false, sigCtx=null, sigLastX=0, sigLastY=0, sigHasData=false;
+
+function initSigPad(){
+  const c=$('sig-pad');
+  if(!c||sigCtx)return;
+  sigCtx=c.getContext('2d');
+  sigCtx.strokeStyle='#000';
+  sigCtx.lineWidth=2.5;
+  sigCtx.lineCap='round';
+  sigCtx.lineJoin='round';
+
+  function getPos(e){
+    const r=c.getBoundingClientRect();
+    const src=e.touches?e.touches[0]:e;
+    return{
+      x:(src.clientX-r.left)*(c.width/r.width),
+      y:(src.clientY-r.top)*(c.height/r.height)
+    };
+  }
+  function start(e){e.preventDefault();sigDrawing=true;const p=getPos(e);sigLastX=p.x;sigLastY=p.y;}
+  function move(e){
+    e.preventDefault();
+    if(!sigDrawing)return;
+    const p=getPos(e);
+    sigCtx.beginPath();sigCtx.moveTo(sigLastX,sigLastY);sigCtx.lineTo(p.x,p.y);sigCtx.stroke();
+    sigLastX=p.x;sigLastY=p.y;
+    sigHasData=true;
+  }
+  function end(){sigDrawing=false;}
+  c.addEventListener('mousedown',start);c.addEventListener('mousemove',move);c.addEventListener('mouseup',end);
+  c.addEventListener('touchstart',start,{passive:false});
+  c.addEventListener('touchmove',move,{passive:false});
+  c.addEventListener('touchend',end);
+}
+
+function clearSig(){
+  if(!sigCtx)return;
+  sigCtx.clearRect(0,0,$('sig-pad').width,$('sig-pad').height);
+  sigHasData=false;
+}
+function clearSigPad(){clearSig();}
+
+function saveSig(){
+  if(!sigCtx||!sigHasData){alert('Bitte zuerst unterschreiben.');return;}
+  const dataUrl=$('sig-pad').toDataURL('image/png');
+  try{localStorage.setItem(LS+'signature',dataUrl);}catch{}
+  showSigDisplay(dataUrl);
+  alert('Unterschrift gespeichert.');
+}
+
+function loadSig(){
+  try{
+    const d=localStorage.getItem(LS+'signature');
+    if(d){showSigDisplay(d);}
+  }catch{}
+}
+
+function showSigDisplay(dataUrl){
+  const img=$('sig-img'), disp=$('sig-display');
+  if(!img||!disp)return;
+  img.src=dataUrl;
+  disp.style.display='block';
+  const name=$('p-pruefer').value;
+  const np=$('sig-name-print');
+  if(np)np.textContent=name;
+}
 function takePhoto(){
   if(ST.photos.length>=4){alert('Maximal 4 Fotos möglich.');return;}
   $('photo-inp').value='';
@@ -741,6 +1146,7 @@ function loadSetup(){
 }
 window.addEventListener('DOMContentLoaded', ()=>{
   loadSetup();
+  loadPruefer();
   // Show "letzten Test laden" button if saved test exists
   try{
     const t=localStorage.getItem(LS+'test');
@@ -803,12 +1209,12 @@ function loadSavedTest(){
 }
 
 function deleteTest(){
-  if(!confirm('Gespeicherte Testdaten und Fotos wirklich löschen?'))return;
+  if(!confirm('Aktuellen Testdaten und Fotos löschen?\n(Historie und Unterschrift bleiben erhalten)'))return;
   try{localStorage.removeItem(LS+'test');localStorage.removeItem(LS+'photos');}catch{}
   ST.photos=[];
   renderPhotos();
-  document.querySelectorAll('.load-test-btn').forEach(b=>b.remove());
-  alert('Daten gelöscht.');
+  alert('Testdaten gelöscht.');
+  show('setup');
 }
 
 // Render protocol from ST (used by loadSavedTest and showProto)
@@ -1400,7 +1806,13 @@ function showProto(){
   renderProto();
   renderPhotos();
   $('p-datum').value=new Date().toLocaleDateString('de-DE');
+  loadPruefer();
+  initSigPad();
+  loadSig();
+  // Auto-save prüfer on change
+  $('p-pruefer').onblur=savePruefer;
   saveTest();
+  saveToHistory(); // push to history ring buffer
   show('proto');
 }
 
@@ -1490,8 +1902,20 @@ function buildPDF(){
   y+=4;
 
   // Signature line
-  doc.line(lm,y+10,lm+60,y+10);
-  doc.setFontSize(8);doc.text('Unterschrift Prüfer',lm,y+14);
+  try{
+    const sigData=localStorage.getItem(LS+'signature');
+    if(sigData){
+      doc.addImage(sigData,'PNG',lm,y,60,18,'','FAST');
+      doc.line(lm,y+20,lm+65,y+20);
+      doc.setFontSize(7);doc.text($('p-pruefer').value||'Prüfer',lm,y+24);
+    } else {
+      doc.line(lm,y+10,lm+60,y+10);
+      doc.setFontSize(8);doc.text('Unterschrift Prüfer',lm,y+14);
+    }
+  }catch{
+    doc.line(lm,y+10,lm+60,y+10);
+    doc.setFontSize(8);doc.text('Unterschrift Prüfer',lm,y+14);
+  }
 
   // ── PAGE 2: PHOTOS ──────────────────────────────────────────
   const photos=ST.photos.filter(Boolean);
