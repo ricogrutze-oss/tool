@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zähler & Wandler — Netzplaner</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+  :root{ --bg:#0b0f14; --panel:#121821; --panel2:#182130; --edge:#243044; --amber:#ffb020; --text:#e7edf5; --text-dim:#8ea0b8; }
+  body { background-color: var(--bg); padding: 15px; font-family: sans-serif; font-size: 0.95rem; color: var(--text); }
+  .card { border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.4); border: 1px solid var(--edge); margin-bottom: 20px; background: var(--panel); }
+  .header-bg { background: var(--panel2); color: var(--amber); padding: 15px; text-align: center; border-radius: 12px 12px 0 0; border-bottom: 1px solid var(--edge); }
+  .header-bg h5{ margin:0; font-weight:700; }
+  .btn-calc { background-color: var(--amber); color: #1a1300; font-weight: bold; width: 100%; border-radius: 8px; padding: 12px; border: none; margin-top: 10px; }
+  .result-card { background-color: var(--panel); border-left: 6px solid var(--amber); display: none; padding: 25px; border-radius: 8px; margin-top: 20px; border-top:1px solid var(--edge); border-right:1px solid var(--edge); border-bottom:1px solid var(--edge); }
+  .output-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--edge); }
+  .output-val { font-weight: 700; color: var(--text); }
+  .form-control, .form-select { background:#0d1319; border:1px solid var(--edge); color:var(--text); }
+  .form-control:focus, .form-select:focus { background:#0d1319; border-color:var(--amber); color:var(--text); box-shadow:0 0 0 .25rem rgba(255,176,32,.2); }
+  label.fw-bold{ color: var(--text-dim); font-size:.85rem; }
+  .text-primary{ color: var(--amber) !important; }
+  .border-bottom{ border-color: var(--edge) !important; }
+  .btn-danger{ background:var(--panel2); border:1px solid var(--edge); color:var(--text); }
+  .highlight-box { background: var(--panel2); border-radius: 6px; padding: 10px; margin-top: 10px; border: 1px dashed var(--amber); }
+  .backhome{
+    position:fixed; top:10px; left:10px; z-index:9999;
+    background:rgba(11,15,20,0.85); color:var(--amber);
+    border:1px solid var(--edge); border-radius:20px;
+    padding:7px 14px; font-size:13px; font-weight:600;
+    text-decoration:none; backdrop-filter:blur(6px);
+  }
+  @media print {
+    .no-print, .backhome { display: none !important; }
+    .result-card { display: block !important; border: none !important; box-shadow: none !important; }
+    .page-break { page-break-before: always; }
+    body { background: white; color:#000; }
+    .output-val { color:#000 !important; }
+  }
+</style>
+</head>
+<body>
+
+<a href="../" class="backhome no-print">← Toolbox</a>
+
+<div class="container" style="max-width: 750px;">
+    <div class="card no-print">
+        <div class="header-bg"><h5>Zähler-Konfiguration</h5></div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-12">
+                    <label class="fw-bold">Zähler Impulswertigkeit (Optisch LED)</label>
+                    <select id="z_imp_opt" class="form-select">
+                        <option value="10000">10.000 Imp/kWh</option>
+                        <option value="40000">40.000 Imp/kWh</option>
+                        <option value="100000">100.000 Imp/kWh</option>
+                    </select>
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-6"><label class="fw-bold">I Primär (A)</label><input type="number" id="a_pri" class="form-control"></div>
+                <div class="col-6"><label class="fw-bold">I Sekundär (A)</label><select id="a_sec" class="form-select"><option value="5">5 A</option><option value="1">1 A</option></select></div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-6"><label class="fw-bold">U Primär (V)</label><input type="number" id="u_pri" class="form-control" value="400"></div>
+                <div class="col-6"><label class="fw-bold">U Sekundär (V)</label><select id="u_sec" class="form-select"><option value="400">400 V</option><option value="100">100 V</option></select></div>
+            </div>
+            <button onclick="calculateZaehler()" class="btn btn-calc">ZÄHLER-PARAMETER BERECHNEN</button>
+        </div>
+    </div>
+    <div id="result_zaehler" class="result-card">
+        <h5 class="text-primary border-bottom pb-2">Zähler & Wandler-Protokoll</h5>
+        <div class="output-row"><span>Wandlerfaktor Strom (ki):</span><span id="out_ki" class="output-val">-</span></div>
+        <div class="output-row"><span>Wandlerfaktor Spannung (ku):</span><span id="out_ku" class="output-val">-</span></div>
+        <div class="output-row highlight-box"><span>Gesamt-Wandlerfaktor (C):</span><span id="out_c_faktor" class="output-val text-primary">-</span></div>
+        <h6 class="mt-4 fw-bold" style="color:var(--text-dim)">Reale Anlagenwerte (Primär):</h6>
+        <div class="output-row" style="background: #2a2410;"><span>Impulswertigkeit Optisch:</span><span id="out_real_opt" class="output-val text-danger">-</span></div>
+        <div class="output-row" style="background: #2a2410;"><span>Impulswertigkeit Elektrisch:</span><span id="out_real_el" class="output-val text-danger">-</span></div>
+    </div>
+
+    <button id="pdfBtn" onclick="window.print()" class="btn btn-danger no-print mt-3 w-100 shadow" style="display:none;">ALS PDF SPEICHERN</button>
+</div>
+
+<script>
+function formatDE(num, decimals = 2) {
+    if (isNaN(num)) return "-";
+    return num.toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: decimals });
+}
+
+function calculateZaehler() {
+    const iPri = parseFloat(document.getElementById('a_pri').value);
+    const iSec = parseFloat(document.getElementById('a_sec').value);
+    const uPri = parseFloat(document.getElementById('u_pri').value);
+    const uSec = parseFloat(document.getElementById('u_sec').value);
+    const impOpt = parseFloat(document.getElementById('z_imp_opt').value);
+
+    if (!iPri || iPri <= 0) return alert("Bitte einen gültigen Primärstrom eingeben!");
+    if (!uPri || uPri <= 0) return alert("Bitte eine gültige Primärspannung eingeben!");
+
+    const ki = iPri / iSec;
+    const ku = uPri / uSec;
+    const cF = ki * ku;
+    document.getElementById('result_zaehler').style.display = 'block';
+    document.getElementById('pdfBtn').style.display = 'block';
+    document.getElementById('out_ki').innerText = formatDE(ki);
+    document.getElementById('out_ku').innerText = formatDE(ku);
+    document.getElementById('out_c_faktor').innerText = formatDE(cF);
+    document.getElementById('out_real_opt').innerText = formatDE(impOpt/cF, 4) + " Imp/kWh";
+    document.getElementById('out_real_el').innerText = formatDE((impOpt/2)/cF, 4) + " Imp/kWh";
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
