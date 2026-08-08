@@ -83,6 +83,12 @@ option{background:var(--surf2)}
 .roof-meta span{display:flex;flex-direction:column}
 .roof-meta b{color:var(--txt);font-size:.82rem}
 .roof-tilt-row{display:flex;gap:6px;align-items:center;margin-top:6px}
+.mount-list{margin-top:8px;padding-top:8px;border-top:1px dashed var(--bord,#333)}
+.mount-item{display:flex;justify-content:space-between;font-size:.72rem;padding:2px 0;color:var(--mut)}
+.mount-item b{color:var(--txt,#eee)}
+.mount-warn{font-size:.7rem;color:#f59e0b;padding:3px 0}
+.mount-disclaimer{font-size:.62rem;color:var(--mut);opacity:.75;margin-top:5px;line-height:1.3}
+.mount-summary-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 16px}
 .roof-tilt-row label{font-size:.72rem;color:var(--mut);white-space:nowrap}
 
 /* STRINGS (manual) */
@@ -122,6 +128,7 @@ option{background:var(--surf2)}
 /* STRING RESULTS */
 .str-results{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
 .str-res{display:flex;align-items:center;gap:9px;background:var(--surf);border:1px solid var(--bord);border-radius:var(--r);padding:9px 12px}
+.str-res-orient{display:flex;gap:2px;flex-shrink:0}
 .str-res-sw{width:7px;height:36px;border-radius:3px;flex-shrink:0}
 .str-res-name{font-size:.78rem;font-weight:600;min-width:80px}
 .str-res-nums{display:flex;gap:14px;flex:1;flex-wrap:wrap}
@@ -341,6 +348,12 @@ option{background:var(--surf2)}
 
   <div class="str-results" id="str-results"></div>
 
+  <div class="cbox" id="mount-summary-box" style="margin-bottom:14px;">
+    <h3>Unterkonstruktion — Materialschätzung (alle Flächen)</h3>
+    <div id="mount-summary"></div>
+    <div class="mount-disclaimer" style="margin-top:8px;">Grobe Anhaltswerte für die Planung – für die verbindliche Bestellung immer die Statik-/Windlastfreigabe des jeweiligen Systemherstellers einholen (Windzone, Gebäudehöhe, Schneelast beachten).</div>
+  </div>
+
   <div class="charts">
     <div class="cbox">
       <h3>Monatlicher Ertrag pro Modulgruppe</h3>
@@ -403,6 +416,92 @@ const MODULES={
 // ca. Modulfläche m² pro Modul (für Dachflächenberechnung)
 const MOD_AREA={'mono-400':1.95,'mono-500':2.35,'mono-600':2.65,'half-420':2.00,'hjt-430':1.98,'perc-380':1.92,'bkw-350':1.75,'bkw-300':1.65};
 
+// ═══════════════════════════════════════════
+//  UNTERKONSTRUKTION — GROBE MENGENSCHÄTZUNG
+//  Achtung: Anhaltswerte für die Planung, ersetzt KEINE Statik-/Windlastberechnung
+//  des jeweiligen Systemherstellers (Schletter, K2, Renusol o.ä.)!
+// ═══════════════════════════════════════════
+const MOUNT_SYSTEMS={
+  'ziegel':      {label:'Schrägdach – Ziegel (Dachhaken)', minTilt:5,  maxTilt:75},
+  'trapez':      {label:'Schrägdach – Trapezblech/Well',   minTilt:5,  maxTilt:75},
+  'flach-ballast':{label:'Flachdach – Ballastiert/Aufständerung', minTilt:0, maxTilt:20},
+  'flach-kleben':{label:'Flachdach – Verklebt (Flachneigung)', minTilt:0, maxTilt:10},
+  'freiflaeche': {label:'Freifläche – Ständerwerk', minTilt:0, maxTilt:40},
+};
+
+function calcMounting(systemKey, count, tilt, flachSchwelle){
+  const items=[];
+  switch(systemKey){
+    case 'ziegel': {
+      const hooks=Math.ceil(count*2.6);
+      const rails=Math.ceil(count*1.9*2/4.2); // ~2 Schienen/Reihe, 4,2m-Standardlänge
+      items.push({name:'Dachhaken (inkl. Kreuzstück)', qty:hooks, unit:'Stk'});
+      items.push({name:'Alu-Trägerschienen (4,2 m)', qty:rails, unit:'Stk'});
+      items.push({name:'Modulklemmen (Mitte+Ende)', qty:Math.ceil(count*2.2), unit:'Stk'});
+      break;
+    }
+    case 'trapez': {
+      items.push({name:'Trapezblech-Halter mit Dichtung', qty:Math.ceil(count*4), unit:'Stk'});
+      items.push({name:'Alu-Trägerschienen (4,2 m)', qty:Math.ceil(count*1.9*2/4.2), unit:'Stk'});
+      items.push({name:'Modulklemmen (Mitte+Ende)', qty:Math.ceil(count*2.2), unit:'Stk'});
+      break;
+    }
+    case 'flach-ballast': {
+      const frames=count;
+      const ballastKg=frames*25; // grober Richtwert 20–30 kg/Modul, windzonenabhängig!
+      items.push({name:'Aufständerungs-Rahmen (Ost-West o. Süd)', qty:frames, unit:'Stk'});
+      items.push({name:'Betonplatten/Ballast (Richtwert)', qty:ballastKg, unit:'kg'});
+      items.push({name:'Windleitbleche', qty:Math.ceil(count*0.3), unit:'Stk'});
+      break;
+    }
+    case 'flach-kleben': {
+      items.push({name:'Klebe-Systemplatten', qty:count, unit:'Stk'});
+      items.push({name:'Kleber-/Kartuschensets (1 je 4 Module)', qty:Math.ceil(count/4), unit:'Set'});
+      if(tilt>flachSchwelle){
+        items.push({name:'⚠ Hinweis', qty:null, unit:`Neigung ${tilt}° liegt über deinem Schwellenwert (${flachSchwelle}°) für Klebemontage`});
+      }
+      break;
+    }
+    case 'freiflaeche': {
+      const rowsPerTable=3;
+      const posts=Math.ceil(count/rowsPerTable)*2;
+      items.push({name:'Rammpfosten/Erdanker', qty:posts, unit:'Stk'});
+      items.push({name:'Fundamente (je Pfosten)', qty:posts, unit:'Stk'});
+      items.push({name:'Tischsystem-Profile', qty:Math.ceil(count/rowsPerTable), unit:'Tische'});
+      break;
+    }
+  }
+  return items;
+}
+
+function renderMountingSummary(){
+  const box=document.getElementById('mount-summary');
+  if(!box) return;
+  if(!roofs.length){ box.innerHTML='<div class="info-box hint">Noch keine Dachflächen vorhanden.</div>'; return; }
+
+  const totals={}; // key: "name|unit" -> qty
+  const warnings=[];
+  roofs.forEach(r=>{
+    const items=calcMounting(r.mountSystem, r.count, r.tilt, r.flachSchwelle);
+    items.forEach(it=>{
+      if(it.qty===null){ warnings.push(`${r.name}: ${it.unit}`); return; }
+      const key=it.name+'|'+it.unit;
+      totals[key]=(totals[key]||0)+it.qty;
+    });
+  });
+
+  let html='<div class="mount-summary-grid">';
+  Object.entries(totals).forEach(([key,qty])=>{
+    const [name,unit]=key.split('|');
+    html+=`<div class="mount-item"><span>${name}</span><b>${Math.round(qty)} ${unit}</b></div>`;
+  });
+  html+='</div>';
+  if(warnings.length){
+    html+=warnings.map(w=>`<div class="mount-warn">⚠ ${w}</div>`).join('');
+  }
+  box.innerHTML=html;
+}
+
 const DAYS_IN_MONTH=[31,28,31,30,31,30,31,31,30,31,30,31];
 const MONTH_NAMES=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
 const COLORS=['#f59e0b','#38bdf8','#22c55e','#a78bfa','#fb923c','#f472b6','#34d399','#60a5fa'];
@@ -437,7 +536,7 @@ function initMap(){
 
   // Satellitenbilder via Esri (kostenlos, kein API-Key nötig)
   L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
-    attribution:'Tiles © Esri, Maxar, Earthstar Geographics',maxZoom:20
+    attribution:'Tiles © Esri, Maxar, Earthstar Geographics',maxZoom:23
   }).addTo(map);
 
   // OSM-Overlay (Straßennamen/Beschriftungen)
@@ -505,35 +604,46 @@ function finishDraw(){
   const color=COLORS[(roofs.length)%COLORS.length];
   const pts=[...currentPoints];
 
-  // Fläche berechnen (m² aus GPS-Koordinaten)
-  const areaM2=calcPolygonArea(pts);
-  // Ausrichtung berechnen (Azimut der längsten Kante)
-  const azimut=calcMainAzimut(pts);
-  // Nutzbare Modulfläche (ca. 85% der Bruttofläche)
-  const usableM2=areaM2*0.85;
+  // Fläche aus GPS-Koordinaten = horizontale Projektion (Kartenansicht von oben)
+  const flatAreaM2=calcPolygonArea(pts);
+  // Ausrichtung: automatisch berechnet, aber vom Nutzer überschreibbar
+  const azimutAuto=calcMainAzimut(pts);
 
   const roof={
-    id, color, pts, areaM2, usableM2, azimut,
+    id, color, pts, flatAreaM2, azimutAuto, azimut:azimutAuto,
     tilt:35,          // Default Neigung, kann angepasst werden
     modKey:'mono-400',
+    mountSystem:'ziegel',
+    flachSchwelle:10,  // Grenzwert (°) für Klebemontage-Warnung
     name:`Dachfläche ${id}`,
   };
-  roof.count=Math.floor(usableM2/MOD_AREA[roof.modKey]);
+  recalcRoofArea(roof);
 
   roofs.push(roof);
 
   // Polygon auf Karte zeichnen
   const poly=L.polygon(pts,{color,fillColor:color,fillOpacity:0.35,weight:2}).addTo(map);
   const label=L.tooltip({permanent:true,direction:'center',className:'roof-label'})
-    .setContent(`<b style="color:${color}">${roof.name}</b><br>${areaM2.toFixed(0)} m²`)
+    .setContent(`<b style="color:${color}">${roof.name}</b><br>${roof.areaM2.toFixed(0)} m²`)
     .setLatLng(polygonCenter(pts));
   label.addTo(map);
   roofLayers[id]={poly,label};
+  roofLayers[id].arrow=createRoofArrow(roof);
 
   cleanupDraw();
   renderRoofList();
   syncRoofsToStrings();
-  document.getElementById('draw-hint').textContent=`✓ ${roof.name}: ${areaM2.toFixed(0)} m² · Azimut ${azimut}° · ~${roof.count} Module`;
+  document.getElementById('draw-hint').textContent=`✓ ${roof.name}: ${roof.areaM2.toFixed(0)} m² (geneigt) · Azimut ${roof.azimut}° · ~${roof.count} Module`;
+}
+
+// Reale (geneigte) Dachfläche aus der horizontalen Kartenprojektion berechnen:
+// Bei Neigung wächst die tatsächliche Dachfläche gegenüber der Draufsicht um 1/cos(Neigung).
+// Beispiel: 30° Neigung -> ca. 15% mehr Fläche als die reine Kartenprojektion zeigt.
+function recalcRoofArea(r){
+  const tiltRad=toRad(r.tilt);
+  r.areaM2 = r.flatAreaM2 / Math.cos(tiltRad);
+  r.usableM2 = r.areaM2*0.85;
+  r.count = Math.floor(r.usableM2/MOD_AREA[r.modKey]);
 }
 
 // ═══════════════════════════════════════════
@@ -596,6 +706,119 @@ function polygonCenter(pts){
   );
 }
 
+// Umrechnung Azimut (0=Süd, +90=West, -90=Ost) -> Kartenposition in `distM` Metern Entfernung vom Zentrum
+function azimutToLatLng(center, azimutDeg, distM){
+  const mPerLatDeg=111320;
+  const mPerLonDeg=111320*Math.cos(toRad(center.lat));
+  const rad=toRad(azimutDeg);
+  const dLatM=-Math.cos(rad)*distM;
+  const dLonM=-Math.sin(rad)*distM;
+  return L.latLng(center.lat+dLatM/mPerLatDeg, center.lng+dLonM/mPerLonDeg);
+}
+
+// Umrechnung Kartenposition (relativ zum Zentrum) -> Azimut in unserer Konvention
+function latLngToAzimut(center, point){
+  const mPerLatDeg=111320;
+  const mPerLonDeg=111320*Math.cos(toRad(center.lat));
+  const dLatM=(point.lat-center.lat)*mPerLatDeg;
+  const dLonM=(point.lng-center.lng)*mPerLonDeg;
+  let az=toDeg(Math.atan2(-dLonM,-dLatM));
+  while(az>180) az-=360;
+  while(az<-180) az+=360;
+  return Math.round(az/5)*5; // auf 5°-Schritte einrasten
+}
+
+function arrowIcon(color, azimutDeg){
+  // Geografische Peilung (0=Nord, im Uhrzeigersinn) fürs Rotieren des Pfeil-Icons
+  const bearing=(azimutDeg+180+360)%360;
+  return L.divIcon({
+    className:'roof-arrow-icon',
+    html:`<div style="width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:20px solid ${color};transform:rotate(${bearing}deg);transform-origin:50% 100%;filter:drop-shadow(0 0 2px rgba(0,0,0,.6));"></div>`,
+    iconSize:[16,20], iconAnchor:[8,20]
+  });
+}
+
+function createRoofArrow(roof){
+  const center=polygonCenter(roof.pts);
+  const distM=Math.max(6, Math.min(40, Math.sqrt(roof.flatAreaM2)*0.55));
+  roof._arrowDist=distM;
+  const tip=azimutToLatLng(center, roof.azimut, distM);
+
+  const line=L.polyline([center, tip], {color:roof.color, weight:3, opacity:0.9}).addTo(map);
+  const head=L.marker(tip, {icon:arrowIcon(roof.color, roof.azimut), draggable:true}).addTo(map);
+
+  head.on('drag', (e)=>{
+    const newTip=e.target.getLatLng();
+    line.setLatLngs([center, newTip]);
+  });
+  head.on('dragend', (e)=>{
+    const newTip=e.target.getLatLng();
+    const az=latLngToAzimut(center, newTip);
+    updateRoof(roof.id, 'azimut', az);
+  });
+
+  return {line, head, center};
+}
+
+function repositionRoofArrow(roof){
+  const layer=roofLayers[roof.id];
+  if(!layer || !layer.arrow) return;
+  const {line, head, center}=layer.arrow;
+  const tip=azimutToLatLng(center, roof.azimut, roof._arrowDist||16);
+  line.setLatLngs([center, tip]);
+  head.setLatLng(tip);
+  head.setIcon(arrowIcon(roof.color, roof.azimut));
+}
+
+// ═══════════════════════════════════════════
+//  ECKPUNKTE NACHTRÄGLICH BEARBEITEN
+// ═══════════════════════════════════════════
+
+function vertexIcon(color){
+  return L.divIcon({
+    className:'roof-vertex-icon',
+    html:`<div style="width:16px;height:16px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 0 4px rgba(0,0,0,.7);"></div>`,
+    iconSize:[16,16], iconAnchor:[8,8]
+  });
+}
+
+function toggleVertexEdit(id){
+  const r=roofs.find(r=>r.id===id);
+  const layer=roofLayers[id];
+  if(!r || !layer) return;
+
+  if(layer.vertexMarkers){
+    // Bearbeitung beenden: Marker entfernen
+    layer.vertexMarkers.forEach(m=>map.removeLayer(m));
+    delete layer.vertexMarkers;
+    renderRoofList();
+    return;
+  }
+
+  // Bearbeitung starten: an jeder Ecke einen ziehbaren Punkt anzeigen
+  layer.vertexMarkers = r.pts.map((pt, i) => {
+    const m = L.marker(pt, { icon: vertexIcon(r.color), draggable: true }).addTo(map);
+    m.on('drag', (e) => {
+      r.pts[i] = e.target.getLatLng();
+      layer.poly.setLatLngs(r.pts);
+    });
+    m.on('dragend', () => {
+      // Fläche, Bericht und Pfeilposition nach dem Verschieben neu berechnen
+      r.flatAreaM2 = calcPolygonArea(r.pts);
+      r.azimutAuto = calcMainAzimut(r.pts);
+      recalcRoofArea(r);
+      const newCenter = polygonCenter(r.pts);
+      layer.label.setLatLng(newCenter);
+      layer.label.setContent(`<b style="color:${r.color}">${r.name}</b><br>${r.areaM2.toFixed(0)} m²`);
+      if(layer.arrow){ layer.arrow.center = newCenter; repositionRoofArrow(r); }
+      renderRoofList();
+      syncRoofsToStrings();
+    });
+    return m;
+  });
+  renderRoofList();
+}
+
 // ═══════════════════════════════════════════
 //  DACHFLÄCHEN-LISTE RENDERN
 // ═══════════════════════════════════════════
@@ -607,16 +830,21 @@ function renderRoofList(){
   roofs.forEach(r=>{
     const div=document.createElement('div');
     div.className='roof-card';
+    const azChanged = r.azimut!==r.azimutAuto;
     div.innerHTML=`
       <div class="roof-head">
         <div class="roof-swatch" style="background:${r.color}"></div>
         <div class="roof-title">${r.name}</div>
+        <button class="roof-edit" onclick="toggleVertexEdit(${r.id})" title="Eckpunkte bearbeiten"
+          style="background:${roofLayers[r.id]&&roofLayers[r.id].vertexMarkers?'var(--sol,#f59e0b)':'none'};border:1px solid var(--edge,#333);border-radius:5px;padding:3px 7px;font-size:.75rem;color:${roofLayers[r.id]&&roofLayers[r.id].vertexMarkers?'#1a1300':'var(--mut)'};cursor:pointer;margin-right:6px;">
+          ${roofLayers[r.id]&&roofLayers[r.id].vertexMarkers?'✓ Fertig':'✏️ Ecken'}
+        </button>
         <button class="roof-del" onclick="removeRoof(${r.id})" title="Entfernen">✕</button>
       </div>
       <div class="roof-meta">
-        <span>Bruttofläche<b>${r.areaM2.toFixed(0)} m²</b></span>
+        <span>Kartenfläche (Draufsicht)<b>${r.flatAreaM2.toFixed(0)} m²</b></span>
+        <span>Reale Dachfläche (geneigt)<b>${r.areaM2.toFixed(0)} m²</b></span>
         <span>Nutzbar<b>${r.usableM2.toFixed(0)} m²</b></span>
-        <span>Azimut (auto)<b>${r.azimut}°</b></span>
       </div>
       <div class="roof-tilt-row">
         <label>Neigung:</label>
@@ -627,6 +855,35 @@ function renderRoofList(){
         <select style="flex:1" onchange="updateRoof(${r.id},'modKey',this.value)">
           ${Object.entries(MODULES).map(([k,v])=>`<option value="${k}" ${k===r.modKey?'selected':''}>${v.label}</option>`).join('')}
         </select>
+      </div>
+      <div class="roof-tilt-row">
+        <label>Azimut:</label>
+        <input type="number" value="${r.azimut}" min="-180" max="180" step="5" style="width:70px"
+          onchange="updateRoof(${r.id},'azimut',+this.value)">
+        <span style="font-size:.7rem;color:var(--mut)">° (${azLabel(r.azimut)})</span>
+        ${azChanged?`<button type="button" style="margin-left:8px;font-size:.68rem;background:none;border:1px solid var(--edge,#333);border-radius:5px;padding:2px 6px;color:var(--mut);cursor:pointer" onclick="updateRoof(${r.id},'azimut',${r.azimutAuto})" title="Auf automatisch berechneten Wert (${r.azimutAuto}°) zurücksetzen">↺ auto (${r.azimutAuto}°)</button>`:'<span style="margin-left:8px;font-size:.65rem;color:var(--mut)">automatisch erkannt</span>'}
+      </div>
+      <div style="font-size:.65rem;color:var(--mut);margin-top:2px">💡 Pfeil auf der Karte ziehen = Ausrichtung direkt festlegen</div>
+      <div class="roof-tilt-row" style="margin-top:8px;">
+        <label>Montagesystem:</label>
+        <select style="flex:1" onchange="updateRoof(${r.id},'mountSystem',this.value)">
+          ${Object.entries(MOUNT_SYSTEMS).map(([k,v])=>`<option value="${k}" ${k===r.mountSystem?'selected':''}>${v.label}</option>`).join('')}
+        </select>
+      </div>
+      ${r.mountSystem==='flach-kleben'?`
+      <div class="roof-tilt-row">
+        <label>Klebe-Grenze:</label>
+        <input type="number" value="${r.flachSchwelle}" min="0" max="20" style="width:60px"
+          onchange="updateRoof(${r.id},'flachSchwelle',+this.value)">
+        <span style="font-size:.7rem;color:var(--mut)">° max.</span>
+      </div>`:''}
+      <div class="mount-list">
+        ${calcMounting(r.mountSystem, r.count, r.tilt, r.flachSchwelle).map(it=>
+          it.qty===null
+            ? `<div class="mount-warn">${it.unit}</div>`
+            : `<div class="mount-item"><span>${it.name}</span><b>${it.qty} ${it.unit}</b></div>`
+        ).join('')}
+        <div class="mount-disclaimer">Anhaltswert für die Planung – ersetzt keine Statik-/Windlastberechnung des Systemherstellers.</div>
       </div>
       <div style="font-size:.7rem;color:var(--mut);margin-top:5px">
         → ~<b style="color:var(--sky)">${r.count}</b> Module · <b style="color:var(--sol)">${(r.count*MODULES[r.modKey].wp/1000).toFixed(2)} kWp</b>
@@ -639,7 +896,11 @@ function updateRoof(id,key,val){
   const r=roofs.find(r=>r.id===id);
   if(!r) return;
   r[key]=val;
-  if(key==='modKey') r.count=Math.floor(r.usableM2/MOD_AREA[val]);
+  if(key==='tilt' || key==='modKey'){ recalcRoofArea(r); }
+  if(roofLayers[id]){
+    roofLayers[id].label.setContent(`<b style="color:${r.color}">${r.name}</b><br>${r.areaM2.toFixed(0)} m²`);
+  }
+  if(key==='azimut'){ repositionRoofArrow(r); }
   renderRoofList();
   syncRoofsToStrings();
 }
@@ -649,6 +910,13 @@ function removeRoof(id){
   if(roofLayers[id]){
     map.removeLayer(roofLayers[id].poly);
     map.removeLayer(roofLayers[id].label);
+    if(roofLayers[id].arrow){
+      map.removeLayer(roofLayers[id].arrow.line);
+      map.removeLayer(roofLayers[id].arrow.head);
+    }
+    if(roofLayers[id].vertexMarkers){
+      roofLayers[id].vertexMarkers.forEach(m=>map.removeLayer(m));
+    }
     delete roofLayers[id];
   }
   renderRoofList();
@@ -792,6 +1060,35 @@ function updateCompass(id,az){
 function azLabel(d){
   if(d<-157)return'Nord';if(d<-112)return'Nordost';if(d<-67)return'Ost';if(d<-22)return'Südost';
   if(d<22)return'Süd ☀️';if(d<67)return'Südwest';if(d<112)return'West';if(d<157)return'Nordwest';return'Nord';
+}
+
+// Kleine Kompass+Seitenprofil-Grafik für die Ergebnis-Ansicht:
+// Kompass zeigt die Azimut-Richtung, Dreieck zeigt den Neigungswinkel maßstäblich.
+function orientationSVG(tilt,azimut,color){
+  const rad = toRad(azimut);
+  // Pfeilspitze: 0°=Süd (unten im Kompass), +90=West, -90=Ost -> auf SVG-Kreis übertragen
+  const cx=24, cy=24, r=17;
+  const ax = cx + r*Math.sin(rad);
+  const ay = cy + r*Math.cos(rad);
+  const tiltRad = toRad(Math.min(tilt,90));
+  const baseW = 30, baseX = 5, baseY = 40;
+  const peakX = baseX + Math.cos(tiltRad)*baseW;
+  const peakY = baseY - Math.sin(tiltRad)*baseW;
+  return `
+    <div class="str-res-orient" title="Azimut ${azimut}° (${azLabel(azimut)}) · Neigung ${tilt}°">
+      <svg width="48" height="48" viewBox="0 0 48 48">
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--mut,#666)" stroke-width="1.2" opacity="0.5"/>
+        <text x="${cx}" y="6" font-size="6" fill="var(--mut,#666)" text-anchor="middle">N</text>
+        <text x="${cx}" y="46" font-size="6" fill="var(--mut,#666)" text-anchor="middle">S</text>
+        <line x1="${cx}" y1="${cy}" x2="${ax}" y2="${ay}" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>
+        <circle cx="${ax}" cy="${ay}" r="2.5" fill="${color}"/>
+      </svg>
+      <svg width="48" height="48" viewBox="0 0 48 48">
+        <line x1="${baseX}" y1="${baseY}" x2="${baseX+baseW}" y2="${baseY}" stroke="var(--mut,#666)" stroke-width="1" opacity="0.4"/>
+        <line x1="${baseX}" y1="${baseY}" x2="${peakX}" y2="${peakY}" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>
+        <text x="${baseX+8}" y="${baseY-4}" font-size="7" fill="${color}">${tilt}°</text>
+      </svg>
+    </div>`;
 }
 function recalcIfActive(){
   if(document.getElementById('tab-ergebnis').classList.contains('active')) recalc();
@@ -1094,6 +1391,7 @@ function recalc(){
       const row=document.createElement('div');row.className='str-res';
       row.innerHTML=`<div class="str-res-sw" style="background:${s.color}"></div>
         <div class="str-res-name">${s.name}</div>
+        ${orientationSVG(s.tilt,s.azimut,s.color)}
         <div class="str-res-nums">
           <div class="sri"><div class="v" style="color:${s.color}">${fmt(s.kWp,2)}</div><div class="u">kWp</div></div>
           <div class="sri"><div class="v" style="color:${s.color}">${fmt(y)}</div><div class="u">kWh/a</div></div>
@@ -1105,6 +1403,8 @@ function recalc(){
       strDiv.appendChild(row);
     });
   }
+
+  renderMountingSummary();
 
   // Charts
   if(chartJahr){
