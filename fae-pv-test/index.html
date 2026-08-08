@@ -209,6 +209,24 @@ input::placeholder{color:var(--muted);}
 .pfield input{font-size:.82rem;padding:.48rem .65rem;}
 
 /* Pulse count control */
+/* Detection controls */
+.det-ctrl{background:#0a0e14;border-bottom:1px solid var(--border);flex-shrink:0;}
+.det-rows{padding:.5rem .9rem .6rem;display:flex;flex-direction:column;gap:.4rem;}
+.det-row{display:flex;align-items:center;gap:.6rem;}
+.det-lbl{font-family:var(--mono);font-size:.62rem;color:var(--muted);white-space:nowrap;width:6.5rem;flex-shrink:0;}
+.det-row input[type=range]{flex:1;accent-color:var(--accent);height:3px;}
+.det-val{font-family:var(--mono);font-size:.68rem;color:var(--accent);width:3.5rem;text-align:right;flex-shrink:0;}
+.ir-tog{
+  width:38px;height:20px;border-radius:12px;background:var(--border);
+  border:1px solid var(--border);cursor:pointer;position:relative;transition:.15s;flex-shrink:0;
+}
+.ir-tog::after{
+  content:'';position:absolute;width:15px;height:15px;border-radius:50%;
+  background:var(--muted);top:2px;left:2px;transition:.15s;
+}
+.ir-tog.on{background:rgba(240,165,0,.25);border-color:var(--accent);}
+.ir-tog.on::after{left:21px;background:var(--accent);}
+
 .imp-ctrl{
   display:flex;align-items:center;gap:.5rem;
   font-family:var(--mono);font-size:.72rem;color:var(--muted);
@@ -240,6 +258,20 @@ input::placeholder{color:var(--muted);}
 .gesamt.warn{background:rgba(240,165,0,.15);color:var(--accent);border:1px solid rgba(240,165,0,.4);}
 .gesamt.fail{background:rgba(248,81,73,.15);color:var(--red);border:1px solid rgba(248,81,73,.4);}
 
+/* Photo grid */
+.photo-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:.3rem;}
+.photo-item{position:relative;aspect-ratio:4/3;background:var(--card);border:1px solid var(--border);overflow:hidden;border-radius:2px;}
+.photo-item img{width:100%;height:100%;object-fit:cover;display:block;}
+.photo-item .pdel{
+  position:absolute;top:.25rem;right:.25rem;background:rgba(0,0,0,.75);color:#fff;
+  border:none;border-radius:50%;width:1.6rem;height:1.6rem;font-size:.85rem;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;
+}
+.photo-item .pnum{
+  position:absolute;bottom:.25rem;left:.3rem;font-family:var(--mono);font-size:.6rem;
+  color:rgba(255,255,255,.7);background:rgba(0,0,0,.5);padding:.1rem .3rem;border-radius:2px;
+}
+
 /* ── PRINT ── */
 @media print{
   .no-print{display:none!important;}
@@ -253,6 +285,9 @@ input::placeholder{color:var(--muted);}
   .gps-box{background:#f8f8f8;border-color:#ccc;border-left-color:#3fb950;}
   .gps-box .ga,.gps-box .gc{color:#333;}
   .p-meta-item .ml{color:#666;}.p-meta-item .mv{color:#000;}
+  .photo-section{page-break-before:always;margin-top:0;}
+  .photo-grid{grid-template-columns:1fr 1fr;}
+  .photo-item{aspect-ratio:4/3;break-inside:avoid;}
 }
 </style>
 </head>
@@ -278,22 +313,38 @@ input::placeholder{color:var(--muted);}
       <div class="s-row">
         <input type="number" id="anlage-kw" placeholder="z.B. 29.7" min="0" step="0.1" style="flex:1;" oninput="onAnlageKwChange()"/>
         <span style="font-family:var(--mono);font-size:.8rem;color:var(--muted);padding:.55rem .3rem;align-self:center;">kWp ×</span>
-        <input type="number" id="anlage-fak" value="1.00" min="0.01" max="1" step="0.01" style="width:4.5rem;flex:0 0 auto;" title="Ertragsfaktor (auto: 0.70 für &lt;100 kW)" oninput="onFaktorChange()"/>
+        <input type="number" id="anlage-fak" value="1.00" min="0.01" max="1" step="0.01" style="width:4.5rem;flex:0 0 auto;" oninput="onFaktorChange()"/>
         <span style="font-family:var(--mono);font-size:.72rem;color:var(--accent);padding:.55rem .3rem;align-self:center;white-space:nowrap;" id="anlage-eff">= — kW</span>
       </div>
     </div>
 
     <div>
-      <div class="s-lbl">Anlagen-Nr.</div>
+      <div class="s-lbl">Harness-ID <span style="color:var(--muted);font-size:.6rem;">(Anlagen-Nr., manuell)</span></div>
+      <input type="text" id="anlage-nr" placeholder="Harness-ID / Anlagen-Nr."/>
+    </div>
+
+    <div>
+      <div class="s-lbl">Zählernummer</div>
       <div class="s-row">
-        <input type="text" id="anlage-nr" placeholder="Nr. eingeben oder QR scannen" style="flex:1;"/>
-        <button class="btn sec" onclick="openQR()">📷 QR</button>
+        <input type="text" id="zaehler-nr" placeholder="Zählernummer eingeben" style="flex:1;"/>
+        <button class="btn sec" onclick="openQR('zaehler-nr')">📷 QR</button>
       </div>
     </div>
 
     <div>
-      <div class="s-lbl">FAE-Code</div>
-      <input type="text" id="fae-code" placeholder="FAE-Kennung"/>
+      <div class="s-lbl">FHE-Nr.</div>
+      <div class="s-row">
+        <input type="text" id="fhe-nr" placeholder="FHE-Nummer eingeben" style="flex:1;"/>
+        <button class="btn sec" onclick="openQR('fhe-nr')">📷 QR</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="s-lbl">FAE/FRE-Code</div>
+      <div class="s-row">
+        <input type="text" id="fae-code" placeholder="FAE/FRE-Code eingeben" style="flex:1;"/>
+        <button class="btn sec" onclick="openQR('fae-code')">📷 QR</button>
+      </div>
     </div>
   </div>
 
@@ -391,7 +442,28 @@ input::placeholder{color:var(--muted);}
   <div class="cam-wrap">
     <video id="tvid" autoplay playsinline muted></video>
     <canvas id="tovl"></canvas>
-    <div class="cam-hint" id="cam-hint">Auf Impuls-LED tippen</div>
+    <div class="cam-hint" id="cam-hint">ROI auf LED ausrichten – antippen zum Verschieben</div>
+  </div>
+
+  <!-- Signal scope + Detektionsparameter -->
+  <div class="det-ctrl no-print">
+    <canvas id="scope-cv" height="40" style="width:100%;height:40px;display:block;background:#0a0e14;"></canvas>
+    <div class="det-rows">
+      <div class="det-row">
+        <span class="det-lbl">Empfindlichkeit</span>
+        <input type="range" id="sens-sl" min="10" max="90" value="50" oninput="onSens(this)">
+        <span class="det-val" id="sens-val">50 %</span>
+      </div>
+      <div class="det-row">
+        <span class="det-lbl">Sperrzeit</span>
+        <input type="range" id="refr-sl" min="10" max="300" value="40" oninput="onRefr(this)">
+        <span class="det-val" id="refr-val">40 ms</span>
+      </div>
+      <div class="det-row" style="justify-content:space-between;">
+        <span class="det-lbl">IR-Modus (Rotkanal)</span>
+        <div class="ir-tog" id="ir-tog" onclick="toggleIR()"></div>
+      </div>
+    </div>
   </div>
 
   <div class="pwr-sec">
@@ -462,17 +534,21 @@ input::placeholder{color:var(--muted);}
   </table>
 
   <div class="pfields">
-    <div class="pfield">
-      <div class="s-lbl">Anlagen-Nr.</div>
+    <div class="pfield full">
+      <div class="s-lbl">Harness-ID / Anlagen-Nr.</div>
       <input type="text" id="p-nr"/>
     </div>
     <div class="pfield">
-      <div class="s-lbl">FAE-Code</div>
-      <input type="text" id="p-fae"/>
+      <div class="s-lbl">Zählernummer</div>
+      <input type="text" id="p-zaehler"/>
     </div>
     <div class="pfield">
-      <div class="s-lbl">Zählernummer</div>
-      <input type="text" id="p-zaehler" placeholder="Zähl.-Nr."/>
+      <div class="s-lbl">FHE-Nr.</div>
+      <input type="text" id="p-fhe"/>
+    </div>
+    <div class="pfield">
+      <div class="s-lbl">FAE/FRE-Code</div>
+      <input type="text" id="p-fae"/>
     </div>
     <div class="pfield">
       <div class="s-lbl">Prüfer</div>
@@ -489,6 +565,18 @@ input::placeholder{color:var(--muted);}
     <div class="pfield full">
       <div class="s-lbl">Bemerkungen</div>
       <input type="text" id="p-bemerk" placeholder="Notizen, Besonderheiten …"/>
+    </div>
+
+    <!-- Fotos – eigene Seite beim Drucken -->
+    <div class="pfield full photo-section">
+      <div class="s-lbl">Fotos (max. 4)</div>
+      <div id="photo-grid" class="photo-grid"></div>
+      <button class="btn sec" id="photo-btn" onclick="takePhoto()"
+        style="width:100%;margin-top:.5rem;display:flex;align-items:center;justify-content:center;gap:.5rem;">
+        📷 Foto aufnehmen
+      </button>
+      <input type="file" id="photo-inp" accept="image/*" capture="environment"
+        style="display:none" onchange="onPhotoTaken(this)">
     </div>
   </div>
 
@@ -517,18 +605,74 @@ const $=id=>document.getElementById(id);
 const ST={
   impConst:1000, wandler:1, numImpulse:10,
   anlageKw:null, anlageFak:1, anlageBase:null,
-  anlageNr:'', faeCode:'',
+  anlageNr:'', zaehlerNr:'', fheNr:'', faeCode:'',
   gpsCoords:null, gpsAddr:'',
-  step:0, refPower:null, results:[],
+  step:0, refPower:null, results:[], photos:[],
   stream:null, raf:null,
-  roi:null, pulses:[], darkBase:null, inPulse:false,
-  stable:false, curPwr:null,
+  roi:null, pulses:[], brightHist:[], inPulse:false,
+  stable:false, curPwr:null, lastPulseMs:0,
+  sensitivity:50, refractory:40, useIR:false,
   qrStream:null, qrRaf:null, qrRunning:false, bdector:null,
 };
 
 function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$(id).classList.add('active');}
 
-// ── LOCALSTORAGE ──────────────────────────────────────────────
+// ── PHOTOS ───────────────────────────────────────────────────
+function takePhoto(){
+  if(ST.photos.length>=4){alert('Maximal 4 Fotos möglich.');return;}
+  $('photo-inp').value='';
+  $('photo-inp').click();
+}
+
+function onPhotoTaken(input){
+  const file=input.files[0];
+  if(!file)return;
+  compressPhoto(file,800,0.70).then(dataUrl=>{
+    ST.photos.push(dataUrl);
+    renderPhotos();
+    saveTest(); // auto-save after each photo
+  });
+}
+
+function compressPhoto(file,maxW,quality){
+  return new Promise(res=>{
+    const img=new Image();
+    const url=URL.createObjectURL(file);
+    img.onload=()=>{
+      const scale=Math.min(1,maxW/img.width);
+      const w=Math.round(img.width*scale), h=Math.round(img.height*scale);
+      const c=document.createElement('canvas');
+      c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(url);
+      res(c.toDataURL('image/jpeg',quality));
+    };
+    img.onerror=()=>{URL.revokeObjectURL(url);res(null);};
+    img.src=url;
+  });
+}
+
+function removePhoto(i){
+  ST.photos.splice(i,1);
+  renderPhotos();
+  saveTest();
+}
+
+function renderPhotos(){
+  const grid=$('photo-grid');
+  if(!grid)return;
+  grid.innerHTML='';
+  ST.photos.forEach((src,i)=>{
+    const item=document.createElement('div');
+    item.className='photo-item';
+    item.innerHTML=`<img src="${src}" loading="lazy">`
+      +`<span class="pnum">Foto ${i+1}</span>`
+      +`<button class="pdel no-print" onclick="removePhoto(${i})">×</button>`;
+    grid.appendChild(item);
+  });
+  const btn=$('photo-btn');
+  if(btn) btn.style.display=ST.photos.length>=4?'none':'flex';
+}
 const LS='fae-pv:';
 function saveSetup(){
   try{
@@ -544,6 +688,10 @@ function saveSetup(){
       email1:$('email-1').value,
       email2:$('email-2').value,
       email3:$('email-3').value,
+      anlageNr:$('anlage-nr').value,
+      zaehlerNr:$('zaehler-nr').value,
+      fheNr:$('fhe-nr').value,
+      faeCode:$('fae-code').value,
     }));
   }catch{}
 }
@@ -567,6 +715,10 @@ function loadSetup(){
     if(d.email1)$('email-1').value=d.email1;
     if(d.email2)$('email-2').value=d.email2;
     if(d.email3)$('email-3').value=d.email3;
+    if(d.anlageNr)$('anlage-nr').value=d.anlageNr;
+    if(d.zaehlerNr)$('zaehler-nr').value=d.zaehlerNr;
+    if(d.fheNr)$('fhe-nr').value=d.fheNr;
+    if(d.faeCode)$('fae-code').value=d.faeCode;
     onFaktorChange();
   }catch{}
 }
@@ -589,19 +741,23 @@ window.addEventListener('DOMContentLoaded', ()=>{
 
 function saveTest(){
   try{
-    localStorage.setItem(LS+'test', JSON.stringify({
-      results:ST.results,
-      refPower:ST.refPower,
+    const payload={
+      results:ST.results, refPower:ST.refPower,
       anlageKw:ST.anlageKw, anlageFak:ST.anlageFak, anlageBase:ST.anlageBase,
       wandler:ST.wandler, impConst:ST.impConst, numImpulse:ST.numImpulse,
       gpsCoords:ST.gpsCoords, gpsAddr:ST.gpsAddr,
-      anlageNr:ST.anlageNr, faeCode:ST.faeCode,
+      anlageNr:ST.anlageNr, zaehlerNr:ST.zaehlerNr,
+      fheNr:ST.fheNr, faeCode:ST.faeCode,
       prAdresse:$('p-adr').value,
       prPruefer:$('p-pruefer').value,
       prZaehler:$('p-zaehler').value,
       prBemerk:$('p-bemerk').value,
       datum:$('p-datum').value,
-    }));
+    };
+    localStorage.setItem(LS+'test', JSON.stringify(payload));
+    // Photos stored separately (can be large)
+    try{localStorage.setItem(LS+'photos', JSON.stringify(ST.photos));}
+    catch{console.warn('Fotos zu groß für localStorage');}
   }catch{}
 }
 
@@ -609,15 +765,17 @@ function loadSavedTest(){
   try{
     const d=JSON.parse(localStorage.getItem(LS+'test')||'null');
     if(!d){alert('Keine gespeicherten Daten gefunden.');return;}
-    // Restore ST
     ST.results=d.results||[];
     ST.refPower=d.refPower||null;
     ST.anlageKw=d.anlageKw||null; ST.anlageFak=d.anlageFak||1; ST.anlageBase=d.anlageBase||null;
     ST.wandler=d.wandler||1; ST.impConst=d.impConst||1000; ST.numImpulse=d.numImpulse||10;
     ST.gpsCoords=d.gpsCoords||null; ST.gpsAddr=d.gpsAddr||'';
-    ST.anlageNr=d.anlageNr||''; ST.faeCode=d.faeCode||'';
-    // Show protocol
+    ST.anlageNr=d.anlageNr||''; ST.zaehlerNr=d.zaehlerNr||'';
+    ST.fheNr=d.fheNr||''; ST.faeCode=d.faeCode||'';
+    // Load photos
+    try{ST.photos=JSON.parse(localStorage.getItem(LS+'photos')||'[]');}catch{ST.photos=[];}
     renderProto();
+    renderPhotos();
     if(d.prAdresse)$('p-adr').value=d.prAdresse;
     if(d.prPruefer)$('p-pruefer').value=d.prPruefer;
     if(d.prZaehler)$('p-zaehler').value=d.prZaehler;
@@ -628,9 +786,10 @@ function loadSavedTest(){
 }
 
 function deleteTest(){
-  if(!confirm('Gespeicherte Testdaten wirklich löschen?'))return;
-  try{localStorage.removeItem(LS+'test');}catch{}
-  // Remove "letzten Test laden" button if present
+  if(!confirm('Gespeicherte Testdaten und Fotos wirklich löschen?'))return;
+  try{localStorage.removeItem(LS+'test');localStorage.removeItem(LS+'photos');}catch{}
+  ST.photos=[];
+  renderPhotos();
   document.querySelectorAll('.load-test-btn').forEach(b=>b.remove());
   alert('Daten gelöscht.');
 }
@@ -716,6 +875,8 @@ function renderProto(){
     }
   }else{banner.style.display='none';}
   $('p-nr').value=ST.anlageNr;
+  $('p-zaehler').value=ST.zaehlerNr||'';
+  $('p-fhe').value=ST.fheNr||'';
   $('p-fae').value=ST.faeCode;
 }
 
@@ -776,6 +937,8 @@ function startTest(){
   // Effective base power used for all step tolerance calculations
   ST.anlageBase=ST.anlageKw?ST.anlageKw*ST.anlageFak:null;
   ST.anlageNr=$('anlage-nr').value.trim();
+  ST.zaehlerNr=$('zaehler-nr').value.trim();
+  ST.fheNr=$('fhe-nr').value.trim();
   ST.faeCode=$('fae-code').value.trim();
   ST.step=0;ST.refPower=null;ST.results=[];
   initTestCam();
@@ -819,7 +982,8 @@ async function captureGPS(){
 }
 
 // ── QR SCANNER ───────────────────────────────────────────────
-async function openQR(){
+async function openQR(targetId){
+  ST.qrTarget=targetId||'anlage-nr';
   $('qr-modal').classList.add('open');
   $('qr-status').className='';$('qr-inp').value='';
   $('qr-status').textContent='Kamera wird gestartet …';
@@ -860,7 +1024,8 @@ async function qrLoopNative(){
 function applyQR(val){
   ST.qrRunning=false;cancelAnimationFrame(ST.qrRaf);
   $('qr-status').className='found';$('qr-status').textContent='✓ '+val;
-  $('anlage-nr').value=val;ST.anlageNr=val;
+  const target=$(ST.qrTarget||'anlage-nr');
+  if(target) target.value=val;
   if(navigator.vibrate)navigator.vibrate(80);
   setTimeout(closeQR,700);
 }
@@ -891,88 +1056,134 @@ async function initTestCam(){
   }
 }
 
-// Tap overlay → set ROI with correct object-fit:cover coordinate mapping
+// Tap overlay → reposition ROI (rectangle, cover-corrected)
 const ovl=$('tovl');
 ovl.addEventListener('click',e=>{
   const vid=$('tvid');
   const rc=ovl.getBoundingClientRect();
   const vw=vid.videoWidth||640, vh=vid.videoHeight||360;
   const dw=rc.width, dh=rc.height;
-  // object-fit:cover: find scale so video fills display in both axes
   const s=Math.max(dw/vw, dh/vh);
-  // video content offset within display box (negative = cropped outside)
   const offX=(dw-vw*s)/2, offY=(dh-vh*s)/2;
-  // map tap → video pixel
   const tx=Math.round((e.clientX-rc.left-offX)/s);
   const ty=Math.round((e.clientY-rc.top-offY)/s);
-  ST.roi={x:Math.max(0,Math.min(vw,tx)), y:Math.max(0,Math.min(vh,ty)), r:30};
-  ST.darkBase=null; ST.inPulse=false;
-  $('cam-hint').textContent='Messung läuft – LED markiert';
+  const rw=Math.round(vw*0.22), rh=Math.round(vh*0.22);
+  ST.roi={x:Math.max(0,Math.min(vw-rw,tx-rw/2|0)),
+          y:Math.max(0,Math.min(vh-rh,ty-rh/2|0)), w:rw, h:rh};
+  ST.brightHist=[]; ST.inPulse=false; ST.lastPulseMs=0;
+  $('cam-hint').textContent='ROI verschoben – Messung läuft';
   resetPulseData();
 });
 
+// Detection parameter controls
+function onSens(el){ST.sensitivity=+el.value;$('sens-val').textContent=el.value+' %';}
+function onRefr(el){ST.refractory=+el.value;$('refr-val').textContent=el.value+' ms';}
+function toggleIR(){
+  ST.useIR=!ST.useIR;
+  $('ir-tog').classList.toggle('on',ST.useIR);
+}
+
+// Scope canvas – scrolling raw signal + threshold line
+function drawScope(lum, minL, maxL){
+  const sc=$('scope-cv');
+  if(!sc) return;
+  const ctx=sc.getContext('2d');
+  const w=sc.offsetWidth||300, h=40;
+  if(sc.width!==w) sc.width=w;
+  // Scroll left
+  const img=ctx.getImageData(1,0,w-1,h);
+  ctx.putImageData(img,0,0);
+  ctx.clearRect(w-1,0,1,h);
+  // Signal sample
+  const range=maxL-minL||1;
+  const y=h-1-Math.round(((lum-minL)/range)*(h-2));
+  ctx.fillStyle=ST.inPulse?'#f0a500':'#3fb950';
+  ctx.fillRect(w-1,Math.max(0,Math.min(h-1,y)),1,2);
+  // Threshold line
+  const thr=minL+range*(ST.sensitivity/100);
+  const ty=h-1-Math.round(((thr-minL)/range)*(h-2));
+  ctx.fillStyle='rgba(88,166,255,0.6)';
+  ctx.fillRect(w-1,Math.max(0,Math.min(h-1,ty)),1,1);
+}
+
 function startDetection(){
-  const vid=$('tvid'),fbuf=document.createElement('canvas');
-  const fctx=fbuf.getContext('2d'),ovlc=$('tovl'),oc=ovlc.getContext('2d');
-  let lastW=0,lastH=0;
+  const vid=$('tvid');
+  const fbuf=document.createElement('canvas');
+  const fctx=fbuf.getContext('2d');
+  const ovlc=$('tovl'), oc=ovlc.getContext('2d');
+  let lastW=0, lastH=0;
+
+  function getLum(data){
+    let s=0;
+    if(ST.useIR){
+      // IR mode: red channel only
+      for(let i=0;i<data.length;i+=4) s+=data[i];
+    } else {
+      for(let i=0;i<data.length;i+=4) s+=0.299*data[i]+0.587*data[i+1]+0.114*data[i+2];
+    }
+    return s/(data.length/4);
+  }
 
   function loop(){
-    if(!ST.stream)return;
-    // Wait until video has actual frame data
+    if(!ST.stream) return;
     if(vid.readyState<2){ST.raf=requestAnimationFrame(loop);return;}
 
     const vw=vid.videoWidth, vh=vid.videoHeight;
-    // Resize canvases only when resolution changes
     if(vw!==lastW||vh!==lastH){
       fbuf.width=vw; fbuf.height=vh;
       ovlc.width=vw; ovlc.height=vh;
       lastW=vw; lastH=vh;
-      // Default ROI: screen center on first valid frame
-      if(!ST.roi) ST.roi={x:Math.round(vw/2), y:Math.round(vh/2), r:30};
+      // Default ROI: center 22% × 22% (Blinkzähler-style fixed box)
+      if(!ST.roi){
+        const rw=Math.round(vw*0.22), rh=Math.round(vh*0.22);
+        ST.roi={x:Math.round((vw-rw)/2), y:Math.round((vh-rh)/2), w:rw, h:rh};
+      }
     }
 
     fctx.drawImage(vid,0,0);
     oc.clearRect(0,0,vw,vh);
 
     if(ST.roi){
-      const roi=ST.roi;
-      // Draw target ring – orange when pulse active, white otherwise
-      oc.beginPath();oc.arc(roi.x,roi.y,roi.r,0,Math.PI*2);
-      oc.strokeStyle=ST.inPulse?'#f0a500':'rgba(255,255,255,.75)';
-      oc.lineWidth=3; oc.stroke();
-      // Crosshair centre dot
-      oc.beginPath();oc.arc(roi.x,roi.y,5,0,Math.PI*2);
-      oc.fillStyle=ST.inPulse?'#f0a500':'rgba(255,255,255,.9)'; oc.fill();
+      const{x,y,w,h}=ST.roi;
+      // Draw ROI rectangle with corner marks
+      const cm=10;
+      oc.lineWidth=1.5;
+      oc.strokeStyle=ST.inPulse?'#f0a500':'rgba(255,255,255,.55)';
+      oc.strokeRect(x,y,w,h);
+      // Orange corner marks
+      [[x,y,1,1],[x+w,y,-1,1],[x,y+h,1,-1],[x+w,y+h,-1,-1]].forEach(([cx,cy,dx,dy])=>{
+        oc.strokeStyle='#f0a500'; oc.lineWidth=2;
+        oc.beginPath();oc.moveTo(cx+dx*cm,cy);oc.lineTo(cx,cy);oc.lineTo(cx,cy+dy*cm);oc.stroke();
+      });
 
-      // Sample brightness in circular ROI area
-      const r=roi.r;
-      const x0=Math.max(0,roi.x-r|0), y0=Math.max(0,roi.y-r|0);
-      const w=Math.min(vw-x0,r*2), h=Math.min(vh-y0,r*2);
-      if(w>0&&h>0){
-        const px=fctx.getImageData(x0,y0,w,h).data;
-        let lum=0;
-        for(let i=0;i<px.length;i+=4)
-          lum+=0.299*px[i]+0.587*px[i+1]+0.114*px[i+2];
-        lum/=(px.length/4);
+      // Sample brightness in ROI
+      const x0=Math.max(0,x), y0=Math.max(0,y);
+      const sw=Math.min(vw-x0,w), sh=Math.min(vh-y0,h);
+      if(sw>0&&sh>0){
+        const lum=getLum(fctx.getImageData(x0,y0,sw,sh).data);
 
-        // Dark baseline: very slow EMA, only adapts when LED is off
-        if(ST.darkBase===null) ST.darkBase=lum;
-        else if(!ST.inPulse) ST.darkBase=ST.darkBase*0.994+lum*0.006;
+        // Rolling brightness history ~90 frames ≈ 3s at 30fps
+        ST.brightHist.push(lum);
+        if(ST.brightHist.length>90) ST.brightHist.shift();
 
-        // Threshold: 15 % above dark baseline (was 28% – too insensitive)
-        const thr=ST.darkBase*1.15;
+        const minL=Math.min(...ST.brightHist);
+        const maxL=Math.max(...ST.brightHist);
+        const range=maxL-minL;
 
-        if(!ST.inPulse&&lum>thr){
-          ST.inPulse=true;
+        drawScope(lum, minL, maxL);
+
+        if(range>5){ // need at least 5 luma units of contrast
+          const thr=minL+range*(ST.sensitivity/100);
           const now=Date.now();
-          // Min 80ms between pulses to filter noise
-          const last=ST.pulses[ST.pulses.length-1]||0;
-          if(now-last>80){
+
+          if(!ST.inPulse && lum>thr && (now-ST.lastPulseMs)>ST.refractory){
+            ST.inPulse=true;
+            ST.lastPulseMs=now;
             ST.pulses.push(now);
-            if(ST.pulses.length>32)ST.pulses.shift();
+            if(ST.pulses.length>35) ST.pulses.shift();
+          } else if(ST.inPulse && lum < thr - range*0.12){
+            ST.inPulse=false;
           }
-        }else if(ST.inPulse&&lum<thr*0.92){
-          ST.inPulse=false;
         }
       }
     }
@@ -1094,7 +1305,7 @@ function resetPulse(){
   $('pamps').textContent='--- A @ 400V/√3';
   $('btn-ok').disabled=true;
 }
-function resetPulseData(){ST.pulses=[];ST.darkBase=null;ST.inPulse=false;ST.stable=false;ST.curPwr=null;}
+function resetPulseData(){ST.pulses=[];ST.brightHist=[];ST.inPulse=false;ST.stable=false;ST.curPwr=null;ST.lastPulseMs=0;}
 
 function confirmStep(){
   const s=STEPS[ST.step],pwr=ST.curPwr||0;
@@ -1137,6 +1348,7 @@ function showProto(){
   if(ST.stream){ST.stream.getTracks().forEach(t=>t.stop());ST.stream=null;}
   cancelAnimationFrame(ST.raf);
   renderProto();
+  renderPhotos();
   $('p-datum').value=new Date().toLocaleDateString('de-DE');
   saveTest();
   show('proto');
@@ -1162,9 +1374,10 @@ function buildPDF(){
   doc.setFontSize(9);doc.setFont('helvetica','bold');doc.text('Anlage',lm,y);y+=4;
   doc.setFont('helvetica','normal');
   const info=[
-    ['Anlagen-Nr.',$('p-nr').value||'—'],
+    ['Harness-ID / Anlagen-Nr.',$('p-nr').value||'—'],
     ['Zählernummer',$('p-zaehler').value||'—'],
-    ['FAE-Code',$('p-fae').value||'—'],
+    ['FHE-Nr.',$('p-fhe').value||'—'],
+    ['FAE/FRE-Code',$('p-fae').value||'—'],
     ['Adresse',$('p-adr').value||'—'],
     ['Anlagenleistung',ST.anlageKw?(ST.anlageKw+' kWp × '+ST.anlageFak+' = '+ST.anlageBase?.toFixed(1)+' kW'):'—'],
     ['Impulskonstante',ST.impConst+' imp/kWh'],
@@ -1230,6 +1443,44 @@ function buildPDF(){
   doc.line(lm,y+10,lm+60,y+10);
   doc.setFontSize(8);doc.text('Unterschrift Prüfer',lm,y+14);
 
+  // ── PAGE 2: PHOTOS ──────────────────────────────────────────
+  const photos=ST.photos.filter(Boolean);
+  if(photos.length>0){
+    doc.addPage();
+    doc.setFontSize(12);doc.setFont('helvetica','bold');doc.setTextColor(0);
+    doc.text('Fotodokumentation',lm,14);
+    doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(100);
+    doc.text(`${$('p-nr').value||'—'} · ${$('p-datum').value}`,lm,19);
+    doc.setTextColor(0);
+    doc.line(lm,21,lm+rw,21);
+
+    // 2×2 grid layout: each cell 85mm × 110mm
+    const cellW=85,cellH=110,gap=10;
+    const positions=[
+      [lm,       26      ],
+      [lm+cellW+gap, 26  ],
+      [lm,       26+cellH+gap],
+      [lm+cellW+gap, 26+cellH+gap],
+    ];
+
+    photos.slice(0,4).forEach((src,i)=>{
+      const[px,py]=positions[i];
+      try{
+        // Draw border first
+        doc.setDrawColor(180);doc.rect(px,py,cellW,cellH);
+        doc.addImage(src,'JPEG',px,py,cellW,cellH,'','FAST');
+      }catch(e){
+        // If image fails, show placeholder box
+        doc.setFillColor(240,240,240);doc.rect(px,py,cellW,cellH,'F');
+        doc.setFontSize(9);doc.text('Foto '+(i+1),px+cellW/2,py+cellH/2,{align:'center'});
+      }
+      // Caption
+      doc.setFontSize(7);doc.setTextColor(80);
+      doc.text(`Foto ${i+1}`,px+1,py+cellH+4);
+      doc.setTextColor(0);
+    });
+  }
+
   return doc;
 }
 
@@ -1276,8 +1527,9 @@ async function sendEmail(){
 }
 
 function restart(){
-  Object.assign(ST,{step:0,refPower:null,anlageBase:null,results:[],
-    pulses:[],darkBase:null,inPulse:false,stable:false,curPwr:null,roi:null,stream:null});
+  Object.assign(ST,{step:0,refPower:null,anlageBase:null,results:[],photos:[],
+    pulses:[],brightHist:[],inPulse:false,stable:false,curPwr:null,
+    roi:null,stream:null,lastPulseMs:0});
   show('setup');
 }
 </script>
