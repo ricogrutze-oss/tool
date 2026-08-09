@@ -354,8 +354,6 @@ input::placeholder{color:var(--muted);}
 <div id="setup" class="screen active">
 <div class="s-inner">
 
-  <a href="../" class="back-link no-print">Tool-Übersicht</a>
-
   <!-- Tab Nav -->
   <div class="tab-nav" style="width:100%;max-width:430px;">
     <button class="tab active" id="tab-new" onclick="switchTab('new')">＋ Neuer Test</button>
@@ -771,8 +769,16 @@ function switchTab(tab){
     const c=$('tab-content-'+t);
     if(c) c.style.display=t===tab?'flex':'none';
   });
+  if(tab==='new') clearForNewTest();
   if(tab==='hist') renderHistoryInline();
   if(tab==='cfg') initCfgSigPad();
+}
+
+function clearForNewTest(){
+  // Clear identification fields for a fresh test
+  // (keep measurement settings: Wandler, Impulskonstante, Anlagenleistung)
+  const fields=['anlage-nr','zaehler-nr','fhe-nr','fae-code'];
+  fields.forEach(id=>{const el=$(id);if(el)el.value='';});
 }
 function showHistory(){show('setup');switchTab('hist');}
 
