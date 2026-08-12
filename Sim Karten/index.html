@@ -37,7 +37,7 @@
     background:#000; min-height:200px; display:flex; align-items:center; justify-content:center;
     touch-action:none; user-select:none;
   }
-  #stage video{ width:100%; display:block; }
+  #stage video{ width:100%; max-height:42vh; object-fit:cover; display:block; }
   #stage .placeholder{ color:var(--muted); font-size:0.85rem; padding:40px 10px; text-align:center;}
   #flashOverlay{
     position:absolute; inset:0; z-index:10; pointer-events:none;
@@ -61,7 +61,7 @@
     background:#fff; border:2px solid #333; touch-action:none;
   }
   .hint{ font-size:0.8rem; color:var(--muted); margin-top:8px; line-height:1.4; }
-  .status{ font-size:0.9rem; color:var(--accent); min-height:1.3em; margin-top:8px; font-family:ui-monospace,Menlo,Consolas,monospace;}
+  .status{ font-size:1.05rem; font-weight:600; color:var(--accent); min-height:1.3em; margin-top:10px; font-family:ui-monospace,Menlo,Consolas,monospace;}
   .status.saved{ color:var(--good); font-weight:700; }
   table{ width:100%; min-width:620px; border-collapse:collapse; margin-top:6px; background:#cfe7e5; border:1px solid #9fc4c1; table-layout:fixed;}
   th,td{ padding:6px 6px; border:1px solid #a9cac7; font-size:0.9rem; overflow:hidden;}
