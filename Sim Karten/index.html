@@ -104,9 +104,9 @@
   <h2 style="font-size:1rem;margin:0 0 8px 0;">Absender-Daten</h2>
   <div class="hint" style="margin-top:0;margin-bottom:8px;">Einmal ausfüllen — wird automatisch in jede Export-Zeile übernommen.</div>
   <div class="btnrow" style="margin-top:0;">
-    <input type="text" id="absKid" placeholder="Absender KID" style="flex:1; min-width:110px; background:var(--panel2); border:1px solid var(--border); color:var(--text); padding:9px 10px; border-radius:8px; font-size:0.9rem;">
-    <input type="text" id="absName" placeholder="Absender Name" style="flex:1; min-width:140px; background:var(--panel2); border:1px solid var(--border); color:var(--text); padding:9px 10px; border-radius:8px; font-size:0.9rem;">
-    <input type="text" id="absOE" placeholder="Absender OE" style="flex:1; min-width:140px; background:var(--panel2); border:1px solid var(--border); color:var(--text); padding:9px 10px; border-radius:8px; font-size:0.9rem;">
+    <input type="text" id="absKid" placeholder="KID" style="flex:1; min-width:110px; background:var(--panel2); border:1px solid var(--border); color:var(--text); padding:9px 10px; border-radius:8px; font-size:0.9rem;">
+    <input type="text" id="absName" placeholder="Nachname, Vorname" style="flex:1; min-width:140px; background:var(--panel2); border:1px solid var(--border); color:var(--text); padding:9px 10px; border-radius:8px; font-size:0.9rem;">
+    <input type="text" id="absOE" placeholder="Abteilung" style="flex:1; min-width:140px; background:var(--panel2); border:1px solid var(--border); color:var(--text); padding:9px 10px; border-radius:8px; font-size:0.9rem;">
   </div>
 </div>
 
@@ -123,13 +123,15 @@
     <option value="Rückbau">
     <option value="Vodafone Rückbau">
     <option value="CSD-Ablösung">
+    <option value="unbekannt">
+    <option value="Umbau auf Mobilfunk">
   </datalist>
   <div style="overflow-x:auto;">
   <table id="resultTable">
     <colgroup>
       <col><col><col><col><col><col>
     </colgroup>
-    <thead><tr><th class="idx">#</th><th>SIM-Karten-Nr</th><th>Rufnummer</th><th>Provider</th><th>Rückgabegrund</th><th></th></tr></thead>
+    <thead><tr><th class="idx">#</th><th>SIM-Karten-Nr</th><th>Rufnummer</th><th>Provider</th><th>Kündigungsgrund</th><th></th></tr></thead>
     <tbody id="tbody"></tbody>
   </table>
   </div>
@@ -627,9 +629,9 @@ function buildExportRows(){
 
 function generateExcelFile(filename){
   const rows = buildExportRows();
-  const sheetData = [['Absender KID', 'Absender Name', 'Absender OE', 'Rufnummer', 'SIM-Karten-Nr', 'Provider', 'Rückgabegrund'], ...rows];
+  const sheetData = [['KID', 'Nachname, Vorname', 'Abteilung', 'Rufnummer (wenn vorhanden)', 'Mobil: SIM-Karten-Nr / Festnetz: Objektdetails', 'Provider', 'Kündigungsgrund'], ...rows];
   const ws = XLSX.utils.aoa_to_sheet(sheetData);
-  ws['!cols'] = [{ wch: 10 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 22 }, { wch: 22 }, { wch: 20 }];
+  ws['!cols'] = [{ wch: 10 }, { wch: 20 }, { wch: 14 }, { wch: 20 }, { wch: 36 }, { wch: 22 }, { wch: 18 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Nummern');
   filename = filename || ('SIM-Karten-Rueckgabe_' + new Date().toISOString().slice(0,19).replace(/[:T]/g,'-') + '.xlsx');
