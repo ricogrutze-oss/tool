@@ -10,7 +10,10 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0023",
   "typbezeichnung": "105033A2 Spannungs-versorgungskabel 33 cm",
   "beschreibung": "Kabel zum Anschluss von SMGw und wahlweise Steuerbox im 3.HZ-Basiszähler.",
-  "status": "",
+  "statusList": [
+   "lager-egs",
+   "lager-westnetz"
+  ],
   "image": "images/img_1.jpg"
  },
  {
@@ -24,7 +27,9 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0032",
   "typbezeichnung": "105034A1 Spannungs- versorgungskabel Y 33 + 20 cm",
   "beschreibung": "",
-  "status": "",
+  "statusList": [
+   "lager-egs"
+  ],
   "image": null
  },
  {
@@ -38,7 +43,10 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0023",
   "typbezeichnung": "3204151//K-\nStandard 230 V",
   "beschreibung": "",
-  "status": "",
+  "statusList": [
+   "lager-egs",
+   "lager-westnetz"
+  ],
   "image": "images/img_2.jpg"
  },
  {
@@ -52,7 +60,9 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0032",
   "typbezeichnung": "3204152//K-Y \n230V_3.HZ",
   "beschreibung": "",
-  "status": "",
+  "statusList": [
+   "lager-egs"
+  ],
   "image": null
  },
  {
@@ -66,7 +76,10 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0023",
   "typbezeichnung": "Netzkabel Standard \u000b230 V 33 cm",
   "beschreibung": "",
-  "status": "",
+  "statusList": [
+   "lager-egs",
+   "lager-westnetz"
+  ],
   "image": "images/img_3.jpg"
  },
  {
@@ -80,7 +93,9 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0032",
   "typbezeichnung": "Netzkabel Standard\u000b230 V 33 + 20 cm",
   "beschreibung": "",
-  "status": "",
+  "statusList": [
+   "lager-egs"
+  ],
   "image": null
  },
  {
@@ -94,7 +109,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "MS2020 OKK 50 cm",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": null
  },
  {
@@ -108,7 +123,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "MS2020 OKK 100 cm",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": null
  },
  {
@@ -122,7 +137,10 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0016",
   "typbezeichnung": "MS2020 OKK 50 cm",
   "beschreibung": "",
-  "status": "",
+  "statusList": [
+   "lager-egs",
+   "lager-westnetz"
+  ],
   "image": null
  },
  {
@@ -136,7 +154,10 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0022",
   "typbezeichnung": "MS2020 OKK 100 cm",
   "beschreibung": "",
-  "status": "",
+  "statusList": [
+   "lager-westnetz",
+   "lager-egs"
+  ],
   "image": null
  },
  {
@@ -150,7 +171,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "12Q-A015-AK-30",
   "beschreibung": "Ab 800 MHz, durch Z00356 abgelöst!",
-  "status": "",
+  "statusList": [],
   "image": "images/img_4.jpg"
  },
  {
@@ -164,7 +185,10 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0027",
   "typbezeichnung": "23N-A015-AK-30",
   "beschreibung": "Ab 700 MHz",
-  "status": "",
+  "statusList": [
+   "lager-westnetz",
+   "lager-egs"
+  ],
   "image": "images/img_5.jpg"
  },
  {
@@ -178,7 +202,10 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0027",
   "typbezeichnung": "LPWTC-7-27",
   "beschreibung": "Ab 700 MHz",
-  "status": "",
+  "statusList": [
+   "lager-westnetz",
+   "lager-egs"
+  ],
   "image": "images/img_6.jpg"
  },
  {
@@ -192,7 +219,7 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0027",
   "typbezeichnung": "LP 701 Low Profile 2G/3G/4G",
   "beschreibung": "Feldtest noch offen!",
-  "status": "",
+  "statusList": [],
   "image": "images/img_7.jpg"
  },
  {
@@ -206,7 +233,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "12Q-A015-AK-01",
   "beschreibung": "Ab 800 MHz, durch Z00347 und Z00348 abgelöst!",
-  "status": "",
+  "statusList": [],
   "image": "images/img_8.jpg"
  },
  {
@@ -220,7 +247,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "12Q-A030-AK-01",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": null
  },
  {
@@ -234,7 +261,7 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0020",
   "typbezeichnung": "23N-A015-AK-01",
   "beschreibung": "Ab 700 MHz",
-  "status": "",
+  "statusList": [],
   "image": "images/img_9.jpg"
  },
  {
@@ -248,7 +275,9 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0019",
   "typbezeichnung": "23N-A030-AK-01",
   "beschreibung": "",
-  "status": "",
+  "statusList": [
+   "lager-westnetz"
+  ],
   "image": null
  },
  {
@@ -262,7 +291,7 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0020",
   "typbezeichnung": "LP-IN2640-1-5",
   "beschreibung": "Ab 700 MHz",
-  "status": "",
+  "statusList": [],
   "image": "images/img_10.jpg"
  },
  {
@@ -276,7 +305,9 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0019",
   "typbezeichnung": "LP-IN2640-3",
   "beschreibung": "",
-  "status": "",
+  "statusList": [
+   "lager-westnetz"
+  ],
   "image": null
  },
  {
@@ -290,7 +321,7 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0020",
   "typbezeichnung": "LP 701 Low Profile 2G/3G/4G Multiband (Fakra-D) - 1,5 m",
   "beschreibung": "Feldtest noch offen!",
-  "status": "",
+  "statusList": [],
   "image": "images/img_11.jpg"
  },
  {
@@ -304,7 +335,7 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0019",
   "typbezeichnung": "LP 701 Low Profile 2G/3G/4G Multiband (Fakra-D) - 3 m",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": null
  },
  {
@@ -318,7 +349,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "LTE ZWT Antenne - LP 701 Low Profile 2G/3G/4G Multiband (Fakra-D) – 0,5 m",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": "images/img_12.jpg"
  },
  {
@@ -332,7 +363,7 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0061",
   "typbezeichnung": "LTE Midpatch Flat\n23O-A030-AB-01",
   "beschreibung": "Nachfolger der Fakra-Variante",
-  "status": "",
+  "statusList": [],
   "image": "images/img_13.jpg"
  },
  {
@@ -346,7 +377,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "LP701",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": "images/img_14.jpg"
  },
  {
@@ -360,7 +391,7 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0061",
   "typbezeichnung": "SiSo 4G/5G LOW PROFILE IOT ANT\nLP-IN2683-3",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": "images/img_15.jpg"
  },
  {
@@ -374,7 +405,7 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0037",
   "typbezeichnung": "LTE Bracket Antenna",
   "beschreibung": "Stabantenne",
-  "status": "",
+  "statusList": [],
   "image": "images/img_16.jpg"
  },
  {
@@ -388,7 +419,7 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0039",
   "typbezeichnung": "LTE Bracket Antenna",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": "images/img_16.jpg"
  },
  {
@@ -402,7 +433,7 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0041",
   "typbezeichnung": "LTE Bracket Antenna",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": "images/img_16.jpg"
  },
  {
@@ -416,7 +447,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "LTE Bracket Antenna",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": "images/img_16.jpg"
  },
  {
@@ -430,7 +461,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "LTE Bracket Antenna",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": "images/img_16.jpg"
  },
  {
@@ -444,7 +475,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "LTE Bracket Antenna",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": "images/img_16.jpg"
  },
  {
@@ -458,7 +489,7 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0037",
   "typbezeichnung": "B4-IN2642",
   "beschreibung": "Becherantenne",
-  "status": "",
+  "statusList": [],
   "image": "images/img_17.jpg"
  },
  {
@@ -472,7 +503,7 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0039",
   "typbezeichnung": "B4-IN2642",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": "images/img_17.jpg"
  },
  {
@@ -486,7 +517,7 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0041",
   "typbezeichnung": "B4-IN2642",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": "images/img_17.jpg"
  },
  {
@@ -500,7 +531,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "B4-IN2642",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": "images/img_17.jpg"
  },
  {
@@ -514,7 +545,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "B4-IN2642",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": "images/img_17.jpg"
  },
  {
@@ -528,7 +559,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "B4-IN2642",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": "images/img_17.jpg"
  },
  {
@@ -542,7 +573,10 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0043",
   "typbezeichnung": "Fakra CFD 195",
   "beschreibung": "Zur Verlängerung von Fakra und SMA",
-  "status": "",
+  "statusList": [
+   "lager-westnetz",
+   "lager-egs"
+  ],
   "image": "images/img_18.jpg"
  },
  {
@@ -556,7 +590,10 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0044",
   "typbezeichnung": "Fakra CFD 195",
   "beschreibung": "",
-  "status": "",
+  "statusList": [
+   "lager-westnetz",
+   "lager-egs"
+  ],
   "image": "images/img_18.jpg"
  },
  {
@@ -570,7 +607,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "SMA CFD 195",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": "images/img_18.jpg"
  },
  {
@@ -584,7 +621,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "SMA CFD 195",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": "images/img_18.jpg"
  },
  {
@@ -598,7 +635,10 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0043",
   "typbezeichnung": "C2-IN2644-3",
   "beschreibung": "Zur Verlängerung von Fakra und SMA",
-  "status": "",
+  "statusList": [
+   "lager-westnetz",
+   "lager-egs"
+  ],
   "image": "images/img_19.jpg"
  },
  {
@@ -612,7 +652,10 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "C2-IN2644-5",
   "beschreibung": "",
-  "status": "",
+  "statusList": [
+   "lager-westnetz",
+   "lager-egs"
+  ],
   "image": "images/img_19.jpg"
  },
  {
@@ -626,7 +669,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "tbd.",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": "images/img_19.jpg"
  },
  {
@@ -640,7 +683,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "tbd.",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": "images/img_19.jpg"
  },
  {
@@ -654,7 +697,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "Cable Adapter AA100 10cm Fakra D(m) Str./SMA(m) Str.\n31X-X001-BH-01",
   "beschreibung": "Verschiedene Adapter für Sonderfälle, unter anderem für die neue SMA-Premiumantenne",
-  "status": "",
+  "statusList": [],
   "image": "images/img_20.jpg"
  },
  {
@@ -668,7 +711,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "Cable Adapter AA100 10cm Fakra D(f) RA/FME(m) Str.\n31X-X001-BE-01",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": "images/img_21.jpg"
  },
  {
@@ -682,7 +725,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "Cable Adapter AA100 10cm\nFakra D(m) Str./MCX(m) RA Grey\n31X-X001-BE-01",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": "images/img_22.jpg"
  },
  {
@@ -696,7 +739,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "Cable Adapter AA100 15cm FME(m)/SMA(m) Str.\n31X-X001-BJ-01",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": "images/img_23.jpg"
  },
  {
@@ -710,7 +753,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "kein Etikett/ keine Leitung\n25X-X000-CJ-01",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": "images/img_24.jpg"
  },
  {
@@ -724,7 +767,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "Cable Adapter AA100 10cm SMA(f) Str./Fakra D(f) RA Grey\n31X-X001-BP-10",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": "images/img_25.jpg"
  },
  {
@@ -738,7 +781,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "RG174 FAKRA D PLUG TO SMA \nPLUG",
   "beschreibung": "Verschiedene Adapter für Sonderfälle, unter anderem für die neue SMA-Premiumantenne",
-  "status": "",
+  "statusList": [],
   "image": "images/img_26.jpg"
  },
  {
@@ -752,7 +795,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "FME(m) TO R/A FAKRA D JACK RG174",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": "images/img_27.jpg"
  },
  {
@@ -766,7 +809,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "FR RG174 FAKRA D PLUG TO R/A \nMCX PLUG",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": "images/img_28.jpg"
  },
  {
@@ -780,7 +823,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "FME(m) - SMA(m) RG174 COAX CABLE",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": "images/img_29.jpg"
  },
  {
@@ -794,7 +837,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "FME(f)-FAKRA D(m) ADAPTOR",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": "images/img_30.jpg"
  },
  {
@@ -808,7 +851,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": null
  },
  {
@@ -822,7 +865,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "PZV1N",
   "beschreibung": "Wurde durch\nZ00250 abgelöst!",
-  "status": "",
+  "statusList": [],
   "image": "images/img_31.jpg"
  },
  {
@@ -836,7 +879,9 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "T95N",
   "beschreibung": "Inklusive Isoliertüllen",
-  "status": "",
+  "statusList": [
+   "lager-westnetz"
+  ],
   "image": "images/img_32.jpg"
  },
  {
@@ -850,7 +895,9 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "T95L",
   "beschreibung": "",
-  "status": "",
+  "statusList": [
+   "lager-westnetz"
+  ],
   "image": "images/img_33.jpg"
  },
  {
@@ -864,7 +911,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "T95E",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": "images/img_34.jpg"
  },
  {
@@ -878,7 +925,9 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "T95A",
   "beschreibung": "",
-  "status": "",
+  "statusList": [
+   "lager-westnetz"
+  ],
   "image": "images/img_35.jpg"
  },
  {
@@ -892,7 +941,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "P000394460 / Klemmendeckel FNN-BZ 80mm (S3) - noch ohne Ausstanzung",
   "beschreibung": "Klemmendeckel Basiszähler, passend für alle beschaffbaren Basiszähler",
-  "status": "",
+  "statusList": [],
   "image": null
  },
  {
@@ -906,7 +955,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "P000414370 / Klemmendeckel FNN-BZ 60mm (S3) mit Aussparung",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": null
  },
  {
@@ -920,7 +969,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "Klemmendeckel SGM-D4 lang",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": null
  },
  {
@@ -934,7 +983,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "Klemmendeckel SGM-D4 standard",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": null
  },
  {
@@ -948,7 +997,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "Klemmendeckel SGM-C8 lang",
   "beschreibung": "mME",
-  "status": "",
+  "statusList": [],
   "image": null
  },
  {
@@ -962,7 +1011,10 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "P000386530 / Zähler-Klemmendeckeladapter E320 S3 (80mm)",
   "beschreibung": "Huckepackdeckel Basiszähler",
-  "status": "",
+  "statusList": [
+   "lager-westnetz",
+   "lager-egs"
+  ],
   "image": null
  },
  {
@@ -976,7 +1028,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": null
  },
  {
@@ -990,7 +1042,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "Klemmendeckel Huckepack mit Sicherung, SGMZC0000000001",
   "beschreibung": "Huckepackdeckel mME",
-  "status": "",
+  "statusList": [],
   "image": null
  },
  {
@@ -1004,7 +1056,9 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "Klemmendeckel Huckepack ohne Sicherung, SGMZC0000000004",
   "beschreibung": "",
-  "status": "",
+  "statusList": [
+   "lager-egs"
+  ],
   "image": null
  },
  {
@@ -1018,7 +1072,9 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0026",
   "typbezeichnung": "Modulfachdeckel 4 TE links und rechts , SGMZDX0000002307",
   "beschreibung": "Modulfachdeckel Basiszähler, passend für alle beschaffbaren Basiszähler",
-  "status": "",
+  "statusList": [
+   "lager-egs"
+  ],
   "image": null
  },
  {
@@ -1032,7 +1088,10 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0025",
   "typbezeichnung": "Modulfachdeckel 4 TE links Ausstanzung SGMZDX0000002301",
   "beschreibung": "",
-  "status": "",
+  "statusList": [
+   "lager-westnetz",
+   "lager-egs"
+  ],
   "image": null
  },
  {
@@ -1046,7 +1105,9 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0053",
   "typbezeichnung": "Modulfachdeckel 5 TE links Ausstanzung, SGMZDX0000002303",
   "beschreibung": "",
-  "status": "",
+  "statusList": [
+   "lager-westnetz"
+  ],
   "image": null
  },
  {
@@ -1060,7 +1121,10 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0021",
   "typbezeichnung": "Modulfachdeckel ohne Ausstanzung SGMZDX0000002305",
   "beschreibung": "",
-  "status": "",
+  "statusList": [
+   "lager-westnetz",
+   "lager-egs"
+  ],
   "image": null
  },
  {
@@ -1074,7 +1138,7 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0025",
   "typbezeichnung": "P000395000 / Moduldeckel FNN-BZ mit Öffnung linksbündig",
   "beschreibung": "Modulfachdeckel Basiszähler, passend für alle beschaffbaren Basiszähler",
-  "status": "",
+  "statusList": [],
   "image": null
  },
  {
@@ -1088,7 +1152,9 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0021",
   "typbezeichnung": "P000375830 / Moduldeckel FNN-BZ",
   "beschreibung": "",
-  "status": "",
+  "statusList": [
+   "lager-westnetz"
+  ],
   "image": null
  },
  {
@@ -1102,7 +1168,10 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0055",
   "typbezeichnung": "P000412450 / Moduldeckel FNN-BZ mit Öff(linksbdg)+Wschild",
   "beschreibung": "",
-  "status": "",
+  "statusList": [
+   "lager-westnetz",
+   "lager-egs"
+  ],
   "image": null
  },
  {
@@ -1116,7 +1185,10 @@ const CATALOG_DATA = [
   "bestellnummer": "BZ0054",
   "typbezeichnung": "P000412430 / Moduldeckel FNN-BZ mit Wandlerschild",
   "beschreibung": "",
-  "status": "",
+  "statusList": [
+   "lager-westnetz",
+   "lager-egs"
+  ],
   "image": null
  },
  {
@@ -1130,7 +1202,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "60G-A030-AK-01",
   "beschreibung": "Projektantennen 2023",
-  "status": "",
+  "statusList": [],
   "image": "images/img_36.png"
  },
  {
@@ -1144,7 +1216,7 @@ const CATALOG_DATA = [
   "bestellnummer": "",
   "typbezeichnung": "LPW-460-2RFDJ",
   "beschreibung": "",
-  "status": "",
+  "statusList": [],
   "image": "images/img_37.png"
  }
 ];

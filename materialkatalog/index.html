@@ -87,7 +87,7 @@
     width:64px; height:64px; border-radius:8px; background:var(--panel2); border:1px solid var(--edge);
     display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;
   }
-  .pcard .thumb img{ width:100%; height:100%; object-fit:cover; }
+  .pcard .thumb img{ width:100%; height:100%; object-fit:cover; cursor:zoom-in; }
   .pcard .info{ flex:1; min-width:0; }
   .pcard .pname{ font-size:13.5px; font-weight:600; line-height:1.3; }
   .pcard .pmeta{ font-size:10.5px; color:var(--text-dim); font-family:var(--mono); margin-top:3px; }
@@ -103,6 +103,12 @@
     border-radius:6px; padding:4px 2px; font-size:13px;
   }
   .pcard.instock{ border-left:3px solid var(--green); }
+  .statusrow{ margin-top:5px; display:flex; flex-wrap:wrap; gap:5px; }
+  .statusbadge{
+    font-size:9.5px; padding:2px 7px; border-radius:10px; border:1px solid;
+    background:rgba(255,255,255,0.03); white-space:nowrap; font-family:var(--mono);
+  }
+  .statusbadge.nolager{ color:var(--text-dim); border-color:var(--edge); }
 
   .cartbar{
     position:fixed; bottom:0; left:0; right:0; background:var(--panel); border-top:1px solid var(--edge);
@@ -207,6 +213,11 @@
     </div>
     <div class="hint">Die E-Mail öffnet dein Mail-Programm mit vorausgefülltem Text. Aus technischen Gründen kann der Browser das PDF nicht automatisch anhängen — bitte die zuvor heruntergeladene PDF-Datei manuell an die E-Mail anhängen.</div>
   </div>
+</div>
+
+<!-- Bild-Vergrößerung -->
+<div class="overlay-bg" id="imgOverlay" style="align-items:center;">
+  <img id="imgOverlayPic" src="" alt="" style="max-width:92vw; max-height:80vh; border-radius:12px; object-fit:contain;">
 </div>
 
 <script>
@@ -364,22 +375,48 @@ window.addEventListener('error', (e) => {
         const v = Math.max(0, parseInt(input.value)||0);
         setQty(p.id, v);
       });
+      const zoomImg = card.querySelector('.zoomable');
+      if(zoomImg){
+        zoomImg.addEventListener('click', () => {
+          document.getElementById('imgOverlayPic').src = zoomImg.dataset.full;
+          document.getElementById('imgOverlay').classList.add('open');
+        });
+      }
     });
+  }
+
+  const STATUS_LABELS = {
+    'lager-westnetz': {icon:'📦', color:'#ff5d5d', label:'Lagerware Westnetz'},
+    'lager-egs': {icon:'📦', color:'#3aa8ff', label:'Lagerware EGS'},
+    'auslaufend-westnetz': {icon:'📉', color:'#ff5d5d', label:'Westnetz auslaufend'},
+    'auslaufend-egs': {icon:'📉', color:'#3aa8ff', label:'EGS auslaufend'},
+  };
+
+  function statusBadgesHTML(statusList){
+    if(!statusList || !statusList.length){
+      return `<span class="statusbadge nolager" title="Kein Lagerbestand — Bestellung mit Lieferzeit">⏳ Bestellware</span>`;
+    }
+    return statusList.map(s => {
+      const info = STATUS_LABELS[s];
+      if(!info) return '';
+      return `<span class="statusbadge" style="color:${info.color};border-color:${info.color}44;" title="${info.label}">${info.icon} ${info.label}</span>`;
+    }).join('');
   }
 
   function productCardHTML(p){
     const qty = cart[p.id] || 0;
     const thumb = p.image
-      ? `<img src="${p.image}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='📦'">`
+      ? `<img src="${p.image}" alt="" loading="lazy" class="zoomable" data-full="${p.image}" onerror="this.parentElement.innerHTML='📦'">`
       : '📦';
     const meta = [p.hersteller, p.bestellnummer, p.artikeltyp, p.materialnummer].filter(Boolean).join(' · ');
     return `
-      <div class="pcard ${p.status?'instock':''}" id="p${p.id}">
+      <div class="pcard" id="p${p.id}">
         <div class="thumb">${thumb}</div>
         <div class="info">
           <div class="pname">${escapeHtml(p.name)}</div>
           <div class="pmeta">${escapeHtml(meta)}</div>
           ${p.beschreibung?`<div class="pdesc">${escapeHtml(p.beschreibung)}</div>`:''}
+          <div class="statusrow">${statusBadgesHTML(p.statusList)}</div>
         </div>
         <div class="qtybox">
           <button class="qty-minus">−</button>
@@ -552,6 +589,10 @@ window.addEventListener('error', (e) => {
 
   // ---- Init ----
   els.search.addEventListener('input', renderCatnav);
+
+  document.getElementById('imgOverlay').addEventListener('click', () => {
+    document.getElementById('imgOverlay').classList.remove('open');
+  });
 
   if(typeof CATALOG_DATA === 'undefined' || !Array.isArray(CATALOG_DATA)){
     els.catnav.innerHTML = '<div style="background:#3a1414;border:1px solid #5a2020;color:#ff8a8a;padding:14px;border-radius:10px;font-size:13px;">⚠ catalog-data.js wurde nicht geladen (CATALOG_DATA fehlt). Bitte prüfen, ob die Datei im selben Ordner wie index.html liegt.</div>';
