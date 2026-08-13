@@ -1,4 +1,4 @@
-const CATALOG_DATA = [
+⁹const CATALOG_DATA = [
  {
   "id": 1,
   "category": "Spannungsversorgungskabel - BZ Standard - 3.HZ",
@@ -248,7 +248,7 @@ const CATALOG_DATA = [
   "typbezeichnung": "12Q-A030-AK-01",
   "beschreibung": "",
   "statusList": [],
-  "image": null
+  "image": "images/img_8.jpg"
  },
  {
   "id": 17,
@@ -278,7 +278,7 @@ const CATALOG_DATA = [
   "statusList": [
    "lager-westnetz"
   ],
-  "image": null
+  "image": "images/img_9.jpg"
  },
  {
   "id": 19,
@@ -308,7 +308,7 @@ const CATALOG_DATA = [
   "statusList": [
    "lager-westnetz"
   ],
-  "image": null
+  "image": "images/img_10.jpg"
  },
  {
   "id": 21,
@@ -336,7 +336,7 @@ const CATALOG_DATA = [
   "typbezeichnung": "LP 701 Low Profile 2G/3G/4G Multiband (Fakra-D) - 3 m",
   "beschreibung": "",
   "statusList": [],
-  "image": null
+  "image": "images/img_11.jpg"
  },
  {
   "id": 23,
