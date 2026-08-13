@@ -210,6 +210,12 @@
 </div>
 
 <script>
+window.addEventListener('error', (e) => {
+  const el = document.getElementById('catnav');
+  if(el){
+    el.innerHTML = `<div style="background:#3a1414;border:1px solid #5a2020;color:#ff8a8a;padding:14px;border-radius:10px;font-family:monospace;font-size:12px;white-space:pre-wrap;">⚠ JavaScript-Fehler:\n${e.message}\n\nDatei: ${e.filename ? e.filename.split('/').pop() : '?'}\nZeile: ${e.lineno}</div>`;
+  }
+});
 (() => {
   const CART_KEY = 'matkat_cart_v1';
   let cart = JSON.parse(localStorage.getItem(CART_KEY) || '{}'); // {productId: qty}
@@ -545,9 +551,13 @@
   });
 
   // ---- Init ----
-  els.search.addEventListener('input', renderProducts);
-  
-  renderCatnav();
+  els.search.addEventListener('input', renderCatnav);
+
+  if(typeof CATALOG_DATA === 'undefined' || !Array.isArray(CATALOG_DATA)){
+    els.catnav.innerHTML = '<div style="background:#3a1414;border:1px solid #5a2020;color:#ff8a8a;padding:14px;border-radius:10px;font-size:13px;">⚠ catalog-data.js wurde nicht geladen (CATALOG_DATA fehlt). Bitte prüfen, ob die Datei im selben Ordner wie index.html liegt.</div>';
+  } else {
+    renderCatnav();
+  }
   updateCartCount();
 })();
 </script>
