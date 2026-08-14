@@ -1,4 +1,4 @@
-⁹const CATALOG_DATA = [
+const CATALOG_DATA = [
  {
   "id": 1,
   "category": "Spannungsversorgungskabel - BZ Standard - 3.HZ",
@@ -110,7 +110,7 @@
   "typbezeichnung": "MS2020 OKK 50 cm",
   "beschreibung": "",
   "statusList": [],
-  "image": null
+  "image": "images/img_4.jpg"
  },
  {
   "id": 8,
@@ -124,7 +124,7 @@
   "typbezeichnung": "MS2020 OKK 100 cm",
   "beschreibung": "",
   "statusList": [],
-  "image": null
+  "image": "images/img_4.jpg"
  },
  {
   "id": 9,
@@ -141,7 +141,7 @@
    "lager-egs",
    "lager-westnetz"
   ],
-  "image": null
+  "image": "images/img_5.jpg"
  },
  {
   "id": 10,
@@ -158,7 +158,7 @@
    "lager-westnetz",
    "lager-egs"
   ],
-  "image": null
+  "image": "images/img_5.jpg"
  },
  {
   "id": 11,
@@ -172,7 +172,7 @@
   "typbezeichnung": "12Q-A015-AK-30",
   "beschreibung": "Ab 800 MHz, durch Z00356 abgelöst!",
   "statusList": [],
-  "image": "images/img_4.jpg"
+  "image": "images/img_6.jpg"
  },
  {
   "id": 12,
@@ -189,7 +189,7 @@
    "lager-westnetz",
    "lager-egs"
   ],
-  "image": "images/img_5.jpg"
+  "image": "images/img_7.jpg"
  },
  {
   "id": 13,
@@ -206,7 +206,7 @@
    "lager-westnetz",
    "lager-egs"
   ],
-  "image": "images/img_6.jpg"
+  "image": "images/img_8.jpg"
  },
  {
   "id": 14,
@@ -220,7 +220,7 @@
   "typbezeichnung": "LP 701 Low Profile 2G/3G/4G",
   "beschreibung": "Feldtest noch offen!",
   "statusList": [],
-  "image": "images/img_7.jpg"
+  "image": "images/img_9.jpg"
  },
  {
   "id": 15,
@@ -234,7 +234,7 @@
   "typbezeichnung": "12Q-A015-AK-01",
   "beschreibung": "Ab 800 MHz, durch Z00347 und Z00348 abgelöst!",
   "statusList": [],
-  "image": "images/img_8.jpg"
+  "image": "images/img_10.jpg"
  },
  {
   "id": 16,
@@ -248,7 +248,7 @@
   "typbezeichnung": "12Q-A030-AK-01",
   "beschreibung": "",
   "statusList": [],
-  "image": "images/img_8.jpg"
+  "image": null
  },
  {
   "id": 17,
@@ -262,7 +262,7 @@
   "typbezeichnung": "23N-A015-AK-01",
   "beschreibung": "Ab 700 MHz",
   "statusList": [],
-  "image": "images/img_9.jpg"
+  "image": "images/img_11.jpg"
  },
  {
   "id": 18,
@@ -278,7 +278,7 @@
   "statusList": [
    "lager-westnetz"
   ],
-  "image": "images/img_9.jpg"
+  "image": null
  },
  {
   "id": 19,
@@ -292,7 +292,7 @@
   "typbezeichnung": "LP-IN2640-1-5",
   "beschreibung": "Ab 700 MHz",
   "statusList": [],
-  "image": "images/img_10.jpg"
+  "image": "images/img_12.jpg"
  },
  {
   "id": 20,
@@ -308,7 +308,7 @@
   "statusList": [
    "lager-westnetz"
   ],
-  "image": "images/img_10.jpg"
+  "image": null
  },
  {
   "id": 21,
@@ -322,7 +322,7 @@
   "typbezeichnung": "LP 701 Low Profile 2G/3G/4G Multiband (Fakra-D) - 1,5 m",
   "beschreibung": "Feldtest noch offen!",
   "statusList": [],
-  "image": "images/img_11.jpg"
+  "image": "images/img_13.jpg"
  },
  {
   "id": 22,
@@ -336,7 +336,7 @@
   "typbezeichnung": "LP 701 Low Profile 2G/3G/4G Multiband (Fakra-D) - 3 m",
   "beschreibung": "",
   "statusList": [],
-  "image": "images/img_11.jpg"
+  "image": null
  },
  {
   "id": 23,
@@ -350,7 +350,7 @@
   "typbezeichnung": "LTE ZWT Antenne - LP 701 Low Profile 2G/3G/4G Multiband (Fakra-D) – 0,5 m",
   "beschreibung": "",
   "statusList": [],
-  "image": "images/img_12.jpg"
+  "image": "images/img_14.jpg"
  },
  {
   "id": 24,
@@ -364,7 +364,7 @@
   "typbezeichnung": "LTE Midpatch Flat\n23O-A030-AB-01",
   "beschreibung": "Nachfolger der Fakra-Variante",
   "statusList": [],
-  "image": "images/img_13.jpg"
+  "image": "images/img_15.jpg"
  },
  {
   "id": 25,
@@ -378,7 +378,7 @@
   "typbezeichnung": "LP701",
   "beschreibung": "",
   "statusList": [],
-  "image": "images/img_14.jpg"
+  "image": "images/img_16.jpg"
  },
  {
   "id": 26,
@@ -392,7 +392,7 @@
   "typbezeichnung": "SiSo 4G/5G LOW PROFILE IOT ANT\nLP-IN2683-3",
   "beschreibung": "",
   "statusList": [],
-  "image": "images/img_15.jpg"
+  "image": "images/img_17.jpg"
  },
  {
   "id": 27,
@@ -406,7 +406,7 @@
   "typbezeichnung": "LTE Bracket Antenna",
   "beschreibung": "Stabantenne",
   "statusList": [],
-  "image": "images/img_16.jpg"
+  "image": "images/img_18.jpg"
  },
  {
   "id": 28,
@@ -420,7 +420,7 @@
   "typbezeichnung": "LTE Bracket Antenna",
   "beschreibung": "",
   "statusList": [],
-  "image": "images/img_16.jpg"
+  "image": "images/img_18.jpg"
  },
  {
   "id": 29,
@@ -434,7 +434,7 @@
   "typbezeichnung": "LTE Bracket Antenna",
   "beschreibung": "",
   "statusList": [],
-  "image": "images/img_16.jpg"
+  "image": "images/img_18.jpg"
  },
  {
   "id": 30,
@@ -448,7 +448,7 @@
   "typbezeichnung": "LTE Bracket Antenna",
   "beschreibung": "",
   "statusList": [],
-  "image": "images/img_16.jpg"
+  "image": "images/img_18.jpg"
  },
  {
   "id": 31,
@@ -462,7 +462,7 @@
   "typbezeichnung": "LTE Bracket Antenna",
   "beschreibung": "",
   "statusList": [],
-  "image": "images/img_16.jpg"
+  "image": "images/img_18.jpg"
  },
  {
   "id": 32,
@@ -476,7 +476,7 @@
   "typbezeichnung": "LTE Bracket Antenna",
   "beschreibung": "",
   "statusList": [],
-  "image": "images/img_16.jpg"
+  "image": "images/img_18.jpg"
  },
  {
   "id": 33,
@@ -490,7 +490,7 @@
   "typbezeichnung": "B4-IN2642",
   "beschreibung": "Becherantenne",
   "statusList": [],
-  "image": "images/img_17.jpg"
+  "image": "images/img_19.jpg"
  },
  {
   "id": 34,
@@ -504,7 +504,7 @@
   "typbezeichnung": "B4-IN2642",
   "beschreibung": "",
   "statusList": [],
-  "image": "images/img_17.jpg"
+  "image": "images/img_19.jpg"
  },
  {
   "id": 35,
@@ -518,7 +518,7 @@
   "typbezeichnung": "B4-IN2642",
   "beschreibung": "",
   "statusList": [],
-  "image": "images/img_17.jpg"
+  "image": "images/img_19.jpg"
  },
  {
   "id": 36,
@@ -532,7 +532,7 @@
   "typbezeichnung": "B4-IN2642",
   "beschreibung": "",
   "statusList": [],
-  "image": "images/img_17.jpg"
+  "image": "images/img_19.jpg"
  },
  {
   "id": 37,
@@ -546,7 +546,7 @@
   "typbezeichnung": "B4-IN2642",
   "beschreibung": "",
   "statusList": [],
-  "image": "images/img_17.jpg"
+  "image": "images/img_19.jpg"
  },
  {
   "id": 38,
@@ -560,7 +560,7 @@
   "typbezeichnung": "B4-IN2642",
   "beschreibung": "",
   "statusList": [],
-  "image": "images/img_17.jpg"
+  "image": "images/img_19.jpg"
  },
  {
   "id": 39,
@@ -577,7 +577,7 @@
    "lager-westnetz",
    "lager-egs"
   ],
-  "image": "images/img_18.jpg"
+  "image": "images/img_20.jpg"
  },
  {
   "id": 40,
@@ -594,7 +594,7 @@
    "lager-westnetz",
    "lager-egs"
   ],
-  "image": "images/img_18.jpg"
+  "image": "images/img_20.jpg"
  },
  {
   "id": 41,
@@ -608,7 +608,7 @@
   "typbezeichnung": "SMA CFD 195",
   "beschreibung": "",
   "statusList": [],
-  "image": "images/img_18.jpg"
+  "image": "images/img_20.jpg"
  },
  {
   "id": 42,
@@ -622,7 +622,7 @@
   "typbezeichnung": "SMA CFD 195",
   "beschreibung": "",
   "statusList": [],
-  "image": "images/img_18.jpg"
+  "image": "images/img_20.jpg"
  },
  {
   "id": 43,
@@ -639,7 +639,7 @@
    "lager-westnetz",
    "lager-egs"
   ],
-  "image": "images/img_19.jpg"
+  "image": "images/img_21.jpg"
  },
  {
   "id": 44,
@@ -656,7 +656,7 @@
    "lager-westnetz",
    "lager-egs"
   ],
-  "image": "images/img_19.jpg"
+  "image": "images/img_21.jpg"
  },
  {
   "id": 45,
@@ -670,7 +670,7 @@
   "typbezeichnung": "tbd.",
   "beschreibung": "",
   "statusList": [],
-  "image": "images/img_19.jpg"
+  "image": "images/img_21.jpg"
  },
  {
   "id": 46,
@@ -684,7 +684,7 @@
   "typbezeichnung": "tbd.",
   "beschreibung": "",
   "statusList": [],
-  "image": "images/img_19.jpg"
+  "image": "images/img_21.jpg"
  },
  {
   "id": 47,
@@ -698,7 +698,7 @@
   "typbezeichnung": "Cable Adapter AA100 10cm Fakra D(m) Str./SMA(m) Str.\n31X-X001-BH-01",
   "beschreibung": "Verschiedene Adapter für Sonderfälle, unter anderem für die neue SMA-Premiumantenne",
   "statusList": [],
-  "image": "images/img_20.jpg"
+  "image": "images/img_22.jpg"
  },
  {
   "id": 48,
@@ -712,7 +712,7 @@
   "typbezeichnung": "Cable Adapter AA100 10cm Fakra D(f) RA/FME(m) Str.\n31X-X001-BE-01",
   "beschreibung": "",
   "statusList": [],
-  "image": "images/img_21.jpg"
+  "image": "images/img_23.jpg"
  },
  {
   "id": 49,
@@ -726,7 +726,7 @@
   "typbezeichnung": "Cable Adapter AA100 10cm\nFakra D(m) Str./MCX(m) RA Grey\n31X-X001-BE-01",
   "beschreibung": "",
   "statusList": [],
-  "image": "images/img_22.jpg"
+  "image": "images/img_24.jpg"
  },
  {
   "id": 50,
@@ -740,7 +740,7 @@
   "typbezeichnung": "Cable Adapter AA100 15cm FME(m)/SMA(m) Str.\n31X-X001-BJ-01",
   "beschreibung": "",
   "statusList": [],
-  "image": "images/img_23.jpg"
+  "image": "images/img_25.jpg"
  },
  {
   "id": 51,
@@ -754,7 +754,7 @@
   "typbezeichnung": "kein Etikett/ keine Leitung\n25X-X000-CJ-01",
   "beschreibung": "",
   "statusList": [],
-  "image": "images/img_24.jpg"
+  "image": "images/img_26.jpg"
  },
  {
   "id": 52,
@@ -768,7 +768,7 @@
   "typbezeichnung": "Cable Adapter AA100 10cm SMA(f) Str./Fakra D(f) RA Grey\n31X-X001-BP-10",
   "beschreibung": "",
   "statusList": [],
-  "image": "images/img_25.jpg"
+  "image": "images/img_27.jpg"
  },
  {
   "id": 53,
@@ -782,7 +782,7 @@
   "typbezeichnung": "RG174 FAKRA D PLUG TO SMA \nPLUG",
   "beschreibung": "Verschiedene Adapter für Sonderfälle, unter anderem für die neue SMA-Premiumantenne",
   "statusList": [],
-  "image": "images/img_26.jpg"
+  "image": "images/img_28.jpg"
  },
  {
   "id": 54,
@@ -796,7 +796,7 @@
   "typbezeichnung": "FME(m) TO R/A FAKRA D JACK RG174",
   "beschreibung": "",
   "statusList": [],
-  "image": "images/img_27.jpg"
+  "image": "images/img_29.jpg"
  },
  {
   "id": 55,
@@ -810,7 +810,7 @@
   "typbezeichnung": "FR RG174 FAKRA D PLUG TO R/A \nMCX PLUG",
   "beschreibung": "",
   "statusList": [],
-  "image": "images/img_28.jpg"
+  "image": "images/img_30.jpg"
  },
  {
   "id": 56,
@@ -824,7 +824,7 @@
   "typbezeichnung": "FME(m) - SMA(m) RG174 COAX CABLE",
   "beschreibung": "",
   "statusList": [],
-  "image": "images/img_29.jpg"
+  "image": "images/img_31.jpg"
  },
  {
   "id": 57,
@@ -838,7 +838,7 @@
   "typbezeichnung": "FME(f)-FAKRA D(m) ADAPTOR",
   "beschreibung": "",
   "statusList": [],
-  "image": "images/img_30.jpg"
+  "image": "images/img_32.jpg"
  },
  {
   "id": 58,
@@ -866,7 +866,7 @@
   "typbezeichnung": "PZV1N",
   "beschreibung": "Wurde durch\nZ00250 abgelöst!",
   "statusList": [],
-  "image": "images/img_31.jpg"
+  "image": "images/img_33.jpg"
  },
  {
   "id": 60,
@@ -882,7 +882,7 @@
   "statusList": [
    "lager-westnetz"
   ],
-  "image": "images/img_32.jpg"
+  "image": "images/img_34.jpg"
  },
  {
   "id": 61,
@@ -898,7 +898,7 @@
   "statusList": [
    "lager-westnetz"
   ],
-  "image": "images/img_33.jpg"
+  "image": "images/img_35.jpg"
  },
  {
   "id": 62,
@@ -912,7 +912,7 @@
   "typbezeichnung": "T95E",
   "beschreibung": "",
   "statusList": [],
-  "image": "images/img_34.jpg"
+  "image": "images/img_36.jpg"
  },
  {
   "id": 63,
@@ -928,7 +928,7 @@
   "statusList": [
    "lager-westnetz"
   ],
-  "image": "images/img_35.jpg"
+  "image": "images/img_37.jpg"
  },
  {
   "id": 64,
@@ -1203,7 +1203,7 @@
   "typbezeichnung": "60G-A030-AK-01",
   "beschreibung": "Projektantennen 2023",
   "statusList": [],
-  "image": "images/img_36.png"
+  "image": "images/img_38.png"
  },
  {
   "id": 82,
@@ -1217,6 +1217,6 @@
   "typbezeichnung": "LPW-460-2RFDJ",
   "beschreibung": "",
   "statusList": [],
-  "image": "images/img_37.png"
+  "image": "images/img_39.png"
  }
 ];
