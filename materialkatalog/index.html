@@ -202,16 +202,15 @@
 <div class="overlay-bg" id="orderOverlay">
   <div class="sheet">
     <button class="sheet-close" id="closeOrderBtn">✕ Schließen</button>
-    <h3>📋 Bestellangaben</h3>
-    <div class="field"><label>Name</label><input type="text" id="ordName" placeholder="Vor- und Nachname"></div>
-    <div class="field"><label>Telefonnummer</label><input type="tel" id="ordPhone" placeholder="z. B. 0391 123456"></div>
-    <div class="field"><label>Bestell-E-Mail-Adresse (Empfänger)</label><input type="email" id="ordEmail" placeholder="bestellung@firma.de"></div>
-    <div class="field"><label>Bemerkung / Stichtext (optional)</label><textarea id="ordNote" placeholder="z. B. Projekt, Lieferadresse, Dringlichkeit…"></textarea></div>
+    <h3>📋 Materialabruf</h3>
+    <div class="field"><label>Verwendung</label><input type="text" id="ordVerwendung" value="AVA_Zählerlager"></div>
+    <div class="field"><label>Ziellager</label><input type="text" id="ordZiellager" value="Netzdienst Oschersleben (AN08)"></div>
+    <div class="field"><label>Referenz</label><input type="text" id="ordReferenz" placeholder="Vor- und Nachname"></div>
     <div class="sheet-actions">
       <button id="pdfBtn">📄 PDF erstellen</button>
       <button id="mailBtn" class="primary">✉️ E-Mail vorbereiten</button>
     </div>
-    <div class="hint">Die E-Mail öffnet dein Mail-Programm mit vorausgefülltem Text. Aus technischen Gründen kann der Browser das PDF nicht automatisch anhängen — bitte die zuvor heruntergeladene PDF-Datei manuell an die E-Mail anhängen.</div>
+    <div class="hint">Die E-Mail geht automatisch an EGS_Beschaffungslogistik@eon.com, mit „Geräteabruf für [Ziellager]" als Betreff. Aus technischen Gründen kann der Browser das PDF nicht automatisch anhängen — bitte die zuvor heruntergeladene PDF-Datei manuell an die E-Mail anhängen.</div>
   </div>
 </div>
 
@@ -503,30 +502,47 @@ window.addEventListener('error', (e) => {
     }catch(e){ return null; }
   }
 
+  const RECIPIENT_EMAIL = 'EGS_Beschaffungslogistik@eon.com';
+
   async function buildPDF(){
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('p','mm','a4');
-    const name = document.getElementById('ordName').value || '–';
-    const phone = document.getElementById('ordPhone').value || '–';
-    const note = document.getElementById('ordNote').value || '';
+    const verwendung = document.getElementById('ordVerwendung').value || 'AVA_Zählerlager';
+    const ziellager = document.getElementById('ordZiellager').value || '–';
+    const referenz = document.getElementById('ordReferenz').value || '–';
+    const now = new Date();
     const lines = getCartLines();
 
-    doc.setFontSize(15);
-    doc.text('Materialbestellung', 14, 16);
-    doc.setFontSize(10);
-    doc.setTextColor(90);
-    doc.text(`Datum: ${new Date().toLocaleDateString('de-DE')}`, 14, 23);
-    doc.text(`Besteller: ${name}`, 14, 29);
-    doc.text(`Telefon: ${phone}`, 14, 34);
-    if(note){ doc.text(`Bemerkung: ${note}`, 14, 39); }
+    doc.setFontSize(18);
+    doc.setTextColor(20);
+    doc.text('Materialabruf', 14, 18);
 
-    let y = note ? 48 : 43;
-    doc.setDrawColor(200);
+    doc.setDrawColor(180);
+    doc.rect(14, 24, 182, 26);
+    doc.setFontSize(10);
+    doc.setTextColor(60);
+    doc.text('Verwendung:', 18, 31);
+    doc.text('Ziellager:', 18, 37);
+    doc.text('Referenz:', 18, 43);
+    doc.setTextColor(20);
+    doc.text(verwendung, 45, 31);
+    doc.text(ziellager, 45, 37);
+    doc.text(referenz, 45, 43);
+    doc.setTextColor(60);
+    doc.text(`Datum: ${now.toLocaleDateString('de-DE')}`, 150, 31);
+
+    // Artikelliste mit Foto + Beschreibung (wie in der Vorversion)
+    let y = 58;
+    doc.setFontSize(11);
+    doc.setTextColor(20);
+    doc.text('Artikel', 14, y);
+    y += 5;
+    doc.setDrawColor(180);
     doc.line(14, y, 196, y);
     y += 7;
 
     for(const {p, qty} of lines){
-      if(y > 265){ doc.addPage(); y = 20; }
+      if(y > 260){ doc.addPage(); y = 20; }
       let imgH = 0;
       if(p.image){
         const dataUrl = await imgToDataUrl(p.image);
@@ -542,8 +558,13 @@ window.addEventListener('error', (e) => {
       doc.text(p.name, 34, y+5, {maxWidth: 130});
       doc.setFontSize(8.5);
       doc.setTextColor(110);
-      const meta = [p.hersteller, p.bestellnummer && ('Best.-Nr. '+p.bestellnummer), p.artikeltyp && ('Art.-Typ '+p.artikeltyp), p.materialnummer && ('Mat.-Nr. '+p.materialnummer)].filter(Boolean).join('  ·  ');
+      const meta = [p.hersteller, p.materialschluessel && ('Mat.-Schl. '+p.materialschluessel), p.bestellnummer && ('Best.-Nr. '+p.bestellnummer), p.artikeltyp && ('Art.-Typ '+p.artikeltyp)].filter(Boolean).join('  ·  ');
       doc.text(meta, 34, y+10, {maxWidth: 130});
+      if(p.beschreibung){
+        doc.setFontSize(8);
+        doc.setTextColor(140);
+        doc.text(p.beschreibung, 34, y+14, {maxWidth: 130});
+      }
       doc.setFontSize(11);
       doc.setTextColor(20);
       doc.text(`${qty}×`, 182, y+7, {align:'right'});
@@ -554,36 +575,38 @@ window.addEventListener('error', (e) => {
 
     doc.setFontSize(8);
     doc.setTextColor(150);
-    doc.text('Erstellt mit der Toolbox — Materialkatalog', 14, 290);
+    doc.text(`Gesendet an: ${RECIPIENT_EMAIL}`, 14, 287);
+    doc.text('Bitte bestätigen Sie uns den Abruf', 14, 292);
 
     return doc;
+  }
+
+  function pdfFilename(){
+    const ziellager = document.getElementById('ordZiellager').value || 'Materialabruf';
+    const now = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    const datePart = String(now.getFullYear()).slice(2) + pad(now.getMonth()+1) + pad(now.getDate());
+    const timePart = pad(now.getHours()) + pad(now.getMinutes());
+    return `${datePart}_${timePart}_${ziellager}.pdf`;
   }
 
   els.pdfBtn.addEventListener('click', async () => {
     els.pdfBtn.textContent = '… erstelle PDF';
     const doc = await buildPDF();
-    doc.save('materialbestellung.pdf');
+    doc.save(pdfFilename());
     els.pdfBtn.textContent = '📄 PDF erstellen';
   });
 
   els.mailBtn.addEventListener('click', () => {
-    const to = document.getElementById('ordEmail').value.trim();
-    const name = document.getElementById('ordName').value || '–';
-    const phone = document.getElementById('ordPhone').value || '–';
-    const note = document.getElementById('ordNote').value || '';
-    const lines = getCartLines();
+    const ziellager = document.getElementById('ordZiellager').value.trim();
+    const referenz = document.getElementById('ordReferenz').value || '–';
 
-    let body = `Materialbestellung\n\nBesteller: ${name}\nTelefon: ${phone}\n`;
-    if(note) body += `Bemerkung: ${note}\n`;
-    body += `\nArtikel:\n`;
-    lines.forEach(({p, qty}) => {
-      body += `- ${qty}x ${p.name}`;
-      if(p.bestellnummer) body += ` (Best.-Nr. ${p.bestellnummer})`;
-      body += `\n`;
-    });
-    body += `\n(Bitte die zuvor heruntergeladene PDF-Datei an diese E-Mail anhängen.)`;
+    if(!ziellager){ alert('Bitte Ziellager angeben.'); return; }
 
-    const mailto = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent('Materialbestellung')}&body=${encodeURIComponent(body)}`;
+    const subject = `Geräteabruf für ${ziellager}`;
+    const body = `Sehr geehrte Damen und Herren,\n\nwir bitten um Zusendung der im Anhang aufgeführten Materialien.\n\nMit freundlichem Gruß\n${referenz}`;
+
+    const mailto = `mailto:${encodeURIComponent(RECIPIENT_EMAIL)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.location.href = mailto;
   });
 
