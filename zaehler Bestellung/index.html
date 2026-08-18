@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zähler und Zubehör — Bestellung</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="catalog-data.js"></script>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#121821; --panel2:#182130; --edge:#243044;
+    --amber:#ffb020; --text:#e7edf5; --text-dim:#8ea0b8; --green:#37e08a;
+    --mono:'SF Mono',ui-monospace,Consolas,monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    padding-bottom:90px;
+  }
+  header{ padding:16px; text-align:center; border-bottom:1px solid var(--edge); position:relative; }
+  header h1{ margin:0; font-size:17px; }
+  header h1 b{ color:var(--amber); }
+
+  .backhome{
+    position:fixed; top:10px; left:10px; z-index:9999;
+    background:rgba(11,15,20,0.85); color:var(--amber);
+    border:1px solid var(--edge); border-radius:20px;
+    padding:7px 14px; font-size:13px; font-weight:600;
+    text-decoration:none; backdrop-filter:blur(6px);
+  }
+
+  .searchbar{ padding:12px 16px; display:flex; gap:8px; }
+  .searchbar input{
+    flex:1; background:var(--panel); border:1px solid var(--edge); color:var(--text);
+    padding:10px 14px; border-radius:10px; font-size:14px; font-family:inherit;
+  }
+
+  .catbar{ display:flex; gap:8px; overflow-x:auto; padding:0 16px 12px; -webkit-overflow-scrolling:touch; display:none; }
+
+  .catnav{ padding:0 16px 8px; }
+  .topcat{
+    background:var(--panel); border:1px solid var(--edge); border-radius:12px; margin-bottom:8px; overflow:hidden;
+  }
+  .topcat-head{
+    display:flex; align-items:center; gap:10px; padding:13px 14px; cursor:pointer;
+  }
+  .topcat-head .tcname{ flex:1; font-size:14px; font-weight:700; }
+  .topcat-head .tccount{ font-size:11px; color:var(--text-dim); font-family:var(--mono); }
+  .topcat-head .chev{ color:var(--amber); font-size:12px; transition:transform .15s; }
+  .topcat.open .chev{ transform:rotate(90deg); }
+
+  .subcat-list{ display:none; border-top:1px solid var(--edge); }
+  .topcat.open .subcat-list{ display:block; }
+  .subcat{ border-bottom:1px solid var(--edge); }
+  .subcat:last-child{ border-bottom:none; }
+  .subcat-head{
+    display:flex; align-items:center; gap:10px; padding:11px 14px 11px 26px; cursor:pointer;
+    background:var(--panel2);
+  }
+  .subcat-head .scname{ flex:1; font-size:12.5px; color:var(--text); }
+  .subcat-head .sccount{ font-size:10.5px; color:var(--text-dim); font-family:var(--mono); }
+  .subcat-head .chev{ color:var(--amber); font-size:11px; transition:transform .15s; }
+  .subcat.open .chev{ transform:rotate(90deg); }
+  .subcat-products{ display:none; padding:10px 12px; }
+  .subcat.open .subcat-products{ display:block; }
+  .catchip{
+    flex-shrink:0; background:var(--panel2); border:1px solid var(--edge); color:var(--text-dim);
+    padding:7px 13px; border-radius:16px; font-size:12px; cursor:pointer; white-space:nowrap;
+  }
+  .catchip.active{ background:var(--amber); color:#1a1300; border-color:var(--amber); font-weight:700; }
+
+  main{ max-width:800px; margin:0 auto; padding:0 16px; }
+
+  .catgroup{ margin-bottom:22px; }
+  .catgroup h2{
+    font-size:13px; text-transform:uppercase; letter-spacing:.05em; color:var(--text-dim);
+    margin:18px 0 10px; font-weight:600;
+  }
+
+  .plist{ display:flex; flex-direction:column; gap:10px; }
+  .pcard{
+    background:var(--panel); border:1px solid var(--edge); border-radius:12px; padding:10px;
+    display:flex; gap:12px; align-items:center;
+  }
+  .pcard .info{ flex:1; min-width:0; }
+  .pcard .pname{ font-size:13.5px; font-weight:600; line-height:1.3; }
+  .pcard .pmeta{ font-size:10.5px; color:var(--text-dim); font-family:var(--mono); margin-top:3px; }
+  .pcard .pdesc{ font-size:11px; color:var(--text-dim); margin-top:3px; line-height:1.35; }
+
+  .qtybox{ display:flex; align-items:center; gap:6px; flex-shrink:0; }
+  .qtybox button{
+    width:28px; height:28px; border-radius:7px; border:1px solid var(--edge); background:var(--panel2);
+    color:var(--text); font-size:15px; cursor:pointer;
+  }
+  .qtybox input{
+    width:34px; text-align:center; background:#0d1319; border:1px solid var(--edge); color:var(--text);
+    border-radius:6px; padding:4px 2px; font-size:13px;
+  }
+  .pcard.instock{ border-left:3px solid var(--green); }
+  .statusrow{ margin-top:5px; display:flex; flex-wrap:wrap; gap:5px; }
+  .statusbadge{
+    font-size:9.5px; padding:2px 7px; border-radius:10px; border:1px solid;
+    background:rgba(255,255,255,0.03); white-space:nowrap; font-family:var(--mono);
+  }
+  .statusbadge.nolager{ color:var(--text-dim); border-color:var(--edge); }
+
+  .cartbar{
+    position:fixed; bottom:0; left:0; right:0; background:var(--panel); border-top:1px solid var(--edge);
+    padding:12px 16px; display:flex; align-items:center; gap:12px; z-index:500;
+  }
+  .cartbar .count{ font-size:13px; color:var(--text-dim); flex:1; }
+  .cartbar .count b{ color:var(--amber); }
+  .cartbar button{
+    background:var(--amber); color:#1a1300; font-weight:700; border:none; border-radius:10px;
+    padding:11px 20px; font-size:14px; cursor:pointer;
+  }
+
+  .overlay-bg{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:1000;
+    align-items:flex-end; justify-content:center;
+  }
+  .overlay-bg.open{ display:flex; }
+  .sheet{
+    background:var(--panel); border-radius:18px 18px 0 0; padding:20px; width:100%; max-width:600px;
+    max-height:85vh; overflow-y:auto;
+  }
+  .sheet h3{ margin:0 0 14px; font-size:17px; }
+  .sheet-close{
+    display:block; margin:0 0 10px auto; background:var(--panel2); border:1px solid var(--edge);
+    color:var(--text-dim); border-radius:8px; padding:6px 12px; font-size:12px; cursor:pointer;
+  }
+
+  .cartitem{
+    display:flex; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid var(--edge);
+  }
+  .cartitem .cname{ flex:1; font-size:12.5px; }
+  .cartitem .cqty{ font-family:var(--mono); font-size:12px; color:var(--amber); }
+  .cartitem .crm{ background:none; border:none; color:#ff5d5d; font-size:16px; cursor:pointer; padding:4px; }
+
+  .field{ margin-bottom:12px; }
+  .field label{ display:block; font-size:11.5px; color:var(--text-dim); margin-bottom:4px; }
+  .field input, .field textarea{
+    width:100%; background:#0d1319; border:1px solid var(--edge); color:var(--text);
+    padding:10px 12px; border-radius:8px; font-size:14px; font-family:inherit;
+  }
+  .field textarea{ min-height:70px; resize:vertical; }
+
+  .sheet-actions{ display:flex; gap:10px; margin-top:16px; }
+  .sheet-actions button{
+    flex:1; padding:12px; border-radius:10px; border:1px solid var(--edge); background:var(--panel2);
+    color:var(--text); font-size:13.5px; font-weight:600; cursor:pointer;
+  }
+  .sheet-actions button.primary{ background:var(--amber); color:#1a1300; border-color:var(--amber); }
+
+  .hint{ font-size:11px; color:var(--text-dim); margin-top:10px; line-height:1.5; }
+  .empty{ text-align:center; color:var(--text-dim); padding:40px 20px; font-size:13px; }
+</style>
+</head>
+<body>
+
+<a href="../" class="backhome">← Toolbox</a>
+
+<header>
+  <h1>🔌 <b>Zähler und Zubehör</b> — Bestellung</h1>
+</header>
+
+<div class="searchbar">
+  <input type="text" id="search" placeholder="Produkt, Artikelnummer suchen…">
+</div>
+<div class="catbar" id="catbar"></div>
+<div class="catnav" id="catnav"></div>
+
+<main id="main"></main>
+
+<div class="cartbar">
+  <div class="count">🛒 <b id="cartCount">0</b> Artikel im Warenkorb</div>
+  <button id="openCartBtn">Warenkorb</button>
+</div>
+
+<!-- Warenkorb-Sheet -->
+<div class="overlay-bg" id="cartOverlay">
+  <div class="sheet">
+    <button class="sheet-close" id="closeCartBtn">✕ Schließen</button>
+    <h3>🛒 Warenkorb</h3>
+    <div id="cartItems"></div>
+    <div class="sheet-actions">
+      <button id="clearCartBtn">Leeren</button>
+      <button id="toOrderBtn" class="primary">Weiter zur Bestellung</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bestellformular-Sheet -->
+<div class="overlay-bg" id="orderOverlay">
+  <div class="sheet">
+    <button class="sheet-close" id="closeOrderBtn">✕ Schließen</button>
+    <h3>📋 Materialabruf</h3>
+    <div class="field"><label>Verwendung</label><input type="text" id="ordVerwendung" value="AVA_Zählerlager"></div>
+    <div class="field"><label>Ziellager</label><input type="text" id="ordZiellager" value="Netzdienst Oschersleben (AN08)"></div>
+    <div class="field"><label>Referenz</label><input type="text" id="ordReferenz" placeholder="Vor- und Nachname"></div>
+    <div class="sheet-actions">
+      <button id="pdfBtn">📄 PDF erstellen</button>
+      <button id="mailBtn" class="primary">✉️ E-Mail vorbereiten</button>
+    </div>
+    <div class="hint">Die E-Mail geht automatisch an EGS_Beschaffungslogistik@eon.com, mit „Geräteabruf für [Ziellager]" als Betreff. Aus technischen Gründen kann der Browser das PDF nicht automatisch anhängen — bitte die zuvor heruntergeladene PDF-Datei manuell an die E-Mail anhängen.</div>
+  </div>
+</div>
+
+<script>
+window.addEventListener('error', (e) => {
+  const el = document.getElementById('catnav');
+  if(el){
+    el.innerHTML = `<div style="background:#3a1414;border:1px solid #5a2020;color:#ff8a8a;padding:14px;border-radius:10px;font-family:monospace;font-size:12px;white-space:pre-wrap;">⚠ JavaScript-Fehler:\n${e.message}\n\nDatei: ${e.filename ? e.filename.split('/').pop() : '?'}\nZeile: ${e.lineno}</div>`;
+  }
+});
+(() => {
+  const CART_KEY = 'matkat_cart_v1';
+  let cart = JSON.parse(localStorage.getItem(CART_KEY) || '{}'); // {productId: qty}
+  let activeCategory = 'Alle';
+
+  const els = {
+    main: document.getElementById('main'),
+    catbar: document.getElementById('catbar'),
+    catnav: document.getElementById('catnav'),
+    search: document.getElementById('search'),
+    cartCount: document.getElementById('cartCount'),
+    openCartBtn: document.getElementById('openCartBtn'),
+    cartOverlay: document.getElementById('cartOverlay'),
+    closeCartBtn: document.getElementById('closeCartBtn'),
+    cartItems: document.getElementById('cartItems'),
+    clearCartBtn: document.getElementById('clearCartBtn'),
+    toOrderBtn: document.getElementById('toOrderBtn'),
+    orderOverlay: document.getElementById('orderOverlay'),
+    closeOrderBtn: document.getElementById('closeOrderBtn'),
+    pdfBtn: document.getElementById('pdfBtn'),
+    mailBtn: document.getElementById('mailBtn'),
+  };
+
+  function escapeHtml(s){
+    return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function saveCart(){
+    localStorage.setItem(CART_KEY, JSON.stringify(cart));
+    updateCartCount();
+  }
+  function updateCartCount(){
+    const total = Object.values(cart).reduce((a,b) => a+b, 0);
+    els.cartCount.textContent = total;
+  }
+
+  // ---- Kategorie-Baum: Oberkategorie (z.B. "Antennen") -> Unterkategorien (Originaltitel) ----
+  const GAS_CATS = ['Balgengaszähler','Drehkolbengaszähler','Turbinenradgaszähler','Zustandsmengenumwerter_kompakt','Flowcomputer','Datenspeicher_Gas'];
+  const STROM_CATS = ['Basiszähler','Moderne_Messeinrichtung','SLP_Classic','RLM_Zähler','Gateway','Modem_drei_Hz','Modem_Einschub','Tarifschaltgeräte','Wandler'];
+
+  function topCategoryOf(title){
+    if(GAS_CATS.includes(title)) return '🔥 Gasgeräte';
+    if(STROM_CATS.includes(title)) return '⚡ Stromgeräte';
+    return title; // Zubehör, Umbausätze bleiben eigenständig
+  }
+
+  function buildTree(){
+    const tree = {}; // topName -> { subName -> [products] }
+    CATALOG_DATA.forEach(p => {
+      const top = topCategoryOf(p.category);
+      (tree[top] = tree[top] || {});
+      (tree[top][p.category] = tree[top][p.category] || []).push(p);
+    });
+    return tree;
+  }
+
+  let openTop = null, openSub = null;
+
+  function renderCatnav(){
+    const q = els.search.value.trim().toLowerCase();
+    const tree = buildTree();
+
+    // Bei aktiver Suche: passende Ober-/Unterkategorien automatisch aufklappen
+    let autoOpenTop = null, autoOpenSub = null;
+    if(q){
+      outer:
+      for(const [top, subs] of Object.entries(tree)){
+        for(const [sub, prods] of Object.entries(subs)){
+          const hit = prods.some(p => matchesQuery(p, q)) || sub.toLowerCase().includes(q) || top.toLowerCase().includes(q);
+          if(hit){ autoOpenTop = top; autoOpenSub = sub; break outer; }
+        }
+      }
+    }
+
+    const html = Object.entries(tree).map(([top, subs]) => {
+      const subEntries = Object.entries(subs);
+      const totalCount = subEntries.reduce((a,[,prods]) => a+prods.length, 0);
+      const isOpen = q ? (top === autoOpenTop || subEntries.some(([sub,prods]) => sub.toLowerCase().includes(q) || prods.some(p=>matchesQuery(p,q)))) : (top === openTop);
+
+      const subHtml = subEntries.map(([sub, prods]) => {
+        const visibleProds = q ? prods.filter(p => matchesQuery(p,q) || sub.toLowerCase().includes(q)) : prods;
+        if(q && !visibleProds.length && !sub.toLowerCase().includes(q)) return '';
+        const subOpen = q ? true : (sub === openSub && top === openTop);
+        return `
+          <div class="subcat ${subOpen?'open':''}" data-top="${escapeHtml(top)}" data-sub="${escapeHtml(sub)}">
+            <div class="subcat-head">
+              <span class="chev">▶</span>
+              <span class="scname">${escapeHtml(sub)}</span>
+              <span class="sccount">${visibleProds.length}</span>
+            </div>
+            <div class="subcat-products">
+              <div class="plist">${visibleProds.map(p => productCardHTML(p)).join('')}</div>
+            </div>
+          </div>`;
+      }).join('');
+
+      return `
+        <div class="topcat ${isOpen?'open':''}" data-top="${escapeHtml(top)}">
+          <div class="topcat-head">
+            <span class="chev">▶</span>
+            <span class="tcname">${escapeHtml(top)}</span>
+            <span class="tccount">${totalCount}</span>
+          </div>
+          <div class="subcat-list">${subHtml}</div>
+        </div>`;
+    }).join('');
+
+    els.catnav.innerHTML = html || '<div class="empty">Keine Produkte gefunden.</div>';
+
+    // Klick-Handler: Oberkategorie auf-/zuklappen
+    els.catnav.querySelectorAll('.topcat-head').forEach(head => {
+      head.addEventListener('click', () => {
+        const top = head.parentElement.dataset.top;
+        openTop = (openTop === top && !els.search.value.trim()) ? null : top;
+        openSub = null;
+        renderCatnav();
+      });
+    });
+    // Klick-Handler: Unterkategorie auf-/zuklappen
+    els.catnav.querySelectorAll('.subcat-head').forEach(head => {
+      head.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const sub = head.parentElement.dataset.sub;
+        const top = head.parentElement.dataset.top;
+        if(els.search.value.trim()) return; // bei Suche bleibt alles offen
+        openSub = (openSub === sub) ? null : sub;
+        openTop = top;
+        renderCatnav();
+      });
+    });
+
+    wireProductCards();
+  }
+
+  function matchesQuery(p, q){
+    return (p.name+p.materialnummer+p.category).toLowerCase().includes(q);
+  }
+
+  function wireProductCards(){
+    CATALOG_DATA.forEach(p => {
+      const card = document.getElementById('p'+p.id);
+      if(!card) return;
+      const input = card.querySelector('.qty-input');
+      card.querySelector('.qty-minus').addEventListener('click', () => changeQty(p.id, -1, input));
+      card.querySelector('.qty-plus').addEventListener('click', () => changeQty(p.id, 1, input));
+      input.addEventListener('change', () => {
+        const v = Math.max(0, parseInt(input.value)||0);
+        setQty(p.id, v);
+      });
+    });
+  }
+
+  function productCardHTML(p){
+    const qty = cart[p.id] || 0;
+    return `
+      <div class="pcard" id="p${p.id}">
+        <div class="info">
+          <div class="pname">${escapeHtml(p.name)}</div>
+          <div class="pmeta">${escapeHtml(p.materialnummer)}</div>
+        </div>
+        <div class="qtybox">
+          <button class="qty-minus">−</button>
+          <input type="number" class="qty-input" min="0" value="${qty}">
+          <button class="qty-plus">+</button>
+        </div>
+      </div>`;
+  }
+
+  function changeQty(id, delta, input){
+    const v = Math.max(0, (cart[id]||0) + delta);
+    setQty(id, v);
+    input.value = v;
+  }
+  function setQty(id, v){
+    if(v <= 0) delete cart[id];
+    else cart[id] = v;
+    saveCart();
+  }
+
+  // ---- Warenkorb-Sheet ----
+  function renderCart(){
+    const ids = Object.keys(cart);
+    if(!ids.length){
+      els.cartItems.innerHTML = '<div class="empty">Warenkorb ist leer.</div>';
+      return;
+    }
+    els.cartItems.innerHTML = ids.map(idStr => {
+      const id = parseInt(idStr);
+      const p = CATALOG_DATA.find(x => x.id === id);
+      if(!p) return '';
+      return `
+        <div class="cartitem">
+          <div class="cname">${escapeHtml(p.name)}</div>
+          <div class="cqty">${cart[id]}×</div>
+          <button class="crm" data-id="${id}">✕</button>
+        </div>`;
+    }).join('');
+    els.cartItems.querySelectorAll('.crm').forEach(btn => {
+      btn.addEventListener('click', () => {
+        delete cart[btn.dataset.id];
+        saveCart();
+        renderCart();
+        renderCatnav();
+      });
+    });
+  }
+
+  els.openCartBtn.addEventListener('click', () => { renderCart(); els.cartOverlay.classList.add('open'); });
+  els.closeCartBtn.addEventListener('click', () => els.cartOverlay.classList.remove('open'));
+  els.cartOverlay.addEventListener('click', (e) => { if(e.target===els.cartOverlay) els.cartOverlay.classList.remove('open'); });
+  els.clearCartBtn.addEventListener('click', () => {
+    if(confirm('Warenkorb wirklich leeren?')){
+      cart = {}; saveCart(); renderCart(); renderCatnav();
+    }
+  });
+  els.toOrderBtn.addEventListener('click', () => {
+    if(!Object.keys(cart).length){ alert('Warenkorb ist leer.'); return; }
+    els.cartOverlay.classList.remove('open');
+    els.orderOverlay.classList.add('open');
+  });
+  els.closeOrderBtn.addEventListener('click', () => els.orderOverlay.classList.remove('open'));
+  els.orderOverlay.addEventListener('click', (e) => { if(e.target===els.orderOverlay) els.orderOverlay.classList.remove('open'); });
+
+  // ---- PDF-Erstellung ----
+  function getCartLines(){
+    return Object.entries(cart).map(([idStr, qty]) => {
+      const p = CATALOG_DATA.find(x => x.id === parseInt(idStr));
+      return p ? {p, qty} : null;
+    }).filter(Boolean);
+  }
+
+  const RECIPIENT_EMAIL = 'EGS_Beschaffungslogistik@eon.com';
+
+  async function buildPDF(){
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p','mm','a4');
+    const verwendung = document.getElementById('ordVerwendung').value || 'AVA_Zählerlager';
+    const ziellager = document.getElementById('ordZiellager').value || '–';
+    const referenz = document.getElementById('ordReferenz').value || '–';
+    const now = new Date();
+    const lines = getCartLines();
+
+    doc.setFontSize(18);
+    doc.setTextColor(20);
+    doc.text('Materialabruf', 14, 18);
+
+    doc.setDrawColor(180);
+    doc.rect(14, 24, 182, 26);
+    doc.setFontSize(10);
+    doc.setTextColor(60);
+    doc.text('Verwendung:', 18, 31);
+    doc.text('Ziellager:', 18, 37);
+    doc.text('Referenz:', 18, 43);
+    doc.setTextColor(20);
+    doc.text(verwendung, 45, 31);
+    doc.text(ziellager, 45, 37);
+    doc.text(referenz, 45, 43);
+    doc.setTextColor(60);
+    doc.text(`Datum: ${now.toLocaleDateString('de-DE')}`, 150, 31);
+
+    // Tabellenkopf
+    let y = 58;
+    doc.setFillColor(70,110,140);
+    doc.rect(14, y, 182, 8, 'F');
+    doc.setTextColor(255);
+    doc.setFontSize(9.5);
+    doc.text('Pos.', 17, y+5.5);
+    doc.text('Materialnummer und -Bezeichnung', 35, y+5.5);
+    doc.text('Stk.', 186, y+5.5, {align:'right'});
+    y += 8;
+
+    let pos = 1;
+    for(const {p, qty} of lines){
+      if(y > 270){ doc.addPage(); y = 20; }
+      const rowH = 9;
+      doc.setDrawColor(220);
+      doc.rect(14, y, 182, rowH);
+      doc.setFontSize(9.5);
+      doc.setTextColor(20);
+      doc.text(String(pos).padStart(2,'0'), 17, y+6);
+      doc.setFont(undefined, 'bold');
+      doc.text(p.materialnummer, 35, y+6);
+      doc.setFont(undefined, 'normal');
+      const kennungWidth = doc.getTextWidth(p.materialnummer + '  ');
+      doc.text(p.name, 35 + Math.max(kennungWidth, 28), y+6, {maxWidth: 118});
+      doc.text(String(qty), 186, y+6, {align:'right'});
+      y += rowH;
+      pos++;
+    }
+
+    doc.setFontSize(8);
+    doc.setTextColor(150);
+    doc.text(`Gesendet an: ${RECIPIENT_EMAIL}`, 14, 287);
+    doc.text('Bitte bestätigen Sie uns den Abruf', 14, 292);
+
+    return doc;
+  }
+
+  function pdfFilename(){
+    const ziellager = document.getElementById('ordZiellager').value || 'Materialabruf';
+    const now = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    const datePart = String(now.getFullYear()).slice(2) + pad(now.getMonth()+1) + pad(now.getDate());
+    const timePart = pad(now.getHours()) + pad(now.getMinutes());
+    return `${datePart}_${timePart}_${ziellager}.pdf`;
+  }
+
+  els.pdfBtn.addEventListener('click', async () => {
+    els.pdfBtn.textContent = '… erstelle PDF';
+    const doc = await buildPDF();
+    doc.save(pdfFilename());
+    els.pdfBtn.textContent = '📄 PDF erstellen';
+  });
+
+  els.mailBtn.addEventListener('click', () => {
+    const ziellager = document.getElementById('ordZiellager').value.trim();
+    const referenz = document.getElementById('ordReferenz').value || '–';
+
+    if(!ziellager){ alert('Bitte Ziellager angeben.'); return; }
+
+    const subject = `Geräteabruf für ${ziellager}`;
+    const body = `Sehr geehrte Damen und Herren,\n\nwir bitten um Zusendung der im Anhang aufgeführten Materialien.\n\nMit freundlichem Gruß\n${referenz}`;
+
+    const mailto = `mailto:${encodeURIComponent(RECIPIENT_EMAIL)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailto;
+  });
+
+  // ---- Init ----
+  els.search.addEventListener('input', renderCatnav);
+
+  if(typeof CATALOG_DATA === 'undefined' || !Array.isArray(CATALOG_DATA)){
+    els.catnav.innerHTML = '<div style="background:#3a1414;border:1px solid #5a2020;color:#ff8a8a;padding:14px;border-radius:10px;font-size:13px;">⚠ catalog-data.js wurde nicht geladen (CATALOG_DATA fehlt). Bitte prüfen, ob die Datei im selben Ordner wie index.html liegt.</div>';
+  } else {
+    renderCatnav();
+  }
+  updateCartCount();
+})();
+</script>
+</body>
+</html>
