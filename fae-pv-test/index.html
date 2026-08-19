@@ -291,6 +291,24 @@ input::placeholder{color:var(--muted);}
   color:rgba(255,255,255,.7);background:rgba(0,0,0,.5);padding:.1rem .3rem;border-radius:2px;
 }
 
+/* P+/P- Direction chips */
+.pdir-row{
+  display:flex;align-items:center;gap:.5rem;padding:.35rem 1rem;
+  background:rgba(255,255,255,.025);border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.pdir-lbl{font-family:var(--mono);font-size:.62rem;color:var(--muted);flex-shrink:0;}
+.pdir-chip{
+  background:var(--card);border:1px solid var(--border);color:var(--muted);
+  font-family:var(--mono);font-size:.72rem;padding:.25rem .75rem;cursor:pointer;border-radius:10px;
+}
+.pdir-chip.active.plus{background:rgba(63,185,80,.15);border-color:var(--green);color:var(--green);}
+.pdir-chip.active.minus{background:rgba(88,166,255,.15);border-color:var(--blue);color:var(--blue);}
+/* Eigenverbrauch display */
+.ev-info{
+  font-family:var(--mono);font-size:.72rem;color:var(--accent);
+  padding:.2rem 1rem;flex-shrink:0;
+}
+
 /* ── HISTORY SCREEN ── */
 #history{padding:0;}
 .hist-item{
@@ -452,6 +470,22 @@ input::placeholder{color:var(--muted);}
         <div class="wand-factor" id="wfak-display">Wandlerfaktor: —</div>
       </div>
     </div>
+
+    <div>
+      <div class="s-lbl">Einspeisemodus</div>
+      <div class="radio-row">
+        <label class="radio-lbl">
+          <input type="radio" name="emodus" value="voll" checked onchange="onEmodus()"> Volleinspeisung
+        </label>
+        <label class="radio-lbl">
+          <input type="radio" name="emodus" value="ueberschuss" onchange="onEmodus()"> Überschusseinspeisung
+        </label>
+      </div>
+      <div id="ev-hint" style="display:none;font-family:var(--mono);font-size:.68rem;color:var(--accent);margin-top:.3rem;line-height:1.5;">
+        ⚡ Reihenfolge: 0 % (Eigenverbrauch P−) → 100 % → 60 % → 30 %<br>
+        Korrektur: PV-Leistung = Messwert + Eigenverbrauch
+      </div>
+    </div>
   </div>
 
   <!-- STANDORT -->
@@ -580,6 +614,14 @@ input::placeholder{color:var(--muted);}
   </div>
 
   <div class="pwr-sec">
+    <!-- P+/P- direction selector -->
+    <div class="pdir-row no-print">
+      <span class="pdir-lbl">Richtung:</span>
+      <button class="pdir-chip plus active" id="pdir-plus" onclick="setPDir(1)">P+ Einspeisung</button>
+      <button class="pdir-chip minus" id="pdir-minus" onclick="setPDir(-1)">P− Verbrauch</button>
+    </div>
+    <div class="ev-info" id="ev-info" style="display:none;"></div>
+
     <div class="pwr-main">
       <div id="pkw" class="dim">---</div>
       <div class="pwr-u">kW</div>
@@ -877,6 +919,29 @@ function renderHistoryInline(){
 
 function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$(id).classList.add('active');}
 function showHistory(){show('setup');switchTab('hist');}
+
+// ── STEPS DEFINITIONS ────────────────────────────────────────
+const STEPS_VOLL=[
+  {pct:100,lbl:'Stufe 100 %',          isRef:true, tol:null,isZero:false,isEV:false,pDirDef:1,
+   instr:'Wechselrichter auf Vollleistung.<br>Kamera auf Impuls-LED, LED antippen.'},
+  {pct:60, lbl:'Stufe 60 %',           isRef:false,tol:5,   isZero:false,isEV:false,pDirDef:1,
+   instr:'FAE-Signal 60 % senden.<br>Auf stabile Anzeige warten.'},
+  {pct:30, lbl:'Stufe 30 %',           isRef:false,tol:5,   isZero:false,isEV:false,pDirDef:1,
+   instr:'FAE-Signal 30 % senden.<br>Auf stabile Anzeige warten.'},
+  {pct:0,  lbl:'Stufe 0 %',            isRef:false,tol:null,isZero:true, isEV:false,pDirDef:1,
+   instr:'Einspeisung sperren.<br>Kein Impuls erwartet — LED bleibt still.'},
+];
+const STEPS_UEBERSCHUSS=[
+  {pct:0,  lbl:'0 % — Eigenverbrauch', isRef:false,tol:null,isZero:true, isEV:true, pDirDef:1,
+   instr:'FAE 0 % — Einspeisung gesperrt.<br><b>P+ Richtung</b>: Zähler zeigt Bezug (+Pe aus Netz).<br>Pe = |Messwert| wird gespeichert.<br><i style="color:#f0a500">⚠ Zeigt Zähler P− (Export): FAE funktioniert nicht → Messung trotzdem möglich, Pe unbekannt.</i>'},
+  {pct:100,lbl:'Stufe 100 % (Referenz)',isRef:true, tol:null,isZero:false,isEV:false,pDirDef:1,
+   instr:'Wechselrichter auf Vollleistung.<br>P+ Richtung. PV-Leistung = Messwert + E.'},
+  {pct:60, lbl:'Stufe 60 %',           isRef:false,tol:5,   isZero:false,isEV:false,pDirDef:1,
+   instr:'FAE-Signal 60 % senden.<br>Wenn Messwert negativ wird: P− wählen.<br>PV-Leistung = Messwert + E.'},
+  {pct:30, lbl:'Stufe 30 %',           isRef:false,tol:5,   isZero:false,isEV:false,pDirDef:1,
+   instr:'FAE-Signal 30 % senden.<br>Wenn Messwert negativ: P− wählen.<br>PV-Leistung = Messwert + E.'},
+];
+let STEPS=STEPS_VOLL;
 
 // ── HISTORY ──────────────────────────────────────────────────
 const MAX_HISTORY=10;
@@ -1229,11 +1294,13 @@ function deleteTest(){
 function renderProto(){
   const meta=$('p-meta');meta.innerHTML='';
   const mdata=[
+    ['Einspeisemodus', ST.einspeisemodus==='ueberschuss'?'Überschusseinspeisung':'Volleinspeisung'],
     ['Anlagenleistung', ST.anlageKw?ST.anlageKw.toFixed(1)+' kWp':'—'],
     ['Ertragsfaktor',   ST.anlageFak?(ST.anlageFak.toFixed(2)+' → '+(ST.anlageBase||0).toFixed(1)+' kW'):'—'],
     ['Impulskonstante', ST.impConst+' imp/kWh'],
     ['Wandlerfaktor',   ST.wandler>1?ST.wandler.toFixed(2):'Direkt'],
-    ['Ref. 100 % (gem.)',ST.refPower?ST.refPower.toFixed(3)+' kW':'—'],
+    ['Ref. 100 % (PV)', ST.refPower?ST.refPower.toFixed(3)+' kW':'—'],
+    ['Eigenverbrauch Pe',ST.eigenverbrauch!=null?f(ST.eigenverbrauch,3)+' kW':'—'],
     ['Basis Teststufen', ST.anlageBase?ST.anlageBase.toFixed(1)+' kW':'—'],
   ];
   mdata.forEach(([l,v])=>{
@@ -1357,22 +1424,30 @@ function calcWandler(){
   }
 }
 
+function onEmodus(){
+  const v=document.querySelector('input[name=emodus]:checked').value;
+  $('ev-hint').style.display=v==='ueberschuss'?'block':'none';
+}
+
 function startTest(){
-  saveSetup(); // persist setup fields + emails to localStorage
-  $('imp-n').textContent=ST.numImpulse; // sync pulse counter display
-  // Sync live imp/kWh chips
+  saveSetup();
+  $('imp-n').textContent=ST.numImpulse;
   setTimeout(()=>setImpLive(ST.impConst),100);
   const impSel=$('imp-sel').value;
   ST.impConst=impSel==='custom'?parseInt($('imp-custom').value)||1000:parseInt(impSel);
   if(document.querySelector('input[name=mtyp]:checked').value==='direkt') ST.wandler=1;
   ST.anlageKw=parseFloat($('anlage-kw').value)||null;
   ST.anlageFak=parseFloat($('anlage-fak').value)||1;
-  // Effective base power used for all step tolerance calculations
   ST.anlageBase=ST.anlageKw?ST.anlageKw*ST.anlageFak:null;
   ST.anlageNr=$('anlage-nr').value.trim();
   ST.zaehlerNr=$('zaehler-nr').value.trim();
   ST.fheNr=$('fhe-nr').value.trim();
   ST.faeCode=$('fae-code').value.trim();
+  ST.einspeisemodus=document.querySelector('input[name=emodus]:checked').value;
+  // Select step sequence based on mode
+  STEPS = ST.einspeisemodus==='ueberschuss' ? STEPS_UEBERSCHUSS : STEPS_VOLL;
+  ST.eigenverbrauch=null;
+  ST.pDir=1; // reset to P+
   ST.step=0;ST.refPower=null;ST.results=[];
   initTestCam();
   show('test');
@@ -1639,6 +1714,14 @@ function setImpLive(val){
   ST.pulses=[];ST.brightHist=[];ST.stable=false;ST.curPwr=null;
 }
 
+function setPDir(dir){
+  ST.pDir=dir;
+  $('pdir-plus').classList.toggle('active',dir===1);
+  $('pdir-minus').classList.toggle('active',dir===-1);
+  // Clear pulses so measurement restarts cleanly
+  ST.pulses=[];ST.brightHist=[];ST.stable=false;ST.curPwr=null;
+}
+
 function adjImp(d){
   ST.numImpulse=Math.max(2,Math.min(30,ST.numImpulse+d));
   $('imp-n').textContent=ST.numImpulse;
@@ -1650,7 +1733,19 @@ function calcPwr(){
   if(rec.length<2)return null;
   let tot=0;for(let i=1;i<rec.length;i++)tot+=rec[i]-rec[i-1];
   const avgMs=tot/(rec.length-1);
-  return (3600000/(avgMs*ST.impConst))*ST.wandler;
+  // Apply pDir: P+ = positive (Einspeisung), P- = negative (Verbrauch)
+  return (3600000/(avgMs*ST.impConst))*ST.wandler*ST.pDir;
+}
+// Corrected PV power for Überschusseinspeisung:
+// PV = Pe − directed_P
+// At step 1 (P+, import): directed_P = +Pe → PV = Pe − Pe = 0 (only used to record Pe)
+// At step 2 exporting (P−, calcPwr = negative): PV = Pe − (−|G−Pe|) = Pe + (G−Pe) = G ✓
+// At step 2 importing (P+, calcPwr = positive): PV = Pe − (Pe−G) = G ✓
+function getPVPower(directedPwr){
+  if(ST.einspeisemodus==='ueberschuss'&&ST.eigenverbrauch!==null){
+    return ST.eigenverbrauch - directedPwr; // Pe − P
+  }
+  return directedPwr;
 }
 function isStable(){
   const n=ST.numImpulse;
@@ -1666,54 +1761,78 @@ function isStable(){
 function updatePwrDisplay(){
   const step=STEPS[ST.step];
   const pwr=calcPwr();ST.curPwr=pwr;ST.stable=isStable();
+  const isUE=ST.einspeisemodus==='ueberschuss';
 
   // Wandlerfaktor hint
-  $('pwfak').textContent=ST.wandler>1?`× ${ST.wandler.toFixed(2)} (Wandler)`:'';
+  $('pwfak').textContent=ST.wandler>1?`× ${ST.wandler.toFixed(2)} (Wandler)`:
+    (isUE&&ST.eigenverbrauch!==null?`E = ${ST.eigenverbrauch.toFixed(3)} kW`:'');
+
+  // EV info bar
+  const evInfo=$('ev-info');
+  if(isUE&&ST.eigenverbrauch!==null&&evInfo){
+    evInfo.style.display='block';
+    const pe=ST.eigenverbrauch;
+    evInfo.textContent=`⚡ Pe = ${f(pe,3)} kW | PV = Pe − P`;
+  } else if(evInfo){
+    evInfo.style.display='none';
+  }
 
   if(pwr===null){
     $('pkw').className='dim';$('pkw').textContent='---';
-    $('pamps').textContent='--- A @ 400V/√3';
-    if(!step.isZero)setBadge('wait','⏳ Warte auf Impuls …');
+    $('pamps').textContent=step.isEV?'P+ messen — Zähler zeigt Bezug':'--- A @ 400V/√3';
+    if(!step.isZero||step.isEV) setBadge('wait','⏳ Warte auf Impuls …');
     $('btn-ok').disabled=true;return;
   }
-  $('pkw').className='';$('pkw').textContent=f(pwr,3);
-  $('pamps').textContent=f(toA(pwr),2)+' A @ 400V/√3';
+
+  // Show raw measurement
+  $('pkw').className='';
+  $('pkw').textContent=f(pwr,3);
+  $('pamps').textContent=step.isEV
+    ?`Pe = |${f(pwr,3)}| = ${f(Math.abs(pwr),3)} kW`
+    :(isUE&&ST.eigenverbrauch!==null
+      ?`P=${f(pwr,3)} kW  →  PV = ${f(ST.eigenverbrauch,3)} − (${f(pwr,3)}) = ${f(getPVPower(pwr),3)} kW`
+      :f(toA(Math.abs(pwr)),2)+' A @ 400V/√3');
+
+  // The effective power for comparisons
+  const effectivePwr = isUE ? getPVPower(pwr) : pwr;
+
+  if(step.isEV){
+    if(ST.stable){
+      const peOk=pwr>=0; // positive = P+ import = normal; negative = P- = FAE might not work
+      setBadge(peOk?'ref':'fail',
+        peOk?`⚡ Pe = ${f(pwr,3)} kW — bereit`:`⚠ P negativ — FAE prüfen! Pe = ${f(pwr,3)} kW`);
+      $('btn-ok').disabled=false;
+    } else {
+      setBadge('wait','⌛ Stabilisierung …');$('btn-ok').disabled=true;
+    }
+    $('pamps').textContent=`Eigenverbrauch Pe = ${f(pwr,3)} kW (P = ${pwr>=0?'+':''} ${f(pwr,3)})`;
+    return;
+  }
 
   if(step.isRef){
     const base=ST.anlageBase;
-    const over=base&&pwr>base;
+    const over=base&&effectivePwr>base;
     if(ST.stable){
-      if(over){
-        setBadge('fail','✗ ÜBERINSTALLATION – Leistung > 100 % Basis');
-        $('btn-ok').disabled=false;
-      } else {
-        setBadge('ref','✓ Referenz stabil – bereit');
-        $('btn-ok').disabled=false;
-      }
-    } else {
-      setBadge('wait','⌛ Stabilisierung …');
-      $('btn-ok').disabled=true;
-    }
+      if(over){setBadge('fail','✗ ÜBERINSTALLATION – PV-Leistung > Basis');$('btn-ok').disabled=false;}
+      else{setBadge('ref','✓ Referenz stabil – bereit');$('btn-ok').disabled=false;}
+    }else{setBadge('wait','⌛ Stabilisierung …');$('btn-ok').disabled=true;}
   }else if(!step.isZero){
     const base=ST.anlageBase||ST.refPower;
     const pNom=base*step.pct/100;
-    const pMax=base*(step.pct+step.tol)/100; // only upper limit matters
+    const pMax=base*(step.pct+step.tol)/100;
     const pMinNom=base*(step.pct-step.tol)/100;
-    const overLimit=pwr>pMax;
-    const underNom=pwr<pMinNom; // below nominal but ≤ upper → still PASS (sun limited)
-    updateTolBar(pwr,pMinNom,pMax,pNom);
+    const overLimit=effectivePwr>pMax;
+    const underNom=effectivePwr<pMinNom;
+    updateTolBar(effectivePwr,pMinNom,pMax,pNom);
     if(!ST.stable){setBadge('wait','⌛ Stabilisierung …');$('btn-ok').disabled=true;}
-    else if(overLimit){
-      setBadge('fail','✗ ÜBEREINSPEISUNG – FAE prüfen');$('btn-ok').disabled=false;
-    }else if(underNom){
-      setBadge('ok','⚠ SONNEN-LIMITIERT – BESTANDEN');$('btn-ok').disabled=false;
-    }else{
-      setBadge('ok','✓ IN BEREICH');$('btn-ok').disabled=false;
-    }
+    else if(overLimit){setBadge('fail','✗ ÜBEREINSPEISUNG – FAE prüfen');$('btn-ok').disabled=false;}
+    else if(underNom){setBadge('ok','⚠ SONNEN-LIMITIERT – BESTANDEN');$('btn-ok').disabled=false;}
+    else{setBadge('ok','✓ IN BEREICH');$('btn-ok').disabled=false;}
   }else{
+    // 0% step (Volleinspeisung)
     if(ST.stable&&ST.refPower){
       const base=ST.anlageBase||ST.refPower;
-      const pass=pwr<=base*0.01;
+      const pass=effectivePwr<=base*0.01;
       setBadge(pass?'ok':'fail',pass?'✓ ≤ 1 % – BESTANDEN':'✗ ZU HOCH');
       $('btn-ok').disabled=false;
     }
@@ -1747,11 +1866,14 @@ function updateStepUI(){
     pips.appendChild(p);
   });
   $('tol-sec').style.display=(!s.isRef&&!s.isZero)?'block':'none';
-  $('btn-zero').style.display=s.isZero?'block':'none';
+  $('btn-zero').style.display=(s.isZero&&!s.isEV)?'block':'none';
   $('btn-ok').disabled=true;
-  $('btn-ok').textContent=s.isZero?'✓ Messwert bestätigen':'✓ Bestätigen';
-  $('cam-hint').textContent=s.isZero?'Kein Impuls erwartet – LED still':'Auf Impuls-LED tippen';
-  if(s.isZero)setBadge('wait','👁 Einspeisung gesperrt – kein Impuls erwartet');
+  $('btn-ok').textContent=s.isEV?'⚡ Eigenverbrauch bestätigen':s.isZero?'✓ Messwert bestätigen':'✓ Bestätigen';
+  $('cam-hint').textContent=s.isEV?'P− messen — Zähler zeigt Bezug (Eigenverbrauch)':
+    s.isZero?'Kein Impuls erwartet – LED still':'ROI auf LED — antippen zum Positionieren';
+  setPDir(s.pDirDef); // auto-set direction for this step
+  if(s.isZero&&!s.isEV) setBadge('wait','👁 Einspeisung gesperrt – kein Impuls erwartet');
+  if(s.isEV) setBadge('wait','⚡ P− messen – Eigenverbrauch');
 }
 function resetPulse(){
   resetPulseData();
@@ -1764,35 +1886,42 @@ function resetPulseData(){ST.pulses=[];ST.brightHist=[];ST.inPulse=false;ST.stab
 
 function confirmStep(){
   const s=STEPS[ST.step],pwr=ST.curPwr||0;
+  const isUE=ST.einspeisemodus==='ueberschuss';
+  if(s.isEV){
+    // Pe = directed measurement at step 1
+    // Normal (FAE OK, P+, import): pwr = +50 → Pe = +50
+    // FAE fails (P-, exporting): pwr = negative → Pe negative (will show as warning)
+    ST.eigenverbrauch = pwr; // Pe = P_step1 (directed, with sign)
+    addResult(pwr,true,true);
+    advance();return;
+  }
+  const effectivePwr=isUE?getPVPower(pwr):pwr;
   if(s.isRef){
-    ST.refPower=pwr; // always record as reference for subsequent steps
+    ST.refPower=effectivePwr;
     const base=ST.anlageBase;
-    const pass=!base||pwr<=base; // fail if > 100% of basis (Überinstallation)
-    addResult(pwr,pass);
+    const pass=!base||effectivePwr<=base;
+    addResult(effectivePwr,pass);
   }else if(!s.isZero){
     const base=ST.anlageBase||ST.refPower;
     const pMax=base*(s.pct+s.tol)/100;
-    addResult(pwr, pwr<=pMax); // PASS if ≤ upper limit; under-production always passes
+    addResult(effectivePwr,effectivePwr<=pMax);
   }else{
     const base=ST.anlageBase||ST.refPower;
-    addResult(pwr,!ST.curPwr||ST.curPwr<=base*0.01); // 1% Schwelle
+    addResult(effectivePwr,!ST.curPwr||Math.abs(effectivePwr)<=base*0.01);
   }
   advance();
 }
 function confirmZero(){addResult(0,true);advance();}
-function addResult(pwr,pass){
+function addResult(pwr,pass,isEVStep=false){
   const s=STEPS[ST.step];
   const base=ST.anlageBase||ST.refPower;
-  // Soll: basis value for all steps (100% → basis, 60% → 60% of basis, 0% → 0)
-  const tgt=s.isZero?0:(base?base*s.pct/100:pwr);
+  const tgt=s.isEV?pwr:(s.isZero?0:(base?base*s.pct/100:pwr));
   const pMinNom=base&&s.tol?base*(s.pct-s.tol)/100:0;
   const pMaxNom=base?base*(s.pct+(s.tol||0))/100:Infinity;
-  // overLimit: measured > upper limit → RED (FAE nicht aktiv)
-  const overLimit=s.isRef?(base&&pwr>base):(s.isZero?pwr>(base||0)*0.01:pwr>pMaxNom);
-  // sunLimited: measured < lower nominal but ≤ upper → YELLOW ⚠ but still PASS (Sonne)
-  const sunLimited=!s.isRef&&!s.isZero&&pwr<pMinNom&&!overLimit;
+  const overLimit=!isEVStep&&(s.isRef?(base&&pwr>base):(s.isZero?Math.abs(pwr)>(base||0)*0.01:pwr>pMaxNom));
+  const sunLimited=!s.isRef&&!s.isZero&&!isEVStep&&pwr<pMinNom&&!overLimit;
   const pctOfBase=base?(pwr/base*100):null;
-  ST.results.push({lbl:s.lbl,pct:s.pct,tgt,pwr,pctOfBase,pass,sunLimited,overLimit});
+  ST.results.push({lbl:s.lbl,pct:s.pct,tgt,pwr,pctOfBase,pass,sunLimited,overLimit,isEVStep});
 }
 function advance(){
   ST.step++;
@@ -2003,8 +2132,10 @@ async function sendEmail(){
 
 function restart(){
   Object.assign(ST,{step:0,refPower:null,anlageBase:null,results:[],photos:[],
+    eigenverbrauch:null,pDir:1,
     pulses:[],brightHist:[],inPulse:false,stable:false,curPwr:null,
     roi:null,stream:null,lastPulseMs:0});
+  STEPS=STEPS_VOLL;
   show('setup');
 }
 </script>
