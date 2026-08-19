@@ -65,6 +65,12 @@ footer.tabs-bottom{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);
 .legend{display:flex;height:14px;border-radius:4px;overflow:hidden;margin:6px 0;}
 .legend div{flex:1;}
 .small-note{font-size:11px;color:var(--text-dim);}
+@media print{
+  header, .tabs, footer.tabs-bottom, button{display:none !important;}
+  body{padding-bottom:0;background:#fff;color:#000;}
+  .card{background:#fff;border-color:#ccc;break-inside:avoid;}
+  .result-big{color:#000;}
+}
 </style>
 </head>
 <body>
@@ -140,6 +146,7 @@ footer.tabs-bottom{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);
       <div><label>U_f Rahmen [W/m²K]</label><input type="number" id="fw-uf" step="0.01" value="1.30" oninput="fensterCalc()"></div>
       <div><label>Ψ_g Randverbund [W/mK]</label><input type="number" id="fw-psig" step="0.01" value="0.06" oninput="fensterCalc()"></div>
       <div><label>Anzahl Sprossenteilung (1=1 Feld)</label><input type="number" id="fw-felder" value="1" min="1" oninput="fensterCalc()"></div>
+      <div><label>g-Wert Verglasung (Energiedurchlass)</label><input type="number" id="fw-gwert" step="0.01" value="0.60" oninput="fensterCalc()"></div>
     </div>
   </div>
   <div class="card">
@@ -153,6 +160,14 @@ footer.tabs-bottom{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);
       <tr><td>Gesamtfläche</td><td style="text-align:right;" id="fw-atot"></td></tr>
     </table>
     <div class="hint" style="margin-top:6px;">GEG-Referenz Neubau Fenster: U_w ≤ 1,3 W/(m²K). Passivhaus-Fenster: U_w ≤ 0,8 W/(m²K).</div>
+
+    <h3>Als Fenstertyp speichern</h3>
+    <div class="hint">Speichert Rahmenprofil + Verglasung als wiederverwendbaren Typ (z.B. „Typ A – Kunststoff 3-fach"). In der Gebäudeübersicht wählst du dann den Typ + Anzahl + Maße, der Glas-/Rahmenanteil wird automatisch je Fenstergröße neu berechnet.</div>
+    <div class="row" style="margin-top:6px;">
+      <input type="text" id="fw-typname" placeholder="Bezeichnung, z.B. Typ A Kunststoff 3-fach">
+      <button class="primary small" onclick="saveWindowType()">Speichern</button>
+    </div>
+    <div id="fw-typlist" style="margin-top:10px;"></div>
   </div>
 
   <div class="card">
@@ -165,6 +180,14 @@ footer.tabs-bottom{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);
     </div>
     <div class="result-big" id="tr-result" style="margin-top:10px;">–</div>
     <div class="result-sub">U_D in W/(m²K) · GEG-Referenz ≤ 1,8 W/(m²K)</div>
+
+    <h3>Als Türtyp speichern</h3>
+    <div class="hint">Speichert U-Werte + Zargenanteil (Verhältnis Zargen- zu Gesamtfläche aus obigen Werten) als wiederverwendbaren Typ. In der Gebäudeübersicht dann Typ wählen + Gesamtfläche eintragen.</div>
+    <div class="row" style="margin-top:6px;">
+      <input type="text" id="tr-typname" placeholder="Bezeichnung, z.B. Typ A Haustür Alu">
+      <button class="primary small" onclick="saveDoorType()">Speichern</button>
+    </div>
+    <div id="tr-typlist" style="margin-top:10px;"></div>
   </div>
 </div>
 
@@ -301,6 +324,15 @@ footer.tabs-bottom{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);
 <!-- ============ PAGE 3b: GEBÄUDE-ENERGIEBILANZ ============ -->
 <div class="page" id="page-gebaeude">
   <div class="card">
+    <h2>Standort</h2>
+    <div class="row">
+      <div><label>Postleitzahl</label><input type="text" id="geb-plz" placeholder="z.B. 39104" maxlength="5" inputmode="numeric"></div>
+      <button class="small primary" style="align-self:flex-end;" onclick="lookupHeizgradtage()">Heizgradtage ermitteln</button>
+    </div>
+    <div class="hint" id="geb-plz-info">Ordnet grob per PLZ-Region eine typische Heizgradtagzahl zu (Klimazonen-Näherung, keine exakte TRY-Stationsdaten). Das Feld unten bleibt danach editierbar, falls du genauere lokale Werte hast.</div>
+  </div>
+
+  <div class="card">
     <h2>Gebäudehülle zusammensetzen</h2>
     <div class="hint">Jede Zeile ist ein Bauteil der Gebäudehülle. U-Wert entweder aus deiner gespeicherten Bauteil-Bibliothek ziehen oder manuell eintragen.</div>
     <div id="geb-components"></div>
@@ -376,6 +408,11 @@ footer.tabs-bottom{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);
     </div>
     <button class="primary" onclick="calcWirtschaftlichkeit()" style="width:100%;margin-top:10px;">Berechnen</button>
     <div id="wirt-results" style="margin-top:10px;"></div>
+  </div>
+
+  <div class="card">
+    <button onclick="printResult()" style="width:100%;">Gebäudeübersicht drucken / als PDF</button>
+    <div class="hint" style="margin-top:6px;">Öffnet den Systemdruckdialog — dort „Als PDF speichern" wählen.</div>
   </div>
 </div>
 
@@ -561,6 +598,24 @@ function deleteConstruction(id){
 /* ============================================================
    SEITE 2: FENSTER / TÜR
    ============================================================ */
+/* Wiederverwendbare Fenstergeometrie: Glas-/Rahmenfläche + Randverbundlänge aus Außenmaßen */
+function windowGeometry(bMm, hMm, rMm, felder){
+  felder = Math.max(1, felder||1);
+  const b = bMm/1000, h = hMm/1000, r = rMm/1000;
+  const Atot = b*h;
+  const glasB = (b - r*(felder+1))/felder;
+  const glasH = h - 2*r;
+  const Ag = Math.max(0, glasB*glasH*felder);
+  const Af = Math.max(0, Atot - Ag);
+  const lg = felder>0 ? 2*(glasB+glasH)*felder : 0;
+  return {Atot, Ag, Af, lg};
+}
+function windowUw(bMm,hMm,rMm,felder,Ug,Uf,psig){
+  const g = windowGeometry(bMm,hMm,rMm,felder);
+  const Uw = g.Atot>0 ? (Ug*g.Ag + Uf*g.Af + psig*g.lg)/g.Atot : 0;
+  return {...g, Uw};
+}
+
 function fensterCalc(){
   const bMm = parseFloat(document.getElementById('fw-b').value)||0;
   const hMm = parseFloat(document.getElementById('fw-h').value)||0;
@@ -570,23 +625,58 @@ function fensterCalc(){
   const Uf = parseFloat(document.getElementById('fw-uf').value)||0;
   const psig = parseFloat(document.getElementById('fw-psig').value)||0;
 
-  const b = bMm/1000, h = hMm/1000, r = rMm/1000;
-  const Atot = b*h;
-  // vereinfachte Annahme: gleich große Felder nebeneinander (1 Reihe)
-  const glasB = (b - r*(felder+1))/felder;
-  const glasH = h - 2*r;
-  const Ag = Math.max(0, glasB*glasH*felder);
-  const Af = Math.max(0, Atot - Ag);
-  const lg = felder>0 ? 2*(glasB+glasH)*felder : 0;
+  const r = windowUw(bMm,hMm,rMm,felder,Ug,Uf,psig);
 
-  const Uw = Atot>0 ? (Ug*Ag + Uf*Af + psig*lg)/Atot : 0;
-
-  document.getElementById('fw-result').textContent = Uw.toFixed(3);
-  document.getElementById('fw-ag').textContent = Ag.toFixed(3)+' m²';
-  document.getElementById('fw-af').textContent = Af.toFixed(3)+' m²';
-  document.getElementById('fw-lg').textContent = lg.toFixed(2)+' m';
-  document.getElementById('fw-atot').textContent = Atot.toFixed(3)+' m²';
+  document.getElementById('fw-result').textContent = r.Uw.toFixed(3);
+  document.getElementById('fw-ag').textContent = r.Ag.toFixed(3)+' m²';
+  document.getElementById('fw-af').textContent = r.Af.toFixed(3)+' m²';
+  document.getElementById('fw-lg').textContent = r.lg.toFixed(2)+' m';
+  document.getElementById('fw-atot').textContent = r.Atot.toFixed(3)+' m²';
 }
+
+/* ---------- Fenstertyp-Bibliothek ---------- */
+function windowTypes(){ return JSON.parse(localStorage.getItem('uwert_window_types')||'[]'); }
+function saveWindowType(){
+  const name = document.getElementById('fw-typname').value.trim();
+  if(!name){ alert('Bitte eine Bezeichnung eingeben (z.B. Typ A).'); return; }
+  const type = {
+    id: 'wt_'+Date.now(),
+    name,
+    rahmenMm: parseFloat(document.getElementById('fw-rahmen').value)||115,
+    ug: parseFloat(document.getElementById('fw-ug').value)||1.1,
+    uf: parseFloat(document.getElementById('fw-uf').value)||1.3,
+    psig: parseFloat(document.getElementById('fw-psig').value)||0.06,
+    gwert: parseFloat(document.getElementById('fw-gwert').value)||0.6,
+    felderDefault: Math.max(1, parseInt(document.getElementById('fw-felder').value)||1),
+  };
+  const list = windowTypes();
+  list.unshift(type);
+  localStorage.setItem('uwert_window_types', JSON.stringify(list));
+  document.getElementById('fw-typname').value='';
+  renderWindowTypeList();
+  alert('Fenstertyp „'+name+'" gespeichert.');
+}
+function deleteWindowType(id){
+  let list = windowTypes().filter(t=>t.id!==id);
+  localStorage.setItem('uwert_window_types', JSON.stringify(list));
+  renderWindowTypeList();
+}
+function renderWindowTypeList(){
+  const wrap = document.getElementById('fw-typlist');
+  if(!wrap) return;
+  const list = windowTypes();
+  if(!list.length){ wrap.innerHTML = '<div class="hint">Noch keine Fenstertypen gespeichert.</div>'; return; }
+  wrap.innerHTML = list.map(t=>`
+    <div class="constr-item">
+      <div>
+        <div style="font-weight:600;">${t.name}</div>
+        <div class="small-note">U_g=${t.ug} · U_f=${t.uf} · Rahmen ${t.rahmenMm}mm · g=${t.gwert}</div>
+      </div>
+      <button class="small danger" onclick="deleteWindowType('${t.id}')">✕</button>
+    </div>
+  `).join('');
+}
+
 function tuerCalc(){
   const Ud = parseFloat(document.getElementById('tr-ud').value)||0;
   const Uf = parseFloat(document.getElementById('tr-uf').value)||0;
@@ -596,7 +686,51 @@ function tuerCalc(){
   const U = Atot>0 ? (Ud*Ad+Uf*Af)/Atot : 0;
   document.getElementById('tr-result').textContent = U.toFixed(3);
 }
-fensterCalc(); tuerCalc();
+
+/* ---------- Türtyp-Bibliothek ---------- */
+function doorTypes(){ return JSON.parse(localStorage.getItem('uwert_door_types')||'[]'); }
+function saveDoorType(){
+  const name = document.getElementById('tr-typname').value.trim();
+  if(!name){ alert('Bitte eine Bezeichnung eingeben (z.B. Typ A).'); return; }
+  const Ad = parseFloat(document.getElementById('tr-ad').value)||1.75;
+  const Af = parseFloat(document.getElementById('tr-af').value)||0.25;
+  const zargenanteil = (Ad+Af)>0 ? Af/(Ad+Af) : 0.1;
+  const type = {
+    id: 'dt_'+Date.now(),
+    name,
+    ud: parseFloat(document.getElementById('tr-ud').value)||1.4,
+    uf: parseFloat(document.getElementById('tr-uf').value)||1.6,
+    zargenanteil,
+  };
+  const list = doorTypes();
+  list.unshift(type);
+  localStorage.setItem('uwert_door_types', JSON.stringify(list));
+  document.getElementById('tr-typname').value='';
+  renderDoorTypeList();
+  alert('Türtyp „'+name+'" gespeichert.');
+}
+function deleteDoorType(id){
+  let list = doorTypes().filter(t=>t.id!==id);
+  localStorage.setItem('uwert_door_types', JSON.stringify(list));
+  renderDoorTypeList();
+}
+function renderDoorTypeList(){
+  const wrap = document.getElementById('tr-typlist');
+  if(!wrap) return;
+  const list = doorTypes();
+  if(!list.length){ wrap.innerHTML = '<div class="hint">Noch keine Türtypen gespeichert.</div>'; return; }
+  wrap.innerHTML = list.map(t=>`
+    <div class="constr-item">
+      <div>
+        <div style="font-weight:600;">${t.name}</div>
+        <div class="small-note">U_Blatt=${t.ud} · U_Zarge=${t.uf} · Zargenanteil ${(t.zargenanteil*100).toFixed(0)}%</div>
+      </div>
+      <button class="small danger" onclick="deleteDoorType('${t.id}')">✕</button>
+    </div>
+  `).join('');
+}
+
+fensterCalc(); tuerCalc(); renderWindowTypeList(); renderDoorTypeList();
 
 /* ============================================================
    SEITE 3: WÄRMEBRÜCKEN-SIMULATOR
@@ -1253,10 +1387,10 @@ function calcPsi(){
    SEITE GEBÄUDE: ENERGIEBILANZ / KÜHLLAST / WIRTSCHAFTLICHKEIT
    ============================================================ */
 let gebComponents = [
-  {typ:'wall', quelle:'manual', constrId:null, u:0.28, flaeche:120, orientation:'sued', gwert:0.6, glasanteil:70},
-  {typ:'roof', quelle:'manual', constrId:null, u:0.20, flaeche:90, orientation:'sued', gwert:0.6, glasanteil:70},
-  {typ:'floor-ground', quelle:'manual', constrId:null, u:0.30, flaeche:90, orientation:'sued', gwert:0.6, glasanteil:70},
-  {typ:'window', quelle:'manual', constrId:null, u:1.30, flaeche:20, orientation:'sued', gwert:0.6, glasanteil:70},
+  {typ:'wall', quelle:'manual', constrId:null, u:0.28, flaeche:120, orientation:'sued', gwert:0.6, glasanteil:70, verschattung:0.9},
+  {typ:'roof', quelle:'manual', constrId:null, u:0.20, flaeche:90, orientation:'sued', gwert:0.6, glasanteil:70, verschattung:0.9},
+  {typ:'floor-ground', quelle:'manual', constrId:null, u:0.30, flaeche:90, orientation:'sued', gwert:0.6, glasanteil:70, verschattung:0.9},
+  {typ:'window', quelle:'manual', constrId:null, u:1.30, flaeche:20, orientation:'sued', gwert:0.6, glasanteil:70, verschattung:0.9},
 ];
 const GEB_TYPES = {
   wall:'Außenwand', roof:'Dach', 'floor-ground':'Boden/Erdreich', window:'Fenster', door:'Tür', innerwall:'Innenwand'
@@ -1264,12 +1398,73 @@ const GEB_TYPES = {
 const ORIENT_SOLAR_HEIZ = {sued:300, ost:200, west:200, nord:120, horizontal:250}; // kWh/m²a Heizperiode, grob
 const ORIENT_SOLAR_PEAK = {sued:230, ost:400, west:400, nord:120, horizontal:700}; // W/m² peak Kühllast, grob
 
+/* Grobe Heizgradtage-Näherung nach PLZ-Leitregion (1. Ziffer) — Klimazonen-Schätzung, keine TRY-Stationsdaten.
+   Werte in Kd/a (Basis 20/12), gerundete Richtwerte je Region. */
+const PLZ_GT_LEITREGION = {
+  '0': 3700, // Sachsen/Thüringen (Dresden, Leipzig, Erfurt) - Mittelgebirgseinfluss
+  '1': 3500, // Berlin/Brandenburg/Mecklenburg-Vorpommern
+  '2': 3300, // Hamburg/Schleswig-Holstein/Bremen - Küste, milder
+  '3': 3450, // Niedersachsen/Sachsen-Anhalt (Hannover, Magdeburg)
+  '4': 3250, // NRW nördl./westl. (Dortmund, Essen, Düsseldorf, Münster)
+  '5': 3150, // NRW südl./Rheinland-Pfalz (Köln, Bonn, Koblenz)
+  '6': 3150, // Hessen/RLP/Saarland (Frankfurt, Mainz, Saarbrücken)
+  '7': 3100, // Baden-Württemberg (Stuttgart, Karlsruhe) - Rheingraben mild
+  '8': 3600, // Bayern Süd/BW Süd (München, Augsburg) - alpine Nähe
+  '9': 3500, // Bayern Nord (Nürnberg, Regensburg, Bayreuth)
+};
+/* Bekannte Ausreißer (2-stelliges PLZ-Präfix) - Hochlagen/Alpenrand/Küste */
+const PLZ_GT_OVERRIDE = {
+  '87':4200, '83':4000, '82':4300, '84':3900, // Allgäu/Chiemgau/Werdenfels/Alpenvorland
+  '98':3900, '96':3800, // Thüringer Wald/Fichtelgebirge/Frankenwald
+  '37':3900, '34':3900, // Harz
+  '18':3300, '17':3300, '23':3300, '25':3300, // Ostsee-/Nordseeküste
+  '79':3400, // Schwarzwald Hochlagen (Stadt Freiburg selbst milder, PLZ-Bereich gemischt)
+};
+function lookupHeizgradtage(){
+  const plz = (document.getElementById('geb-plz').value||'').trim();
+  const info = document.getElementById('geb-plz-info');
+  if(!/^\d{4,5}$/.test(plz)){
+    info.innerHTML = '<span class="badge bad">Bitte eine gültige PLZ eingeben (4-5 Ziffern).</span>';
+    return;
+  }
+  const plz5 = plz.padStart(5,'0');
+  const prefix2 = plz5.slice(0,2);
+  const prefix1 = plz5.slice(0,1);
+  let gt, quelle;
+  if(PLZ_GT_OVERRIDE[prefix2]!=null){ gt = PLZ_GT_OVERRIDE[prefix2]; quelle = 'Region '+prefix2+'xxx (Hochlage/Küste-Näherung)'; }
+  else { gt = PLZ_GT_LEITREGION[prefix1]; quelle = 'PLZ-Leitregion '+prefix1+' (grobe Zonen-Näherung)'; }
+  document.getElementById('geb-gt').value = gt;
+  info.innerHTML = `Gt ≈ <b style="color:var(--amber);">${gt} Kd/a</b> — ${quelle}. Näherung, keine exakte Wetterstationsdatenbank — bei Bedarf manuell feinjustieren.`;
+}
+
 function savedConstructions(){ return JSON.parse(localStorage.getItem('uwert_constructions')||'[]'); }
 
 function renderGebComponents(){
   const wrap = document.getElementById('geb-components');
   const constrs = savedConstructions();
-  wrap.innerHTML = gebComponents.map((c,i)=>`
+  const wtypes = windowTypes();
+  const dtypes = doorTypes();
+  wrap.innerHTML = gebComponents.map((c,i)=>{
+    const isWindowType = c.typ==='window' && c.quelle==='fenstertyp';
+    const isDoorType = c.typ==='door' && c.quelle==='tuertyp';
+    let geomInfo = '';
+    if(isWindowType){
+      const wt = wtypes.find(w=>w.id===c.windowTypeId);
+      if(wt){
+        const g = windowUw(c.breiteMm||1230, c.hoeheMm||1480, wt.rahmenMm, c.felder||wt.felderDefault||1, wt.ug, wt.uf, wt.psig);
+        const anz = c.anzahl||1;
+        geomInfo = `<div class="small-note" style="width:100%;margin-top:2px;">→ ${anz}× ${(c.breiteMm/1000).toFixed(2)}×${(c.hoeheMm/1000).toFixed(2)}m · A_g=${(g.Ag*anz).toFixed(2)}m² Glas · A_f=${(g.Af*anz).toFixed(2)}m² Rahmen · U_w=${g.Uw.toFixed(3)} · Gesamt ${(g.Atot*anz).toFixed(2)}m²</div>`;
+      }
+    }
+    if(isDoorType){
+      const dt = dtypes.find(d=>d.id===c.doorTypeId);
+      if(dt){
+        const A = c.flaeche||0;
+        const U = dt.ud*(1-dt.zargenanteil) + dt.uf*dt.zargenanteil;
+        geomInfo = `<div class="small-note" style="width:100%;margin-top:2px;">→ ${A.toFixed(2)}m² · Zargenanteil ${(dt.zargenanteil*100).toFixed(0)}% · U=${U.toFixed(3)}</div>`;
+      }
+    }
+    return `
     <div class="layer-row" style="flex-wrap:wrap;">
       <select style="flex:1.2;" onchange="gebComponents[${i}].typ=this.value; renderGebComponents();">
         ${Object.keys(GEB_TYPES).map(k=>`<option value="${k}" ${k===c.typ?'selected':''}>${GEB_TYPES[k]}</option>`).join('')}
@@ -1277,16 +1472,33 @@ function renderGebComponents(){
       <select style="flex:1.2;" onchange="gebComponents[${i}].quelle=this.value; renderGebComponents();">
         <option value="manual" ${c.quelle==='manual'?'selected':''}>Manueller U-Wert</option>
         <option value="lib" ${c.quelle==='lib'?'selected':''}>Aus Bibliothek</option>
+        ${c.typ==='window' ? `<option value="fenstertyp" ${c.quelle==='fenstertyp'?'selected':''}>Aus Fenstertyp-Bibliothek</option>` : ''}
+        ${c.typ==='door' ? `<option value="tuertyp" ${c.quelle==='tuertyp'?'selected':''}>Aus Türtyp-Bibliothek</option>` : ''}
       </select>
-      ${c.quelle==='lib' ? `
+      ${isWindowType ? `
+        <select style="flex:1.5;" onchange="gebComponents[${i}].windowTypeId=this.value; renderGebComponents();">
+          <option value="">– Fenstertyp wählen –</option>
+          ${wtypes.map(w=>`<option value="${w.id}" ${w.id===c.windowTypeId?'selected':''}>${w.name}</option>`).join('')}
+        </select>
+        <input type="number" value="${c.anzahl||1}" min="1" placeholder="Stück" style="max-width:65px;" oninput="gebComponents[${i}].anzahl=parseInt(this.value)||1; renderGebComponents();">
+        <input type="number" value="${c.breiteMm||1230}" placeholder="Breite mm" style="max-width:85px;" oninput="gebComponents[${i}].breiteMm=parseFloat(this.value)||0; renderGebComponents();">
+        <input type="number" value="${c.hoeheMm||1480}" placeholder="Höhe mm" style="max-width:85px;" oninput="gebComponents[${i}].hoeheMm=parseFloat(this.value)||0; renderGebComponents();">
+      ` : isDoorType ? `
+        <select style="flex:1.5;" onchange="gebComponents[${i}].doorTypeId=this.value; renderGebComponents();">
+          <option value="">– Türtyp wählen –</option>
+          ${dtypes.map(d=>`<option value="${d.id}" ${d.id===c.doorTypeId?'selected':''}>${d.name}</option>`).join('')}
+        </select>
+        <input type="number" value="${c.flaeche}" placeholder="Fläche m²" oninput="gebComponents[${i}].flaeche=parseFloat(this.value)||0; renderGebComponents();">
+      ` : c.quelle==='lib' ? `
         <select style="flex:1.5;" onchange="gebComponents[${i}].constrId=this.value; renderGebComponents();">
           <option value="">– wählen –</option>
           ${constrs.map(x=>`<option value="${x.id}" ${x.id===c.constrId?'selected':''}>${x.name} (U=${x.U.toFixed(2)})</option>`).join('')}
         </select>
+        <input type="number" value="${c.flaeche}" placeholder="Fläche m²" oninput="gebComponents[${i}].flaeche=parseFloat(this.value)||0;">
       ` : `
         <input type="number" step="0.01" value="${c.u}" placeholder="U [W/m²K]" oninput="gebComponents[${i}].u=parseFloat(this.value)||0;">
+        <input type="number" value="${c.flaeche}" placeholder="Fläche m²" oninput="gebComponents[${i}].flaeche=parseFloat(this.value)||0;">
       `}
-      <input type="number" value="${c.flaeche}" placeholder="Fläche m²" oninput="gebComponents[${i}].flaeche=parseFloat(this.value)||0;">
       ${c.typ==='window' ? `
         <select style="flex:1;" onchange="gebComponents[${i}].orientation=this.value;">
           <option value="sued" ${c.orientation==='sued'?'selected':''}>Süd</option>
@@ -1294,23 +1506,60 @@ function renderGebComponents(){
           <option value="west" ${c.orientation==='west'?'selected':''}>West</option>
           <option value="nord" ${c.orientation==='nord'?'selected':''}>Nord</option>
         </select>
-        <input type="number" step="0.05" value="${c.gwert}" placeholder="g-Wert" style="max-width:70px;" oninput="gebComponents[${i}].gwert=parseFloat(this.value)||0;">
+        ${!isWindowType ? `<input type="number" step="0.05" value="${c.gwert}" placeholder="g-Wert" style="max-width:70px;" oninput="gebComponents[${i}].gwert=parseFloat(this.value)||0;">` : ''}
+        <input type="number" step="0.05" min="0" max="1" value="${c.verschattung!=null?c.verschattung:0.9}" placeholder="Fs" title="Verschattungsfaktor Fs (1=keine Verschattung, 0,7=Vordach/Nachbar, 0,3=Rollladen/dichte Bäume)" style="max-width:65px;" oninput="gebComponents[${i}].verschattung=parseFloat(this.value); if(isNaN(gebComponents[${i}].verschattung))gebComponents[${i}].verschattung=0.9;">
       ` : ''}
       <button class="small danger" onclick="gebComponents.splice(${i},1); renderGebComponents();">✕</button>
+      ${geomInfo}
     </div>
-  `).join('');
+  `}).join('');
   renderWirtComponentSelect();
 }
 function addGebComponent(){
-  gebComponents.push({typ:'wall', quelle:'manual', constrId:null, u:0.28, flaeche:20, orientation:'sued', gwert:0.6, glasanteil:70});
+  gebComponents.push({typ:'wall', quelle:'manual', constrId:null, u:0.28, flaeche:20, orientation:'sued', gwert:0.6, glasanteil:70, verschattung:0.9, anzahl:1, breiteMm:1230, hoeheMm:1480, windowTypeId:null, doorTypeId:null});
   renderGebComponents();
 }
+function windowGeomFor(c){
+  const wt = windowTypes().find(w=>w.id===c.windowTypeId);
+  if(!wt) return null;
+  return windowUw(c.breiteMm||1230, c.hoeheMm||1480, wt.rahmenMm, c.felder||wt.felderDefault||1, wt.ug, wt.uf, wt.psig);
+}
 function resolveU(c){
+  if(c.typ==='window' && c.quelle==='fenstertyp'){
+    const g = windowGeomFor(c);
+    return g ? g.Uw : 0;
+  }
+  if(c.typ==='door' && c.quelle==='tuertyp' && c.doorTypeId){
+    const dt = doorTypes().find(d=>d.id===c.doorTypeId);
+    return dt ? (dt.ud*(1-dt.zargenanteil) + dt.uf*dt.zargenanteil) : 0;
+  }
   if(c.quelle==='lib' && c.constrId){
     const found = savedConstructions().find(x=>x.id===c.constrId);
     return found ? found.U : 0;
   }
   return c.u||0;
+}
+function resolveFlaeche(c){
+  if(c.typ==='window' && c.quelle==='fenstertyp'){
+    const g = windowGeomFor(c);
+    return g ? g.Atot*(c.anzahl||1) : 0;
+  }
+  return c.flaeche||0;
+}
+function resolveGlasflaeche(c){
+  // für präzisere solare Gewinne: bei Fenstertyp die echte Glasfläche, sonst gesamte Fensterfläche als Näherung
+  if(c.typ==='window' && c.quelle==='fenstertyp'){
+    const g = windowGeomFor(c);
+    return g ? g.Ag*(c.anzahl||1) : 0;
+  }
+  return c.flaeche||0;
+}
+function resolveGwert(c){
+  if(c.typ==='window' && c.quelle==='fenstertyp'){
+    const wt = windowTypes().find(w=>w.id===c.windowTypeId);
+    return wt ? wt.gwert : 0.6;
+  }
+  return c.gwert||0.6;
 }
 
 function calcGebaeude(){
@@ -1326,10 +1575,11 @@ function calcGebaeude(){
   let HT_base = 0, Afl = 0, Qs = 0;
   gebComponents.forEach(c=>{
     const U = resolveU(c);
-    HT_base += U * c.flaeche;
-    Afl += c.flaeche;
+    const A = resolveFlaeche(c);
+    HT_base += U * A;
+    Afl += A;
     if(c.typ==='window'){
-      Qs += c.flaeche * (c.gwert||0.6) * 0.9 * (ORIENT_SOLAR_HEIZ[c.orientation]||200) / 1000;
+      Qs += resolveGlasflaeche(c) * resolveGwert(c) * (c.verschattung!=null?c.verschattung:0.9) * (ORIENT_SOLAR_HEIZ[c.orientation]||200) / 1000;
     }
   });
   const HT = HT_base + dWB*Afl;
@@ -1363,7 +1613,7 @@ function calcKuehllast(){
   let Qsolar = 0;
   gebComponents.forEach(c=>{
     if(c.typ==='window'){
-      Qsolar += c.flaeche * (c.gwert||0.6) * 0.9 * (ORIENT_SOLAR_PEAK[c.orientation]||300);
+      Qsolar += resolveGlasflaeche(c) * resolveGwert(c) * (c.verschattung!=null?c.verschattung:0.9) * (ORIENT_SOLAR_PEAK[c.orientation]||300);
     }
   });
   const Qintern = qik * Angf;
@@ -1379,7 +1629,7 @@ function calcKuehllast(){
 function renderWirtComponentSelect(){
   const sel = document.getElementById('wirt-component');
   if(!sel) return;
-  sel.innerHTML = gebComponents.map((c,i)=>`<option value="${i}">${GEB_TYPES[c.typ]} · ${c.flaeche} m² · U=${resolveU(c).toFixed(2)}</option>`).join('');
+  sel.innerHTML = gebComponents.map((c,i)=>`<option value="${i}">${GEB_TYPES[c.typ]} · ${resolveFlaeche(c).toFixed(1)} m² · U=${resolveU(c).toFixed(2)}</option>`).join('');
 }
 
 function calcWirtschaftlichkeit(){
@@ -1395,7 +1645,7 @@ function calcWirtschaftlichkeit(){
 
   const U0 = resolveU(c);
   const R0 = U0>0 ? 1/U0 : 5;
-  const A = c.flaeche;
+  const A = resolveFlaeche(c);
 
   const dicken = [2,4,6,8,10,12,14,16,18,20,24,28,32];
   let rows = [];
