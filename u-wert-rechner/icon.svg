@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#141414"/>
+  <!-- Haus -->
+  <path d="M256 96 L416 216 L416 400 C416 411 407 420 396 420 L116 420 C105 420 96 411 96 400 L96 216 Z"
+        fill="none" stroke="#f2a30f" stroke-width="18" stroke-linejoin="round"/>
+  <!-- Wärmebänder / Isotherme -->
+  <path d="M96 216 L256 96 L416 216" fill="none" stroke="#f2a30f" stroke-width="18" stroke-linejoin="round" stroke-linecap="round"/>
+  <rect x="150" y="260" width="80" height="90" rx="6" fill="#2a3a55" stroke="#f2a30f" stroke-width="8"/>
+  <rect x="282" y="280" width="70" height="70" rx="6" fill="#2a3a55" stroke="#f2a30f" stroke-width="8"/>
+  <!-- Thermometer -->
+  <g transform="translate(238,150)">
+    <rect x="-10" y="-8" width="20" height="120" rx="10" fill="#0a0a0a" stroke="#e0693c" stroke-width="8"/>
+    <circle cx="0" cy="120" r="22" fill="#e0693c"/>
+    <rect x="-5" y="30" width="10" height="90" fill="#e0693c"/>
+  </g>
+</svg>

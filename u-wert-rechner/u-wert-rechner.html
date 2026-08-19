@@ -1,0 +1,1442 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>U-Wert & Wärmebrücken</title>
+<style>
+:root{
+  --bg:#141414; --bg2:#1e1e1e; --bg3:#262626; --line:#3a3a3a;
+  --amber:#f2a30f; --amber-d:#c9860a; --text:#e8e5df; --text-dim:#9a958c;
+  --ok:#5cb85c; --warn:#e0693c; --bad:#d9534f; --blue:#4a90d9;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,'Segoe UI',Roboto,sans-serif;font-size:15px;padding-bottom:70px;}
+header{position:sticky;top:0;z-index:20;background:var(--bg2);border-bottom:1px solid var(--line);padding:10px 12px;display:flex;align-items:center;gap:8px;}
+header h1{font-size:16px;margin:0;color:var(--amber);font-weight:600;flex:1;}
+.tabs{display:flex;position:sticky;top:41px;z-index:19;background:var(--bg2);border-bottom:1px solid var(--line);overflow-x:auto;}
+.tab{flex:1;text-align:center;padding:11px 6px;font-size:12.5px;color:var(--text-dim);border-bottom:2px solid transparent;white-space:nowrap;cursor:pointer;}
+.tab.active{color:var(--amber);border-bottom-color:var(--amber);}
+.page{display:none;padding:12px;max-width:900px;margin:0 auto;}
+.page.active{display:block;}
+.card{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px;}
+.card h2{font-size:14px;margin:0 0 10px 0;color:var(--amber);font-weight:600;}
+.card h3{font-size:12.5px;margin:12px 0 6px 0;color:var(--text-dim);text-transform:uppercase;letter-spacing:.03em;}
+label{display:block;font-size:12px;color:var(--text-dim);margin:8px 0 3px;}
+input,select,button,textarea{font-family:inherit;font-size:14px;}
+input[type=text],input[type=number],select{width:100%;padding:9px 10px;background:var(--bg3);border:1px solid var(--line);border-radius:7px;color:var(--text);}
+input:focus,select:focus{outline:none;border-color:var(--amber);}
+.row{display:flex;gap:8px;}
+.row>*{flex:1;min-width:0;}
+button{padding:9px 14px;border-radius:7px;border:1px solid var(--line);background:var(--bg3);color:var(--text);cursor:pointer;}
+button.primary{background:var(--amber);border-color:var(--amber);color:#1a1200;font-weight:600;}
+button.danger{color:var(--bad);}
+button.small{padding:5px 9px;font-size:12px;}
+button:active{transform:scale(0.97);}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{text-align:left;color:var(--text-dim);font-weight:500;font-size:11px;text-transform:uppercase;padding:5px 4px;border-bottom:1px solid var(--line);}
+td{padding:6px 4px;border-bottom:1px solid #2a2a2a;}
+.layer-row{display:flex;gap:6px;align-items:center;margin-bottom:6px;background:var(--bg3);padding:8px;border-radius:7px;}
+.layer-row select{flex:2;}
+.layer-row input{flex:1;}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;}
+.badge.ok{background:rgba(92,184,92,.15);color:var(--ok);}
+.badge.warn{background:rgba(224,105,60,.15);color:var(--warn);}
+.badge.bad{background:rgba(217,83,79,.15);color:var(--bad);}
+.result-big{font-size:32px;font-weight:700;color:var(--amber);}
+.result-sub{font-size:12px;color:var(--text-dim);}
+.constr-item{display:flex;justify-content:space-between;align-items:center;padding:9px 10px;background:var(--bg3);border-radius:7px;margin-bottom:6px;cursor:pointer;}
+.constr-item:active{background:#2f2f2f;}
+.hint{font-size:11.5px;color:var(--text-dim);line-height:1.5;margin-top:4px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.chip-row{display:flex;flex-wrap:wrap;gap:6px;}
+.chip{padding:5px 10px;border-radius:20px;background:var(--bg3);border:1px solid var(--line);font-size:12px;color:var(--text-dim);cursor:pointer;white-space:nowrap;}
+.chip.active{background:var(--amber);color:#1a1200;border-color:var(--amber);font-weight:600;}
+/* Simulator */
+#simWrap{overflow:auto;border:1px solid var(--line);border-radius:8px;background:#000;touch-action:none;}
+#simCanvas{display:block;touch-action:none;}
+.matbtn{display:flex;align-items:center;gap:6px;padding:7px 9px;border-radius:7px;background:var(--bg3);border:1px solid var(--line);font-size:12px;cursor:pointer;}
+.matbtn.active{border-color:var(--amber);background:#2a2214;}
+.swatch{width:14px;height:14px;border-radius:3px;flex-shrink:0;border:1px solid rgba(255,255,255,.2);}
+.statline{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #2a2a2a;font-size:13px;}
+.statline b{color:var(--amber);}
+footer.tabs-bottom{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--line);display:flex;z-index:20;}
+.legend{display:flex;height:14px;border-radius:4px;overflow:hidden;margin:6px 0;}
+.legend div{flex:1;}
+.small-note{font-size:11px;color:var(--text-dim);}
+</style>
+</head>
+<body>
+
+<header><h1>U-Wert & Wärmebrücken</h1></header>
+<div class="tabs">
+  <div class="tab active" data-page="uwert">U-Wert</div>
+  <div class="tab" data-page="fenster">Fenster/Tür</div>
+  <div class="tab" data-page="sim">Wärmebrücken-Sim</div>
+  <div class="tab" data-page="gebaeude">Gebäude</div>
+  <div class="tab" data-page="lib">Bauteile</div>
+</div>
+
+<!-- ============ PAGE 1: U-WERT RECHNER ============ -->
+<div class="page active" id="page-uwert">
+  <div class="card">
+    <h2>Bauteil</h2>
+    <label>Bezeichnung</label>
+    <input type="text" id="uw-name" placeholder="z.B. Außenwand Bestand 1965">
+    <label>Bauteiltyp (bestimmt R_si / R_se)</label>
+    <select id="uw-type">
+      <option value="wall" data-rsi="0.13" data-rse="0.04">Außenwand (vertikal)</option>
+      <option value="roof" data-rsi="0.10" data-rse="0.04">Dach / Decke nach oben</option>
+      <option value="floor-ground" data-rsi="0.17" data-rse="0.00">Boden gegen Erdreich</option>
+      <option value="floor-unheated" data-rsi="0.17" data-rse="0.17">Decke gegen unbeheizt</option>
+      <option value="innerwall" data-rsi="0.13" data-rse="0.13">Innenwand</option>
+    </select>
+    <div class="hint">R_si/R_se werden automatisch nach DIN EN ISO 6946 gesetzt, sind aber unten überschreibbar.</div>
+    <div class="row" style="margin-top:8px;">
+      <div><label>R_si [m²K/W]</label><input type="number" id="uw-rsi" step="0.01" value="0.13"></div>
+      <div><label>R_se [m²K/W]</label><input type="number" id="uw-rse" step="0.01" value="0.04"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Schichtaufbau (von innen nach außen)</h2>
+    <div id="uw-layers"></div>
+    <button class="small" onclick="addLayer()" style="margin-top:4px;">+ Schicht hinzufügen</button>
+  </div>
+
+  <div class="card">
+    <h2>Ergebnis</h2>
+    <div class="result-big" id="uw-result">–</div>
+    <div class="result-sub" id="uw-result-sub">W/(m²K)</div>
+    <div id="uw-geg" style="margin-top:8px;"></div>
+    <table style="margin-top:10px;">
+      <tr><td>Summe Schichtwiderstände R_T</td><td id="uw-rt" style="text-align:right;"></td></tr>
+      <tr><td>Gesamtwiderstand R (inkl. R_si+R_se)</td><td id="uw-rges" style="text-align:right;"></td></tr>
+      <tr><td>Flächenbezogene Masse (grob)</td><td id="uw-mass" style="text-align:right;"></td></tr>
+    </table>
+    <div class="hint" style="margin-top:8px;">GEG-Richtwerte sind Orientierung (Neubau-Anforderungen §-Werte je nach Bauteil), keine Rechtsauskunft – für Sanierung/Bestand gelten ggf. andere Grenzwerte (§48 GEG Bauteilverfahren).</div>
+    <div class="row" style="margin-top:10px;">
+      <button class="primary" onclick="saveConstruction()">Bauteil speichern</button>
+      <button onclick="printResult()">Drucken</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PAGE 2: FENSTER / TÜR ============ -->
+<div class="page" id="page-fenster">
+  <div class="card">
+    <h2>Fenster U_w Berechnung</h2>
+    <div class="hint">U_w = (U_g·A_g + U_f·A_f + Ψ_g·l_g) / (A_g + A_f) — nach DIN EN ISO 10077-1</div>
+    <h3>Geometrie</h3>
+    <div class="grid3">
+      <div><label>Breite außen [mm]</label><input type="number" id="fw-b" value="1230" oninput="fensterCalc()"></div>
+      <div><label>Höhe außen [mm]</label><input type="number" id="fw-h" value="1480" oninput="fensterCalc()"></div>
+      <div><label>Rahmenbreite [mm]</label><input type="number" id="fw-rahmen" value="115" oninput="fensterCalc()"></div>
+    </div>
+    <h3>Kennwerte</h3>
+    <div class="grid2">
+      <div><label>U_g Verglasung [W/m²K]</label><input type="number" id="fw-ug" step="0.01" value="1.10" oninput="fensterCalc()"></div>
+      <div><label>U_f Rahmen [W/m²K]</label><input type="number" id="fw-uf" step="0.01" value="1.30" oninput="fensterCalc()"></div>
+      <div><label>Ψ_g Randverbund [W/mK]</label><input type="number" id="fw-psig" step="0.01" value="0.06" oninput="fensterCalc()"></div>
+      <div><label>Anzahl Sprossenteilung (1=1 Feld)</label><input type="number" id="fw-felder" value="1" min="1" oninput="fensterCalc()"></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Ergebnis</h2>
+    <div class="result-big" id="fw-result">–</div>
+    <div class="result-sub">U_w in W/(m²K)</div>
+    <table style="margin-top:10px;">
+      <tr><td>Glasfläche A_g</td><td style="text-align:right;" id="fw-ag"></td></tr>
+      <tr><td>Rahmenfläche A_f</td><td style="text-align:right;" id="fw-af"></td></tr>
+      <tr><td>Randverbundlänge l_g</td><td style="text-align:right;" id="fw-lg"></td></tr>
+      <tr><td>Gesamtfläche</td><td style="text-align:right;" id="fw-atot"></td></tr>
+    </table>
+    <div class="hint" style="margin-top:6px;">GEG-Referenz Neubau Fenster: U_w ≤ 1,3 W/(m²K). Passivhaus-Fenster: U_w ≤ 0,8 W/(m²K).</div>
+  </div>
+
+  <div class="card">
+    <h2>Türen (vereinfacht)</h2>
+    <div class="grid2">
+      <div><label>U_Türblatt [W/m²K]</label><input type="number" id="tr-ud" step="0.01" value="1.40" oninput="tuerCalc()"></div>
+      <div><label>U_Zarge/Rahmen [W/m²K]</label><input type="number" id="tr-uf" step="0.01" value="1.60" oninput="tuerCalc()"></div>
+      <div><label>Türblattfläche [m²]</label><input type="number" id="tr-ad" step="0.01" value="1.75" oninput="tuerCalc()"></div>
+      <div><label>Zargenfläche [m²]</label><input type="number" id="tr-af" step="0.01" value="0.25" oninput="tuerCalc()"></div>
+    </div>
+    <div class="result-big" id="tr-result" style="margin-top:10px;">–</div>
+    <div class="result-sub">U_D in W/(m²K) · GEG-Referenz ≤ 1,8 W/(m²K)</div>
+  </div>
+</div>
+
+<!-- ============ PAGE 3: WÄRMEBRÜCKEN SIMULATOR ============ -->
+<div class="page" id="page-sim">
+  <div class="card">
+    <h2>Raster</h2>
+    <div class="grid3">
+      <div><label>Breite [cm]</label><input type="number" id="sim-w" value="140"></div>
+      <div><label>Höhe [cm]</label><input type="number" id="sim-h" value="100"></div>
+      <div><label>Zellgröße [cm]</label><input type="number" id="sim-cell" value="2"></div>
+    </div>
+    <div class="row" style="margin-top:8px;">
+      <button class="primary" onclick="initSimGrid()">Raster neu aufbauen</button>
+      <button onclick="clearSimGrid()">Leeren</button>
+    </div>
+    <h3>Vorlagen</h3>
+    <div class="chip-row">
+      <div class="chip" onclick="loadPreset('ecke')">Gebäudeecke</div>
+      <div class="chip" onclick="loadPreset('sturz')">Fenstersturz</div>
+      <div class="chip" onclick="loadPreset('sockel')">Sockel/Bodenplatte</div>
+      <div class="chip" onclick="loadPreset('balkon')">Balkonplatte</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Werkzeug</h2>
+    <div class="chip-row" id="sim-tools"></div>
+
+    <div id="tool-brush-opts">
+      <div class="row" style="margin-top:8px;">
+        <div><label>Pinselstärke [cm]</label><input type="number" id="sim-brush" value="4" min="1"></div>
+      </div>
+    </div>
+
+    <div id="tool-rect-opts" style="display:none;">
+      <div class="hint">Auf dem Raster ziehen für Freihand-Rechteck — oder unten exakte Maße eintragen.</div>
+      <h3>Exaktes Rechteck einfügen</h3>
+      <div class="grid2">
+        <div><label>X [cm] (von links)</label><input type="number" id="rect-x" value="0"></div>
+        <div><label>Y [cm] (von oben)</label><input type="number" id="rect-y" value="0"></div>
+        <div><label>Breite [cm]</label><input type="number" id="rect-w" value="24"></div>
+        <div><label>Höhe [cm]</label><input type="number" id="rect-h" value="20"></div>
+      </div>
+      <button class="primary small" onclick="insertExactRect()" style="margin-top:8px;">Rechteck einfügen</button>
+    </div>
+
+    <div id="tool-rzone-opts" style="display:none;">
+      <div class="hint">Wärmeübergangs-Zone: klicke/ziehe über Innen- oder Außenluft-Zellen <b>direkt an einer Bauteilkante</b>, um dort lokal einen abweichenden R_si/R_se-Wert zu setzen (z.B. reduzierter Wärmeübergang in Ecken/Nischen nach DIN EN ISO 13788).</div>
+      <h3>Innenseite (R_si)</h3>
+      <div class="chip-row">
+        <div class="chip" onclick="setRZoneValue(0.13)">Standard Wand · 0,13</div>
+        <div class="chip" onclick="setRZoneValue(0.17)">Laibung/Sockel · 0,17</div>
+        <div class="chip" onclick="setRZoneValue(0.25)">Ecke/Nische · 0,25</div>
+      </div>
+      <h3>Außenseite (R_se)</h3>
+      <div class="chip-row">
+        <div class="chip" onclick="setRZoneValue(0.04)">Standard · 0,04</div>
+        <div class="chip" onclick="setRZoneValue(0.08)">Konvexe Ecke · 0,08</div>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <div><label>Eigener Wert [m²K/W]</label><input type="number" id="rzone-custom" step="0.01" placeholder="z.B. 0.20"></div>
+        <button class="small" onclick="setRZoneValue(parseFloat(document.getElementById('rzone-custom').value))" style="align-self:flex-end;">Übernehmen</button>
+      </div>
+      <div class="row" style="margin-top:6px;">
+        <div id="rzone-active" class="small-note">Aktiver Wert: keiner gewählt</div>
+        <button class="small" onclick="setRZoneValue(null)">Zurücksetzen (Radiergummi)</button>
+      </div>
+    </div>
+
+    <h3>Material</h3>
+    <div class="chip-row" id="sim-palette"></div>
+    <div class="row" style="margin-top:8px;">
+      <button class="small" onclick="openMaterialEditor()">+ Material</button>
+      <button class="small" onclick="undoSim()">↩ Rückgängig</button>
+    </div>
+    <div class="hint">„Innenluft" und „Außenluft" markieren die Randbedingungen — an deren Grenze zu Bauteilen wird automatisch R_si bzw. R_se berücksichtigt, außer wo eine Wärmeübergangs-Zone lokal einen eigenen Wert setzt.</div>
+  </div>
+
+  <div class="card">
+    <h2>Querschnitt zeichnen</h2>
+    <div id="simWrap"><canvas id="simCanvas"></canvas></div>
+    <div class="hint" id="sim-gridinfo"></div>
+    <div class="hint" id="sim-rzone-summary"></div>
+  </div>
+
+  <div class="card">
+    <h2>Randbedingungen</h2>
+    <div class="grid2">
+      <div><label>Innentemperatur [°C]</label><input type="number" id="sim-tin" value="20"></div>
+      <div><label>Außentemperatur [°C]</label><input type="number" id="sim-tout" value="-5"></div>
+      <div><label>R_si (Innen) [m²K/W]</label><input type="number" id="sim-rsi" step="0.01" value="0.13"></div>
+      <div><label>R_se (Außen) [m²K/W]</label><input type="number" id="sim-rse" step="0.01" value="0.04"></div>
+    </div>
+    <button class="primary" onclick="runSimulation()" style="width:100%;margin-top:10px;">Simulation starten</button>
+    <div id="sim-progress" class="small-note" style="margin-top:6px;"></div>
+  </div>
+
+  <div class="card" id="sim-results-card" style="display:none;">
+    <h2>Ergebnis</h2>
+    <div id="simResultWrap" style="overflow:auto;border:1px solid var(--line);border-radius:8px;"><canvas id="simResultCanvas"></canvas></div>
+    <div class="legend" id="sim-legend"></div>
+    <div class="row"><div class="small-note" id="sim-legend-min">min</div><div class="small-note" style="text-align:right;" id="sim-legend-max">max</div></div>
+
+    <div class="statline"><span>Min. Oberflächentemperatur innen (θ_si,min)</span><b id="res-tsimin">–</b></div>
+    <div class="statline"><span>Temperaturfaktor f_Rsi</span><b id="res-frsi">–</b></div>
+    <div class="statline"><span>Schimmelrisiko (f_Rsi &lt; 0,7)</span><b id="res-mold">–</b></div>
+    <div class="statline"><span>Wärmestrom L2D (pro m Bautiefe)</span><b id="res-l2d">–</b></div>
+    <div class="statline"><span>Wärmestrom Q'</span><b id="res-q">–</b></div>
+
+    <h3>Ψ-Wert berechnen (optional)</h3>
+    <div class="hint">Ψ = L2D − Σ(U_i · l_i) der ungestörten Anschlussbauteile. Trage die 1D-Referenzwerte der angrenzenden Bauteile ein.</div>
+    <div class="grid2">
+      <div><label>U₁ [W/m²K]</label><input type="number" id="psi-u1" step="0.001"></div>
+      <div><label>l₁ [m]</label><input type="number" id="psi-l1" step="0.01"></div>
+      <div><label>U₂ [W/m²K]</label><input type="number" id="psi-u2" step="0.001"></div>
+      <div><label>l₂ [m]</label><input type="number" id="psi-l2" step="0.01"></div>
+    </div>
+    <button class="small" onclick="calcPsi()" style="margin-top:8px;">Ψ berechnen</button>
+    <div class="result-big" id="psi-result" style="margin-top:8px;font-size:24px;">–</div>
+    <div class="result-sub">Ψ in W/(mK)</div>
+
+    <h3>Sanierungsvorschlag</h3>
+    <div id="sim-suggestion" class="hint"></div>
+    <div class="row" id="sim-suggestion-actions" style="margin-top:8px;display:none;">
+      <div><label>Zusatzdämmung [cm]</label><input type="number" id="fix-thickness" value="4" min="1"></div>
+      <select id="fix-material" style="flex:1;"></select>
+    </div>
+    <button class="small primary" id="fix-apply-btn" style="display:none;margin-top:6px;" onclick="applySuggestedFix()">Vorschlag anwenden (Zeichnung anpassen)</button>
+    <div class="hint" style="margin-top:6px;">Nach dem Anwenden einfach nochmal auf „Simulation starten" tippen — so siehst du direkt, ob die Maßnahme f_Rsi über 0,7 bringt.</div>
+  </div>
+</div>
+
+<!-- ============ PAGE 3b: GEBÄUDE-ENERGIEBILANZ ============ -->
+<div class="page" id="page-gebaeude">
+  <div class="card">
+    <h2>Gebäudehülle zusammensetzen</h2>
+    <div class="hint">Jede Zeile ist ein Bauteil der Gebäudehülle. U-Wert entweder aus deiner gespeicherten Bauteil-Bibliothek ziehen oder manuell eintragen.</div>
+    <div id="geb-components"></div>
+    <button class="small" onclick="addGebComponent()" style="margin-top:6px;">+ Bauteil hinzufügen</button>
+  </div>
+
+  <div class="card">
+    <h2>Gebäudeparameter</h2>
+    <div class="grid2">
+      <div><label>Heizgradtage Gt [Kd/a]</label><input type="number" id="geb-gt" value="3500"></div>
+      <div><label>Beheiztes Volumen Ve [m³]</label><input type="number" id="geb-ve" value="450"></div>
+      <div><label>Beheizte Nutzfläche A_NGF [m²]</label><input type="number" id="geb-angf" value="150"></div>
+      <div><label>Luftwechselrate n [1/h]</label><input type="number" id="geb-n" step="0.1" value="0.5"></div>
+      <div><label>Innentemperatur Winter [°C]</label><input type="number" id="geb-ti" value="20"></div>
+      <div><label>Wärmebrückenzuschlag ΔU_WB [W/m²K]</label><input type="number" id="geb-dwb" step="0.01" value="0.05"></div>
+      <div><label>Interne Gewinne q_i [W/m²]</label><input type="number" id="geb-qi" value="5"></div>
+      <div><label>Heizperiode [h/a]</label><input type="number" id="geb-hp" value="5300"></div>
+      <div><label>Ausnutzungsgrad Gewinne η</label><input type="number" id="geb-eta" step="0.05" value="0.85"></div>
+    </div>
+    <div class="hint">Gt=3500 Kd/a ist ein grober Mittelwert für Deutschland — regional (z.B. Magdeburg) kann's abweichen, gerne anpassen.</div>
+    <button class="primary" onclick="calcGebaeude()" style="width:100%;margin-top:10px;">Energiebilanz berechnen</button>
+  </div>
+
+  <div class="card" id="geb-results-card" style="display:none;">
+    <h2>Ergebnis Heizwärmebedarf</h2>
+    <table>
+      <tr><td>Transmissionswärmeverlust H_T</td><td style="text-align:right;" id="geb-ht"></td></tr>
+      <tr><td>Lüftungswärmeverlust H_V</td><td style="text-align:right;" id="geb-hv"></td></tr>
+      <tr><td>Gesamt H_ges</td><td style="text-align:right;" id="geb-hges"></td></tr>
+      <tr><td>Verlust-Wärmebedarf (Transmission+Lüftung)</td><td style="text-align:right;" id="geb-qverlust"></td></tr>
+      <tr><td>Interne Gewinne</td><td style="text-align:right;" id="geb-qi-out"></td></tr>
+      <tr><td>Solare Gewinne</td><td style="text-align:right;" id="geb-qs-out"></td></tr>
+    </table>
+    <div class="result-big" id="geb-qh" style="margin-top:10px;">–</div>
+    <div class="result-sub">Heizwärmebedarf Q_H [kWh/a]</div>
+    <div class="result-big" id="geb-qh-spez" style="font-size:22px;color:var(--text);">–</div>
+    <div class="result-sub">spezifisch [kWh/(m²a)]</div>
+    <div class="chip-row" style="margin-top:8px;">
+      <div class="chip">Altbau unsaniert ~200-250</div>
+      <div class="chip">EnEV-Standard ~70-100</div>
+      <div class="chip">KfW55 ~55</div>
+      <div class="chip">Passivhaus ~15</div>
+    </div>
+    <div class="hint" style="margin-top:8px;">Vereinfachtes Gradtagzahlverfahren, keine normierte Berechnung nach DIN V 18599/DIN 4108-6 (z.B. für Energieausweis). Für Orientierung und Sanierungsplanung aber gut geeignet.</div>
+
+    <h3>Kühllast (Kurzverfahren, Peak-Abschätzung)</h3>
+    <div class="grid2">
+      <div><label>Außentemp. Auslegung Sommer [°C]</label><input type="number" id="geb-te-kuehl" value="32"></div>
+      <div><label>Innentemp. Komfort Sommer [°C]</label><input type="number" id="geb-ti-kuehl" value="26"></div>
+      <div><label>Interne Kühllast q_i,k [W/m²]</label><input type="number" id="geb-qik" value="10"></div>
+    </div>
+    <button class="small" onclick="calcKuehllast()" style="margin-top:8px;">Kühllast berechnen</button>
+    <table style="margin-top:8px;">
+      <tr><td>Transmission</td><td style="text-align:right;" id="kuehl-trans"></td></tr>
+      <tr><td>Solare Lasten (Fenster)</td><td style="text-align:right;" id="kuehl-solar"></td></tr>
+      <tr><td>Interne Lasten</td><td style="text-align:right;" id="kuehl-intern"></td></tr>
+    </table>
+    <div class="result-big" id="kuehl-peak" style="margin-top:8px;">–</div>
+    <div class="result-sub">Kühllast Peak [kW] — grobe Abschätzung, ersetzt keine Auslegung nach VDI 2078</div>
+  </div>
+
+  <div class="card">
+    <h2>Wirtschaftlichkeit: Sanierungsempfehlung</h2>
+    <div class="hint">Für ein gewähltes Bauteil wird die wirtschaftlich sinnvolle Zusatzdämmdicke ermittelt — weder unter- noch überdämmt, sondern die Dicke, ab der sich jedes weitere cm nicht mehr innerhalb der Zielamortisation rentiert.</div>
+    <label>Bauteil</label>
+    <select id="wirt-component"></select>
+    <div class="grid2">
+      <div><label>Dämmmaterial λ [W/mK]</label><input type="number" id="wirt-lambda" step="0.001" value="0.035"></div>
+      <div><label>Energiepreis [€/kWh]</label><input type="number" id="wirt-preis" step="0.01" value="0.10"></div>
+      <div><label>Grundkosten Maßnahme [€/m²]</label><input type="number" id="wirt-grund" value="40"></div>
+      <div><label>Materialkosten [€/m² je cm]</label><input type="number" id="wirt-material" step="0.5" value="3.5"></div>
+      <div><label>Zielamortisation [Jahre]</label><input type="number" id="wirt-ziel" value="20"></div>
+    </div>
+    <button class="primary" onclick="calcWirtschaftlichkeit()" style="width:100%;margin-top:10px;">Berechnen</button>
+    <div id="wirt-results" style="margin-top:10px;"></div>
+  </div>
+</div>
+
+<!-- ============ PAGE 4: GESPEICHERTE BAUTEILE ============ -->
+<div class="page" id="page-lib">
+  <div class="card">
+    <h2>Gespeicherte Bauteile</h2>
+    <div id="lib-list"></div>
+    <div class="hint" id="lib-empty">Noch keine Bauteile gespeichert.</div>
+  </div>
+</div>
+
+<footer class="tabs-bottom"></footer>
+
+<script>
+/* ============================================================
+   MATERIAL-DATENBANK
+   ============================================================ */
+const MATERIALS = [
+  {id:'beton', name:'Stahlbeton', lambda:2.30, color:'#8a8a8a'},
+  {id:'ziegel', name:'Mauerziegel (HLZ)', lambda:0.44, color:'#b5651d'},
+  {id:'ksv', name:'Kalksandstein', lambda:0.99, color:'#c9b896'},
+  {id:'poroton', name:'Porenbeton / Ziegel hochdämmend', lambda:0.16, color:'#d9c9a3'},
+  {id:'holz', name:'Holz (Nadelholz)', lambda:0.13, color:'#a0723c'},
+  {id:'mineralwolle', name:'Mineralwolle (Dämmung)', lambda:0.035, color:'#f4d35e'},
+  {id:'eps', name:'EPS / Polystyrol', lambda:0.035, color:'#e8e08a'},
+  {id:'pur', name:'PUR/PIR-Hartschaum', lambda:0.025, color:'#ffd166'},
+  {id:'putz_innen', name:'Kalk-/Gipsputz innen', lambda:0.70, color:'#e5ded0'},
+  {id:'putz_aussen', name:'Kalkzementputz außen', lambda:0.87, color:'#cfcabf'},
+  {id:'gipskarton', name:'Gipskarton', lambda:0.21, color:'#f0ebe0'},
+  {id:'luftschicht', name:'Ruhende Luftschicht (R=0,18 fix)', lambda:null, R_fix:0.18, color:'#cfe8f5'},
+  {id:'estrich', name:'Zementestrich', lambda:1.40, color:'#a8a29e'},
+  {id:'holzfaser', name:'Holzfaserdämmplatte', lambda:0.045, color:'#e0a458'},
+  {id:'glas2fach', name:'Glas 2-fach (nur Simulator, λ_äquiv.)', lambda:1.0, color:'#a9d6e5'},
+];
+let customMaterials = JSON.parse(localStorage.getItem('uwert_custom_materials')||'[]');
+function allMaterials(){ return MATERIALS.concat(customMaterials); }
+
+/* ============================================================
+   TAB NAVIGATION
+   ============================================================ */
+const tabsTop = document.querySelectorAll('.tab');
+tabsTop.forEach(t=>t.addEventListener('click',()=>{
+  tabsTop.forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+t.dataset.page).classList.add('active');
+  if(t.dataset.page==='lib') renderLibrary();
+  if(t.dataset.page==='sim' && !simInited){ initSimGrid(); simInited=true; }
+  if(t.dataset.page==='gebaeude') renderGebComponents();
+}));
+
+/* ============================================================
+   SEITE 1: U-WERT RECHNER
+   ============================================================ */
+let layers = [
+  {materialId:'putz_innen', thickness:1.5},
+  {materialId:'ziegel', thickness:24},
+  {materialId:'mineralwolle', thickness:14},
+  {materialId:'putz_aussen', thickness:1.5},
+];
+
+function matOptions(selectedId){
+  return allMaterials().map(m=>`<option value="${m.id}" ${m.id===selectedId?'selected':''}>${m.name}${m.lambda?` (λ=${m.lambda})`:''}</option>`).join('');
+}
+
+function renderLayers(){
+  const wrap = document.getElementById('uw-layers');
+  wrap.innerHTML = layers.map((l,i)=>`
+    <div class="layer-row">
+      <span style="color:var(--text-dim);font-size:12px;width:16px;">${i+1}</span>
+      <select onchange="layers[${i}].materialId=this.value; calcU();">${matOptions(l.materialId)}</select>
+      <input type="number" step="0.1" value="${l.thickness}" placeholder="cm" oninput="layers[${i}].thickness=parseFloat(this.value)||0; calcU();">
+      <button class="small danger" onclick="removeLayer(${i})">✕</button>
+    </div>
+  `).join('');
+  calcU();
+}
+function addLayer(){ layers.push({materialId:'ziegel', thickness:10}); renderLayers(); }
+function removeLayer(i){ layers.splice(i,1); renderLayers(); }
+
+document.getElementById('uw-type').addEventListener('change',function(){
+  const opt = this.selectedOptions[0];
+  document.getElementById('uw-rsi').value = opt.dataset.rsi;
+  document.getElementById('uw-rse').value = opt.dataset.rse;
+  calcU();
+});
+document.getElementById('uw-rsi').addEventListener('input',calcU);
+document.getElementById('uw-rse').addEventListener('input',calcU);
+
+const GEG_LIMITS = {wall:0.28, roof:0.20, 'floor-ground':0.30, 'floor-unheated':0.30, innerwall:null};
+
+function calcU(){
+  const mats = allMaterials();
+  let RT = 0, mass = 0;
+  layers.forEach(l=>{
+    const m = mats.find(x=>x.id===l.materialId);
+    if(!m) return;
+    const d = (l.thickness||0)/100; // m
+    if(m.R_fix!=null){ RT += m.R_fix; }
+    else { RT += d / m.lambda; }
+    mass += d * 1600; // grobe pauschale Rohdichte-Annahme falls keine Dichte hinterlegt
+  });
+  const Rsi = parseFloat(document.getElementById('uw-rsi').value)||0;
+  const Rse = parseFloat(document.getElementById('uw-rse').value)||0;
+  const Rges = RT + Rsi + Rse;
+  const U = Rges>0 ? 1/Rges : 0;
+
+  document.getElementById('uw-result').textContent = U.toFixed(3);
+  document.getElementById('uw-rt').textContent = RT.toFixed(3)+' m²K/W';
+  document.getElementById('uw-rges').textContent = Rges.toFixed(3)+' m²K/W';
+  document.getElementById('uw-mass').textContent = mass.toFixed(0)+' kg/m² (Richtwert)';
+
+  const type = document.getElementById('uw-type').value;
+  const limit = GEG_LIMITS[type];
+  const gegDiv = document.getElementById('uw-geg');
+  if(limit){
+    const ok = U <= limit;
+    gegDiv.innerHTML = `<span class="badge ${ok?'ok':'bad'}">${ok?'erfüllt':'überschritten'} GEG-Referenz ${limit} W/m²K</span>`;
+  } else {
+    gegDiv.innerHTML = '';
+  }
+  return {U, RT, Rges, mass};
+}
+
+function printResult(){ window.print(); }
+
+/* ============================================================
+   BAUTEILE SPEICHERN / LADEN
+   ============================================================ */
+function saveConstruction(){
+  const name = document.getElementById('uw-name').value.trim() || 'Bauteil '+(new Date()).toLocaleDateString('de-DE');
+  const {U, RT, Rges} = calcU();
+  const type = document.getElementById('uw-type').value;
+  const data = {
+    id: 'c_'+Date.now(),
+    name, type,
+    rsi: parseFloat(document.getElementById('uw-rsi').value),
+    rse: parseFloat(document.getElementById('uw-rse').value),
+    layers: JSON.parse(JSON.stringify(layers)),
+    U, RT, Rges,
+    date: new Date().toISOString()
+  };
+  const list = JSON.parse(localStorage.getItem('uwert_constructions')||'[]');
+  list.unshift(data);
+  localStorage.setItem('uwert_constructions', JSON.stringify(list));
+  alert('Gespeichert: '+name+' — U = '+U.toFixed(3)+' W/m²K');
+}
+
+function renderLibrary(){
+  const list = JSON.parse(localStorage.getItem('uwert_constructions')||'[]');
+  const wrap = document.getElementById('lib-list');
+  document.getElementById('lib-empty').style.display = list.length ? 'none':'block';
+  wrap.innerHTML = list.map(c=>`
+    <div class="constr-item">
+      <div onclick='loadConstruction(${JSON.stringify(c.id)})'>
+        <div style="font-weight:600;">${c.name}</div>
+        <div class="small-note">${c.type} · U=${c.U.toFixed(3)} W/m²K · ${c.layers.length} Schichten</div>
+      </div>
+      <button class="small danger" onclick="deleteConstruction('${c.id}')">✕</button>
+    </div>
+  `).join('');
+}
+function loadConstruction(id){
+  const list = JSON.parse(localStorage.getItem('uwert_constructions')||'[]');
+  const c = list.find(x=>x.id===id);
+  if(!c) return;
+  document.getElementById('uw-name').value = c.name;
+  document.getElementById('uw-type').value = c.type;
+  document.getElementById('uw-rsi').value = c.rsi;
+  document.getElementById('uw-rse').value = c.rse;
+  layers = JSON.parse(JSON.stringify(c.layers));
+  renderLayers();
+  document.querySelector('.tab[data-page="uwert"]').click();
+}
+function deleteConstruction(id){
+  let list = JSON.parse(localStorage.getItem('uwert_constructions')||'[]');
+  list = list.filter(x=>x.id!==id);
+  localStorage.setItem('uwert_constructions', JSON.stringify(list));
+  renderLibrary();
+}
+
+/* ============================================================
+   SEITE 2: FENSTER / TÜR
+   ============================================================ */
+function fensterCalc(){
+  const bMm = parseFloat(document.getElementById('fw-b').value)||0;
+  const hMm = parseFloat(document.getElementById('fw-h').value)||0;
+  const rMm = parseFloat(document.getElementById('fw-rahmen').value)||0;
+  const felder = Math.max(1, parseInt(document.getElementById('fw-felder').value)||1);
+  const Ug = parseFloat(document.getElementById('fw-ug').value)||0;
+  const Uf = parseFloat(document.getElementById('fw-uf').value)||0;
+  const psig = parseFloat(document.getElementById('fw-psig').value)||0;
+
+  const b = bMm/1000, h = hMm/1000, r = rMm/1000;
+  const Atot = b*h;
+  // vereinfachte Annahme: gleich große Felder nebeneinander (1 Reihe)
+  const glasB = (b - r*(felder+1))/felder;
+  const glasH = h - 2*r;
+  const Ag = Math.max(0, glasB*glasH*felder);
+  const Af = Math.max(0, Atot - Ag);
+  const lg = felder>0 ? 2*(glasB+glasH)*felder : 0;
+
+  const Uw = Atot>0 ? (Ug*Ag + Uf*Af + psig*lg)/Atot : 0;
+
+  document.getElementById('fw-result').textContent = Uw.toFixed(3);
+  document.getElementById('fw-ag').textContent = Ag.toFixed(3)+' m²';
+  document.getElementById('fw-af').textContent = Af.toFixed(3)+' m²';
+  document.getElementById('fw-lg').textContent = lg.toFixed(2)+' m';
+  document.getElementById('fw-atot').textContent = Atot.toFixed(3)+' m²';
+}
+function tuerCalc(){
+  const Ud = parseFloat(document.getElementById('tr-ud').value)||0;
+  const Uf = parseFloat(document.getElementById('tr-uf').value)||0;
+  const Ad = parseFloat(document.getElementById('tr-ad').value)||0;
+  const Af = parseFloat(document.getElementById('tr-af').value)||0;
+  const Atot = Ad+Af;
+  const U = Atot>0 ? (Ud*Ad+Uf*Af)/Atot : 0;
+  document.getElementById('tr-result').textContent = U.toFixed(3);
+}
+fensterCalc(); tuerCalc();
+
+/* ============================================================
+   SEITE 3: WÄRMEBRÜCKEN-SIMULATOR
+   ============================================================ */
+const SIM_PALETTE = [
+  {id:'innenluft', name:'Innenluft', color:'#3a6ea5', isAir:'in'},
+  {id:'aussenluft', name:'Außenluft', color:'#2a3a55', isAir:'out'},
+].concat(allMaterials().filter(m=>!m.R_fix).map(m=>({id:m.id,name:m.name,color:m.color,lambda:m.lambda})));
+
+let simCols=0, simRows=0, simCellCm=2;
+let simGrid = null; // Uint8Array of palette index
+let simRZone = null; // Float32Array, NOVAL = no override, else custom Rsi/Rse in m²K/W for that air cell
+const NOVAL = -9999;
+let simActiveBrush = 2; // default first real material
+let simInited = false;
+let simIsPointerDown = false;
+let simTool = 'brush'; // 'brush' | 'rect' | 'eraser' | 'rzone'
+let simRZoneValue = null; // currently selected override value to paint
+let rectDragStart = null; // {x,y} cell coords
+let rectDragCurrent = null;
+let undoStack = [];
+const CELL_PX = 8;
+
+const SIM_TOOLS = [
+  {id:'brush', name:'✏ Pinsel'},
+  {id:'rect', name:'▭ Rechteck'},
+  {id:'eraser', name:'⌫ Radiergummi'},
+  {id:'rzone', name:'🌡 Wärmeübergang'},
+];
+function renderTools(){
+  const wrap = document.getElementById('sim-tools');
+  wrap.innerHTML = SIM_TOOLS.map(t=>`
+    <div class="chip ${simTool===t.id?'active':''}" onclick="selectTool('${t.id}')">${t.name}</div>
+  `).join('');
+  document.getElementById('tool-brush-opts').style.display = simTool==='brush' ? '' : 'none';
+  document.getElementById('tool-rect-opts').style.display = simTool==='rect' ? '' : 'none';
+  document.getElementById('tool-rzone-opts').style.display = simTool==='rzone' ? '' : 'none';
+}
+function selectTool(id){ simTool = id; rectDragStart=null; rectDragCurrent=null; renderTools(); drawSimGrid(); }
+
+function renderPalette(){
+  const wrap = document.getElementById('sim-palette');
+  wrap.innerHTML = SIM_PALETTE.map((m,i)=>`
+    <div class="matbtn ${i===simActiveBrush?'active':''}" onclick="selectBrush(${i})">
+      <div class="swatch" style="background:${m.color};"></div>${m.name}
+    </div>
+  `).join('');
+}
+function selectBrush(i){ simActiveBrush = i; renderPalette(); }
+
+function setRZoneValue(v){
+  simRZoneValue = (v===null || isNaN(v)) ? null : v;
+  document.getElementById('rzone-active').textContent = simRZoneValue===null
+    ? 'Aktiver Wert: keiner gewählt (malt = Zurücksetzen)'
+    : `Aktiver Wert: ${simRZoneValue.toFixed(2)} m²K/W`;
+}
+function pushUndo(){
+  undoStack.push({grid: simGrid.slice(), rzone: simRZone.slice()});
+  if(undoStack.length>25) undoStack.shift();
+}
+function undoSim(){
+  const prev = undoStack.pop();
+  if(!prev){ return; }
+  simGrid = prev.grid; simRZone = prev.rzone;
+  drawSimGrid();
+  updateRZoneSummary();
+}
+
+function openMaterialEditor(){
+  const name = prompt('Materialname:');
+  if(!name) return;
+  const lambda = parseFloat(prompt('λ-Wert [W/mK]:','0.1'));
+  if(!lambda || lambda<=0){ alert('Ungültiger λ-Wert'); return; }
+  const color = prompt('Farbe (hex, z.B. #ff8800):','#ff8800') || '#ff8800';
+  const id = 'custom_'+Date.now();
+  customMaterials.push({id,name,lambda,color});
+  localStorage.setItem('uwert_custom_materials', JSON.stringify(customMaterials));
+  SIM_PALETTE.push({id,name,color,lambda});
+  renderPalette();
+  renderLayers();
+}
+
+function initSimGrid(){
+  simCellCm = Math.max(0.5, parseFloat(document.getElementById('sim-cell').value)||2);
+  const wCm = parseFloat(document.getElementById('sim-w').value)||140;
+  const hCm = parseFloat(document.getElementById('sim-h').value)||100;
+  simCols = Math.max(4, Math.round(wCm/simCellCm));
+  simRows = Math.max(4, Math.round(hCm/simCellCm));
+  if(simCols*simRows > 25000){ alert('Raster zu groß für die Simulation im Browser — bitte Zellgröße erhöhen.'); return; }
+  simGrid = new Uint8Array(simCols*simRows).fill(255); // 255 = leer
+  simRZone = new Float32Array(simCols*simRows).fill(NOVAL);
+  undoStack = [];
+  renderPalette();
+  renderTools();
+  drawSimGrid();
+  document.getElementById('sim-gridinfo').textContent = `${simCols} × ${simRows} Zellen · ${simCellCm} cm/Zelle · Feld = ${(simCols*simCellCm)}×${(simRows*simCellCm)} cm`;
+  document.getElementById('sim-results-card').style.display='none';
+  updateRZoneSummary();
+}
+function clearSimGrid(){
+  if(simGrid){ pushUndo(); simGrid.fill(255); simRZone.fill(NOVAL); }
+  drawSimGrid();
+  updateRZoneSummary();
+}
+
+function drawSimGrid(){
+  const canvas = document.getElementById('simCanvas');
+  canvas.width = simCols*CELL_PX;
+  canvas.height = simRows*CELL_PX;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#0a0a0a';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  for(let y=0;y<simRows;y++){
+    for(let x=0;x<simCols;x++){
+      const i = y*simCols+x;
+      const v = simGrid[i];
+      if(v===255) continue;
+      ctx.fillStyle = SIM_PALETTE[v].color;
+      ctx.fillRect(x*CELL_PX, y*CELL_PX, CELL_PX, CELL_PX);
+      if(simRZone[i]!==NOVAL){
+        ctx.fillStyle = 'rgba(255,45,200,0.85)';
+        const r = Math.max(1.5, CELL_PX*0.18);
+        ctx.beginPath();
+        ctx.arc(x*CELL_PX+CELL_PX/2, y*CELL_PX+CELL_PX/2, r, 0, Math.PI*2);
+        ctx.fill();
+      }
+    }
+  }
+  // gridlines light
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth=1;
+  for(let x=0;x<=simCols;x+=5){ ctx.beginPath(); ctx.moveTo(x*CELL_PX,0); ctx.lineTo(x*CELL_PX,canvas.height); ctx.stroke(); }
+  for(let y=0;y<=simRows;y+=5){ ctx.beginPath(); ctx.moveTo(0,y*CELL_PX); ctx.lineTo(canvas.width,y*CELL_PX); ctx.stroke(); }
+  // rectangle preview
+  if(simTool==='rect' && rectDragStart && rectDragCurrent){
+    const x0=Math.min(rectDragStart.x,rectDragCurrent.x), x1=Math.max(rectDragStart.x,rectDragCurrent.x)+1;
+    const y0=Math.min(rectDragStart.y,rectDragCurrent.y), y1=Math.max(rectDragStart.y,rectDragCurrent.y)+1;
+    ctx.strokeStyle = '#f2a30f'; ctx.lineWidth=2;
+    ctx.strokeRect(x0*CELL_PX, y0*CELL_PX, (x1-x0)*CELL_PX, (y1-y0)*CELL_PX);
+    document.getElementById('sim-gridinfo').textContent = `Rechteck: ${((x1-x0)*simCellCm).toFixed(1)} × ${((y1-y0)*simCellCm).toFixed(1)} cm`;
+  }
+}
+
+function cellFromEvent(clientX, clientY){
+  const canvas = document.getElementById('simCanvas');
+  const rect = canvas.getBoundingClientRect();
+  const cx = Math.floor((clientX-rect.left) / (rect.width/simCols));
+  const cy = Math.floor((clientY-rect.top) / (rect.height/simRows));
+  return {x: Math.min(simCols-1,Math.max(0,cx)), y: Math.min(simRows-1,Math.max(0,cy))};
+}
+
+function cellHasSolidNeighbor(x,y){
+  const nbrs = [[x-1,y],[x+1,y],[x,y-1],[x,y+1]];
+  for(const [nx,ny] of nbrs){
+    if(nx<0||nx>=simCols||ny<0||ny>=simRows) continue;
+    const v = simGrid[ny*simCols+nx];
+    if(v!==255 && !isAirIn(v) && !isAirOut(v)) return true;
+  }
+  return false;
+}
+
+function paintAt(clientX, clientY){
+  const c = cellFromEvent(clientX, clientY);
+  if(simTool==='brush' || simTool==='eraser'){
+    const brushCm = simTool==='eraser' ? simCellCm : Math.max(1, parseFloat(document.getElementById('sim-brush').value)||simCellCm);
+    const brushCells = Math.max(1, Math.round(brushCm/simCellCm/2));
+    for(let dy=-brushCells+1; dy<brushCells; dy++){
+      for(let dx=-brushCells+1; dx<brushCells; dx++){
+        const x=c.x+dx, y=c.y+dy;
+        if(x>=0&&x<simCols&&y>=0&&y<simRows){
+          const i=y*simCols+x;
+          simGrid[i] = simTool==='eraser' ? 255 : simActiveBrush;
+          simRZone[i] = NOVAL; // neues Material -> lokale Übergangs-Zone zurücksetzen
+        }
+      }
+    }
+    drawSimGrid();
+    updateRZoneSummary();
+  } else if(simTool==='rzone'){
+    const i = c.y*simCols+c.x;
+    const v = simGrid[i];
+    if((isAirIn(v)||isAirOut(v)) && cellHasSolidNeighbor(c.x,c.y)){
+      simRZone[i] = simRZoneValue===null ? NOVAL : simRZoneValue;
+      drawSimGrid();
+      updateRZoneSummary();
+    }
+  }
+  // 'rect' tool handled separately via drag in bindCanvasEvents
+}
+
+function insertRectRange(x0,y0,x1,y1){
+  const matIdx = simActiveBrush;
+  for(let y=y0;y<y1;y++){
+    for(let x=x0;x<x1;x++){
+      if(x<0||x>=simCols||y<0||y>=simRows) continue;
+      const i=y*simCols+x;
+      simGrid[i]=matIdx;
+      simRZone[i]=NOVAL;
+    }
+  }
+  drawSimGrid();
+  updateRZoneSummary();
+}
+
+function insertExactRect(){
+  if(!simGrid){ alert('Bitte zuerst Raster aufbauen.'); return; }
+  pushUndo();
+  const xCm = parseFloat(document.getElementById('rect-x').value)||0;
+  const yCm = parseFloat(document.getElementById('rect-y').value)||0;
+  const wCm = parseFloat(document.getElementById('rect-w').value)||0;
+  const hCm = parseFloat(document.getElementById('rect-h').value)||0;
+  const x0 = Math.round(xCm/simCellCm), y0 = Math.round(yCm/simCellCm);
+  const x1 = x0 + Math.max(1,Math.round(wCm/simCellCm)), y1 = y0 + Math.max(1,Math.round(hCm/simCellCm));
+  insertRectRange(x0,y0,x1,y1);
+}
+
+function updateRZoneSummary(){
+  const el = document.getElementById('sim-rzone-summary');
+  if(!el) return;
+  if(!simRZone){ el.textContent=''; return; }
+  const counts = {};
+  for(let i=0;i<simRZone.length;i++){
+    if(simRZone[i]!==NOVAL){
+      const key = simRZone[i].toFixed(2);
+      counts[key] = (counts[key]||0)+1;
+    }
+  }
+  const keys = Object.keys(counts);
+  if(!keys.length){ el.textContent=''; return; }
+  el.innerHTML = '🌡 Eigene Wärmeübergangs-Zonen: ' + keys.map(k=>`${k} m²K/W (${counts[k]} Zellen)`).join(' · ');
+}
+
+function bindCanvasEvents(){
+  const canvas = document.getElementById('simCanvas');
+  const onDown = e=>{
+    simIsPointerDown=true;
+    const p=pt(e);
+    if(simTool==='rect'){
+      pushUndo();
+      rectDragStart = cellFromEvent(p.x,p.y);
+      rectDragCurrent = rectDragStart;
+      drawSimGrid();
+    } else {
+      pushUndo();
+      paintAt(p.x,p.y);
+    }
+    e.preventDefault();
+  };
+  const onMove = e=>{
+    if(!simIsPointerDown) return;
+    const p=pt(e);
+    if(simTool==='rect'){
+      rectDragCurrent = cellFromEvent(p.x,p.y);
+      drawSimGrid();
+    } else {
+      paintAt(p.x,p.y);
+    }
+    e.preventDefault();
+  };
+  const onUp = ()=>{
+    if(simTool==='rect' && rectDragStart && rectDragCurrent){
+      const x0=Math.min(rectDragStart.x,rectDragCurrent.x), x1=Math.max(rectDragStart.x,rectDragCurrent.x)+1;
+      const y0=Math.min(rectDragStart.y,rectDragCurrent.y), y1=Math.max(rectDragStart.y,rectDragCurrent.y)+1;
+      insertRectRange(x0,y0,x1,y1);
+      rectDragStart=null; rectDragCurrent=null;
+      document.getElementById('sim-gridinfo').textContent = `${simCols} × ${simRows} Zellen · ${simCellCm} cm/Zelle`;
+    }
+    simIsPointerDown=false;
+  };
+  function pt(e){ if(e.touches&&e.touches[0]) return {x:e.touches[0].clientX,y:e.touches[0].clientY}; return {x:e.clientX,y:e.clientY}; }
+  canvas.addEventListener('mousedown', onDown);
+  canvas.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onUp);
+  canvas.addEventListener('touchstart', onDown, {passive:false});
+  canvas.addEventListener('touchmove', onMove, {passive:false});
+  canvas.addEventListener('touchend', onUp);
+}
+bindCanvasEvents();
+
+/* ---------- Presets ---------- */
+function loadPreset(name){
+  document.getElementById('sim-w').value = 140;
+  document.getElementById('sim-h').value = 100;
+  document.getElementById('sim-cell').value = 2;
+  initSimGrid();
+  const idx = id => SIM_PALETTE.findIndex(m=>m.id===id);
+  const set = (x0,y0,x1,y1,matId) => {
+    const v = idx(matId);
+    for(let y=y0;y<y1;y++) for(let x=x0;x<x1;x++) if(x>=0&&x<simCols&&y>=0&&y<simRows) simGrid[y*simCols+x]=v;
+  };
+  if(name==='ecke'){
+    // Außenwand Ecke: L-förmige Wand, außen oben+links Luft, Dämmung außenseitig
+    set(0,0,simCols,simRows,'aussenluft');
+    // wand L-form 30cm dick, dämmung 14cm außen
+    const wd = Math.round(30/simCellCm), dd = Math.round(14/simCellCm);
+    set(wd+dd, wd+dd, simCols, simRows, 'innenluft');
+    set(wd, wd, simCols, simRows, 'ziegel');
+    set(wd+dd, wd+dd, simCols, simRows, 'innenluft');
+    set(0,0,wd+dd,simRows,'mineralwolle');
+    set(0,0,simCols,wd+dd,'mineralwolle');
+    set(dd,dd,wd+dd,simRows,'ziegel');
+    set(dd,dd,simCols,wd+dd,'ziegel');
+    set(wd+dd,wd+dd,simCols,simRows,'innenluft');
+  } else if(name==='sturz'){
+    // Fenstersturz: oben Wand mit Betonsturz, darunter Fenster/Glas, dahinter innenluft
+    set(0,0,simCols,simRows,'aussenluft');
+    const wandY = Math.round(20/simCellCm);
+    set(0,0,simCols,wandY,'mineralwolle');
+    set(4,4,simCols,wandY,'ziegel');
+    // Sturz Betonriegel
+    const sturzY0=wandY, sturzY1=wandY+Math.round(24/simCellCm);
+    set(0,sturzY0,simCols,sturzY1,'beton');
+    // darunter Fenster
+    set(4,sturzY1,simCols-4,simRows,'glas2fach');
+    set(0,sturzY1-2,4,simRows,'ziegel');
+    set(simCols-4,sturzY1-2,simCols,simRows,'ziegel');
+    set(4,simRows-2,simCols-4,simRows,'innenluft');
+    set(4,sturzY0-1,4+2,sturzY1,'innenluft'); // grob
+  } else if(name==='sockel'){
+    // Bodenplatte / Sockel: unten Erdreich/Platte(Beton), Wand darüber, Perimeterdämmung
+    set(0,0,simCols,simRows,'aussenluft');
+    const plattenY0 = Math.round(60/simCellCm), plattenY1=plattenY0+Math.round(20/simCellCm);
+    set(0,plattenY0,simCols,plattenY1,'beton'); // Bodenplatte
+    const wd=Math.round(24/simCellCm);
+    set(Math.round(20/simCellCm), 0, Math.round(20/simCellCm)+wd, plattenY0, 'ziegel');
+    set(Math.round(20/simCellCm)-Math.round(10/simCellCm), 0, Math.round(20/simCellCm), plattenY0, 'mineralwolle');
+    // Perimeterdämmung unter/neben Platte
+    set(0, plattenY0-Math.round(8/simCellCm), simCols, plattenY0, 'eps');
+    set(Math.round(20/simCellCm)+wd, 0, simCols, plattenY0, 'innenluft');
+    set(0, plattenY1, simCols, simRows, 'innenluft'); // vereinfachte Innenraum-Zone unter Platte weggelassen
+  } else if(name==='balkon'){
+    // Auskragende Balkonplatte: Wand mit Dämmung, durchstoßende Betonplatte
+    set(0,0,simCols,simRows,'aussenluft');
+    const wd = Math.round(30/simCellCm);
+    set(wd, 0, simCols, simRows, 'innenluft');
+    set(0,0,wd,simRows,'mineralwolle');
+    set(Math.round(8/simCellCm),0,wd,simRows,'ziegel');
+    // Balkonplatte durchstoßend
+    const platY0=Math.round(40/simCellCm), platY1=platY0+Math.round(16/simCellCm);
+    set(0,platY0,wd+Math.round(50/simCellCm),platY1,'beton');
+  }
+  drawSimGrid();
+}
+
+/* ---------- SOLVER ---------- */
+function lambdaOf(idx){
+  if(idx===255) return null;
+  return SIM_PALETTE[idx].lambda;
+}
+function isAirIn(idx){ return idx!==255 && SIM_PALETTE[idx].isAir==='in'; }
+function isAirOut(idx){ return idx!==255 && SIM_PALETTE[idx].isAir==='out'; }
+
+function runSimulation(){
+  if(!simGrid){ alert('Bitte zuerst Raster aufbauen.'); return; }
+  const Tin = parseFloat(document.getElementById('sim-tin').value);
+  const Tout = parseFloat(document.getElementById('sim-tout').value);
+  const Rsi = parseFloat(document.getElementById('sim-rsi').value)||0.13;
+  const Rse = parseFloat(document.getElementById('sim-rse').value)||0.04;
+  const dx = simCellCm/100; // m
+
+  const n = simCols*simRows;
+  const T = new Float32Array(n);
+  const fixed = new Uint8Array(n); // 1 = Dirichlet fixed
+  // init
+  let hasIn=false, hasOut=false, hasSolid=false;
+  for(let i=0;i<n;i++){
+    const v = simGrid[i];
+    if(isAirIn(v)){ T[i]=Tin; fixed[i]=1; hasIn=true; }
+    else if(isAirOut(v)){ T[i]=Tout; fixed[i]=1; hasOut=true; }
+    else if(v!==255){ T[i]=(Tin+Tout)/2; hasSolid=true; }
+    else { T[i]=(Tin+Tout)/2; } // leer -> wie Luft ohne Randbedingung, wird wie sehr leichtes Material behandelt
+  }
+  if(!hasIn || !hasOut){ alert('Bitte sowohl Innenluft als auch Außenluft im Raster markieren.'); return; }
+
+  // Vorab-Konduktanzen zwischen Nachbarn berechnen (4-connectivity), inkl. Rsi/Rse an Luftgrenzen
+  // G[i][dir] gespeichert on the fly during iteration for performance -> precompute arrays
+  const Gr = new Float32Array(n); // rechts
+  const Gd = new Float32Array(n); // unten
+  const EMPTY_LAMBDA = 0.5; // näherungsweise für unbemalte Zellen (verhindert Singularitäten), grobe Annahme ruhende Luft im Hohlraum
+  function lamAt(i){
+    const v = simGrid[i];
+    if(v===255) return EMPTY_LAMBDA;
+    if(isAirIn(v)||isAirOut(v)) return null; // air handled via fixed T, conductance calc special-cased
+    return SIM_PALETTE[v].lambda;
+  }
+  for(let y=0;y<simRows;y++){
+    for(let x=0;x<simCols;x++){
+      const i = y*simCols+x;
+      // rechts
+      if(x<simCols-1){
+        const j = i+1;
+        Gr[i] = conductanceBetween(i,j);
+      }
+      // unten
+      if(y<simRows-1){
+        const j = i+simCols;
+        Gd[i] = conductanceBetween(i,j);
+      }
+    }
+  }
+  function conductanceBetween(i,j){
+    const vi=simGrid[i], vj=simGrid[j];
+    const iAir = isAirIn(vi)||isAirOut(vi);
+    const jAir = isAirIn(vj)||isAirOut(vj);
+    if(iAir && jAir) return 0; // beide luft, kein flux relevant (beide fixed sowieso)
+    if(iAir || jAir){
+      // eine Seite Luft (fixed), andere solid: R = Rsurf + halbe Zelle solid
+      const airCellIdx = iAir?i:j;
+      const solidLambda = iAir ? lamAt(j) : lamAt(i);
+      const override = simRZone[airCellIdx];
+      const Rsurf = override!==NOVAL ? override : (isAirIn(vi)||isAirIn(vj) ? Rsi : Rse);
+      const Rtotal = Rsurf + (dx/2)/solidLambda;
+      return 1/Rtotal; // pro m² (dx bereits Zellbreite, Tiefe 1m angenommen -> G in W/K pro laufendem Meter Bautiefe, Fläche=dx*1)
+        // Hinweis: physikalisch ist Leitwert G = A/R mit A=dx*1m (Bautiefe), das kürzt sich beim GS-Update konsistent weg,
+        // da alle Konduktanzen dieselbe Flächenreferenz (dx*1) nutzen.
+    }
+    // beide solid (oder leer)
+    const li = lamAt(i), lj = lamAt(j);
+    const Rtotal = (dx/2)/li + (dx/2)/lj;
+    return 1/Rtotal;
+  }
+
+  // Gauss-Seidel Iteration
+  const maxIter = 3000;
+  const progressEl = document.getElementById('sim-progress');
+  let iter=0;
+  function step(batch){
+    let maxDelta = 0;
+    for(let b=0;b<batch;b++){
+      for(let y=0;y<simRows;y++){
+        for(let x=0;x<simCols;x++){
+          const i = y*simCols+x;
+          if(fixed[i]) continue;
+          let sumG=0, sumGT=0;
+          if(x>0){ const g=Gr[i-1]; sumG+=g; sumGT+=g*T[i-1]; }
+          if(x<simCols-1){ const g=Gr[i]; sumG+=g; sumGT+=g*T[i+1]; }
+          if(y>0){ const g=Gd[i-simCols]; sumG+=g; sumGT+=g*T[i-simCols]; }
+          if(y<simRows-1){ const g=Gd[i]; sumG+=g; sumGT+=g*T[i+simCols]; }
+          if(sumG>0){
+            const newT = sumGT/sumG;
+            const delta = Math.abs(newT - T[i]);
+            if(delta>maxDelta) maxDelta=delta;
+            T[i] = newT;
+          }
+        }
+      }
+      iter++;
+    }
+    return maxDelta;
+  }
+  // run in chunks to keep UI responsive-ish (synchronous is fine for typical grid sizes here, but chunk to allow progress text)
+  let delta = 1;
+  const t0 = performance.now();
+  while(iter<maxIter && delta>0.0005){
+    delta = step(20);
+    if(performance.now()-t0 > 8000){ break; } // Sicherheitsabbruch
+  }
+  progressEl.textContent = `Konvergiert nach ${iter} Iterationen (Δ=${delta.toFixed(4)} K)`;
+
+  renderSimResults(T, fixed, Tin, Tout, Rsi, Rse, dx);
+}
+
+function renderSimResults(T, fixed, Tin, Tout, Rsi, Rse, dx){
+  document.getElementById('sim-results-card').style.display='block';
+  // heatmap
+  const canvas = document.getElementById('simResultCanvas');
+  canvas.width = simCols*CELL_PX;
+  canvas.height = simRows*CELL_PX;
+  const ctx = canvas.getContext('2d');
+  const tMin = Math.min(Tin,Tout), tMax = Math.max(Tin,Tout);
+  const bands = 12;
+  function colorFor(t){
+    let frac = (t - tMin)/(tMax-tMin || 1);
+    frac = Math.min(1,Math.max(0,frac));
+    // banded isotherm-like coloring: blue -> cyan -> green -> yellow -> red
+    const banded = Math.floor(frac*bands)/bands;
+    const stops = [
+      [42,58,120],[42,120,180],[60,170,140],[150,190,60],[230,190,40],[230,110,40],[200,40,30]
+    ];
+    const pos = banded*(stops.length-1);
+    const i0 = Math.floor(pos), i1=Math.min(stops.length-1,i0+1), f=pos-i0;
+    const c0=stops[i0], c1=stops[i1];
+    const r = Math.round(c0[0]+(c1[0]-c0[0])*f);
+    const g = Math.round(c0[1]+(c1[1]-c0[1])*f);
+    const b = Math.round(c0[2]+(c1[2]-c0[2])*f);
+    return `rgb(${r},${g},${b})`;
+  }
+  for(let y=0;y<simRows;y++){
+    for(let x=0;x<simCols;x++){
+      const i=y*simCols+x;
+      if(simGrid[i]===255 && !fixed[i]){ ctx.fillStyle='#111'; }
+      else ctx.fillStyle = colorFor(T[i]);
+      ctx.fillRect(x*CELL_PX,y*CELL_PX,CELL_PX,CELL_PX);
+    }
+  }
+  // legend
+  const legend = document.getElementById('sim-legend');
+  legend.innerHTML='';
+  for(let k=0;k<40;k++){
+    const t = tMin + (tMax-tMin)*k/39;
+    const d = document.createElement('div');
+    d.style.background = colorFor(t);
+    legend.appendChild(d);
+  }
+  document.getElementById('sim-legend-min').textContent = tMin.toFixed(1)+' °C';
+  document.getElementById('sim-legend-max').textContent = tMax.toFixed(1)+' °C';
+
+  // min surface temp inside: solid cells adjacent to innenluft
+  let tsiMin = Infinity;
+  let tsiMinCell = null; // {x,y} des kritischen Bauteil-Cells (nicht der Luftzelle)
+  for(let y=0;y<simRows;y++){
+    for(let x=0;x<simCols;x++){
+      const i=y*simCols+x;
+      if(!isAirIn(simGrid[i])) continue;
+      const nbrs = [{x:x-1,y,i:i-1},{x:x+1,y,i:i+1},{x,y:y-1,i:i-simCols},{x,y:y+1,i:i+simCols}];
+      nbrs.forEach(n=>{
+        if(n.x<0||n.x>=simCols||n.y<0||n.y>=simRows) return;
+        if(!isAirIn(simGrid[n.i]) && !isAirOut(simGrid[n.i])){
+          if(T[n.i] < tsiMin){ tsiMin = T[n.i]; tsiMinCell = {x:n.x,y:n.y}; }
+        }
+      });
+    }
+  }
+  if(!isFinite(tsiMin)) tsiMin = NaN;
+  const fRsi = (tsiMin - Tout)/(Tin - Tout);
+
+  document.getElementById('res-tsimin').textContent = isFinite(tsiMin) ? tsiMin.toFixed(2)+' °C' : '–';
+  document.getElementById('res-frsi').textContent = isFinite(fRsi) ? fRsi.toFixed(3) : '–';
+  const moldEl = document.getElementById('res-mold');
+  if(isFinite(fRsi)){
+    moldEl.innerHTML = fRsi < 0.7 ? '<span class="badge bad">Risiko</span>' : '<span class="badge ok">unkritisch</span>';
+  } else moldEl.textContent='–';
+
+  // Wärmestrom: Summe der Flüsse über eine Spalte knapp an der Außenluft-Grenze
+  let Q = 0; // W pro m Bautiefe (da G bereits pro dx*1m Fläche berechnet)
+  for(let y=0;y<simRows;y++){
+    for(let x=0;x<simCols;x++){
+      const i=y*simCols+x;
+      if(!isAirOut(simGrid[i])) continue;
+      const nbrs=[];
+      if(x>0) nbrs.push(i-1);
+      if(x<simCols-1) nbrs.push(i+1);
+      if(y>0) nbrs.push(i-simCols);
+      if(y<simRows-1) nbrs.push(i+simCols);
+      nbrs.forEach(j=>{
+        if(!isAirOut(simGrid[j])){
+          // Konduktanz just for this pair recompute quickly via stored not available post-hoc; approximate via temps und Rse (bzw. lokaler Override)
+          const solidLambda = (!isAirIn(simGrid[j]) && simGrid[j]!==255) ? SIM_PALETTE[simGrid[j]].lambda : 0.5;
+          const overrideQ = simRZone[i];
+          const Rtotal = (overrideQ!==NOVAL ? overrideQ : Rse) + (dx/2)/solidLambda;
+          const g = 1/Rtotal;
+          Q += g*(T[j]-T[i]);
+        }
+      });
+    }
+  }
+  const L2D = Math.abs(Q)/Math.abs(Tin-Tout);
+  document.getElementById('res-l2d').textContent = L2D.toFixed(4)+' W/(mK)';
+  document.getElementById('res-q').textContent = Math.abs(Q).toFixed(2)+' W/m';
+
+  window._lastSim = {L2D, tsiMinCell, fRsi};
+  generateSuggestion(tsiMinCell, fRsi);
+}
+
+/* ---------- Sanierungsvorschlag ---------- */
+function generateSuggestion(cell, fRsi){
+  const box = document.getElementById('sim-suggestion');
+  const actions = document.getElementById('sim-suggestion-actions');
+  const btn = document.getElementById('fix-apply-btn');
+  if(!cell || !isFinite(fRsi)){ box.textContent=''; actions.style.display='none'; btn.style.display='none'; return; }
+
+  if(fRsi >= 0.7){
+    box.innerHTML = `<span class="badge ok">Unkritisch</span> Kein akuter Handlungsbedarf — f_Rsi liegt über dem DIN 4108-2 Grenzwert von 0,7.`;
+    actions.style.display='none'; btn.style.display='none';
+    return;
+  }
+
+  const i = cell.y*simCols+cell.x;
+  const matIdx = simGrid[i];
+  const matName = matIdx!==255 ? SIM_PALETTE[matIdx].name : 'unbekannt';
+  const lambda = matIdx!==255 ? (SIM_PALETTE[matIdx].lambda||null) : null;
+
+  // Heuristik: Position im Raster + Material am kritischen Punkt
+  const nearEdgeX = cell.x < simCols*0.15 || cell.x > simCols*0.85;
+  const nearEdgeY = cell.y < simRows*0.15 || cell.y > simRows*0.85;
+  const isCorner = nearEdgeX && nearEdgeY;
+  const isHighConductive = lambda && lambda > 0.5;
+  // grober Test: liegt in der Nähe (±6 Zellen) sowohl Innen- als auch Außenluft nahe an diesem Material -> durchgehendes Bauteil (Wärmebrücke durch Material)
+  function airWithinRadius(cx,cy,r,type){
+    for(let dy=-r;dy<=r;dy++) for(let dx=-r;dx<=r;dx++){
+      const x=cx+dx,y=cy+dy;
+      if(x<0||x>=simCols||y<0||y>=simRows) continue;
+      const v = simGrid[y*simCols+x];
+      if(type==='in' && isAirIn(v)) return true;
+      if(type==='out' && isAirOut(v)) return true;
+    }
+    return false;
+  }
+  const spansThrough = isHighConductive && airWithinRadius(cell.x,cell.y,4,'in') && airWithinRadius(cell.x,cell.y,4,'out');
+
+  let text = '';
+  if(spansThrough){
+    text = `<span class="badge bad">Durchgehendes Bauteil erkannt</span> Am kritischen Punkt liegt „${matName}" (λ=${lambda}), das ohne ausreichende Dämmschicht von innen nach außen reicht (z.B. auskragende Platte, Sturz, Konsole). Empfehlung: thermische Trennung bzw. nachträgliche Dämmung genau an dieser Stelle — bei Beton-Durchdringungen idealerweise mit umlaufender Dämmung, bei Stahlbetonplatten (Balkon) ggf. Iso-Korb-Nachrüstung prüfen (aufwendiger, aber wirksamste Lösung).`;
+  } else if(isCorner){
+    text = `<span class="badge warn">Geometrische Ecke</span> Kritischster Punkt liegt in einer Gebäude-/Raumecke bei „${matName}". Typisch für reduzierte Luftzirkulation dort (siehe Wärmeübergangs-Zone „Ecke/Nische · 0,25"). Empfehlung: Innendämmkeil (30-50mm, kapillaraktiv/diffusionsoffen) im Eckbereich anbringen, ca. 50cm auslaufend an beiden Wandseiten.`;
+  } else {
+    text = `Kritischster Punkt liegt an „${matName}"${lambda?` (λ=${lambda})`:''}. Empfehlung: punktuelle Zusatzdämmung an dieser Stelle.`;
+  }
+  box.innerHTML = text;
+  actions.style.display = 'flex';
+  btn.style.display = 'inline-block';
+
+  // Material-Auswahl für Fix befüllen (nur Dämmstoffe, λ<0.06)
+  const sel = document.getElementById('fix-material');
+  const insulators = SIM_PALETTE.map((m,idx)=>({idx,...m})).filter(m=>m.lambda && m.lambda<=0.06);
+  sel.innerHTML = insulators.map(m=>`<option value="${m.idx}">${m.name}</option>`).join('');
+  window._suggestionCell = cell;
+}
+
+function applySuggestedFix(){
+  const cell = window._suggestionCell;
+  if(!cell){ return; }
+  pushUndo();
+  const matIdx = parseInt(document.getElementById('fix-material').value);
+  const thicknessCm = parseFloat(document.getElementById('fix-thickness').value)||4;
+  const radiusCells = Math.max(1, Math.round(thicknessCm/simCellCm));
+  for(let dy=-radiusCells; dy<=radiusCells; dy++){
+    for(let dx=-radiusCells; dx<=radiusCells; dx++){
+      const x=cell.x+dx, y=cell.y+dy;
+      if(x<0||x>=simCols||y<0||y>=simRows) continue;
+      const v = simGrid[y*simCols+x];
+      if(v!==255 && !isAirIn(v) && !isAirOut(v)){
+        simGrid[y*simCols+x] = matIdx;
+        simRZone[y*simCols+x] = NOVAL;
+      }
+    }
+  }
+  drawSimGrid();
+  updateRZoneSummary();
+  document.getElementById('sim-suggestion').innerHTML += '<br><span class="small-note">✓ Maßnahme in Zeichnung angewendet — jetzt neu simulieren zum Prüfen.</span>';
+}
+
+function calcPsi(){
+  if(!window._lastSim){ alert('Bitte zuerst Simulation ausführen.'); return; }
+  const u1 = parseFloat(document.getElementById('psi-u1').value)||0;
+  const l1 = parseFloat(document.getElementById('psi-l1').value)||0;
+  const u2 = parseFloat(document.getElementById('psi-u2').value)||0;
+  const l2 = parseFloat(document.getElementById('psi-l2').value)||0;
+  const psi = window._lastSim.L2D - (u1*l1 + u2*l2);
+  document.getElementById('psi-result').textContent = psi.toFixed(4);
+}
+
+/* ============================================================
+   SEITE GEBÄUDE: ENERGIEBILANZ / KÜHLLAST / WIRTSCHAFTLICHKEIT
+   ============================================================ */
+let gebComponents = [
+  {typ:'wall', quelle:'manual', constrId:null, u:0.28, flaeche:120, orientation:'sued', gwert:0.6, glasanteil:70},
+  {typ:'roof', quelle:'manual', constrId:null, u:0.20, flaeche:90, orientation:'sued', gwert:0.6, glasanteil:70},
+  {typ:'floor-ground', quelle:'manual', constrId:null, u:0.30, flaeche:90, orientation:'sued', gwert:0.6, glasanteil:70},
+  {typ:'window', quelle:'manual', constrId:null, u:1.30, flaeche:20, orientation:'sued', gwert:0.6, glasanteil:70},
+];
+const GEB_TYPES = {
+  wall:'Außenwand', roof:'Dach', 'floor-ground':'Boden/Erdreich', window:'Fenster', door:'Tür', innerwall:'Innenwand'
+};
+const ORIENT_SOLAR_HEIZ = {sued:300, ost:200, west:200, nord:120, horizontal:250}; // kWh/m²a Heizperiode, grob
+const ORIENT_SOLAR_PEAK = {sued:230, ost:400, west:400, nord:120, horizontal:700}; // W/m² peak Kühllast, grob
+
+function savedConstructions(){ return JSON.parse(localStorage.getItem('uwert_constructions')||'[]'); }
+
+function renderGebComponents(){
+  const wrap = document.getElementById('geb-components');
+  const constrs = savedConstructions();
+  wrap.innerHTML = gebComponents.map((c,i)=>`
+    <div class="layer-row" style="flex-wrap:wrap;">
+      <select style="flex:1.2;" onchange="gebComponents[${i}].typ=this.value; renderGebComponents();">
+        ${Object.keys(GEB_TYPES).map(k=>`<option value="${k}" ${k===c.typ?'selected':''}>${GEB_TYPES[k]}</option>`).join('')}
+      </select>
+      <select style="flex:1.2;" onchange="gebComponents[${i}].quelle=this.value; renderGebComponents();">
+        <option value="manual" ${c.quelle==='manual'?'selected':''}>Manueller U-Wert</option>
+        <option value="lib" ${c.quelle==='lib'?'selected':''}>Aus Bibliothek</option>
+      </select>
+      ${c.quelle==='lib' ? `
+        <select style="flex:1.5;" onchange="gebComponents[${i}].constrId=this.value; renderGebComponents();">
+          <option value="">– wählen –</option>
+          ${constrs.map(x=>`<option value="${x.id}" ${x.id===c.constrId?'selected':''}>${x.name} (U=${x.U.toFixed(2)})</option>`).join('')}
+        </select>
+      ` : `
+        <input type="number" step="0.01" value="${c.u}" placeholder="U [W/m²K]" oninput="gebComponents[${i}].u=parseFloat(this.value)||0;">
+      `}
+      <input type="number" value="${c.flaeche}" placeholder="Fläche m²" oninput="gebComponents[${i}].flaeche=parseFloat(this.value)||0;">
+      ${c.typ==='window' ? `
+        <select style="flex:1;" onchange="gebComponents[${i}].orientation=this.value;">
+          <option value="sued" ${c.orientation==='sued'?'selected':''}>Süd</option>
+          <option value="ost" ${c.orientation==='ost'?'selected':''}>Ost</option>
+          <option value="west" ${c.orientation==='west'?'selected':''}>West</option>
+          <option value="nord" ${c.orientation==='nord'?'selected':''}>Nord</option>
+        </select>
+        <input type="number" step="0.05" value="${c.gwert}" placeholder="g-Wert" style="max-width:70px;" oninput="gebComponents[${i}].gwert=parseFloat(this.value)||0;">
+      ` : ''}
+      <button class="small danger" onclick="gebComponents.splice(${i},1); renderGebComponents();">✕</button>
+    </div>
+  `).join('');
+  renderWirtComponentSelect();
+}
+function addGebComponent(){
+  gebComponents.push({typ:'wall', quelle:'manual', constrId:null, u:0.28, flaeche:20, orientation:'sued', gwert:0.6, glasanteil:70});
+  renderGebComponents();
+}
+function resolveU(c){
+  if(c.quelle==='lib' && c.constrId){
+    const found = savedConstructions().find(x=>x.id===c.constrId);
+    return found ? found.U : 0;
+  }
+  return c.u||0;
+}
+
+function calcGebaeude(){
+  const Gt = parseFloat(document.getElementById('geb-gt').value)||3500;
+  const Ve = parseFloat(document.getElementById('geb-ve').value)||0;
+  const Angf = parseFloat(document.getElementById('geb-angf').value)||0;
+  const n = parseFloat(document.getElementById('geb-n').value)||0.5;
+  const dWB = parseFloat(document.getElementById('geb-dwb').value)||0.05;
+  const qi = parseFloat(document.getElementById('geb-qi').value)||5;
+  const hp = parseFloat(document.getElementById('geb-hp').value)||5300;
+  const eta = parseFloat(document.getElementById('geb-eta').value)||0.85;
+
+  let HT_base = 0, Afl = 0, Qs = 0;
+  gebComponents.forEach(c=>{
+    const U = resolveU(c);
+    HT_base += U * c.flaeche;
+    Afl += c.flaeche;
+    if(c.typ==='window'){
+      Qs += c.flaeche * (c.gwert||0.6) * 0.9 * (ORIENT_SOLAR_HEIZ[c.orientation]||200) / 1000;
+    }
+  });
+  const HT = HT_base + dWB*Afl;
+  const HV = 0.34 * n * Ve;
+  const Hges = HT + HV;
+  const Qverlust = Hges * Gt * 24/1000; // kWh/a
+  const Qi = qi * Angf * hp/1000; // kWh/a
+  const QH = Math.max(0, Qverlust - eta*(Qi+Qs));
+  const spez = Angf>0 ? QH/Angf : 0;
+
+  document.getElementById('geb-ht').textContent = HT.toFixed(1)+' W/K';
+  document.getElementById('geb-hv').textContent = HV.toFixed(1)+' W/K';
+  document.getElementById('geb-hges').textContent = Hges.toFixed(1)+' W/K';
+  document.getElementById('geb-qverlust').textContent = Qverlust.toFixed(0)+' kWh/a';
+  document.getElementById('geb-qi-out').textContent = Qi.toFixed(0)+' kWh/a';
+  document.getElementById('geb-qs-out').textContent = Qs.toFixed(0)+' kWh/a';
+  document.getElementById('geb-qh').textContent = QH.toFixed(0);
+  document.getElementById('geb-qh-spez').textContent = spez.toFixed(0)+' kWh/(m²a)';
+  document.getElementById('geb-results-card').style.display = 'block';
+  window._lastGebaeude = {HT, HV, Hges, Angf};
+}
+
+function calcKuehllast(){
+  if(!window._lastGebaeude){ alert('Bitte zuerst Energiebilanz berechnen.'); return; }
+  const {HT, Angf} = window._lastGebaeude;
+  const TeK = parseFloat(document.getElementById('geb-te-kuehl').value)||32;
+  const TiK = parseFloat(document.getElementById('geb-ti-kuehl').value)||26;
+  const qik = parseFloat(document.getElementById('geb-qik').value)||10;
+
+  const Qtrans = HT * (TeK - TiK); // W
+  let Qsolar = 0;
+  gebComponents.forEach(c=>{
+    if(c.typ==='window'){
+      Qsolar += c.flaeche * (c.gwert||0.6) * 0.9 * (ORIENT_SOLAR_PEAK[c.orientation]||300);
+    }
+  });
+  const Qintern = qik * Angf;
+  const Qpeak = Qtrans + Qsolar + Qintern;
+
+  document.getElementById('kuehl-trans').textContent = Qtrans.toFixed(0)+' W';
+  document.getElementById('kuehl-solar').textContent = Qsolar.toFixed(0)+' W';
+  document.getElementById('kuehl-intern').textContent = Qintern.toFixed(0)+' W';
+  document.getElementById('kuehl-peak').textContent = (Qpeak/1000).toFixed(2);
+}
+
+/* ---------- Wirtschaftlichkeit ---------- */
+function renderWirtComponentSelect(){
+  const sel = document.getElementById('wirt-component');
+  if(!sel) return;
+  sel.innerHTML = gebComponents.map((c,i)=>`<option value="${i}">${GEB_TYPES[c.typ]} · ${c.flaeche} m² · U=${resolveU(c).toFixed(2)}</option>`).join('');
+}
+
+function calcWirtschaftlichkeit(){
+  const idx = parseInt(document.getElementById('wirt-component').value);
+  const c = gebComponents[idx];
+  if(!c){ alert('Kein Bauteil gewählt.'); return; }
+  const Gt = parseFloat(document.getElementById('geb-gt').value)||3500;
+  const lambda = parseFloat(document.getElementById('wirt-lambda').value)||0.035;
+  const preis = parseFloat(document.getElementById('wirt-preis').value)||0.10;
+  const grund = parseFloat(document.getElementById('wirt-grund').value)||40;
+  const material = parseFloat(document.getElementById('wirt-material').value)||3.5;
+  const ziel = parseFloat(document.getElementById('wirt-ziel').value)||20;
+
+  const U0 = resolveU(c);
+  const R0 = U0>0 ? 1/U0 : 5;
+  const A = c.flaeche;
+
+  const dicken = [2,4,6,8,10,12,14,16,18,20,24,28,32];
+  let rows = [];
+  let optimum = null;
+  let prevAmort = null;
+  dicken.forEach(d=>{
+    const Rneu = R0 + (d/100)/lambda;
+    const Uneu = 1/Rneu;
+    const dU = U0 - Uneu;
+    const einsparungKwh = dU * A * Gt*24/1000;
+    const einsparungEuro = einsparungKwh * preis;
+    const investition = A*grund + A*material*d;
+    const amort = einsparungEuro>0 ? investition/einsparungEuro : Infinity;
+    rows.push({d, Uneu, einsparungKwh, einsparungEuro, investition, amort});
+    if(amort <= ziel) optimum = d; // letzte Dicke, die noch innerhalb Ziel liegt -> danach evtl. Grenznutzen sinkend geprüft unten
+  });
+
+  // wirtschaftliches Optimum: größte Dicke, bei der der Grenznutzen der nächsten 2cm noch die Investition innerhalb Ziel-Amortisation refinanziert
+  let recommended = dicken[0];
+  for(let k=0;k<rows.length;k++){
+    if(rows[k].amort <= ziel) recommended = rows[k].d;
+  }
+
+  let html = '<table><tr><th>Dicke</th><th>U neu</th><th>Einsparung</th><th>Invest.</th><th>Amort.</th></tr>';
+  rows.forEach(r=>{
+    const isRec = r.d===recommended;
+    html += `<tr style="${isRec?'background:rgba(242,163,15,0.12);':''}">
+      <td>${r.d} cm${isRec?' ⭐':''}</td>
+      <td>${r.Uneu.toFixed(3)}</td>
+      <td>${r.einsparungKwh.toFixed(0)} kWh/a</td>
+      <td>${r.investition.toFixed(0)} €</td>
+      <td>${isFinite(r.amort)?r.amort.toFixed(1)+' J':'–'}</td>
+    </tr>`;
+  });
+  html += '</table>';
+  html += `<div class="hint" style="margin-top:8px;">⭐ Empfohlene Dicke: <b style="color:var(--amber);">${recommended} cm</b> — letzte Stufe, die sich innerhalb von ${ziel} Jahren amortisiert. Dickere Dämmung bringt zwar mehr Einsparung, aber die Investition rentiert sich dann nicht mehr im Zielzeitraum (Grenznutzen sinkt mit jedem cm, da die Energieeinsparung pro cm abnimmt, während die Materialkosten linear steigen).</div>`;
+  document.getElementById('wirt-results').innerHTML = html;
+}
+
+/* init */
+renderLayers();
+</script>
+</body>
+</html>
