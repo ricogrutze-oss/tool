@@ -777,16 +777,6 @@ input::placeholder{color:var(--muted);}
 
 <script>
 'use strict';
-const STEPS=[
-  {pct:100,lbl:'Stufe 100 %',isRef:true, tol:null,isZero:false,
-   instr:'Wechselrichter auf Vollleistung bringen.<br>Kamera auf die Impuls-LED des Zählers richten und LED antippen.'},
-  {pct:60, lbl:'Stufe 60 %', isRef:false,tol:5,   isZero:false,
-   instr:'FAE-Signal auf 60 % Begrenzung senden.<br>Auf stabile Anzeige warten, dann bestätigen.'},
-  {pct:30, lbl:'Stufe 30 %', isRef:false,tol:5,   isZero:false,
-   instr:'FAE-Signal auf 30 % Begrenzung senden.<br>Auf stabile Anzeige warten, dann bestätigen.'},
-  {pct:0,  lbl:'Stufe 0 %',  isRef:false,tol:null,isZero:true,
-   instr:'Einspeisung vollständig sperren.<br>Kein Impuls erwartet — LED bleibt still.'},
-];
 const U=400,S3=Math.sqrt(3);
 const toA=kw=>kw*1000/(U*S3);
 const f=(v,d)=>v.toFixed(d);
@@ -794,6 +784,9 @@ const $=id=>document.getElementById(id);
 
 const ST={
   impConst:1000, wandler:1, numImpulse:10,
+  einspeisemodus:'voll',   // 'voll' | 'ueberschuss'
+  pDir:1,                  // +1=P+ (Einspeisung/Import positiv), -1=P- (Export positiv)
+  eigenverbrauch:null,     // kW, from 0%-EV step
   anlageKw:null, anlageFak:1, anlageBase:null,
   anlageNr:'', zaehlerNr:'', fheNr:'', faeCode:'',
   gpsCoords:null, gpsAddr:'',
@@ -802,7 +795,7 @@ const ST={
   roi:null, pulses:[], brightHist:[], inPulse:false,
   stable:false, curPwr:null, lastPulseMs:0,
   sensitivity:50, refractory:40, useIR:false,
-  qrStream:null, qrRaf:null, qrRunning:false, bdector:null,
+  qrStream:null, qrRaf:null, qrRunning:false, bdector:null, qrTarget:'anlage-nr',
 };
 
 function switchTab(tab){
@@ -817,12 +810,9 @@ function switchTab(tab){
 }
 
 function clearForNewTest(){
-  // Clear identification fields for a fresh test
-  // (keep measurement settings: Wandler, Impulskonstante, Anlagenleistung)
   const fields=['anlage-nr','zaehler-nr','fhe-nr','fae-code'];
   fields.forEach(id=>{const el=$(id);if(el)el.value='';});
 }
-function showHistory(){show('setup');switchTab('hist');}
 
 // ── CFG SIGNATURE PAD ────────────────────────────────────────
 let cfgSigCtx=null, cfgDrawing=false, cfgLastX=0, cfgLastY=0, cfgHasData=false;
