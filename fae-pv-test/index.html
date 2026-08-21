@@ -1631,6 +1631,18 @@ function closeQR(){
   $('qr-modal').classList.remove('open');
 }
 
+// ── TEST CAMERA ──────────────────────────────────────────────
+function initTestCam(){
+  camOpen=false;
+  const cs=$('cam-section');if(cs)cs.style.display='none';
+  const tb=$('cam-toggle-btn');
+  if(tb){tb.classList.remove('open');tb.textContent='📷 Kamera-Impulse einblenden';}
+  if(ST.stream){ST.stream.getTracks().forEach(t=>t.stop());ST.stream=null;}
+  cancelAnimationFrame(ST.raf);
+  resetPulse();
+  updateStepUI();
+}
+
 let camOpen=false;
 function toggleCam(){
   camOpen=!camOpen;
