@@ -1854,9 +1854,9 @@ function clearStepPhotoUI(){
 function onManKw(){
   const kw=parseFloat($('man-kw').value);
   if(!isNaN(kw)){
-    // Back-calculate A from kW (÷ wandler for secondary side display)
-    const a=(kw*1000)/(400*S3*(ST.wandler||1));
-    $('man-a').value=f(Math.abs(a),2);
+    // Back-calculate A: primary side (no CT factor)
+    const a=(Math.abs(kw)*1000)/(400*S3);
+    $('man-a').value=f(a,2);
     $('man-a-kw').textContent=`→ ${f(kw,3)} kW`;
   } else {
     $('man-a-kw').textContent='→ — kW';
@@ -1865,8 +1865,8 @@ function onManKw(){
 function onManA(){
   const a=parseFloat($('man-a').value);
   if(!isNaN(a)){
-    // P = I × √3 × 400V × wandler / 1000  (wandler for secondary→primary CT)
-    const kw=a*400*S3*(ST.wandler||1)/1000;
+    // Primary side current → P = I × √3 × 400V / 1000  (NO Wandlerfaktor)
+    const kw=a*400*S3/1000;
     $('man-kw').value=f(kw,3);
     $('man-a-kw').textContent=`→ ${f(kw,3)} kW`;
   } else {
@@ -2010,23 +2010,24 @@ function updatePwrDisplay(){
   }else if(!step.isZero){
     const base=ST.anlageBase||ST.refPower;
     const pNom=base*step.pct/100;
-    const pMax=base*(step.pct+step.tol)/100;
-    const pMinNom=base*(step.pct-step.tol)/100;
+    const pMax=base*(step.pct+step.tol)/100; // e.g. 65% for 60% step
+    const pMinNom=base*(step.pct-step.tol)/100; // e.g. 55% for 60% step
     const overLimit=effectivePwr>pMax;
     const underNom=effectivePwr<pMinNom;
     updateTolBar(effectivePwr,pMinNom,pMax,pNom);
     if(!ST.stable){setBadge('wait','⌛ Stabilisierung …');$('btn-ok').disabled=true;}
-    else if(overLimit){setBadge('fail','✗ ÜBEREINSPEISUNG – FAE prüfen');$('btn-ok').disabled=false;}
+    else if(overLimit){setBadge('fail',`✗ > ${step.pct+step.tol} % – MANGEL`);$('btn-ok').disabled=false;}
     else if(underNom){setBadge('ok','⚠ SONNEN-LIMITIERT – BESTANDEN');$('btn-ok').disabled=false;}
-    else{setBadge('ok','✓ IN BEREICH');$('btn-ok').disabled=false;}
+    else{setBadge('ok',`✓ IN BEREICH (${step.pct-step.tol}–${step.pct+step.tol} %)`);$('btn-ok').disabled=false;}
   }else{
-    // 0% step (Volleinspeisung)
-    if(ST.stable&&ST.refPower){
-      const base=ST.anlageBase||ST.refPower;
-      const pass=effectivePwr<=base*0.01;
-      setBadge(pass?'ok':'fail',pass?'✓ ≤ 1 % – BESTANDEN':'✗ ZU HOCH');
-      $('btn-ok').disabled=false;
-    }
+    // 0% step: 0–5% allowed
+    const base=ST.anlageBase||ST.refPower;
+    const pMax5=base*0.05;
+    const over5=Math.abs(effectivePwr)>pMax5;
+    if(base){updateTolBar(Math.abs(effectivePwr),0,pMax5,0);}
+    if(!ST.stable&&pwr===null){setBadge('wait','⌛ Warte …');$('btn-ok').disabled=true;}
+    else if(over5){setBadge('fail','✗ > 5 % – MANGEL');$('btn-ok').disabled=false;}
+    else if(pwr!==null){setBadge('ok','✓ ≤ 5 % – BESTANDEN');$('btn-ok').disabled=false;}
   }
 }
 
@@ -2098,7 +2099,7 @@ function confirmStep(){
     addResult(effectivePwr,effectivePwr<=pMax);
   }else{
     const base=ST.anlageBase||ST.refPower;
-    addResult(effectivePwr,!ST.curPwr||Math.abs(effectivePwr)<=base*0.01);
+    addResult(effectivePwr,!ST.curPwr||Math.abs(effectivePwr)<=base*0.05); // 5% erlaubt
   }
   advance();
 }
@@ -2109,7 +2110,7 @@ function addResult(pwr,pass,isEVStep=false){
   const tgt=s.isEV?pwr:(s.isZero?0:(base?base*s.pct/100:pwr));
   const pMinNom=base&&s.tol?base*(s.pct-s.tol)/100:0;
   const pMaxNom=base?base*(s.pct+(s.tol||0))/100:Infinity;
-  const overLimit=!isEVStep&&(s.isRef?(base&&pwr>base):(s.isZero?Math.abs(pwr)>(base||0)*0.01:pwr>pMaxNom));
+  const overLimit=!isEVStep&&(s.isRef?(base&&pwr>base):(s.isZero?Math.abs(pwr)>(base||0)*0.05:pwr>pMaxNom));
   const sunLimited=!s.isRef&&!s.isZero&&!isEVStep&&pwr<pMinNom&&!overLimit;
   const pctOfBase=base?(pwr/base*100):null;
   ST.results.push({lbl:s.lbl,pct:s.pct,tgt,pwr,pctOfBase,pass,sunLimited,overLimit,isEVStep,
