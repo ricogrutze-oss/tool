@@ -1664,6 +1664,7 @@ async function startCam(){
 }
 
 // Tap overlay → reposition ROI
+const ovl=$('tovl');
 ovl.addEventListener('click',e=>{
   const vid=$('tvid');
   const rc=ovl.getBoundingClientRect();
