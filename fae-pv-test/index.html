@@ -663,6 +663,7 @@ input::placeholder{color:var(--muted);}
       <div id="pwfak"></div>
     </div>
     <div id="badge" class="badge wait">⏳ Warte auf Impuls …</div>
+    <div id="range-info" style="font-family:var(--mono);font-size:.68rem;color:var(--muted);margin-top:.25rem;line-height:1.5;"></div>
   </div>
 
   <div class="tol-sec" id="tol-sec">
@@ -993,7 +994,7 @@ const STEPS_VOLL=[
    instr:'FAE-Signal 60 % senden.<br>Weiter P− Einspeisung. Auf stabile Anzeige warten.'},
   {pct:30, lbl:'Stufe 30 %',           isRef:false,tol:5,   isZero:false,isEV:false,pDirDef:-1,
    instr:'FAE-Signal 30 % senden.<br>Weiter P− Einspeisung. Auf stabile Anzeige warten.'},
-  {pct:0,  lbl:'Stufe 0 %',            isRef:false,tol:null,isZero:true, isEV:false,pDirDef:1,
+  {pct:0,  lbl:'Stufe 0 %',            isRef:false,tol:null,isZero:true, isEV:false,pDirDef:-1,
    instr:'Einspeisung sperren.<br>Kein Impuls erwartet — LED bleibt still.'},
 ];
 const STEPS_UEBERSCHUSS=[
@@ -1369,7 +1370,7 @@ function renderProto(){
     ['Ertragsfaktor',   ST.anlageFak?(ST.anlageFak.toFixed(2)+' → '+(ST.anlageBase||0).toFixed(1)+' kW'):'—'],
     ['Impulskonstante', ST.impConst+' imp/kWh'],
     ['Wandlerfaktor',   ST.wandler>1?ST.wandler.toFixed(2):'Direkt'],
-    ['Ref. 100 % (PV)', ST.refPower?ST.refPower.toFixed(3)+' kW':'—'],
+    ['Ref. 100 % (PV)', ST.refPower!=null?f(Math.abs(ST.refPower),3)+' kW':'—'],
     ['Eigenverbrauch Pe',ST.eigenverbrauch!=null?f(ST.eigenverbrauch,3)+' kW':'—'],
     ['Basis Teststufen', ST.anlageBase?ST.anlageBase.toFixed(1)+' kW':'—'],
   ];
@@ -1389,38 +1390,28 @@ function renderProto(){
   }
   const tb=$('rtbody');tb.innerHTML='';
   let anyOverFail=false, anyUnderFail=false, anyWarn=false;
+  const isVoll=ST.einspeisemodus!=='ueberschuss';
   ST.results.forEach(r=>{
+    // Normalize: Volleinspeisung always positive for display
+    const dispPwr = (isVoll && !r.isEVStep) ? Math.abs(r.pwr) : r.pwr;
+    const dispPct = r.pctOfBase!==null ? Math.abs(r.pctOfBase) : null;
     const tr=document.createElement('tr');
     // Soll: always show the numeric target (100% → anlageBase, others → pct% of base)
     const sollStr=f(r.tgt,3);
-    const pctStr=r.pctOfBase!=null?f(r.pctOfBase,1)+' %':'—';
-    // Icon logic:
-    // ✓ green  = pass, fully in band
-    // ⚠ yellow = sun-limited pass  OR  fail but under-production (too little, not dangerous)
-    // ✗ red    = over-production (too much = FAE not working = critical)
+    const pctStr=dispPct!=null?f(dispPct,1)+' %':'—';
+    const icon_pass=!r.pass;
     let icon, rowStyle='';
     if(!r.pass){
-      if(r.overLimit){
-        icon='<span class="fi" style="font-size:1.25rem;">✗</span>';
-        rowStyle='background:rgba(248,81,73,.06);';
-        anyOverFail=true;
-      }else{
-        icon='<span class="wi" style="font-size:1.25rem;">⚠</span>';
-        rowStyle='background:rgba(240,165,0,.06);';
-        anyUnderFail=true;
-      }
-    }else if(r.sunLimited){
-      icon='<span class="wi" style="font-size:1.25rem;">⚠</span>';
-      anyWarn=true;
-    }else{
-      icon='<span class="pi" style="font-size:1.25rem;">✓</span>';
-    }
+      if(r.overLimit){icon='<span class="fi" style="font-size:1.25rem;">✗</span>';rowStyle='background:rgba(248,81,73,.06);';anyOverFail=true;}
+      else{icon='<span class="wi" style="font-size:1.25rem;">⚠</span>';rowStyle='background:rgba(240,165,0,.06);';anyUnderFail=true;}
+    }else if(r.sunLimited){icon='<span class="wi" style="font-size:1.25rem;">⚠</span>';anyWarn=true;}
+    else{icon='<span class="pi" style="font-size:1.25rem;">✓</span>';}
     tr.style.cssText=rowStyle;
     tr.innerHTML=
       `<td style="font-weight:600;">${r.lbl}</td>`+
       `<td><span style="color:var(--muted)">${sollStr}</span></td>`+
-      `<td><strong>${f(r.pwr,3)}</strong></td>`+
-      `<td style="text-align:right;color:${r.pctOfBase!=null&&r.pct>0&&Math.abs(r.pctOfBase-r.pct)<5?'var(--green)':'var(--text)'}">${pctStr}</td>`+
+      `<td><strong>${f(dispPwr,3)}</strong></td>`+
+      `<td style="text-align:right;">${pctStr}</td>`+
       `<td style="text-align:center">${icon}</td>`;
     tb.appendChild(tr);
   });
@@ -1948,10 +1939,13 @@ function isStable(){
 function updatePwrDisplay(){
   const step=STEPS[ST.step];
   const isManual=ST.manualPwr!==null;
-  const pwr=isManual?ST.manualPwr:calcPwr();
+  const isUE=ST.einspeisemodus==='ueberschuss';
+  let rawPwr=isManual?ST.manualPwr:calcPwr();
+  // In Volleinspeisung: always positive (feed-in = magnitude, sign irrelevant)
+  // In Überschusseinspeisung: keep sign (needed for Pe−P formula)
+  const pwr = (rawPwr!==null && !isUE && !step.isEV) ? Math.abs(rawPwr) : rawPwr;
   ST.curPwr=pwr;
   if(!isManual) ST.stable=isStable();
-  const isUE=ST.einspeisemodus==='ueberschuss';
 
   // Wandlerfaktor hint
   $('pwfak').textContent=ST.wandler>1?`× ${ST.wandler.toFixed(2)} (Wandler)`:
@@ -2003,6 +1997,8 @@ function updatePwrDisplay(){
   if(step.isRef){
     const base=ST.anlageBase;
     const over=base&&effectivePwr>base;
+    const ri=$('range-info');
+    if(ri&&base) ri.textContent=`Max. erlaubt: ${f(base,3)} kW (= 100 % von ${f(base,1)} kW Basis)`;
     if(ST.stable){
       if(over){setBadge('fail','✗ ÜBERINSTALLATION – PV-Leistung > Basis');$('btn-ok').disabled=false;}
       else{setBadge('ref','✓ Referenz stabil – bereit');$('btn-ok').disabled=false;}
@@ -2010,11 +2006,16 @@ function updatePwrDisplay(){
   }else if(!step.isZero){
     const base=ST.anlageBase||ST.refPower;
     const pNom=base*step.pct/100;
-    const pMax=base*(step.pct+step.tol)/100; // e.g. 65% for 60% step
-    const pMinNom=base*(step.pct-step.tol)/100; // e.g. 55% for 60% step
+    const pMax=base*(step.pct+step.tol)/100;
+    const pMinNom=base*(step.pct-step.tol)/100;
     const overLimit=effectivePwr>pMax;
     const underNom=effectivePwr<pMinNom;
     updateTolBar(effectivePwr,pMinNom,pMax,pNom);
+    // Range info
+    const ri=$('range-info');
+    if(ri&&base) ri.textContent=
+      `Soll: ${f(pNom,3)} kW | Erlaubt: ${f(pMinNom,3)} – ${f(pMax,3)} kW`+
+      ` (${step.pct-step.tol}–${step.pct+step.tol} % von ${f(base,1)} kW)`;
     if(!ST.stable){setBadge('wait','⌛ Stabilisierung …');$('btn-ok').disabled=true;}
     else if(overLimit){setBadge('fail',`✗ > ${step.pct+step.tol} % – MANGEL`);$('btn-ok').disabled=false;}
     else if(underNom){setBadge('ok','⚠ SONNEN-LIMITIERT – BESTANDEN');$('btn-ok').disabled=false;}
@@ -2025,6 +2026,8 @@ function updatePwrDisplay(){
     const pMax5=base*0.05;
     const over5=Math.abs(effectivePwr)>pMax5;
     if(base){updateTolBar(Math.abs(effectivePwr),0,pMax5,0);}
+    const ri=$('range-info');
+    if(ri&&base) ri.textContent=`Max. erlaubt: ${f(pMax5,3)} kW (= 5 % von ${f(base,1)} kW Basis)`;
     if(!ST.stable&&pwr===null){setBadge('wait','⌛ Warte …');$('btn-ok').disabled=true;}
     else if(over5){setBadge('fail','✗ > 5 % – MANGEL');$('btn-ok').disabled=false;}
     else if(pwr!==null){setBadge('ok','✓ ≤ 5 % – BESTANDEN');$('btn-ok').disabled=false;}
@@ -2063,7 +2066,10 @@ function updateStepUI(){
   $('btn-ok').textContent=s.isEV?'⚡ Eigenverbrauch bestätigen':s.isZero?'✓ Messwert bestätigen':'✓ Bestätigen';
   $('cam-hint').textContent=s.isEV?'P− messen — Zähler zeigt Bezug (Eigenverbrauch)':
     s.isZero?'Kein Impuls erwartet – LED still':'ROI auf LED — antippen zum Positionieren';
-  setPDir(s.pDirDef); // auto-set direction for this step
+  setPDir(s.pDirDef);
+  // P+/P- chips only relevant for Überschusseinspeisung
+  const pdirRow=document.querySelector('.pdir-row');
+  if(pdirRow) pdirRow.style.display=ST.einspeisemodus==='ueberschuss'?'flex':'none'; // auto-set direction for this step
   if(s.isZero&&!s.isEV) setBadge('wait','👁 Einspeisung gesperrt – kein Impuls erwartet');
   if(s.isEV) setBadge('wait','⚡ P− messen – Eigenverbrauch');
 }
@@ -2072,6 +2078,7 @@ function resetPulse(){
   setBadge('wait','⏳ Warte auf Impuls …');
   $('pkw').className='dim';$('pkw').textContent='---';
   $('pamps').textContent='--- A @ 400V/√3';
+  const ri=$('range-info');if(ri)ri.textContent='';
   $('btn-ok').disabled=true;
 }
 function resetPulseData(){ST.pulses=[];ST.brightHist=[];ST.inPulse=false;ST.stable=false;ST.curPwr=null;ST.lastPulseMs=0;}
@@ -2087,7 +2094,9 @@ function confirmStep(){
     addResult(pwr,true,true);
     advance();return;
   }
-  const effectivePwr=isUE?getPVPower(pwr):pwr;
+  const rawCur=ST.curPwr||0;
+  // Volleinspeisung: always positive; Überschusseinspeisung: keep sign for Pe-P
+  const effectivePwr=isUE?getPVPower(rawCur):(s.isEV?rawCur:Math.abs(rawCur));
   if(s.isRef){
     ST.refPower=effectivePwr;
     const base=ST.anlageBase;
