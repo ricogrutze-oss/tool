@@ -291,6 +291,24 @@ input::placeholder{color:var(--muted);}
   color:rgba(255,255,255,.7);background:rgba(0,0,0,.5);padding:.1rem .3rem;border-radius:2px;
 }
 
+/* Camera toggle */
+.cam-toggle-row{padding:.5rem 1rem;flex-shrink:0;border-top:1px solid var(--border);}
+.cam-toggle-btn{
+  width:100%;background:var(--card);border:1px solid var(--border);color:var(--muted);
+  font-family:var(--mono);font-size:.75rem;padding:.5rem;cursor:pointer;
+  text-align:left;letter-spacing:.04em;display:flex;align-items:center;gap:.5rem;
+}
+.cam-toggle-btn:hover{border-color:var(--accent);color:var(--accent);}
+.cam-toggle-btn.open{color:var(--accent);border-color:var(--accent);background:rgba(240,165,0,.07);}
+.cam-toggle-btn::after{content:'▼';margin-left:auto;font-size:.65rem;}
+.cam-toggle-btn.open::after{content:'▲';}
+
+/* Manual primary styling */
+.manual-ctrl{
+  padding:.6rem 1rem .7rem;border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);flex-shrink:0;
+}
+
 /* P+/P- Direction chips */
 .pdir-row{
   display:flex;align-items:center;gap:.5rem;padding:.35rem 1rem;
@@ -343,6 +361,30 @@ input::placeholder{color:var(--muted);}
 #sig-display{display:none;}
 #sig-display img{max-height:60px;border-bottom:1px solid #ccc;display:block;}
 #sig-display p{font-size:.65rem;color:var(--muted);font-family:var(--mono);margin-top:.2rem;}
+
+/* Manual power input */
+.manual-ctrl{
+  padding:.5rem 1rem .6rem;border-top:1px solid var(--border);
+  background:rgba(255,255,255,.02);flex-shrink:0;
+}
+.manual-hdr{
+  font-family:var(--mono);font-size:.6rem;color:var(--muted);
+  letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem;
+  display:flex;align-items:center;gap:.5rem;
+}
+.manual-hdr::after{content:'';flex:1;height:1px;background:var(--border);}
+.manual-row{display:flex;gap:.4rem;align-items:center;margin-bottom:.4rem;flex-wrap:wrap;}
+.manual-row input{
+  background:var(--card);border:1px solid var(--border);color:var(--text);
+  font-family:var(--mono);font-size:.9rem;padding:.4rem .6rem;
+  width:5.5rem;flex-shrink:0;-moz-appearance:textfield;
+}
+.manual-row input::-webkit-inner-spin-button{-webkit-appearance:none;}
+.manual-row input:focus{border-color:var(--accent);outline:none;}
+.manual-row .mu{font-family:var(--mono);font-size:.72rem;color:var(--muted);}
+.manual-row .sep{font-family:var(--mono);font-size:.68rem;color:var(--border);padding:0 .2rem;}
+.man-kw-calc{font-family:var(--mono);font-size:.7rem;color:var(--accent);}
+.manual-active{background:rgba(240,165,0,.08);border-color:rgba(240,165,0,.3);}
 
 /* ── PRINT ── */
 @media print{
@@ -578,50 +620,40 @@ input::placeholder{color:var(--muted);}
     </div>
   </div>
 
-  <div class="cam-wrap">
-    <video id="tvid" autoplay playsinline muted></video>
-    <canvas id="tovl"></canvas>
-    <div class="cam-hint" id="cam-hint">ROI auf LED ausrichten – antippen zum Verschieben</div>
+  <!-- P+/P- + EV info (always visible) -->
+  <div class="pdir-row no-print">
+    <span class="pdir-lbl">Richtung:</span>
+    <button class="pdir-chip plus active" id="pdir-plus" onclick="setPDir(1)">P+ Bezug</button>
+    <button class="pdir-chip minus" id="pdir-minus" onclick="setPDir(-1)">P− Einspeisung</button>
   </div>
+  <div class="ev-info" id="ev-info" style="display:none;"></div>
 
-  <!-- Signal scope + Detektionsparameter -->
-  <div class="det-ctrl no-print">
-    <canvas id="scope-cv" height="40" style="width:100%;height:40px;display:block;background:#0a0e14;"></canvas>
-    <div class="det-rows">
-      <div class="det-row" style="flex-wrap:wrap;gap:.35rem;">
-        <span class="det-lbl" style="width:auto;">imp/kWh</span>
-        <button class="imp-chip" onclick="setImpLive(1000)">1.000</button>
-        <button class="imp-chip" onclick="setImpLive(5000)">5.000</button>
-        <button class="imp-chip" onclick="setImpLive(10000)">10.000</button>
-        <button class="imp-chip" onclick="setImpLive(100000)">100.000</button>
-        <span id="imp-live-val" style="font-family:var(--mono);font-size:.68rem;color:var(--accent);margin-left:.3rem;"></span>
-      </div>
-      <div class="det-row">
-        <span class="det-lbl">Empfindlichkeit</span>
-        <input type="range" id="sens-sl" min="10" max="90" value="50" oninput="onSens(this)">
-        <span class="det-val" id="sens-val">50 %</span>
-      </div>
-      <div class="det-row">
-        <span class="det-lbl">Sperrzeit</span>
-        <input type="range" id="refr-sl" min="10" max="300" value="40" oninput="onRefr(this)">
-        <span class="det-val" id="refr-val">40 ms</span>
-      </div>
-      <div class="det-row" style="justify-content:space-between;">
-        <span class="det-lbl">IR-Modus (Rotkanal)</span>
-        <div class="ir-tog" id="ir-tog" onclick="toggleIR()"></div>
-      </div>
+  <!-- PRIMÄR: Manuelle Eingabe -->
+  <div class="manual-ctrl" id="manual-ctrl">
+    <div class="manual-hdr">Leistung eingeben</div>
+    <div class="manual-row">
+      <input type="number" id="man-kw" placeholder="kW" step="0.001" min="-9999" oninput="onManKw()"/>
+      <span class="mu">kW</span>
+      <span class="sep">oder</span>
+      <input type="number" id="man-a" placeholder="A (L1)" step="0.01" min="0" oninput="onManA()"/>
+      <span class="mu">A</span>
+      <span class="man-kw-calc" id="man-a-kw">→ — kW</span>
     </div>
+    <div style="display:flex;gap:.4rem;">
+      <button class="btn grn" onclick="useManual()" style="flex:2;font-size:.78rem;padding:.5rem;">✓ Verwenden</button>
+      <button class="btn sec" id="btn-clr-man" onclick="clearManual()" style="flex:1;font-size:.78rem;padding:.5rem;display:none;">× Aufheben</button>
+      <button class="btn sec" onclick="takeStepPhoto()" style="flex:0 0 auto;font-size:.78rem;padding:.5rem;" title="Foto vom Messgerät">📷</button>
+    </div>
+    <div id="step-photo-preview" style="display:none;margin-top:.4rem;align-items:center;gap:.5rem;">
+      <img id="step-photo-img" style="height:52px;border:1px solid var(--border);border-radius:2px;object-fit:cover;"/>
+      <span style="font-family:var(--mono);font-size:.65rem;color:var(--muted);flex:1;">Messgerät-Foto</span>
+      <button class="btn sec" onclick="removeStepPhoto()" style="width:auto;padding:.25rem .5rem;font-size:.8rem;">×</button>
+    </div>
+    <input type="file" id="step-photo-inp" accept="image/*" capture="environment" style="display:none" onchange="onStepPhoto(this)">
   </div>
 
+  <!-- Leistungsanzeige -->
   <div class="pwr-sec">
-    <!-- P+/P- direction selector -->
-    <div class="pdir-row no-print">
-      <span class="pdir-lbl">Richtung:</span>
-      <button class="pdir-chip plus active" id="pdir-plus" onclick="setPDir(1)">P+ Einspeisung</button>
-      <button class="pdir-chip minus" id="pdir-minus" onclick="setPDir(-1)">P− Verbrauch</button>
-    </div>
-    <div class="ev-info" id="ev-info" style="display:none;"></div>
-
     <div class="pwr-main">
       <div id="pkw" class="dim">---</div>
       <div class="pwr-u">kW</div>
@@ -649,14 +681,57 @@ input::placeholder{color:var(--muted);}
 
   <div class="instr" id="instr"></div>
 
-  <div class="actions">
-    <div class="imp-ctrl no-print">
-      <span>Mittelung über</span>
-      <button onclick="adjImp(-1)">−</button>
-      <span id="imp-n">10</span>
-      <button onclick="adjImp(+1)">+</button>
-      <span>Impulse</span>
+  <!-- Kamera-Impulse: einklappbar -->
+  <div class="cam-toggle-row no-print">
+    <button class="cam-toggle-btn" id="cam-toggle-btn" onclick="toggleCam()">
+      📷 Kamera-Impulse einblenden
+    </button>
+  </div>
+  <div id="cam-section" style="display:none;">
+    <div class="cam-wrap" style="max-height:28vh;">
+      <video id="tvid" autoplay playsinline muted></video>
+      <canvas id="tovl"></canvas>
+      <div class="cam-hint" id="cam-hint">Antippen zum Positionieren</div>
     </div>
+    <div class="det-ctrl">
+      <canvas id="scope-cv" height="36" style="width:100%;height:36px;display:block;background:#0a0e14;"></canvas>
+      <div class="det-rows">
+        <div class="det-row" style="flex-wrap:wrap;gap:.3rem;">
+          <span class="det-lbl" style="width:auto;">imp/kWh</span>
+          <button class="imp-chip" onclick="setImpLive(1000)">1.000</button>
+          <button class="imp-chip" onclick="setImpLive(5000)">5.000</button>
+          <button class="imp-chip" onclick="setImpLive(10000)">10.000</button>
+          <button class="imp-chip" onclick="setImpLive(100000)">100.000</button>
+          <span id="imp-live-val" style="font-family:var(--mono);font-size:.65rem;color:var(--accent);"></span>
+        </div>
+        <div class="det-row">
+          <span class="det-lbl">Empfindlichkeit</span>
+          <input type="range" id="sens-sl" min="10" max="90" value="50" oninput="onSens(this)">
+          <span class="det-val" id="sens-val">50 %</span>
+        </div>
+        <div class="det-row">
+          <span class="det-lbl">Sperrzeit</span>
+          <input type="range" id="refr-sl" min="10" max="300" value="40" oninput="onRefr(this)">
+          <span class="det-val" id="refr-val">40 ms</span>
+        </div>
+        <div class="det-row" style="justify-content:space-between;">
+          <span class="det-lbl">IR-Modus</span>
+          <div class="ir-tog" id="ir-tog" onclick="toggleIR()"></div>
+        </div>
+        <div class="det-row" style="justify-content:space-between;">
+          <span class="det-lbl">Mittelung</span>
+          <div class="imp-ctrl" style="border:none;padding:0;">
+            <button onclick="adjImp(-1)">−</button>
+            <span id="imp-n">10</span>
+            <button onclick="adjImp(+1)">+</button>
+            <span style="font-family:var(--mono);font-size:.65rem;color:var(--muted);">Impulse</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions">
     <button class="btn grn" id="btn-ok" onclick="confirmStep()" disabled>✓ Bestätigen</button>
     <button class="btn sec" id="btn-zero" onclick="confirmZero()" style="display:none;">
       Kein Impuls – 0 W bestätigen
@@ -790,10 +865,10 @@ const ST={
   anlageKw:null, anlageFak:1, anlageBase:null,
   anlageNr:'', zaehlerNr:'', fheNr:'', faeCode:'',
   gpsCoords:null, gpsAddr:'',
-  step:0, refPower:null, results:[], photos:[],
+  step:0, refPower:null, results:[], photos:[], stepPhotos:{},
   stream:null, raf:null,
   roi:null, pulses:[], brightHist:[], inPulse:false,
-  stable:false, curPwr:null, lastPulseMs:0,
+  stable:false, curPwr:null, lastPulseMs:0, manualPwr:null,
   sensitivity:50, refractory:40, useIR:false,
   qrStream:null, qrRaf:null, qrRunning:false, bdector:null, qrTarget:'anlage-nr',
 };
@@ -912,24 +987,24 @@ function showHistory(){show('setup');switchTab('hist');}
 
 // ── STEPS DEFINITIONS ────────────────────────────────────────
 const STEPS_VOLL=[
-  {pct:100,lbl:'Stufe 100 %',          isRef:true, tol:null,isZero:false,isEV:false,pDirDef:1,
-   instr:'Wechselrichter auf Vollleistung.<br>Kamera auf Impuls-LED, LED antippen.'},
-  {pct:60, lbl:'Stufe 60 %',           isRef:false,tol:5,   isZero:false,isEV:false,pDirDef:1,
-   instr:'FAE-Signal 60 % senden.<br>Auf stabile Anzeige warten.'},
-  {pct:30, lbl:'Stufe 30 %',           isRef:false,tol:5,   isZero:false,isEV:false,pDirDef:1,
-   instr:'FAE-Signal 30 % senden.<br>Auf stabile Anzeige warten.'},
+  {pct:100,lbl:'Stufe 100 %',          isRef:true, tol:null,isZero:false,isEV:false,pDirDef:-1,
+   instr:'Wechselrichter auf Vollleistung.<br>Volleinspeisung → <b>P− Einspeisung</b>.'},
+  {pct:60, lbl:'Stufe 60 %',           isRef:false,tol:5,   isZero:false,isEV:false,pDirDef:-1,
+   instr:'FAE-Signal 60 % senden.<br>Weiter P− Einspeisung. Auf stabile Anzeige warten.'},
+  {pct:30, lbl:'Stufe 30 %',           isRef:false,tol:5,   isZero:false,isEV:false,pDirDef:-1,
+   instr:'FAE-Signal 30 % senden.<br>Weiter P− Einspeisung. Auf stabile Anzeige warten.'},
   {pct:0,  lbl:'Stufe 0 %',            isRef:false,tol:null,isZero:true, isEV:false,pDirDef:1,
    instr:'Einspeisung sperren.<br>Kein Impuls erwartet — LED bleibt still.'},
 ];
 const STEPS_UEBERSCHUSS=[
   {pct:0,  lbl:'0 % — Eigenverbrauch', isRef:false,tol:null,isZero:true, isEV:true, pDirDef:1,
-   instr:'FAE 0 % — Einspeisung gesperrt.<br><b>P+ Richtung</b>: Zähler zeigt Bezug (+Pe aus Netz).<br>Pe = |Messwert| wird gespeichert.<br><i style="color:#f0a500">⚠ Zeigt Zähler P− (Export): FAE funktioniert nicht → Messung trotzdem möglich, Pe unbekannt.</i>'},
-  {pct:100,lbl:'Stufe 100 % (Referenz)',isRef:true, tol:null,isZero:false,isEV:false,pDirDef:1,
-   instr:'Wechselrichter auf Vollleistung.<br>P+ Richtung. PV-Leistung = Messwert + E.'},
-  {pct:60, lbl:'Stufe 60 %',           isRef:false,tol:5,   isZero:false,isEV:false,pDirDef:1,
-   instr:'FAE-Signal 60 % senden.<br>Wenn Messwert negativ wird: P− wählen.<br>PV-Leistung = Messwert + E.'},
-  {pct:30, lbl:'Stufe 30 %',           isRef:false,tol:5,   isZero:false,isEV:false,pDirDef:1,
-   instr:'FAE-Signal 30 % senden.<br>Wenn Messwert negativ: P− wählen.<br>PV-Leistung = Messwert + E.'},
+   instr:'FAE 0 % — Einspeisung gesperrt.<br><b>P+ wählen</b>: Zähler zeigt Bezug (Kunde nimmt aus Netz).<br>Messwert = +Pe (Eigenverbrauch).'},
+  {pct:100,lbl:'Stufe 100 % (Referenz)',isRef:true, tol:null,isZero:false,isEV:false,pDirDef:-1,
+   instr:'Wechselrichter auf Vollleistung.<br>PV speist ein → <b>P− Einspeisung</b> wählen.<br>PV-Leistung = Pe − P.'},
+  {pct:60, lbl:'Stufe 60 %',           isRef:false,tol:5,   isZero:false,isEV:false,pDirDef:-1,
+   instr:'FAE-Signal 60 % senden.<br>Speist noch ein → P− / Bezieht → P+.<br>PV-Leistung = Pe − P.'},
+  {pct:30, lbl:'Stufe 30 %',           isRef:false,tol:5,   isZero:false,isEV:false,pDirDef:-1,
+   instr:'FAE-Signal 30 % senden.<br>Speist noch ein → P− / Bezieht → P+.<br>PV-Leistung = Pe − P.'},
 ];
 let STEPS=STEPS_VOLL;
 
@@ -1241,6 +1316,9 @@ function saveTest(){
       datum:$('p-datum').value,
     };
     localStorage.setItem(LS+'test', JSON.stringify(payload));
+    // Step photos stored separately
+    try{localStorage.setItem(LS+'stepPhotos', JSON.stringify(ST.stepPhotos));}
+    catch{console.warn('Step-Fotos zu groß für localStorage');}
     // Photos stored separately (can be large)
     try{localStorage.setItem(LS+'photos', JSON.stringify(ST.photos));}
     catch{console.warn('Fotos zu groß für localStorage');}
@@ -1258,6 +1336,8 @@ function loadSavedTest(){
     ST.gpsCoords=d.gpsCoords||null; ST.gpsAddr=d.gpsAddr||'';
     ST.anlageNr=d.anlageNr||''; ST.zaehlerNr=d.zaehlerNr||'';
     ST.fheNr=d.fheNr||''; ST.faeCode=d.faeCode||'';
+    // Load step photos
+    try{ST.stepPhotos=JSON.parse(localStorage.getItem(LS+'stepPhotos')||'{}');}catch{ST.stepPhotos={};}
     // Load photos
     try{ST.photos=JSON.parse(localStorage.getItem(LS+'photos')||'[]');}catch{ST.photos=[];}
     renderProto();
@@ -1273,7 +1353,7 @@ function loadSavedTest(){
 
 function deleteTest(){
   if(!confirm('Aktuellen Testdaten und Fotos löschen?\n(Historie und Unterschrift bleiben erhalten)'))return;
-  try{localStorage.removeItem(LS+'test');localStorage.removeItem(LS+'photos');}catch{}
+  try{localStorage.removeItem(LS+'test');localStorage.removeItem(LS+'photos');localStorage.removeItem(LS+'stepPhotos');}catch{}
   ST.photos=[];
   renderPhotos();
   alert('Testdaten gelöscht.');
@@ -1366,6 +1446,24 @@ function renderProto(){
   $('p-zaehler').value=ST.zaehlerNr||'';
   $('p-fhe').value=ST.fheNr||'';
   $('p-fae').value=ST.faeCode;
+
+  // Step photos below table
+  let spContainer=$('step-photos-proto');
+  if(!spContainer){
+    spContainer=document.createElement('div');
+    spContainer.id='step-photos-proto';
+    spContainer.style.cssText='display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.5rem;';
+    tb.parentElement.after(spContainer);
+  }
+  spContainer.innerHTML='';
+  const stepsWithPhotos=ST.results.filter(r=>r.stepPhoto);
+  stepsWithPhotos.forEach(r=>{
+    const div=document.createElement('div');
+    div.style.cssText='display:flex;flex-direction:column;align-items:center;gap:.15rem;';
+    div.innerHTML=`<img src="${r.stepPhoto}" style="width:80px;height:80px;object-fit:cover;border:1px solid var(--border);border-radius:2px;"/>`+
+      `<span style="font-family:var(--mono);font-size:.55rem;color:var(--muted);">${r.lbl}</span>`;
+    spContainer.appendChild(div);
+  });
 }
 
 // ── SETUP LOGIC ──────────────────────────────────────────────
@@ -1375,12 +1473,11 @@ function onAnlageKwChange(){
   // Auto-set factor to 0.70 for systems < 100 kW
   const fak=parseFloat($('anlage-fak').value)||1;
   if(kw<100){
-    // only auto-set if user hasn't manually changed it (still default)
     if(parseFloat($('anlage-fak').value)===1.00||parseFloat($('anlage-fak').value)===1){
-      $('anlage-fak').value='0.70';
+      $('anlage-fak').value='0.60';
     }
   } else {
-    if(parseFloat($('anlage-fak').value)===0.70){
+    if(parseFloat($('anlage-fak').value)===0.60){
       $('anlage-fak').value='1.00';
     }
   }
@@ -1534,28 +1631,39 @@ function closeQR(){
   $('qr-modal').classList.remove('open');
 }
 
-// ── TEST CAMERA ──────────────────────────────────────────────
-async function initTestCam(){
-  resetPulse();updateStepUI();
-  if(ST.stream)return;
+let camOpen=false;
+function toggleCam(){
+  camOpen=!camOpen;
+  $('cam-section').style.display=camOpen?'block':'none';
+  $('cam-toggle-btn').classList.toggle('open',camOpen);
+  $('cam-toggle-btn').textContent=camOpen?'📷 Kamera-Impulse ausblenden':'📷 Kamera-Impulse einblenden';
+  if(camOpen&&!ST.stream){
+    // Start camera only when user opens the panel
+    startCam();
+  }else if(!camOpen&&ST.stream){
+    // Stop camera when closed to save battery
+    cancelAnimationFrame(ST.raf);
+    ST.stream.getTracks().forEach(t=>t.stop());
+    ST.stream=null;
+    ST.pulses=[];ST.brightHist=[];
+  }
+}
+
+async function startCam(){
   try{
     ST.stream=await navigator.mediaDevices.getUserMedia({
       video:{facingMode:{ideal:'environment'}}
     });
-    const v=$('tvid');
-    v.srcObject=ST.stream;
+    const v=$('tvid');v.srcObject=ST.stream;
     v.play().catch(()=>{});
-    // Start loop immediately – loop itself waits for readyState
     startDetection();
-    $('cam-hint').textContent='Kamera aktiv – LED antippen zum Positionieren';
+    $('cam-hint').textContent='Antippen zum Positionieren';
   }catch(e){
     $('cam-hint').textContent='Kamera: '+(e.message||'Nicht verfügbar');
-    if(STEPS[ST.step].isZero){$('btn-zero').style.display='block';}
   }
 }
 
-// Tap overlay → reposition ROI (rectangle, cover-corrected)
-const ovl=$('tovl');
+// Tap overlay → reposition ROI
 ovl.addEventListener('click',e=>{
   const vid=$('tvid');
   const rc=ovl.getBoundingClientRect();
@@ -1704,6 +1812,82 @@ function setImpLive(val){
   ST.pulses=[];ST.brightHist=[];ST.stable=false;ST.curPwr=null;
 }
 
+// ── STEP PHOTOS (per measurement step) ───────────────────────
+function takeStepPhoto(){
+  $('step-photo-inp').value='';
+  $('step-photo-inp').click();
+}
+function onStepPhoto(inp){
+  const file=inp.files[0];if(!file)return;
+  compressPhoto(file,600,0.72).then(dataUrl=>{
+    if(!dataUrl)return;
+    ST.stepPhotos[ST.step]=dataUrl;
+    showStepPhotoPreview(dataUrl);
+  });
+}
+function showStepPhotoPreview(src){
+  const p=$('step-photo-preview'),img=$('step-photo-img');
+  if(p&&img){img.src=src;p.style.display='flex';}
+}
+function removeStepPhoto(){
+  delete ST.stepPhotos[ST.step];
+  const p=$('step-photo-preview');if(p)p.style.display='none';
+}
+function clearStepPhotoUI(){
+  const p=$('step-photo-preview');if(p)p.style.display='none';
+  // Show photo for current step if it was already taken
+  if(ST.stepPhotos[ST.step]) showStepPhotoPreview(ST.stepPhotos[ST.step]);
+}
+function onManKw(){
+  const kw=parseFloat($('man-kw').value);
+  if(!isNaN(kw)){
+    // Back-calculate A from kW (÷ wandler for secondary side display)
+    const a=(kw*1000)/(400*S3*(ST.wandler||1));
+    $('man-a').value=f(Math.abs(a),2);
+    $('man-a-kw').textContent=`→ ${f(kw,3)} kW`;
+  } else {
+    $('man-a-kw').textContent='→ — kW';
+  }
+}
+function onManA(){
+  const a=parseFloat($('man-a').value);
+  if(!isNaN(a)){
+    // P = I × √3 × 400V × wandler / 1000  (wandler for secondary→primary CT)
+    const kw=a*400*S3*(ST.wandler||1)/1000;
+    $('man-kw').value=f(kw,3);
+    $('man-a-kw').textContent=`→ ${f(kw,3)} kW`;
+  } else {
+    $('man-a-kw').textContent='→ — kW';
+  }
+}
+function useManual(){
+  const kw=parseFloat($('man-kw').value);
+  if(isNaN(kw)){alert('Bitte kW oder A eingeben.');return;}
+  // Apply pDir sign for Überschusseinspeisung
+  const directed=kw*ST.pDir;
+  ST.manualPwr=directed;
+  ST.curPwr=directed;
+  ST.stable=true;
+  $('btn-clr-man').style.display='block';
+  $('manual-ctrl').classList.add('manual-active');
+  updatePwrDisplay();
+}
+function clearManual(){
+  ST.manualPwr=null;
+  $('man-kw').value='';$('man-a').value='';
+  $('man-a-kw').textContent='→ — kW';
+  $('btn-clr-man').style.display='none';
+  $('manual-ctrl').classList.remove('manual-active');
+  ST.stable=false; ST.curPwr=null;
+  updatePwrDisplay();
+}
+function resetManual(){
+  ST.manualPwr=null;
+  try{$('man-kw').value='';$('man-a').value='';$('man-a-kw').textContent='→ — kW';
+      $('btn-clr-man').style.display='none';
+      $('manual-ctrl').classList.remove('manual-active');}catch{}
+}
+
 function setPDir(dir){
   ST.pDir=dir;
   $('pdir-plus').classList.toggle('active',dir===1);
@@ -1750,7 +1934,10 @@ function isStable(){
 
 function updatePwrDisplay(){
   const step=STEPS[ST.step];
-  const pwr=calcPwr();ST.curPwr=pwr;ST.stable=isStable();
+  const isManual=ST.manualPwr!==null;
+  const pwr=isManual?ST.manualPwr:calcPwr();
+  ST.curPwr=pwr;
+  if(!isManual) ST.stable=isStable();
   const isUE=ST.einspeisemodus==='ueberschuss';
 
   // Wandlerfaktor hint
@@ -1774,14 +1961,15 @@ function updatePwrDisplay(){
     $('btn-ok').disabled=true;return;
   }
 
-  // Show raw measurement
-  $('pkw').className='';
+  // Show measurement
+  $('pkw').className=isManual?'':'';
   $('pkw').textContent=f(pwr,3);
+  const manTag=isManual?' 🖊':'';
   $('pamps').textContent=step.isEV
-    ?`Pe = |${f(pwr,3)}| = ${f(Math.abs(pwr),3)} kW`
+    ?`Pe = ${f(Math.abs(pwr),3)} kW${manTag}`
     :(isUE&&ST.eigenverbrauch!==null
-      ?`P=${f(pwr,3)} kW  →  PV = ${f(ST.eigenverbrauch,3)} − (${f(pwr,3)}) = ${f(getPVPower(pwr),3)} kW`
-      :f(toA(Math.abs(pwr)),2)+' A @ 400V/√3');
+      ?`P=${f(pwr,3)} kW → PV = ${f(getPVPower(pwr),3)} kW${manTag}`
+      :`${f(toA(Math.abs(pwr)),2)} A @ 400V/√3${manTag}`);
 
   // The effective power for comparisons
   const effectivePwr = isUE ? getPVPower(pwr) : pwr;
@@ -1911,10 +2099,13 @@ function addResult(pwr,pass,isEVStep=false){
   const overLimit=!isEVStep&&(s.isRef?(base&&pwr>base):(s.isZero?Math.abs(pwr)>(base||0)*0.01:pwr>pMaxNom));
   const sunLimited=!s.isRef&&!s.isZero&&!isEVStep&&pwr<pMinNom&&!overLimit;
   const pctOfBase=base?(pwr/base*100):null;
-  ST.results.push({lbl:s.lbl,pct:s.pct,tgt,pwr,pctOfBase,pass,sunLimited,overLimit,isEVStep});
+  ST.results.push({lbl:s.lbl,pct:s.pct,tgt,pwr,pctOfBase,pass,sunLimited,overLimit,isEVStep,
+    stepPhoto:ST.stepPhotos[ST.step]||null});
 }
 function advance(){
   ST.step++;
+  resetManual();
+  clearStepPhotoUI();
   if(ST.step>=STEPS.length)showProto();
   else{resetPulse();updateStepUI();}
 }
@@ -1923,6 +2114,7 @@ function advance(){
 function showProto(){
   if(ST.stream){ST.stream.getTracks().forEach(t=>t.stop());ST.stream=null;}
   cancelAnimationFrame(ST.raf);
+  camOpen=false;
   renderProto();
   renderPhotos();
   $('p-datum').value=new Date().toLocaleDateString('de-DE');
@@ -2021,8 +2213,33 @@ function buildPDF(){
   });
   y+=4;
 
-  // Signature line
-  try{
+  // ── Step photos (Messgerät-Fotos) auf Seite 1 ──────────────
+  const stepWithPhotos=ST.results.filter(r=>r.stepPhoto);
+  if(stepWithPhotos.length>0){
+    y+=4;
+    doc.setFontSize(8);doc.setFont('helvetica','bold');
+    doc.text('Messgerät-Fotos',lm,y);y+=4;
+    const photoSize=40; // 40mm × 40mm
+    const photoCols=4;
+    const photoGap=2;
+    stepWithPhotos.forEach((r,i)=>{
+      const px=lm+i*(photoSize+photoGap);
+      const py=y;
+      if(px+photoSize>lm+rw){return;} // max 4 per row
+      try{
+        doc.addImage(r.stepPhoto,'JPEG',px,py,photoSize,photoSize,'','FAST');
+      }catch{
+        doc.setFillColor(240,240,240);doc.rect(px,py,photoSize,photoSize,'F');
+      }
+      doc.rect(px,py,photoSize,photoSize);
+      doc.setFontSize(6);doc.setTextColor(80);
+      // Step label + value below photo
+      doc.text(r.lbl,px+1,py+photoSize+3);
+      doc.text(f(r.pwr,3)+' kW',px+1,py+photoSize+7);
+      doc.setTextColor(0);
+    });
+    if(stepWithPhotos.length>0) y+=photoSize+10;
+  }
     const sigData=localStorage.getItem(LS+'signature');
     if(sigData){
       doc.addImage(sigData,'PNG',lm,y,60,18,'','FAST');
@@ -2121,8 +2338,8 @@ async function sendEmail(){
 }
 
 function restart(){
-  Object.assign(ST,{step:0,refPower:null,anlageBase:null,results:[],photos:[],
-    eigenverbrauch:null,pDir:1,
+  Object.assign(ST,{step:0,refPower:null,anlageBase:null,results:[],photos:[],stepPhotos:{},
+    eigenverbrauch:null,pDir:1,manualPwr:null,
     pulses:[],brightHist:[],inPulse:false,stable:false,curPwr:null,
     roi:null,stream:null,lastPulseMs:0});
   STEPS=STEPS_VOLL;
