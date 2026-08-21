@@ -2240,6 +2240,9 @@ function buildPDF(){
     });
     if(stepWithPhotos.length>0) y+=photoSize+10;
   }
+
+  // Signature line
+  try{
     const sigData=localStorage.getItem(LS+'signature');
     if(sigData){
       doc.addImage(sigData,'PNG',lm,y,60,18,'','FAST');
