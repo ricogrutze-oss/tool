@@ -2167,32 +2167,39 @@ function buildPDF(){
   y+=5;doc.setTextColor(0);
   doc.line(lm,y,lm+rw,y);y+=5;
 
-  // Anlage info
+  // German number format for PDF (comma as decimal separator)
+  const fDE=(v,d)=>v.toFixed(d).replace('.',',');
+
+  // Anlage info — single address (GPS if available, otherwise manual)
   doc.setFontSize(9);doc.setFont('helvetica','bold');doc.text('Anlage',lm,y);y+=4;
   doc.setFont('helvetica','normal');
+  // Determine address: GPS address takes priority, then manual field
+  const adresseDisplay = ST.gpsAddr || $('p-adr').value || '—';
+  const gpsCoordsLine = ST.gpsCoords
+    ?`${ST.gpsCoords.lat.toFixed(6)}° N, ${ST.gpsCoords.lng.toFixed(6)}° E ±${Math.round(ST.gpsCoords.acc)}m`
+    :null;
+  const anlageLeistungDE = ST.anlageKw
+    ?(fDE(ST.anlageKw,1)+' kWp × '+fDE(ST.anlageFak,2).replace(',00','')+' = '+fDE(ST.anlageBase||0,1)+' kW')
+    :'—';
   const info=[
-    ['Harness-ID / Anlagen-Nr.',$('p-nr').value||'—'],
-    ['Zählernummer',$('p-zaehler').value||'—'],
-    ['FHE-Nr.',$('p-fhe').value||'—'],
-    ['FAE/FRE-Code',$('p-fae').value||'—'],
-    ['Adresse',$('p-adr').value||'—'],
-    ['Anlagenleistung',ST.anlageKw?(ST.anlageKw+' kWp × '+ST.anlageFak+' = '+ST.anlageBase?.toFixed(1)+' kW'):'—'],
-    ['Impulskonstante',ST.impConst+' imp/kWh'],
-    ['Wandlerfaktor',ST.wandler>1?ST.wandler.toFixed(2):'Direktmessung'],
-    ['Impuls-Mittelung',ST.numImpulse+' Impulse'],
-    ['Bemerkungen',$('p-bemerk').value||'—'],
+    ['Harness-ID / Anlagen-Nr.', $('p-nr').value||'—'],
+    ['Zählernummer',             $('p-zaehler').value||'—'],
+    ['FHE-Nr.',                  $('p-fhe').value||'—'],
+    ['FAE/FRE-Code',             $('p-fae').value||'—'],
+    ['Adresse',                  adresseDisplay],
+    ['Anlagenleistung',          anlageLeistungDE],
+    ['Impulskonstante',          ST.impConst+' imp/kWh'],
+    ['Wandlerfaktor',            ST.wandler>1?Math.round(ST.wandler).toString():'Direktmessung'],
+    ['Impuls-Mittelung',         ST.numImpulse+' Impulse'],
   ];
-  if(ST.gpsCoords){
-    const{lat,lng,acc}=ST.gpsCoords;
-    info.push(['GPS',`${lat.toFixed(6)}° N, ${lng.toFixed(6)}° E ±${Math.round(acc)}m`]);
-    if(ST.gpsAddr)info.push(['Adresse (GPS)',ST.gpsAddr]);
-  }
+  if(gpsCoordsLine) info.push(['GPS-Koordinaten', gpsCoordsLine]);
+  if($('p-bemerk').value) info.push(['Bemerkungen', $('p-bemerk').value]);
   info.forEach(([l,v])=>{
-    doc.setFont('helvetica','bold');doc.text(l+':',lm,y);
+    doc.setFont('helvetica','bold');doc.text(l+': ',lm,y);
     doc.setFont('helvetica','normal');
-    const lines=doc.splitTextToSize(String(v),rw-40);
-    doc.text(lines,lm+38,y);
-    y+=4*lines.length;
+    const lines=doc.splitTextToSize(String(v),rw-42);
+    doc.text(lines,lm+42,y);
+    y+=4.5*lines.length;
   });
   y+=3;doc.line(lm,y,lm+rw,y);y+=5;
 
@@ -2209,17 +2216,20 @@ function buildPDF(){
   doc.text('Gesamtergebnis: '+gesamtTxt, lm, y);
   doc.setTextColor(0); y+=6;
   // Header row
-  doc.setFillColor(240,240,240);doc.rect(lm,y-4,rw,5,'F');
+  doc.setFillColor(240,240,240);doc.rect(lm,y-4,rw,6,'F');
   doc.setFontSize(8);doc.setFont('helvetica','bold');
   let x=lm;
   hdrs.forEach((h,i)=>{doc.text(h,x+1,y);x+=cols[i];});
-  y+=2;doc.line(lm,y,lm+rw,y);y+=3;
+  y+=3;doc.line(lm,y,lm+rw,y);y+=4;
   doc.setFont('helvetica','normal');
+  const isVollPDF=ST.einspeisemodus!=='ueberschuss';
   ST.results.forEach(r=>{
-    const sollStr=f(r.tgt,3);
-    const pctStr=r.pctOfBase!=null?f(r.pctOfBase,1)+' %':'—';
+    const dispPwr=(isVollPDF&&!r.isEVStep)?Math.abs(r.pwr):r.pwr;
+    const dispPct=r.pctOfBase!=null?Math.abs(r.pctOfBase):null;
+    const sollStr=fDE(r.tgt,3);
+    const pctStr=dispPct!=null?fDE(dispPct,1)+' %':'—';
     const resultTxt=!r.pass?(r.overLimit?'ÜBEREINSP.':'UNTEREINSP.'):r.sunLimited?'OK (Sonne)':'OK';
-    const row=[r.lbl,sollStr,f(r.pwr,3),pctStr,resultTxt];
+    const row=[r.lbl,sollStr,fDE(dispPwr,3),pctStr,resultTxt];
     x=lm;
     row.forEach((v,i)=>{
       if(i===4){
@@ -2231,8 +2241,8 @@ function buildPDF(){
       doc.setTextColor(0);
       x+=cols[i];
     });
-    y+=5;
-    doc.line(lm,y-1,lm+rw,y-1);
+    y+=7; // more row height to avoid line-through-text
+    doc.setDrawColor(200);doc.line(lm,y-2,lm+rw,y-2);doc.setDrawColor(0);
   });
   y+=4;
 
