@@ -389,22 +389,54 @@ input::placeholder{color:var(--muted);}
 /* ── PRINT ── */
 @media print{
   .no-print{display:none!important;}
-  html,body{height:auto;overflow:visible;}
+  html,body{height:auto;overflow:visible;background:white;color:black;}
   .screen{display:none!important;}
-  #proto{display:flex!important;height:auto;overflow:visible;background:white;color:#000;padding:.5cm;}
-  .p-hdr{color:#000;}
-  .rtable th{background:#f0f0f0;color:#333;border-color:#ccc;}
-  .rtable td{border-color:#ccc;}
-  .pfield input{border:1px solid #ccc;color:#000;background:white;}
-  .gps-box{background:#f8f8f8;border-color:#ccc;border-left-color:#3fb950;}
+  #proto{
+    display:flex!important;height:auto;overflow:visible;
+    background:white;color:#000;padding:.8cm 1cm;gap:.5rem;
+    font-family:Helvetica,Arial,sans-serif;font-size:9pt;
+  }
+  .p-hdr{color:#000;font-size:14pt;font-weight:bold;}
+  /* Meta table */
+  .p-meta{display:grid;grid-template-columns:1fr 1fr;gap:.15cm .4cm;}
+  .p-meta-item .ml{color:#555;font-size:7pt;text-transform:uppercase;letter-spacing:.05em;}
+  .p-meta-item .mv{color:#000;font-size:8.5pt;}
+  /* GPS box */
+  .gps-box{background:#f8f8f8;border:1px solid #ccc;border-left:3px solid #2d6a4f;padding:4pt 8pt;}
   .gps-box .ga,.gps-box .gc{color:#333;}
-  .p-meta-item .ml{color:#666;}.p-meta-item .mv{color:#000;}
-  .photo-section{page-break-before:always;margin-top:0;}
-  .photo-grid{grid-template-columns:1fr 1fr;}
-  .photo-item{aspect-ratio:4/3;break-inside:avoid;}
+  /* Results table */
+  .rtable{width:100%;border-collapse:collapse;font-size:8.5pt;}
+  .rtable th{
+    background:#f0f0f0;color:#333;border-bottom:1.5pt solid #999;
+    padding:4pt 4pt;font-size:7.5pt;text-align:left;font-weight:bold;
+  }
+  .rtable td{padding:5pt 4pt;border-bottom:none;color:#000;}
+  .rtable td:nth-child(2),.rtable td:nth-child(3),.rtable td:nth-child(4){text-align:right;}
+  .pi{color:#2d6a4f;font-weight:bold;} .fi{color:#c00;font-weight:bold;} .wi{color:#c07800;font-weight:bold;}
+  /* Gesamt banner */
+  .gesamt{border:1pt solid #ccc;padding:4pt 8pt;font-weight:bold;font-size:9pt;}
+  .gesamt.ok{color:#2d6a4f;border-color:#2d6a4f;}
+  .gesamt.warn{color:#c07800;border-color:#c07800;}
+  .gesamt.fail{color:#c00;border-color:#c00;}
+  /* Fields */
+  .pfields{display:grid;grid-template-columns:1fr 1fr;gap:.3cm .4cm;margin-top:.3cm;}
+  .pfield input{border-bottom:1pt solid #999;border-top:none;border-left:none;border-right:none;
+    color:#000;background:white;font-size:8.5pt;padding:1pt 0;width:100%;}
+  .pfield.full{grid-column:1/-1;}
+  /* Signature */
   .sig-wrap{display:none!important;}
-  #sig-display{display:block!important;}
-  #sig-display img{max-height:70px;}
+  #sig-display{display:block!important;margin-top:.4cm;}
+  #sig-display img{max-height:18mm;border-bottom:1pt solid #999;display:block;}
+  #sig-display p{font-size:7pt;color:#555;margin-top:2pt;}
+  /* Photos on separate page */
+  .photo-section{page-break-before:always;margin-top:0;}
+  .photo-grid{display:grid;grid-template-columns:1fr 1fr;gap:.4cm;}
+  .photo-item{aspect-ratio:4/3;break-inside:avoid;}
+  .photo-item img{width:100%;height:100%;object-fit:cover;}
+  .pdel{display:none!important;}
+  /* Step photo captions */
+  #step-photos-proto{display:flex!important;flex-wrap:wrap;gap:.3cm;}
+  #step-photos-proto div img{width:4cm;height:4cm;object-fit:cover;}
 }
 </style>
 </head>
@@ -2161,9 +2193,10 @@ function buildPDF(){
   // Header
   doc.setFontSize(14);doc.setFont('helvetica','bold');
   doc.text('FAE Prüfprotokoll – PV Anlage',lm,y);y+=7;
+  const pruefer=$('p-pruefer').value||(()=>{try{return localStorage.getItem(LS+'pruefer')||''}catch{return ''}})();
   doc.setFontSize(9);doc.setFont('helvetica','normal');
   doc.setTextColor(100);
-  doc.text(`Datum: ${$('p-datum').value}   Prüfer: ${$('p-pruefer').value||'—'}`,lm,y);
+  doc.text(`Datum: ${$('p-datum').value}   Prüfer: ${pruefer||'—'}`,lm,y);
   y+=5;doc.setTextColor(0);
   doc.line(lm,y,lm+rw,y);y+=5;
 
@@ -2241,8 +2274,7 @@ function buildPDF(){
       doc.setTextColor(0);
       x+=cols[i];
     });
-    y+=7; // more row height to avoid line-through-text
-    doc.setDrawColor(200);doc.line(lm,y-2,lm+rw,y-2);doc.setDrawColor(0);
+    y+=7; // row height — no dividing lines between rows
   });
   y+=4;
 
@@ -2280,7 +2312,7 @@ function buildPDF(){
     if(sigData){
       doc.addImage(sigData,'PNG',lm,y,60,18,'','FAST');
       doc.line(lm,y+20,lm+65,y+20);
-      doc.setFontSize(7);doc.text($('p-pruefer').value||'Prüfer',lm,y+24);
+      doc.setFontSize(7);doc.text(pruefer||'Prüfer',lm,y+24);
     } else {
       doc.line(lm,y+10,lm+60,y+10);
       doc.setFontSize(8);doc.text('Unterschrift Prüfer',lm,y+14);
