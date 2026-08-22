@@ -2204,6 +2204,14 @@ function buildPDF(){
   // German number format for PDF (comma as decimal separator)
   const fDE=(v,d)=>v.toFixed(d).replace('.',',');
 
+  // jsPDF Helvetica has no Unicode — replace problematic chars to avoid letter-spacing glitch
+  const pdfTxt=(s)=>String(s)
+    .replace(/§/g,'Par.')
+    .replace(/≤/g,'<=')
+    .replace(/≥/g,'>=')
+    .replace(/\u00AD/g,'')   // soft hyphen
+    .replace(/[^\x00-\xFF]/g,'?'); // any other non-latin1
+
   // Anlage info — single address (GPS if available, otherwise manual)
   doc.setFontSize(9);doc.setFont('helvetica','bold');doc.text('Anlage',lm,y);y+=4;
   doc.setFont('helvetica','normal');
@@ -2221,7 +2229,7 @@ function buildPDF(){
       genLeistungStr=fDE(ST.anlageKw,1)+' kW';
     } else {
       const pct=Math.round(fak*100);
-      genLeistungStr=`${fDE(ST.anlageKw,1)} kWp → ${fDE(baseKw,1)} kW (${pct} %-Begrenzung gem. § 9 EEG 2023)`;
+      genLeistungStr=`${fDE(ST.anlageKw,1)} kWp -> ${fDE(baseKw,1)} kW (${pct}%-Begrenzung gem. Par. 9 EEG 2023)`;
     }
   } else { genLeistungStr='—'; }
 
@@ -2238,9 +2246,9 @@ function buildPDF(){
   if(gpsCoordsLine) info.push(['GPS-Koordinaten', gpsCoordsLine]);
   if($('p-bemerk').value) info.push(['Bemerkungen', $('p-bemerk').value]);
   info.forEach(([l,v])=>{
-    doc.setFont('helvetica','bold');doc.text(l+': ',lm,y);
+    doc.setFont('helvetica','bold');doc.text(pdfTxt(l)+': ',lm,y);
     doc.setFont('helvetica','normal');
-    const lines=doc.splitTextToSize(String(v),rw-42);
+    const lines=doc.splitTextToSize(pdfTxt(String(v)),rw-42);
     doc.text(lines,lm+42,y);
     y+=4.5*lines.length;
   });
@@ -2314,27 +2322,6 @@ function buildPDF(){
       doc.setTextColor(0);
     });
     if(stepWithPhotos.length>0) y+=photoSize+10;
-  }
-
-  // ── Rechtshinweis ──────────────────────────────────────────
-  if(y<230){
-    const boxH=26;
-    doc.setFillColor(248,248,248);doc.rect(lm,y,rw,boxH,'F');
-    doc.setDrawColor(180);doc.rect(lm,y,rw,boxH);doc.setDrawColor(0);
-    doc.setFontSize(7);doc.setFont('helvetica','normal');doc.setTextColor(100);
-    const legal=[
-      '§ 9 Abs. 1 EEG 2023: Anlagen > 100 kWp müssen über eine fernsteuerbare Regelungseinheit (FRE) verfügen und durch den Netzbetreiber in Leistungsstufen (0/30/60/100 %) geregelt werden können.',
-      '§ 9 Abs. 2 EEG 2023: Anlagen ≤ 100 kWp wahlweise mit FRE oder fixer Einspeisebegrenzung (60 %-Regel).',
-      '§ 11 EEG 2023: Netzbetreiber darf Einspeisung aus Netzgründen temporär reduzieren (Einspeisemanagement).',
-    ];
-    let ly=y+5;
-    legal.forEach(txt=>{
-      const wrapped=doc.splitTextToSize(txt, rw-6);
-      doc.text(wrapped,lm+3,ly);
-      ly+=wrapped.length*3.8;
-    });
-    doc.setTextColor(0);
-    y+=boxH+4;
   }
 
   // Signature line
