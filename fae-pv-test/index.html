@@ -399,13 +399,14 @@ input::placeholder{color:var(--muted);}
   .p-hdr{color:#000;font-size:14pt;font-weight:bold;}
   /* Meta table */
   .p-meta{display:grid;grid-template-columns:1fr 1fr;gap:.15cm .4cm;}
-  .p-meta-item .ml{color:#555;font-size:7pt;text-transform:uppercase;letter-spacing:.05em;}
-  .p-meta-item .mv{color:#000;font-size:8.5pt;}
+  .p-meta-item .ml{color:#555;font-size:7pt;text-transform:uppercase;letter-spacing:.03em;font-family:Helvetica,Arial,sans-serif;}
+  .p-meta-item .mv{color:#000;font-size:8.5pt;font-family:Helvetica,Arial,sans-serif;letter-spacing:0;word-break:break-word;}
   /* GPS box */
   .gps-box{background:#f8f8f8;border:1px solid #ccc;border-left:3px solid #2d6a4f;padding:4pt 8pt;}
   .gps-box .ga,.gps-box .gc{color:#333;}
-  /* Results table */
-  .rtable{width:100%;border-collapse:collapse;font-size:8.5pt;}
+  /* All text in print: no mono font, no letter-spacing */
+  #proto *{font-family:Helvetica,Arial,sans-serif!important;letter-spacing:0!important;}
+  #proto .rtable{font-size:8.5pt;}
   .rtable th{
     background:#f0f0f0;color:#333;border-bottom:1.5pt solid #999;
     padding:4pt 4pt;font-size:7.5pt;text-align:left;font-weight:bold;
@@ -2316,19 +2317,24 @@ function buildPDF(){
   }
 
   // ── Rechtshinweis ──────────────────────────────────────────
-  if(y<230){ // only if there's space on page 1
-    doc.setFontSize(7);doc.setFont('helvetica','normal');doc.setTextColor(120);
-    doc.setFillColor(248,248,248);doc.rect(lm,y,rw,22,'F');
-    doc.setDrawColor(180);doc.rect(lm,y,rw,22);doc.setDrawColor(0);
+  if(y<230){
+    const boxH=26;
+    doc.setFillColor(248,248,248);doc.rect(lm,y,rw,boxH,'F');
+    doc.setDrawColor(180);doc.rect(lm,y,rw,boxH);doc.setDrawColor(0);
+    doc.setFontSize(7);doc.setFont('helvetica','normal');doc.setTextColor(100);
     const legal=[
-      '§ 9 Abs. 1 EEG 2023 – Technische Anforderungen: Anlagen > 100 kWp müssen über eine fernsteuerbare',
-      'Regelungseinheit (FRE) verfügen und durch den Netzbetreiber in vier Leistungsstufen (0/30/60/100 %) geregelt werden können.',
-      '§ 9 Abs. 2 EEG 2023 – Einspeisebegrenzung: Anlagen ≤ 100 kWp wahlweise mit FRE oder fixer Begrenzung (60 %-Regel).',
-      '§ 11 EEG 2023 – Einspeisemanagement: Netzbetreiber darf Einspeisung aus Netzgründen temporär reduzieren.',
+      '§ 9 Abs. 1 EEG 2023: Anlagen > 100 kWp müssen über eine fernsteuerbare Regelungseinheit (FRE) verfügen und durch den Netzbetreiber in Leistungsstufen (0/30/60/100 %) geregelt werden können.',
+      '§ 9 Abs. 2 EEG 2023: Anlagen ≤ 100 kWp wahlweise mit FRE oder fixer Einspeisebegrenzung (60 %-Regel).',
+      '§ 11 EEG 2023: Netzbetreiber darf Einspeisung aus Netzgründen temporär reduzieren (Einspeisemanagement).',
     ];
-    legal.forEach((l,i)=>{doc.text(l,lm+2,y+4+i*4.5);});
+    let ly=y+5;
+    legal.forEach(txt=>{
+      const wrapped=doc.splitTextToSize(txt, rw-6);
+      doc.text(wrapped,lm+3,ly);
+      ly+=wrapped.length*3.8;
+    });
     doc.setTextColor(0);
-    y+=26;
+    y+=boxH+4;
   }
 
   // Signature line
