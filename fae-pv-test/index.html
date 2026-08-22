@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>FAE Test – PV Anlage</title>
+<title>FRE Test – PV Anlage</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
@@ -457,8 +457,8 @@ input::placeholder{color:var(--muted);}
   <div id="tab-content-new" style="width:100%;max-width:430px;display:flex;flex-direction:column;gap:.85rem;">
 
   <div class="s-title">
-    <h1>FAE Test</h1>
-    <p>PV-Anlage · Wirkleistungssteuerung</p>
+    <h1>Funk-Rundsteuer&shy;empfänger-Test</h1>
+    <p>PV-Anlage · Einspeisemanagement gem. § 9 EEG 2023</p>
   </div>
 
   <!-- ANLAGE -->
@@ -466,7 +466,7 @@ input::placeholder{color:var(--muted);}
     <div class="sec-hdr">Anlage</div>
 
     <div>
-      <div class="s-lbl">Anlagenleistung</div>
+      <div class="s-lbl">Generatorleistung</div>
       <div class="s-row">
         <input type="number" id="anlage-kw" placeholder="z.B. 29.7" min="0" step="0.1" style="flex:1;" oninput="onAnlageKwChange()"/>
         <span style="font-family:var(--mono);font-size:.8rem;color:var(--muted);padding:.55rem .3rem;align-self:center;">kWp ×</span>
@@ -477,7 +477,7 @@ input::placeholder{color:var(--muted);}
 
     <div>
       <div class="s-lbl">Harness-ID <span style="color:var(--muted);font-size:.6rem;">(Anlagen-Nr., manuell)</span></div>
-      <input type="text" id="anlage-nr" placeholder="Harness-ID / Anlagen-Nr."/>
+      <input type="text" id="anlage-nr" placeholder="Harness-ID"/>
     </div>
 
     <div>
@@ -489,17 +489,17 @@ input::placeholder{color:var(--muted);}
     </div>
 
     <div>
-      <div class="s-lbl">FHE-Nr.</div>
+      <div class="s-lbl">FRE-Seriennummer</div>
       <div class="s-row">
-        <input type="text" id="fhe-nr" placeholder="FHE-Nummer eingeben" style="flex:1;"/>
+        <input type="text" id="fhe-nr" placeholder="FRE-Seriennummer-Nummer eingeben" style="flex:1;"/>
         <button class="btn sec" onclick="openQR('fhe-nr')">📷 QR</button>
       </div>
     </div>
 
     <div>
-      <div class="s-lbl">FAE/FRE-Code</div>
+      <div class="s-lbl">FRE-Code</div>
       <div class="s-row">
-        <input type="text" id="fae-code" placeholder="FAE/FRE-Code eingeben" style="flex:1;"/>
+        <input type="text" id="fae-code" placeholder="FRE-Code eingeben" style="flex:1;"/>
         <button class="btn sec" onclick="openQR('fae-code')">📷 QR</button>
       </div>
     </div>
@@ -776,7 +776,7 @@ input::placeholder{color:var(--muted);}
 <div id="proto" class="screen">
   <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:.2rem;">
     <a href="../" class="back-link no-print">Übersicht</a>
-    <div class="p-hdr" style="flex:1;">FAE Prüfprotokoll</div>
+    <div class="p-hdr" style="flex:1;">FRE Prüfprotokoll</div>
     <div style="width:5rem;"></div>
   </div>
 
@@ -798,7 +798,7 @@ input::placeholder{color:var(--muted);}
 
   <div class="pfields">
     <div class="pfield full">
-      <div class="s-lbl">Harness-ID / Anlagen-Nr.</div>
+      <div class="s-lbl">Harness-ID</div>
       <input type="text" id="p-nr"/>
     </div>
     <div class="pfield">
@@ -806,11 +806,11 @@ input::placeholder{color:var(--muted);}
       <input type="text" id="p-zaehler"/>
     </div>
     <div class="pfield">
-      <div class="s-lbl">FHE-Nr.</div>
+      <div class="s-lbl">FRE-Seriennummer</div>
       <input type="text" id="p-fhe"/>
     </div>
     <div class="pfield">
-      <div class="s-lbl">FAE/FRE-Code</div>
+      <div class="s-lbl">FRE-Code</div>
       <input type="text" id="p-fae"/>
     </div>
     <div class="pfield">
@@ -955,7 +955,7 @@ function initCfgSigPad(){
   // Load existing signature preview
   loadCfgSigPreview();
   // Load saved name
-  try{const v=localStorage.getItem(LS+'pruefer');if(v)$('cfg-pruefer').value=v;}catch{}
+  try{const v=localStorage.getItem(LS+'pruefer');if(v)$('cfg-pruefer').value=v;}catch(e){}
 }
 
 function clearCfgSig(){
@@ -967,7 +967,7 @@ function clearCfgSig(){
 function saveCfgSig(){
   if(!cfgSigCtx||!cfgHasData){alert('Bitte zuerst unterschreiben.');return;}
   const dataUrl=$('cfg-sig-pad').toDataURL('image/png');
-  try{localStorage.setItem(LS+'signature',dataUrl);}catch{}
+  try{localStorage.setItem(LS+'signature',dataUrl);}catch(e){}
   loadCfgSigPreview();
   alert('Unterschrift gespeichert ✓');
 }
@@ -977,12 +977,12 @@ function loadCfgSigPreview(){
     const d=localStorage.getItem(LS+'signature');
     const preview=$('cfg-sig-preview'), img=$('cfg-sig-img');
     if(d&&preview&&img){img.src=d;preview.style.display='block';}
-  }catch{}
+  }catch(e){}
 }
 
 function savePrueferFromCfg(){
   const v=$('cfg-pruefer').value.trim();
-  try{localStorage.setItem(LS+'pruefer',v);}catch{}
+  try{localStorage.setItem(LS+'pruefer',v);}catch(e){}
   alert('Name gespeichert: '+v);
 }
 
@@ -990,7 +990,7 @@ function renderHistoryInline(){
   const list=$('hist-list-inline');
   if(!list)return;
   let hist=[];
-  try{hist=JSON.parse(localStorage.getItem(LS+'history')||'[]');}catch{}
+  try{hist=JSON.parse(localStorage.getItem(LS+'history')||'[]');}catch(e){}
   list.innerHTML='';
   if(hist.length===0){
     list.innerHTML='<div class="hist-empty">Noch keine Tests gespeichert.</div>';
@@ -1023,21 +1023,21 @@ const STEPS_VOLL=[
   {pct:100,lbl:'Stufe 100 %',          isRef:true, tol:null,isZero:false,isEV:false,pDirDef:-1,
    instr:'Wechselrichter auf Vollleistung.<br>Volleinspeisung → <b>P− Einspeisung</b>.'},
   {pct:60, lbl:'Stufe 60 %',           isRef:false,tol:5,   isZero:false,isEV:false,pDirDef:-1,
-   instr:'FAE-Signal 60 % senden.<br>Weiter P− Einspeisung. Auf stabile Anzeige warten.'},
+   instr:'FRE-Signal 60 % senden.<br>Weiter P− Einspeisung. Auf stabile Anzeige warten.'},
   {pct:30, lbl:'Stufe 30 %',           isRef:false,tol:5,   isZero:false,isEV:false,pDirDef:-1,
-   instr:'FAE-Signal 30 % senden.<br>Weiter P− Einspeisung. Auf stabile Anzeige warten.'},
+   instr:'FRE-Signal 30 % senden.<br>Weiter P− Einspeisung. Auf stabile Anzeige warten.'},
   {pct:0,  lbl:'Stufe 0 %',            isRef:false,tol:null,isZero:true, isEV:false,pDirDef:-1,
    instr:'Einspeisung sperren.<br>Kein Impuls erwartet — LED bleibt still.'},
 ];
 const STEPS_UEBERSCHUSS=[
   {pct:0,  lbl:'0 % — Eigenverbrauch', isRef:false,tol:null,isZero:true, isEV:true, pDirDef:1,
-   instr:'FAE 0 % — Einspeisung gesperrt.<br><b>P+ wählen</b>: Zähler zeigt Bezug (Kunde nimmt aus Netz).<br>Messwert = +Pe (Eigenverbrauch).'},
+   instr:'FRE 0 % — Einspeisung gesperrt.<br><b>P+ wählen</b>: Zähler zeigt Bezug (Kunde nimmt aus Netz).<br>Messwert = +Pe (Eigenverbrauch).'},
   {pct:100,lbl:'Stufe 100 % (Referenz)',isRef:true, tol:null,isZero:false,isEV:false,pDirDef:-1,
    instr:'Wechselrichter auf Vollleistung.<br>PV speist ein → <b>P− Einspeisung</b> wählen.<br>PV-Leistung = Pe − P.'},
   {pct:60, lbl:'Stufe 60 %',           isRef:false,tol:5,   isZero:false,isEV:false,pDirDef:-1,
-   instr:'FAE-Signal 60 % senden.<br>Speist noch ein → P− / Bezieht → P+.<br>PV-Leistung = Pe − P.'},
+   instr:'FRE-Signal 60 % senden.<br>Speist noch ein → P− / Bezieht → P+.<br>PV-Leistung = Pe − P.'},
   {pct:30, lbl:'Stufe 30 %',           isRef:false,tol:5,   isZero:false,isEV:false,pDirDef:-1,
-   instr:'FAE-Signal 30 % senden.<br>Speist noch ein → P− / Bezieht → P+.<br>PV-Leistung = Pe − P.'},
+   instr:'FRE-Signal 30 % senden.<br>Speist noch ein → P− / Bezieht → P+.<br>PV-Leistung = Pe − P.'},
 ];
 let STEPS=STEPS_VOLL;
 
@@ -1116,16 +1116,16 @@ function deleteHistEntry(i){
     hist.splice(i,1);
     localStorage.setItem(LS+'history',JSON.stringify(hist));
     renderHistoryList();
-  }catch{}
+  }catch(e){}
 }
 
 function clearAll(){
   if(!confirm('Wirklich ALLES löschen?\n(Historie, Unterschrift, Prüfername, aktuelle Testdaten)'))return;
   try{
     [LS+'test',LS+'photos',LS+'history',LS+'signature',LS+'pruefer'].forEach(k=>{
-      try{localStorage.removeItem(k);}catch{}
+      try{localStorage.removeItem(k);}catch(e){}
     });
-  }catch{}
+  }catch(e){}
   ST.results=[];ST.photos=[];ST.refPower=null;
   clearSigPad();
   $('sig-display').style.display='none';
@@ -1135,13 +1135,13 @@ function clearAll(){
 
 // ── PRÜFER NAME (persistent) ──────────────────────────────────
 function savePruefer(){
-  try{localStorage.setItem(LS+'pruefer',$('p-pruefer').value);}catch{}
+  try{localStorage.setItem(LS+'pruefer',$('p-pruefer').value);}catch(e){}
 }
 function loadPruefer(){
   try{
     const v=localStorage.getItem(LS+'pruefer');
     if(v)$('p-pruefer').value=v;
-  }catch{}
+  }catch(e){}
 }
 
 // ── SIGNATURE PAD ─────────────────────────────────────────────
@@ -1190,7 +1190,7 @@ function clearSigPad(){clearSig();}
 function saveSig(){
   if(!sigCtx||!sigHasData){alert('Bitte zuerst unterschreiben.');return;}
   const dataUrl=$('sig-pad').toDataURL('image/png');
-  try{localStorage.setItem(LS+'signature',dataUrl);}catch{}
+  try{localStorage.setItem(LS+'signature',dataUrl);}catch(e){}
   showSigDisplay(dataUrl);
   alert('Unterschrift gespeichert.');
 }
@@ -1199,7 +1199,7 @@ function loadSig(){
   try{
     const d=localStorage.getItem(LS+'signature');
     if(d){showSigDisplay(d);}
-  }catch{}
+  }catch(e){}
 }
 
 function showSigDisplay(dataUrl){
@@ -1286,7 +1286,7 @@ function saveSetup(){
       fheNr:$('fhe-nr').value,
       faeCode:$('fae-code').value,
     }));
-  }catch{}
+  }catch(e){}
 }
 function loadSetup(){
   // Default email pre-fill
@@ -1313,7 +1313,7 @@ function loadSetup(){
     if(d.fheNr)$('fhe-nr').value=d.fheNr;
     if(d.faeCode)$('fae-code').value=d.faeCode;
     onFaktorChange();
-  }catch{}
+  }catch(e){}
 }
 window.addEventListener('DOMContentLoaded', ()=>{
   loadSetup();
@@ -1330,7 +1330,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
       btn.onclick=loadSavedTest;
       $('setup').querySelector('.s-inner').appendChild(btn);
     }
-  }catch{}
+  }catch(e){}
 });
 
 function saveTest(){
@@ -1355,7 +1355,7 @@ function saveTest(){
     // Photos stored separately (can be large)
     try{localStorage.setItem(LS+'photos', JSON.stringify(ST.photos));}
     catch{console.warn('Fotos zu groß für localStorage');}
-  }catch{}
+  }catch(e){}
 }
 
 function loadSavedTest(){
@@ -1370,9 +1370,9 @@ function loadSavedTest(){
     ST.anlageNr=d.anlageNr||''; ST.zaehlerNr=d.zaehlerNr||'';
     ST.fheNr=d.fheNr||''; ST.faeCode=d.faeCode||'';
     // Load step photos
-    try{ST.stepPhotos=JSON.parse(localStorage.getItem(LS+'stepPhotos')||'{}');}catch{ST.stepPhotos={};}
+    try{ST.stepPhotos=JSON.parse(localStorage.getItem(LS+'stepPhotos')||'{}');}catch(e){ST.stepPhotos={};}
     // Load photos
-    try{ST.photos=JSON.parse(localStorage.getItem(LS+'photos')||'[]');}catch{ST.photos=[];}
+    try{ST.photos=JSON.parse(localStorage.getItem(LS+'photos')||'[]');}catch(e){ST.photos=[];}
     renderProto();
     renderPhotos();
     if(d.prAdresse)$('p-adr').value=d.prAdresse;
@@ -1386,7 +1386,7 @@ function loadSavedTest(){
 
 function deleteTest(){
   if(!confirm('Aktuellen Testdaten und Fotos löschen?\n(Historie und Unterschrift bleiben erhalten)'))return;
-  try{localStorage.removeItem(LS+'test');localStorage.removeItem(LS+'photos');localStorage.removeItem(LS+'stepPhotos');}catch{}
+  try{localStorage.removeItem(LS+'test');localStorage.removeItem(LS+'photos');localStorage.removeItem(LS+'stepPhotos');}catch(e){}
   ST.photos=[];
   renderPhotos();
   alert('Testdaten gelöscht.');
@@ -1398,7 +1398,7 @@ function renderProto(){
   const meta=$('p-meta');meta.innerHTML='';
   const mdata=[
     ['Einspeisemodus', ST.einspeisemodus==='ueberschuss'?'Überschusseinspeisung':'Volleinspeisung'],
-    ['Anlagenleistung', ST.anlageKw?ST.anlageKw.toFixed(1)+' kWp':'—'],
+    ['Generatorleistung', ST.anlageKw?ST.anlageKw.toFixed(1)+' kWp':'—'],
     ['Ertragsfaktor',   ST.anlageFak?(ST.anlageFak.toFixed(2)+' → '+(ST.anlageBase||0).toFixed(1)+' kW'):'—'],
     ['Impulskonstante', ST.impConst+' imp/kWh'],
     ['Wandlerfaktor',   ST.wandler>1?ST.wandler.toFixed(2):'Direkt'],
@@ -1578,7 +1578,7 @@ async function captureGPS(){
     try{
       const r=await fetch(
         `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=de`,
-        {headers:{'User-Agent':'FAE-Test-App/1.0'}}
+        {headers:{'User-Agent':'FRE-Test-App/1.0'}}
       );
       const d=await r.json();
       const a=d.address||{};
@@ -1586,7 +1586,7 @@ async function captureGPS(){
       const city=a.city||a.town||a.village||'';
       const plz=a.postcode||'';
       ST.gpsAddr=[road,plz&&city?plz+' '+city:''].filter(Boolean).join(', ')||d.display_name||'';
-    }catch{ST.gpsAddr='';}
+    }catch(e){ST.gpsAddr='';}
     const aline=ST.gpsAddr||'Adresse nicht ermittelbar';
     st.className='gps-status ok';
     st.innerHTML=`✓ ${aline}<br><small style="color:var(--muted)">${lat.toFixed(6)}° N, ${lng.toFixed(6)}° E · ±${Math.round(acc)} m</small>`;
@@ -1618,7 +1618,7 @@ async function openQR(targetId){
         $('qr-status').textContent='QR / Barcode in den Rahmen halten …';
         ST.qrRunning=true;
         qrLoopNative();
-      }catch{
+      }catch(e){
         $('qr-status').textContent='Kamera aktiv — BarcodeDetector nicht verfügbar. Manuell eingeben.';
       }
     } else {
@@ -1636,7 +1636,7 @@ async function qrLoopNative(){
       const codes=await ST.bdector.detect(v);
       if(codes&&codes.length>0){applyQR(codes[0].rawValue);return;}
     }
-  }catch{}
+  }catch(e){}
   ST.qrRaf=requestAnimationFrame(qrLoopNative);
 }
 function applyQR(val){
@@ -1921,7 +1921,7 @@ function resetManual(){
   ST.manualPwr=null;
   try{$('man-kw').value='';$('man-a').value='';$('man-a-kw').textContent='→ — kW';
       $('btn-clr-man').style.display='none';
-      $('manual-ctrl').classList.remove('manual-active');}catch{}
+      $('manual-ctrl').classList.remove('manual-active');}catch(e){}
 }
 
 function setPDir(dir){
@@ -2015,9 +2015,9 @@ function updatePwrDisplay(){
 
   if(step.isEV){
     if(ST.stable){
-      const peOk=pwr>=0; // positive = P+ import = normal; negative = P- = FAE might not work
+      const peOk=pwr>=0; // positive = P+ import = normal; negative = P- = FRE might not work
       setBadge(peOk?'ref':'fail',
-        peOk?`⚡ Pe = ${f(pwr,3)} kW — bereit`:`⚠ P negativ — FAE prüfen! Pe = ${f(pwr,3)} kW`);
+        peOk?`⚡ Pe = ${f(pwr,3)} kW — bereit`:`⚠ P negativ — FRE prüfen! Pe = ${f(pwr,3)} kW`);
       $('btn-ok').disabled=false;
     } else {
       setBadge('wait','⌛ Stabilisierung …');$('btn-ok').disabled=true;
@@ -2192,8 +2192,8 @@ function buildPDF(){
 
   // Header
   doc.setFontSize(14);doc.setFont('helvetica','bold');
-  doc.text('FAE Prüfprotokoll – PV Anlage',lm,y);y+=7;
-  const pruefer=$('p-pruefer').value||(()=>{try{return localStorage.getItem(LS+'pruefer')||''}catch{return ''}})();
+  doc.text('FRE Prüfprotokoll – PV Anlage',lm,y);y+=7;
+  const pruefer=$('p-pruefer').value||(()=>{try{return localStorage.getItem(LS+'pruefer')||''}catch(e){return ''}})();
   doc.setFontSize(9);doc.setFont('helvetica','normal');
   doc.setTextColor(100);
   doc.text(`Datum: ${$('p-datum').value}   Prüfer: ${pruefer||'—'}`,lm,y);
@@ -2211,19 +2211,28 @@ function buildPDF(){
   const gpsCoordsLine = ST.gpsCoords
     ?`${ST.gpsCoords.lat.toFixed(6)}° N, ${ST.gpsCoords.lng.toFixed(6)}° E ±${Math.round(ST.gpsCoords.acc)}m`
     :null;
-  const anlageLeistungDE = ST.anlageKw
-    ?(fDE(ST.anlageKw,1)+' kWp × '+fDE(ST.anlageFak,2).replace(',00','')+' = '+fDE(ST.anlageBase||0,1)+' kW')
-    :'—';
+  // Smart Generatorleistung display
+  let genLeistungStr;
+  if(ST.anlageKw){
+    const baseKw=ST.anlageBase||0;
+    const fak=ST.anlageFak||1;
+    if(Math.abs(fak-1.0)<0.01){
+      genLeistungStr=fDE(ST.anlageKw,1)+' kW';
+    } else {
+      const pct=Math.round(fak*100);
+      genLeistungStr=`${fDE(ST.anlageKw,1)} kWp → ${fDE(baseKw,1)} kW (${pct} %-Begrenzung gem. § 9 EEG 2023)`;
+    }
+  } else { genLeistungStr='—'; }
+
   const info=[
-    ['Harness-ID / Anlagen-Nr.', $('p-nr').value||'—'],
+    ['Harness-ID', $('p-nr').value||'—'],
     ['Zählernummer',             $('p-zaehler').value||'—'],
-    ['FHE-Nr.',                  $('p-fhe').value||'—'],
-    ['FAE/FRE-Code',             $('p-fae').value||'—'],
+    ['FRE-Seriennummer',                  $('p-fhe').value||'—'],
+    ['FRE-Code',                 $('p-fae').value||'—'],
     ['Adresse',                  adresseDisplay],
-    ['Anlagenleistung',          anlageLeistungDE],
+    ['Generatorleistung',        genLeistungStr],
     ['Impulskonstante',          ST.impConst+' imp/kWh'],
     ['Wandlerfaktor',            ST.wandler>1?Math.round(ST.wandler).toString():'Direktmessung'],
-    ['Impuls-Mittelung',         ST.numImpulse+' Impulse'],
   ];
   if(gpsCoordsLine) info.push(['GPS-Koordinaten', gpsCoordsLine]);
   if($('p-bemerk').value) info.push(['Bemerkungen', $('p-bemerk').value]);
@@ -2293,7 +2302,7 @@ function buildPDF(){
       if(px+photoSize>lm+rw){return;} // max 4 per row
       try{
         doc.addImage(r.stepPhoto,'JPEG',px,py,photoSize,photoSize,'','FAST');
-      }catch{
+      }catch(e){
         doc.setFillColor(240,240,240);doc.rect(px,py,photoSize,photoSize,'F');
       }
       doc.rect(px,py,photoSize,photoSize);
@@ -2304,6 +2313,22 @@ function buildPDF(){
       doc.setTextColor(0);
     });
     if(stepWithPhotos.length>0) y+=photoSize+10;
+  }
+
+  // ── Rechtshinweis ──────────────────────────────────────────
+  if(y<230){ // only if there's space on page 1
+    doc.setFontSize(7);doc.setFont('helvetica','normal');doc.setTextColor(120);
+    doc.setFillColor(248,248,248);doc.rect(lm,y,rw,22,'F');
+    doc.setDrawColor(180);doc.rect(lm,y,rw,22);doc.setDrawColor(0);
+    const legal=[
+      '§ 9 Abs. 1 EEG 2023 – Technische Anforderungen: Anlagen > 100 kWp müssen über eine fernsteuerbare',
+      'Regelungseinheit (FRE) verfügen und durch den Netzbetreiber in vier Leistungsstufen (0/30/60/100 %) geregelt werden können.',
+      '§ 9 Abs. 2 EEG 2023 – Einspeisebegrenzung: Anlagen ≤ 100 kWp wahlweise mit FRE oder fixer Begrenzung (60 %-Regel).',
+      '§ 11 EEG 2023 – Einspeisemanagement: Netzbetreiber darf Einspeisung aus Netzgründen temporär reduzieren.',
+    ];
+    legal.forEach((l,i)=>{doc.text(l,lm+2,y+4+i*4.5);});
+    doc.setTextColor(0);
+    y+=26;
   }
 
   // Signature line
@@ -2317,7 +2342,7 @@ function buildPDF(){
       doc.line(lm,y+10,lm+60,y+10);
       doc.setFontSize(8);doc.text('Unterschrift Prüfer',lm,y+14);
     }
-  }catch{
+  }catch(e){
     doc.line(lm,y+10,lm+60,y+10);
     doc.setFontSize(8);doc.text('Unterschrift Prüfer',lm,y+14);
   }
@@ -2365,7 +2390,7 @@ function buildPDF(){
 
 async function sendEmail(){
   const emails=[$('email-1').value,$('email-2').value,$('email-3').value].filter(Boolean);
-  const subject=`FAE Prüfprotokoll – ${$('p-nr').value||'Anlage'} – ${$('p-datum').value}`;
+  const subject=`FRE Prüfprotokoll – ${$('p-nr').value||'Anlage'} – ${$('p-datum').value}`;
 
   let doc;
   try{ doc=buildPDF(); }
@@ -2375,7 +2400,7 @@ async function sendEmail(){
   }
 
   const blob=doc.output('blob');
-  const fname=`FAE-Protokoll-${($('p-nr').value||'Anlage').replace(/\s/g,'_')}.pdf`;
+  const fname=`FRE-Protokoll-${($('p-nr').value||'Anlage').replace(/\s/g,'_')}.pdf`;
   const file=new File([blob],fname,{type:'application/pdf'});
 
   // Try Web Share API (Android / iOS – attaches PDF to email app)
@@ -2383,7 +2408,7 @@ async function sendEmail(){
     try{
       await navigator.share({
         title:subject,
-        text:'Im Anhang das FAE Prüfprotokoll.',
+        text:'Im Anhang das FRE Prüfprotokoll.',
         files:[file],
       });
       return;
@@ -2399,7 +2424,7 @@ async function sendEmail(){
   setTimeout(()=>{
     URL.revokeObjectURL(url);
     if(emails.length>0){
-      const body=encodeURIComponent(`Guten Tag,\n\nim Anhang das FAE Prüfprotokoll für Anlage ${$('p-nr').value||'—'}.\n\nMit freundlichen Grüßen`);
+      const body=encodeURIComponent(`Guten Tag,\n\nim Anhang das FRE Prüfprotokoll für Anlage ${$('p-nr').value||'—'}.\n\nMit freundlichen Grüßen`);
       window.open(`mailto:${emails.join(',')}?subject=${encodeURIComponent(subject)}&body=${body}`);
     }
   },500);
