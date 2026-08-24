@@ -33,11 +33,11 @@
   button.danger{ background:var(--accent2); color:#2a0505; border-color:var(--accent2); font-weight:600;}
   button:disabled{opacity:.4; cursor:default;}
   #stage{
-    position:relative; width:100%; border-radius:10px; overflow:hidden;
+    position:relative; width:100%; max-width:420px; margin:0 auto; border-radius:10px; overflow:hidden;
     background:#000; min-height:200px; display:flex; align-items:center; justify-content:center;
     touch-action:none; user-select:none;
   }
-  #stage video{ width:100%; max-height:42vh; object-fit:cover; display:block; }
+  #stage video{ width:100%; display:block; }
   #stage .placeholder{ color:var(--muted); font-size:0.85rem; padding:40px 10px; text-align:center;}
   #flashOverlay{
     position:absolute; inset:0; z-index:10; pointer-events:none;
@@ -92,6 +92,7 @@
   <div class="btnrow">
     <button class="primary" id="startBtn">📷 Kamera starten</button>
     <button id="stopBtn" disabled>⏹ Stoppen</button>
+    <button id="resetZonesBtn">↺ Zonen zurücksetzen</button>
     <label class="toggle"><input type="checkbox" id="soundToggle" checked> Ton</label>
     <label class="toggle"><input type="checkbox" id="vibrateToggle" checked> Vibration</label>
     <label class="toggle"><input type="checkbox" id="singleScanToggle"> Einzeln scannen</label>
@@ -197,6 +198,16 @@ function saveZones(){
 // ---------- Camera ----------
 startBtn.addEventListener('click', startCamera);
 stopBtn.addEventListener('click', stopCamera);
+document.getElementById('resetZonesBtn').addEventListener('click', () => {
+  zones = {
+    lower: { x: 8,  y: 62, w: 84, h: 14 },
+    upper: { x: 8,  y: 30, w: 84, h: 14 }
+  };
+  saveZones();
+  stage.querySelectorAll('.zone').forEach(el => el.remove());
+  if (videoEl) buildZoneEls();
+  statusEl.textContent = 'Zonen auf Standardposition zurückgesetzt.';
+});
 
 async function startCamera(){
   try{
