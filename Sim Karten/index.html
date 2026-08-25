@@ -116,17 +116,6 @@
     <h2 style="font-size:1rem;margin:0;">Ergebnis-Tabelle</h2>
     <button id="addRowBtn">+ leere Zeile</button>
   </div>
-  <datalist id="ausbaugrundList">
-    <option value="kündigen">
-    <option value="Kartenverlust">
-    <option value="nicht mehr auffindbar">
-    <option value="nicht mehr benötigt">
-    <option value="Rückbau">
-    <option value="Vodafone Rückbau">
-    <option value="CSD-Ablösung">
-    <option value="unbekannt">
-    <option value="Umbau auf Mobilfunk">
-  </datalist>
   <div style="overflow-x:auto;">
   <table id="resultTable">
     <colgroup>
@@ -423,7 +412,7 @@ async function recognizeZone(worker, fullCanvas, z){
 // fills the pending row, creating it on the first field and completing it once both are present.
 function handleFieldLocked(key, value){
   if (!pendingRow.rowEl){
-    pendingRow.rowEl = addRow('', '', '', '');
+    pendingRow.rowEl = addRow('', '', '', '', true);
   }
   const fields = pendingRow.rowEl.querySelectorAll('.rowfield');
   if (key === 'lower'){ fields[0].value = value; pendingRow.lowerVal = value; }
@@ -456,7 +445,7 @@ function handleFieldLocked(key, value){
 
 // Standardmodus: erzeugt erst dann eine Zeile, wenn BEIDE Felder gleichzeitig stabil erkannt wurden.
 function handleBothLocked(lowerVal, upperVal){
-  addRow(lowerVal, upperVal, '', '');
+  addRow(lowerVal, upperVal, '', '', true);
   statusEl.className = 'status saved';
   statusEl.textContent = `✅ Zeile komplett: ${lowerVal}  /  ${upperVal}`;
   if (soundToggle.checked) playBeep(880, 0.22);
@@ -520,6 +509,7 @@ loadAbsender();
 // ---------- Table ----------
 const TABLE_STORAGE_KEY = 'nummernscanner_rows_v4';
 const PROVIDERS = ['Telekom Deutschland / D1', 'T-Mobile Austria', 'Vodafone / D2', 'Telefonica / O2', 'Telefonica / E-Plus', 'unbekannt'];
+const REASONS = ['kündigen', 'Kartenverlust', 'nicht mehr auffindbar', 'nicht mehr benötigt', 'Rückbau', 'Vodafone Rückbau', 'CSD-Ablösung', 'unbekannt', 'Umbau auf Mobilfunk'];
 
 function saveTableToStorage(){
   try{
@@ -536,26 +526,63 @@ function loadTableFromStorage(){
     const raw = localStorage.getItem(TABLE_STORAGE_KEY);
     if (!raw) return;
     const rows = JSON.parse(raw);
-    rows.forEach(r => addRow(r[0] || '', r[1] || '', r[2] || '', r[3] || ''));
+    rows.forEach(r => addRow(r[0] || '', r[1] || '', r[2] || '', r[3] || '', false));
   }catch(e){}
 }
 
-function addRow(val1, val2, provider, reason){
+function buildSelectOptions(fixedList, selectedValue){
+  let html = '<option value="">– wählen –</option>';
+  fixedList.forEach(v => { html += `<option${v === selectedValue ? ' selected' : ''}>${escapeHtml(v)}</option>`; });
+  if (selectedValue && !fixedList.includes(selectedValue)){
+    html += `<option selected>${escapeHtml(selectedValue)}</option>`;
+  }
+  return html;
+}
+
+// inheritFromPrevious: bei echten Neu-Zeilen (Scan / "+ leere Zeile") werden Provider und
+// Kündigungsgrund automatisch von der Zeile darüber übernommen, falls hier leer übergeben —
+// die erkannten Zahlen selbst werden NIE vererbt.
+function addRow(val1, val2, provider, reason, inheritFromPrevious){
+  if (inheritFromPrevious){
+    const rows = tbody.querySelectorAll('tr');
+    if (rows.length){
+      const prev = rows[rows.length - 1].querySelectorAll('.rowfield');
+      if (!provider && prev[2]) provider = prev[2].value;
+      if (!reason && prev[3]) reason = prev[3].value;
+    }
+  }
   const tr = document.createElement('tr');
-  const providerOptions = ['<option value="">– wählen –</option>']
-    .concat(PROVIDERS.map(p => `<option${p === provider ? ' selected' : ''}>${escapeHtml(p)}</option>`))
-    .join('');
+  const providerOptions = buildSelectOptions(PROVIDERS, provider);
+  const reasonOptions = buildSelectOptions(REASONS, reason) + '<option value="__custom__">✏️ Eigener Text…</option>';
   tr.innerHTML = `
     <td class="idx"></td>
     <td><input class="rowfield" type="text" value="${escapeHtml(val1)}"></td>
     <td><input class="rowfield" type="text" value="${escapeHtml(val2)}"></td>
     <td><select class="rowfield">${providerOptions}</select></td>
-    <td><input class="rowfield" type="text" list="ausbaugrundList" placeholder="Grund…" value="${escapeHtml(reason)}"></td>
+    <td><select class="rowfield reason-select">${reasonOptions}</select></td>
     <td class="act"><button title="Löschen">✕</button></td>
   `;
   tr.querySelectorAll('.rowfield').forEach(el => {
     el.addEventListener('input', saveTableToStorage);
     el.addEventListener('change', saveTableToStorage);
+  });
+  const reasonSelect = tr.querySelector('.reason-select');
+  reasonSelect.addEventListener('change', () => {
+    if (reasonSelect.value === '__custom__'){
+      const custom = window.prompt('Eigenen Kündigungsgrund eingeben:', '');
+      const trimmed = (custom || '').trim();
+      if (trimmed){
+        const opt = document.createElement('option');
+        opt.value = trimmed;
+        opt.textContent = trimmed;
+        opt.selected = true;
+        reasonSelect.insertBefore(opt, reasonSelect.querySelector('option[value="__custom__"]'));
+        reasonSelect.value = trimmed;
+      } else {
+        reasonSelect.value = '';
+      }
+      saveTableToStorage();
+    }
   });
   tr.querySelector('button').addEventListener('click', () => {
     if (pendingRow.rowEl === tr) pendingRow = { lowerVal: null, upperVal: null, rowEl: null };
@@ -569,7 +596,7 @@ function addRow(val1, val2, provider, reason){
 function reindex(){ [...tbody.children].forEach((tr,i) => tr.querySelector('.idx').textContent = i+1); }
 function escapeHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-document.getElementById('addRowBtn').addEventListener('click', () => addRow('','','',''));
+document.getElementById('addRowBtn').addEventListener('click', () => addRow('','','','', true));
 document.getElementById('clearAllBtn').addEventListener('click', () => {
   if (!confirm('Tabelle wirklich vollständig löschen? Das kann nicht rückgängig gemacht werden.')) return;
   tbody.innerHTML = '';
