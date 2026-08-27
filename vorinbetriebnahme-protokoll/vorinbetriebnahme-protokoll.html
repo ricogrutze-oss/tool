@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Vorinbetriebnahme-Protokoll</title>
+<style>
+  :root{
+    --bg:#141210;
+    --bg2:#1c1915;
+    --card:#211d18;
+    --border:#3a332a;
+    --border-light:#4a4136;
+    --amber:#f0a830;
+    --amber-dim:#a87a30;
+    --text:#eee7da;
+    --text-dim:#a89a86;
+    --ok:#5fae6b;
+    --warn:#d9534f;
+    --mono: 'Consolas','SFMono-Regular',Menlo,monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,'Segoe UI',Roboto,sans-serif;
+    padding-bottom:90px;
+  }
+  header{
+    background:linear-gradient(180deg,#1c1915,#161310);
+    border-bottom:2px solid var(--amber-dim);
+    padding:14px 16px 10px;
+    position:sticky; top:0; z-index:20;
+  }
+  header h1{margin:0 0 2px; font-size:17px; color:var(--amber); letter-spacing:.3px;}
+  header .sub{font-size:11px; color:var(--text-dim);}
+  .steps{display:flex; gap:4px; margin-top:10px;}
+  .step{flex:1; text-align:center; padding:6px 2px; font-size:10.5px; border-radius:6px;
+    background:var(--bg2); color:var(--text-dim); border:1px solid var(--border); cursor:pointer;}
+  .step.active{background:var(--amber); color:#1a1410; font-weight:700; border-color:var(--amber);}
+  .step.done{color:var(--ok); border-color:var(--ok);}
+  .step.disabled{opacity:.35; pointer-events:none;}
+
+  main{padding:14px 14px 20px; max-width:640px; margin:0 auto;}
+  .panel{display:none;}
+  .panel.active{display:block; animation:fade .15s ease;}
+  @keyframes fade{from{opacity:0} to{opacity:1}}
+
+  .card{background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:12px;}
+  .card h2{margin:0 0 10px; font-size:14px; color:var(--amber); border-bottom:1px solid var(--border); padding-bottom:6px;}
+  .card h3{margin:14px 0 8px; font-size:12.5px; color:var(--text); text-transform:uppercase; letter-spacing:.5px; opacity:.8;}
+
+  label{display:block; font-size:11.5px; color:var(--text-dim); margin:8px 0 3px;}
+  input[type=text], input[type=number], input[type=date], select, textarea{
+    width:100%; padding:9px 10px; background:#171410; border:1px solid var(--border-light);
+    border-radius:7px; color:var(--text); font-size:14px; font-family:inherit;
+  }
+  textarea{min-height:50px; resize:vertical; font-family:var(--mono); font-size:12.5px;}
+  input:focus, select:focus, textarea:focus{outline:none; border-color:var(--amber);}
+
+  .row{display:flex; gap:8px;}
+  .row > *{flex:1;}
+
+  .choice-group{display:flex; gap:8px; flex-wrap:wrap;}
+  .choice{flex:1; min-width:100px; text-align:center; padding:12px 8px; border:1px solid var(--border-light);
+    border-radius:8px; background:#171410; cursor:pointer; font-size:13px; color:var(--text-dim);}
+  .choice.sel{border-color:var(--amber); background:#2a2013; color:var(--amber); font-weight:600;}
+
+  button{font-family:inherit; cursor:pointer;}
+  .btn{padding:10px 16px; border-radius:8px; border:1px solid var(--border-light); background:#211d18;
+    color:var(--text); font-size:13.5px;}
+  .btn:active{transform:scale(.97);}
+  .btn-amber{background:var(--amber); color:#1a1410; border-color:var(--amber); font-weight:700;}
+  .btn-ghost{background:transparent; color:var(--text-dim);}
+  .btn-sm{padding:6px 10px; font-size:12px; border-radius:6px;}
+  .btn-block{width:100%;}
+  .btn-danger{color:var(--warn); border-color:#5a2f2d;}
+
+  .photo-row{display:flex; gap:10px; align-items:center; margin:10px 0;}
+  .thumb{width:70px; height:70px; border-radius:8px; object-fit:cover; border:1px solid var(--border-light); background:#0d0b09; flex-shrink:0;}
+  .thumb.empty{display:flex; align-items:center; justify-content:center; color:var(--text-dim); font-size:22px;}
+  .photo-actions{display:flex; flex-direction:column; gap:6px; flex:1;}
+  .status-line{font-size:11.5px; color:var(--text-dim); min-height:16px;}
+  .status-line.ok{color:var(--ok);}
+  .status-line.err{color:var(--warn);}
+
+  .device-block{border:1px solid var(--border); border-radius:9px; padding:12px; margin-bottom:12px; background:#191510;}
+  .device-block h4{margin:0 0 8px; font-size:12.5px; color:var(--amber);}
+
+  .check-cat{margin-bottom:14px;}
+  .check-cat-title{font-size:12px; text-transform:uppercase; letter-spacing:.5px; color:var(--amber-dim); margin:14px 0 6px; padding-top:8px; border-top:1px dashed var(--border);}
+  .check-item{display:flex; gap:10px; align-items:flex-start; padding:8px 0; border-bottom:1px solid #221e18;}
+  .check-item input[type=checkbox]{width:20px; height:20px; margin-top:1px; accent-color: var(--amber); flex-shrink:0;}
+  .check-item .txt{flex:1; font-size:13px; line-height:1.35;}
+  .check-item .tag{display:inline-block; font-size:9px; padding:1px 5px; border-radius:4px; margin-left:6px; vertical-align:1px;}
+  .tag.ns{background:#1e3a2a; color:#7fd99a;}
+  .tag.ms{background:#3a2a1e; color:#e0a35c;}
+  .tag.beide{background:#232323; color:#999;}
+  .note-toggle{font-size:10.5px; color:var(--text-dim); text-decoration:underline; margin-left:30px; cursor:pointer;}
+  .note-field{margin:4px 0 6px 30px; display:none;}
+  .note-field.open{display:block;}
+  .note-field textarea{min-height:34px; font-family:inherit;}
+
+  footer.navbar{position:fixed; bottom:0; left:0; right:0; background:#171410; border-top:1px solid var(--border);
+    padding:10px 14px; display:flex; gap:10px; z-index:20;}
+  footer.navbar .btn{flex:1;}
+
+  .gps-box{display:flex; gap:8px; align-items:center;}
+  .gps-box input{flex:1;}
+
+  .summary-line{display:flex; justify-content:space-between; font-size:13px; padding:5px 0; border-bottom:1px dotted var(--border);}
+  .summary-line span:first-child{color:var(--text-dim);}
+
+  .hint{font-size:11px; color:var(--text-dim); margin-top:6px; line-height:1.4;}
+  .hint.warn{color:#d9a45c;}
+
+  @media print{
+    header, footer.navbar, .no-print{display:none !important;}
+    body{background:#fff; color:#000; padding:0;}
+    .panel{display:block !important;}
+    .card{border:1px solid #999; background:#fff; page-break-inside:avoid;}
+    .card h2{color:#000;}
+    input, select, textarea{border:1px solid #999; color:#000; background:#fff;}
+    .check-item{border-bottom:1px solid #ccc;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Vorinbetriebnahme-Protokoll</h1>
+  <div class="sub">Zähleranlage · Mittel-/Niederspannung</div>
+  <div class="steps no-print" id="stepNav"></div>
+</header>
+
+<main>
+
+  <!-- STEP 1: SETUP -->
+  <div class="panel" id="panel-1">
+    <div class="card">
+      <h2>1 · Anlage &amp; Messart</h2>
+      <label>Spannungsebene</label>
+      <div class="choice-group" id="choiceEbene">
+        <div class="choice" data-val="NS">Niederspannung</div>
+        <div class="choice" data-val="MS">Mittelspannung</div>
+      </div>
+
+      <label style="margin-top:14px;">Messart</label>
+      <div class="choice-group" id="choiceMessart"></div>
+
+      <div id="vtCountBox" style="display:none;">
+        <label>Spannungswandler-Schaltung</label>
+        <div class="choice-group" id="choiceVt">
+          <div class="choice" data-val="3">3 Stück (Sternschaltung)</div>
+          <div class="choice" data-val="2">2 Stück (V-/Aron-Schaltung)</div>
+        </div>
+      </div>
+      <div class="hint" id="messartHint"></div>
+    </div>
+
+    <div class="card">
+      <h2>Standort</h2>
+      <label>Anlagenbezeichnung / Messstellen-ID</label>
+      <input type="text" id="anlName" placeholder="z. B. -T1.1 / Trafostation Musterweg">
+      <label>Adresse</label>
+      <input type="text" id="anlAdresse" placeholder="Straße, PLZ Ort">
+      <label>GPS-Position</label>
+      <div class="gps-box">
+        <input type="text" id="gpsField" placeholder="wird per GPS ermittelt oder manuell eintragen" readonly>
+        <button class="btn btn-sm" id="btnGps">📍 Orten</button>
+      </div>
+      <div class="status-line" id="gpsStatus"></div>
+      <label>Prüfer / Monteur</label>
+      <input type="text" id="pruefer" placeholder="Name">
+      <label>Datum</label>
+      <input type="date" id="pruefdatum">
+    </div>
+  </div>
+
+  <!-- STEP 2: ZÄHLER -->
+  <div class="panel" id="panel-2">
+    <div class="card">
+      <h2>2 · Zähler</h2>
+      <div class="photo-row">
+        <img class="thumb empty" id="thumb-zaehler">
+        <div class="photo-actions">
+          <input type="file" accept="image/*" capture="environment" style="display:none" id="file-zaehler">
+          <button class="btn btn-sm" onclick="document.getElementById('file-zaehler').click()">📷 Foto Typenschild aufnehmen</button>
+          <div class="status-line" id="status-zaehler"></div>
+        </div>
+      </div>
+
+      <label>Zählernummer</label>
+      <input type="text" id="z_nummer">
+      <label>Identifikationsnummer (falls abweichend)</label>
+      <input type="text" id="z_id">
+      <div class="row">
+        <div><label>Hersteller</label><input type="text" id="z_hersteller"></div>
+        <div><label>Typ</label><input type="text" id="z_typ"></div>
+      </div>
+      <div class="row">
+        <div><label>Genauigkeitsklasse</label><input type="text" id="z_klasse"></div>
+        <div><label>Baujahr</label><input type="text" id="z_baujahr"></div>
+      </div>
+      <div class="row">
+        <div><label>Spannung</label><input type="text" id="z_spannung"></div>
+        <div><label>Strom</label><input type="text" id="z_strom"></div>
+      </div>
+      <label>Zulassung / Eichkennzeichen</label>
+      <input type="text" id="z_zulassung">
+      <label>Wandlerfaktor (parametriert)</label>
+      <input type="text" id="z_wfaktor" placeholder="z. B. 40000">
+      <label>Zählerstand bei Inbetriebnahme</label>
+      <input type="text" id="z_stand" placeholder="alle Register, z. B. 1.8.0 = ...">
+      <label>Kommunikation (Modem/DLMS) — Anmerkungen</label>
+      <textarea id="z_kom" placeholder="SIM-Nr., Verbindungstest, IP..."></textarea>
+    </div>
+  </div>
+
+  <!-- STEP 3: WANDLER -->
+  <div class="panel" id="panel-3">
+    <div class="card" id="wandlerCard">
+      <h2>3 · Wandler</h2>
+      <div id="wandlerContainer"></div>
+    </div>
+  </div>
+
+  <!-- STEP 4: CHECKLISTE -->
+  <div class="panel" id="panel-4">
+    <div class="card">
+      <h2>4 · Prüf-Checkliste</h2>
+      <div class="hint warn">Diese Liste ist eine fachliche Orientierung, keine normative Vorgabe. Bitte anhand VDE-AR-N 4400, TAB des Netzbetreibers und interner Arbeitsanweisung ergänzen/prüfen.</div>
+      <div id="checklistContainer"></div>
+    </div>
+  </div>
+
+  <!-- STEP 5: ABSCHLUSS -->
+  <div class="panel" id="panel-5">
+    <div class="card">
+      <h2>5 · Zusammenfassung</h2>
+      <div id="summaryBox"></div>
+    </div>
+    <div class="card">
+      <h2>Ergebnis</h2>
+      <div class="choice-group" id="choiceErgebnis">
+        <div class="choice" data-val="frei">Freigegeben</div>
+        <div class="choice" data-val="maengel">Mängel / Nacharbeit</div>
+      </div>
+      <label>Mängel / Bemerkungen</label>
+      <textarea id="maengelText" placeholder="ggf. Mängel, offene Punkte, Nachprüftermin..."></textarea>
+      <label>Unterschrift Prüfer (Name genügt als Platzhalter)</label>
+      <input type="text" id="unterschrift">
+    </div>
+    <div class="card no-print">
+      <h2>Export</h2>
+      <button class="btn btn-amber btn-block" onclick="window.print()">🖨️ Drucken / Als PDF speichern</button>
+      <button class="btn btn-block" style="margin-top:8px;" onclick="exportJson()">⬇️ Protokoll als JSON exportieren</button>
+      <button class="btn btn-block btn-danger" style="margin-top:8px;" onclick="if(confirm('Neues, leeres Protokoll starten? Aktuelle Eingaben gehen verloren.'))resetAll()">🗑️ Neues Protokoll</button>
+    </div>
+  </div>
+
+</main>
+
+<footer class="navbar no-print">
+  <button class="btn" id="btnBack">← Zurück</button>
+  <button class="btn btn-amber" id="btnNext">Weiter →</button>
+</footer>
+
+<script>
+/* ---------------- STATE ---------------- */
+const STEPS = ['Setup','Zähler','Wandler','Checkliste','Abschluss'];
+let step = 1;
+
+const state = {
+  ebene: null,           // NS | MS
+  messart: null,         // direkt | halbindirekt | wandler
+  vtCount: 3,
+  standort: { name:'', adresse:'', gps:'', pruefer:'', datum:'' },
+  zaehler: {},
+  wandler: [],           // {rolle:'Stromwandler L1', typ:'ct'|'vt', felder:{...}, photo:null}
+  checklist: {},         // id -> {checked:bool, note:string}
+  abschluss: { ergebnis:'', maengel:'', unterschrift:'' }
+};
+
+const LS_KEY = 'vibn_protokoll_draft_v1';
+
+function saveDraft(){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){}
+}
+function loadDraft(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(raw) Object.assign(state, JSON.parse(raw));
+  }catch(e){}
+}
+
+/* ---------------- CHECKLIST DEFINITION ---------------- */
+const CHECKLIST = [
+  { cat:'Allgemein / Sichtprüfung', tag:'beide', items:[
+    ['sicht_zugang','Zählerplatz / Wandlerraum sauber, trocken, frei zugänglich'],
+    ['sicht_beschriftung','Beschriftung / Anlagenkennzeichnung vorhanden und korrekt'],
+    ['sicht_schrank','Schrank / Kiosk unbeschädigt, Tür/Schloss funktionsfähig'],
+    ['sicht_plombierfaehig','Plombierstellen vorhanden und plombierfähig'],
+    ['sicht_ueberspannung','Überspannungs-/Blitzschutz vorhanden (falls gefordert)'],
+  ]},
+  { cat:'Sicherheit (nur MS)', tag:'ms', items:[
+    ['ms_5regeln','Fünf Sicherheitsregeln beachtet, Anlage spannungsfrei geschaltet'],
+    ['ms_schaltauftrag','Schaltauftrag / Schaltberechtigung vorhanden'],
+    ['ms_erdung','Erdung und Kurzschließung der Anlage vorgenommen'],
+    ['ms_spannungsfrei','Spannungsfreiheit vor Wandleranschluss geprüft'],
+  ]},
+  { cat:'Wandlerprüfung (bei Wandlermessung)', tag:'wandler', items:[
+    ['w_typenschild','Typenschilddaten mit Bestellung/Netzberechnung abgeglichen (Übersetzung, Klasse, Bürde)'],
+    ['w_sek_klemmen','Sekundärklemmen S1/S2 korrekt zugeordnet und fest angezogen'],
+    ['w_prim_klemmen','Primärklemmen P1/P2 in Energieflussrichtung korrekt'],
+    ['w_ks_bruecken','Kurzschlussbrücken vor/während Zähleranschluss korrekt gesetzt bzw. entfernt'],
+    ['w_erdung_sek','Sekundärkreis der Stromwandler einseitig geerdet (i. d. R. S2)'],
+    ['w_sicherungen','Spannungswandler-Sicherungen bestückt und funktionsfähig'],
+    ['w_isolation','Isolationswiderstand der Sekundärverdrahtung gemessen'],
+    ['w_buerde','Bürde der Sekundärverdrahtung (Länge/Querschnitt) im zulässigen Bereich'],
+  ]},
+  { cat:'Anschluss- und Verdrahtungsprüfung', tag:'beide', items:[
+    ['v_klemmenplan','Klemmenbezeichnung mit Schaltplan abgeglichen'],
+    ['v_drehmoment','Alle Klemmen mit Drehmomentschlüssel nachgezogen (Sollwert dokumentiert)'],
+    ['v_beschriftung','Aderleitungen eindeutig beschriftet'],
+    ['v_ks_fest','Kurzschlussfestigkeit des Sekundärkreises geprüft'],
+    ['v_schirmung','Schirmung / Erdung der Messleitungen korrekt aufgelegt'],
+  ]},
+  { cat:'Spannungs- und Stromprüfung', tag:'beide', items:[
+    ['s_sternspannung','Spannung L1-N, L2-N, L3-N gemessen und dokumentiert'],
+    ['s_verkettete','Verkettete Spannung L1-L2, L2-L3, L3-L1 gemessen und dokumentiert'],
+    ['s_drehfeld','Drehfeldrichtung geprüft (rechtsdrehend)'],
+    ['s_strom','Stromaufnahme je Phase plausibilisiert'],
+    ['s_vektor','Vektordiagramm / Winkelmessung mit Prüfgerät durchgeführt'],
+  ]},
+  { cat:'Zähler', tag:'beide', items:[
+    ['z_nummer_check','Zählernummer mit Bestellung / Zählerdatenbank abgeglichen'],
+    ['z_stand_check','Zählerstand bei Inbetriebnahme dokumentiert (alle Register)'],
+    ['z_faktor_check','Wandlerfaktor im Zähler korrekt parametriert'],
+    ['z_uhrzeit','Datum/Uhrzeit im Zähler synchron'],
+    ['z_kom_check','Kommunikationsmodul funktionsfähig, Verbindungstest erfolgreich'],
+    ['z_fehlercode','Anzeige ohne Fehlercode (kein F.F, kein Rückstellzähler-Fehler)'],
+  ]},
+  { cat:'Abschluss', tag:'beide', items:[
+    ['a_plombierung','Plombierung durchgeführt, Plombennummern dokumentiert'],
+    ['a_fotos','Foto-Dokumentation vollständig (Zähler, Wandler, Klemmen, Schrank)'],
+    ['a_unterschrift','Protokoll unterschrieben (Prüfer / ggf. Anlagenbetreiber)'],
+  ]},
+];
+
+/* ---------------- INIT ---------------- */
+function init(){
+  loadDraft();
+  renderStepNav();
+  buildMessartChoices();
+  buildChecklist();
+  buildWandlerBlocks();
+  bindStaticFields();
+  hydrateForm();
+  showStep(1);
+  document.getElementById('pruefdatum').value = state.standort.datum || new Date().toISOString().slice(0,10);
+}
+
+function renderStepNav(){
+  const nav = document.getElementById('stepNav');
+  nav.innerHTML = '';
+  STEPS.forEach((s,i)=>{
+    const d = document.createElement('div');
+    d.className = 'step';
+    d.textContent = (i+1)+' '+s;
+    d.dataset.n = i+1;
+    d.onclick = ()=>{ if(canGoTo(i+1)) showStep(i+1); };
+    nav.appendChild(d);
+  });
+}
+function canGoTo(n){
+  if(n<=2) return true;
+  return !!state.ebene && !!state.messart;
+}
+function updateStepNav(){
+  document.querySelectorAll('.step').forEach(el=>{
+    const n = +el.dataset.n;
+    el.classList.toggle('active', n===step);
+    el.classList.toggle('done', n<step);
+    el.classList.toggle('disabled', !canGoTo(n));
+  });
+}
+
+function showStep(n){
+  step = n;
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+n).classList.add('active');
+  updateStepNav();
+  document.getElementById('btnBack').style.visibility = n===1 ? 'hidden' : 'visible';
+  document.getElementById('btnNext').textContent = n===5 ? 'Fertig ✓' : 'Weiter →';
+  if(n===3) buildWandlerBlocks();
+  if(n===4) refreshChecklistVisibility();
+  if(n===5) buildSummary();
+  window.scrollTo(0,0);
+}
+
+document.getElementById('btnNext').onclick = ()=>{
+  if(step===1 && (!state.ebene || !state.messart)){
+    alert('Bitte Spannungsebene und Messart wählen.'); return;
+  }
+  if(step<5) showStep(step+1);
+};
+document.getElementById('btnBack').onclick = ()=>{ if(step>1) showStep(step-1); };
+
+/* ---------------- STEP 1: SETUP ---------------- */
+document.querySelectorAll('#choiceEbene .choice').forEach(el=>{
+  el.onclick = ()=>{
+    state.ebene = el.dataset.val;
+    document.querySelectorAll('#choiceEbene .choice').forEach(c=>c.classList.remove('sel'));
+    el.classList.add('sel');
+    buildMessartChoices();
+    saveDraft();
+  };
+});
+
+function buildMessartChoices(){
+  const box = document.getElementById('choiceMessart');
+  box.innerHTML = '';
+  let options = [];
+  if(state.ebene==='NS'){
+    options = [
+      ['direkt','Direktmessung'],
+      ['halbindirekt','Halbindirekt (3 Stromwandler)'],
+    ];
+  } else if(state.ebene==='MS'){
+    options = [ ['wandler','Wandlermessung (3 CT + Spannungswandler)'] ];
+  } else {
+    box.innerHTML = '<div class="hint">Bitte zuerst Spannungsebene wählen.</div>';
+    return;
+  }
+  options.forEach(([val,label])=>{
+    const d = document.createElement('div');
+    d.className = 'choice' + (state.messart===val ? ' sel':'');
+    d.textContent = label;
+    d.dataset.val = val;
+    d.onclick = ()=>{
+      state.messart = val;
+      document.querySelectorAll('#choiceMessart .choice').forEach(c=>c.classList.remove('sel'));
+      d.classList.add('sel');
+      document.getElementById('vtCountBox').style.display = (val==='wandler') ? 'block' : 'none';
+      updateMessartHint();
+      buildWandlerBlocks();
+      buildChecklist();
+      saveDraft();
+    };
+    box.appendChild(d);
+  });
+  updateMessartHint();
+  if(state.ebene==='MS') state.messart='wandler';
+}
+function updateMessartHint(){
+  const el = document.getElementById('messartHint');
+  if(state.ebene==='NS' && state.messart==='direkt') el.textContent='Direktmessung: kein Stromwandler nötig, Schritt 3 entfällt.';
+  else if(state.ebene==='NS' && state.messart==='halbindirekt') el.textContent='Halbindirekte Messung: 3 Stromwandler (je Phase 1), keine Spannungswandler.';
+  else if(state.ebene==='MS') el.textContent='Mittelspannung: 3 Stromwandler + Spannungswandler (Anzahl unten wählen).';
+  else el.textContent='';
+}
+document.querySelectorAll('#choiceVt .choice').forEach(el=>{
+  el.onclick = ()=>{
+    state.vtCount = +el.dataset.val;
+    document.querySelectorAll('#choiceVt .choice').forEach(c=>c.classList.remove('sel'));
+    el.classList.add('sel');
+    buildWandlerBlocks();
+    saveDraft();
+  };
+});
+
+function bindStaticFields(){
+  const map = {
+    anlName:'name', anlAdresse:'adresse', pruefer:'pruefer', pruefdatum:'datum'
+  };
+  Object.entries(map).forEach(([id,key])=>{
+    document.getElementById(id).addEventListener('input', e=>{
+      state.standort[key] = e.target.value; saveDraft();
+    });
+  });
+  ['z_nummer','z_id','z_hersteller','z_typ','z_klasse','z_baujahr','z_spannung','z_strom','z_zulassung','z_wfaktor','z_stand','z_kom'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', e=>{
+      state.zaehler[id] = e.target.value; saveDraft();
+    });
+  });
+  document.getElementById('maengelText').addEventListener('input', e=>{ state.abschluss.maengel = e.target.value; saveDraft(); });
+  document.getElementById('unterschrift').addEventListener('input', e=>{ state.abschluss.unterschrift = e.target.value; saveDraft(); });
+  document.querySelectorAll('#choiceErgebnis .choice').forEach(el=>{
+    el.onclick = ()=>{
+      state.abschluss.ergebnis = el.dataset.val;
+      document.querySelectorAll('#choiceErgebnis .choice').forEach(c=>c.classList.remove('sel'));
+      el.classList.add('sel'); saveDraft();
+    };
+  });
+  document.getElementById('btnGps').onclick = getGps;
+  document.getElementById('file-zaehler').addEventListener('change', e=>handlePhoto(e,'zaehler'));
+}
+
+function hydrateForm(){
+  document.getElementById('anlName').value = state.standort.name||'';
+  document.getElementById('anlAdresse').value = state.standort.adresse||'';
+  document.getElementById('gpsField').value = state.standort.gps||'';
+  document.getElementById('pruefer').value = state.standort.pruefer||'';
+  if(state.ebene){
+    document.querySelectorAll('#choiceEbene .choice').forEach(c=>c.classList.toggle('sel', c.dataset.val===state.ebene));
+    buildMessartChoices();
+  }
+  Object.entries(state.zaehler).forEach(([id,val])=>{
+    const el = document.getElementById(id); if(el) el.value = val;
+  });
+  document.getElementById('maengelText').value = state.abschluss.maengel||'';
+  document.getElementById('unterschrift').value = state.abschluss.unterschrift||'';
+  if(state.abschluss.ergebnis){
+    document.querySelectorAll('#choiceErgebnis .choice').forEach(c=>c.classList.toggle('sel', c.dataset.val===state.abschluss.ergebnis));
+  }
+  if(state.zaehler.photo) document.getElementById('thumb-zaehler').src = state.zaehler.photo;
+}
+
+function getGps(){
+  const status = document.getElementById('gpsStatus');
+  status.textContent = 'Standort wird ermittelt...'; status.className='status-line';
+  if(!navigator.geolocation){
+    status.textContent = 'Geolocation vom Browser/Umgebung nicht unterstützt. Bitte manuell eintragen.';
+    status.className='status-line err';
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const s = pos.coords.latitude.toFixed(6)+', '+pos.coords.longitude.toFixed(6);
+    document.getElementById('gpsField').value = s;
+    document.getElementById('gpsField').readOnly = false;
+    state.standort.gps = s; saveDraft();
+    status.textContent = 'Position ermittelt (±'+Math.round(pos.coords.accuracy)+' m).'; status.className='status-line ok';
+  }, err=>{
+    document.getElementById('gpsField').readOnly = false;
+    status.textContent = 'Ortung nicht möglich ('+err.message+'). Bitte manuell eintragen.';
+    status.className='status-line err';
+  }, {enableHighAccuracy:true, timeout:8000});
+}
+document.getElementById('gpsField').addEventListener('input', e=>{ state.standort.gps=e.target.value; saveDraft(); });
+
+/* ---------------- WANDLER BLOCKS ---------------- */
+function buildWandlerBlocks(){
+  const container = document.getElementById('wandlerContainer');
+  container.innerHTML = '';
+  let list = [];
+  if(state.ebene==='NS' && state.messart==='halbindirekt'){
+    list = [
+      {id:'ct1', label:'Stromwandler L1', typ:'ct'},
+      {id:'ct2', label:'Stromwandler L2', typ:'ct'},
+      {id:'ct3', label:'Stromwandler L3', typ:'ct'},
+    ];
+  } else if(state.ebene==='MS'){
+    list = [
+      {id:'ct1', label:'Stromwandler L1', typ:'ct'},
+      {id:'ct2', label:'Stromwandler L2', typ:'ct'},
+      {id:'ct3', label:'Stromwandler L3', typ:'ct'},
+    ];
+    const vtN = state.vtCount||3;
+    for(let i=1;i<=vtN;i++) list.push({id:'vt'+i, label:'Spannungswandler '+(vtN===2?['L1-L2','L2-L3'][i-1]:'L'+i), typ:'vt'});
+  } else {
+    container.innerHTML = '<div class="hint">Bei Direktmessung sind keine Wandler zu erfassen. Weiter zu Schritt 4.</div>';
+    return;
+  }
+
+  list.forEach(spec=>{
+    if(!state.wandler.find(w=>w.rid===spec.id)){
+      state.wandler.push({rid:spec.id, label:spec.label, typ:spec.typ, felder:{}, photo:null});
+    }
+  });
+  state.wandler = state.wandler.filter(w=>list.find(l=>l.id===w.rid));
+
+  list.forEach(spec=>{
+    const w = state.wandler.find(x=>x.rid===spec.id);
+    const block = document.createElement('div');
+    block.className = 'device-block';
+    const fid = 'w_'+spec.id;
+    block.innerHTML = `
+      <h4>${spec.label}</h4>
+      <div class="photo-row">
+        <img class="thumb empty" id="thumb-${fid}">
+        <div class="photo-actions">
+          <input type="file" accept="image/*" capture="environment" style="display:none" id="file-${fid}">
+          <button class="btn btn-sm" data-fid="${fid}" data-rid="${spec.id}" onclick="document.getElementById('file-${fid}').click()">📷 Foto Typenschild</button>
+          <div class="status-line" id="status-${fid}"></div>
+        </div>
+      </div>
+      <div class="row">
+        <div><label>Seriennummer</label><input type="text" data-field="seriennummer" data-rid="${spec.id}"></div>
+        <div><label>Hersteller / Typ</label><input type="text" data-field="typ" data-rid="${spec.id}"></div>
+      </div>
+      <div class="row">
+        <div><label>Übersetzung</label><input type="text" data-field="uebersetzung" data-rid="${spec.id}" placeholder="${spec.typ==='ct'?'z. B. 1000/5 A':'z. B. 20000/100 V'}"></div>
+        <div><label>Klasse</label><input type="text" data-field="klasse" data-rid="${spec.id}"></div>
+      </div>
+      <div class="row">
+        <div><label>Bürde</label><input type="text" data-field="buerde" data-rid="${spec.id}"></div>
+        <div><label>Baujahr</label><input type="text" data-field="baujahr" data-rid="${spec.id}"></div>
+      </div>
+    `;
+    container.appendChild(block);
+    block.querySelectorAll('input[data-field]').forEach(inp=>{
+      inp.value = w.felder[inp.dataset.field] || '';
+      inp.addEventListener('input', e=>{ w.felder[inp.dataset.field] = e.target.value; saveDraft(); });
+    });
+    if(w.photo) document.getElementById('thumb-'+fid).src = w.photo;
+    document.getElementById('file-'+fid).addEventListener('change', e=>handlePhoto(e,'wandler',spec.id));
+  });
+}
+
+/* ---------------- PHOTO + API EXTRACTION ---------------- */
+function fileToBase64(file){
+  return new Promise((res,rej)=>{
+    const r = new FileReader();
+    r.onload = ()=>res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+const PROMPTS = {
+  zaehler: `Du bekommst ein Foto eines Elektrizitätszählers (Typenschild). Extrahiere folgende Felder, sofern lesbar. Antworte AUSSCHLIESSLICH mit einem JSON-Objekt, ohne Markdown, ohne Erklärtext:
+{"z_nummer":"","z_id":"","z_hersteller":"","z_typ":"","z_klasse":"","z_baujahr":"","z_spannung":"","z_strom":"","z_zulassung":""}
+Wenn ein Feld nicht erkennbar ist, gib einen leeren String zurück. z_nummer ist die Zähler-/Gerätenummer (oft "Nr." oder große Ziffernfolge). z_id ist eine ggf. abweichende Identifikationsnummer (z. B. beginnend mit Buchstaben wie LGZ/E).`,
+  ct: `Du bekommst ein Foto eines Stromwandler-Typenschilds. Extrahiere folgende Felder, sofern lesbar. Antworte AUSSCHLIESSLICH mit JSON, ohne Markdown:
+{"seriennummer":"","typ":"","uebersetzung":"","klasse":"","buerde":"","baujahr":""}
+uebersetzung im Format z. B. "1000/5 A". typ = Hersteller + Typbezeichnung. Leere Felder als leeren String zurückgeben.`,
+  vt: `Du bekommst ein Foto eines Spannungswandler-Typenschilds. Extrahiere folgende Felder, sofern lesbar. Antworte AUSSCHLIESSLICH mit JSON, ohne Markdown:
+{"seriennummer":"","typ":"","uebersetzung":"","klasse":"","buerde":"","baujahr":""}
+uebersetzung im Format z. B. "20000/100 V". typ = Hersteller + Typbezeichnung. Leere Felder als leeren String zurückgeben.`
+};
+
+async function callClaudeVision(base64, promptKey){
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 1000,
+      messages: [{
+        role: "user",
+        content: [
+          { type: "image", source: { type: "base64", media_type: "image/jpeg", data: base64 } },
+          { type: "text", text: PROMPTS[promptKey] }
+        ]
+      }]
+    })
+  });
+  const data = await response.json();
+  const text = (data.content||[]).map(b=>b.text||'').join('\n');
+  const clean = text.replace(/```json|```/g,'').trim();
+  return JSON.parse(clean);
+}
+
+async function handlePhoto(e, kind, rid){
+  const file = e.target.files[0];
+  if(!file) return;
+  const fid = kind==='zaehler' ? 'zaehler' : 'w_'+rid;
+  const thumb = document.getElementById('thumb-'+fid);
+  const status = document.getElementById('status-'+fid);
+  thumb.classList.remove('empty');
+
+  const base64 = await fileToBase64(file);
+  const dataUrl = 'data:image/jpeg;base64,'+base64;
+  thumb.src = dataUrl;
+
+  if(kind==='zaehler'){ state.zaehler.photo = dataUrl; }
+  else { const w = state.wandler.find(x=>x.rid===rid); w.photo = dataUrl; }
+  saveDraft();
+
+  status.textContent = 'Analysiere Foto...'; status.className='status-line';
+  try{
+    let promptKey = kind==='zaehler' ? 'zaehler' : (state.wandler.find(x=>x.rid===rid).typ==='ct' ? 'ct' : 'vt');
+    const result = await callClaudeVision(base64, promptKey);
+
+    if(kind==='zaehler'){
+      Object.entries(result).forEach(([k,v])=>{
+        if(v){ const el=document.getElementById(k); if(el){ el.value=v; state.zaehler[k]=v; } }
+      });
+    } else {
+      const w = state.wandler.find(x=>x.rid===rid);
+      Object.entries(result).forEach(([k,v])=>{
+        if(v){ w.felder[k]=v; const el=document.querySelector(`input[data-field="${k}"][data-rid="${rid}"]`); if(el) el.value=v; }
+      });
+    }
+    saveDraft();
+    status.textContent = '✓ Felder automatisch übernommen — bitte prüfen.';
+    status.className='status-line ok';
+  }catch(err){
+    status.textContent = 'Automatische Erkennung nicht verfügbar (nur innerhalb von Claude nutzbar). Bitte Felder manuell eintragen.';
+    status.className='status-line err';
+  }
+}
+
+/* ---------------- CHECKLIST ---------------- */
+function buildChecklist(){
+  const container = document.getElementById('checklistContainer');
+  container.innerHTML = '';
+  CHECKLIST.forEach(cat=>{
+    const catDiv = document.createElement('div');
+    catDiv.className = 'check-cat';
+    catDiv.dataset.tag = cat.tag;
+    const title = document.createElement('div');
+    title.className = 'check-cat-title';
+    title.textContent = cat.cat;
+    catDiv.appendChild(title);
+    cat.items.forEach(([id,label])=>{
+      if(!state.checklist[id]) state.checklist[id] = {checked:false, note:''};
+      const item = document.createElement('div');
+      item.className = 'check-item';
+      item.innerHTML = `
+        <input type="checkbox" id="chk-${id}">
+        <div style="flex:1;">
+          <div class="txt">${label}</div>
+          <span class="note-toggle" data-id="${id}">+ Notiz</span>
+          <div class="note-field" id="notefield-${id}"><textarea id="note-${id}" placeholder="Bemerkung, Messwert..."></textarea></div>
+        </div>
+      `;
+      catDiv.appendChild(item);
+    });
+    container.appendChild(catDiv);
+  });
+
+  Object.keys(state.checklist).forEach(id=>{
+    const chk = document.getElementById('chk-'+id);
+    if(!chk) return;
+    chk.checked = state.checklist[id].checked;
+    chk.addEventListener('change', e=>{ state.checklist[id].checked = e.target.checked; saveDraft(); });
+    const note = document.getElementById('note-'+id);
+    note.value = state.checklist[id].note;
+    note.addEventListener('input', e=>{ state.checklist[id].note = e.target.value; saveDraft(); });
+  });
+  document.querySelectorAll('.note-toggle').forEach(t=>{
+    t.onclick = ()=>{
+      const f = document.getElementById('notefield-'+t.dataset.id);
+      f.classList.toggle('open');
+      t.textContent = f.classList.contains('open') ? '− Notiz' : '+ Notiz';
+    };
+  });
+}
+
+function refreshChecklistVisibility(){
+  const hasWandler = (state.ebene==='MS') || (state.ebene==='NS' && state.messart==='halbindirekt');
+  document.querySelectorAll('.check-cat').forEach(cat=>{
+    const tag = cat.dataset.tag;
+    let show = true;
+    if(tag==='ms') show = state.ebene==='MS';
+    if(tag==='wandler') show = hasWandler;
+    cat.style.display = show ? '' : 'none';
+  });
+}
+
+/* ---------------- SUMMARY / EXPORT ---------------- */
+function buildSummary(){
+  const el = document.getElementById('summaryBox');
+  const done = Object.values(state.checklist).filter(c=>c.checked).length;
+  const total = Object.values(state.checklist).length;
+  let visibleTotal = 0, visibleDone = 0;
+  document.querySelectorAll('.check-cat').forEach(()=>{}); // ensure built
+  const hasWandler = (state.ebene==='MS') || (state.ebene==='NS' && state.messart==='halbindirekt');
+  CHECKLIST.forEach(cat=>{
+    let show = true;
+    if(cat.tag==='ms') show = state.ebene==='MS';
+    if(cat.tag==='wandler') show = hasWandler;
+    if(show) cat.items.forEach(([id])=>{
+      visibleTotal++;
+      if(state.checklist[id] && state.checklist[id].checked) visibleDone++;
+    });
+  });
+  el.innerHTML = `
+    <div class="summary-line"><span>Anlage</span><span>${state.standort.name||'–'}</span></div>
+    <div class="summary-line"><span>Adresse</span><span>${state.standort.adresse||'–'}</span></div>
+    <div class="summary-line"><span>GPS</span><span>${state.standort.gps||'–'}</span></div>
+    <div class="summary-line"><span>Spannungsebene</span><span>${state.ebene||'–'}</span></div>
+    <div class="summary-line"><span>Messart</span><span>${state.messart||'–'}</span></div>
+    <div class="summary-line"><span>Zählernummer</span><span>${state.zaehler.z_nummer||'–'}</span></div>
+    <div class="summary-line"><span>Wandler erfasst</span><span>${state.wandler.length}</span></div>
+    <div class="summary-line"><span>Checkliste</span><span>${visibleDone} / ${visibleTotal} erledigt</span></div>
+    <div class="summary-line"><span>Prüfer</span><span>${state.standort.pruefer||'–'}</span></div>
+    <div class="summary-line"><span>Datum</span><span>${document.getElementById('pruefdatum').value||'–'}</span></div>
+  `;
+}
+
+function exportJson(){
+  state.standort.datum = document.getElementById('pruefdatum').value;
+  const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const name = (state.standort.name||'protokoll').replace(/[^a-z0-9-_]+/gi,'_');
+  a.download = 'vibn_'+name+'_'+(document.getElementById('pruefdatum').value||'')+'.json';
+  a.click();
+}
+
+function resetAll(){
+  localStorage.removeItem(LS_KEY);
+  location.reload();
+}
+
+document.getElementById('pruefdatum').addEventListener('input', e=>{ state.standort.datum=e.target.value; saveDraft(); });
+
+init();
+</script>
+</body>
+</html>
