@@ -161,14 +161,21 @@
       <h2>Standort</h2>
       <label>Anlagenbezeichnung / Messstellen-ID</label>
       <input type="text" id="anlName" placeholder="z. B. -T1.1 / Trafostation Musterweg">
-      <label>Adresse</label>
-      <input type="text" id="anlAdresse" placeholder="Straße, PLZ Ort">
       <label>GPS-Position</label>
       <div class="gps-box">
         <input type="text" id="gpsField" placeholder="wird per GPS ermittelt oder manuell eintragen" readonly>
         <button class="btn btn-sm" id="btnGps">📍 Orten</button>
       </div>
       <div class="status-line" id="gpsStatus"></div>
+      <div class="hint">Nach der Ortung wird die Adresse automatisch über OpenStreetMap nachgeschlagen (Internetverbindung nötig) und kann danach angepasst werden.</div>
+      <div class="row">
+        <div><label>Straße</label><input type="text" id="anlStrasse"></div>
+        <div style="max-width:90px;"><label>Hausnr.</label><input type="text" id="anlHausnr"></div>
+      </div>
+      <div class="row">
+        <div style="max-width:110px;"><label>PLZ</label><input type="text" id="anlPlz"></div>
+        <div><label>Ort</label><input type="text" id="anlOrt"></div>
+      </div>
       <label>Prüfer / Monteur</label>
       <input type="text" id="pruefer" placeholder="Name">
       <label>Datum</label>
@@ -176,15 +183,28 @@
     </div>
   </div>
 
-  <!-- STEP 2: ZÄHLER -->
+  <!-- STEP 2: WANDLER -->
   <div class="panel" id="panel-2">
+    <div class="card" id="wandlerCard">
+      <h2>2 · Wandler</h2>
+      <div id="wandlerContainer"></div>
+      <div id="wfaktorBox"></div>
+    </div>
+  </div>
+
+  <!-- STEP 3: ZÄHLER -->
+  <div class="panel" id="panel-3">
     <div class="card">
-      <h2>2 · Zähler</h2>
+      <h2>3 · Zähler</h2>
       <div class="photo-row">
         <img class="thumb empty" id="thumb-zaehler">
         <div class="photo-actions">
-          <input type="file" accept="image/*" capture="environment" style="display:none" id="file-zaehler">
-          <button class="btn btn-sm" onclick="document.getElementById('file-zaehler').click()">📷 Foto Typenschild aufnehmen</button>
+          <input type="file" accept="image/*" capture="environment" style="display:none" id="file-zaehler-cam">
+          <input type="file" accept="image/*" style="display:none" id="file-zaehler-gal">
+          <div style="display:flex; gap:6px;">
+            <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-zaehler-cam').click()">📷 Kamera</button>
+            <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-zaehler-gal').click()">🖼️ Galerie</button>
+          </div>
           <div class="status-line" id="status-zaehler"></div>
         </div>
       </div>
@@ -209,18 +229,11 @@
       <input type="text" id="z_zulassung">
       <label>Wandlerfaktor (parametriert)</label>
       <input type="text" id="z_wfaktor" placeholder="z. B. 40000">
+      <div class="hint" id="wfaktorHint"></div>
       <label>Zählerstand bei Inbetriebnahme</label>
       <input type="text" id="z_stand" placeholder="alle Register, z. B. 1.8.0 = ...">
       <label>Kommunikation (Modem/DLMS) — Anmerkungen</label>
       <textarea id="z_kom" placeholder="SIM-Nr., Verbindungstest, IP..."></textarea>
-    </div>
-  </div>
-
-  <!-- STEP 3: WANDLER -->
-  <div class="panel" id="panel-3">
-    <div class="card" id="wandlerCard">
-      <h2>3 · Wandler</h2>
-      <div id="wandlerContainer"></div>
     </div>
   </div>
 
@@ -238,6 +251,10 @@
     <div class="card">
       <h2>5 · Zusammenfassung</h2>
       <div id="summaryBox"></div>
+    </div>
+    <div class="card" id="photoGalleryCard">
+      <h2>Foto-Dokumentation</h2>
+      <div id="photoGallery" style="display:flex; flex-wrap:wrap; gap:10px;"></div>
     </div>
     <div class="card">
       <h2>Ergebnis</h2>
@@ -267,14 +284,14 @@
 
 <script>
 /* ---------------- STATE ---------------- */
-const STEPS = ['Setup','Zähler','Wandler','Checkliste','Abschluss'];
+const STEPS = ['Setup','Wandler','Zähler','Checkliste','Abschluss'];
 let step = 1;
 
 const state = {
   ebene: null,           // NS | MS
   messart: null,         // direkt | halbindirekt | wandler
   vtCount: 3,
-  standort: { name:'', adresse:'', gps:'', pruefer:'', datum:'' },
+  standort: { name:'', strasse:'', hausnr:'', plz:'', ort:'', gps:'', pruefer:'', datum:'' },
   zaehler: {},
   wandler: [],           // {rolle:'Stromwandler L1', typ:'ct'|'vt', felder:{...}, photo:null}
   checklist: {},         // id -> {checked:bool, note:string}
@@ -392,9 +409,14 @@ function showStep(n){
   updateStepNav();
   document.getElementById('btnBack').style.visibility = n===1 ? 'hidden' : 'visible';
   document.getElementById('btnNext').textContent = n===5 ? 'Fertig ✓' : 'Weiter →';
-  if(n===3) buildWandlerBlocks();
+  if(n===2) buildWandlerBlocks();
+  if(n===3){
+    const r = computeWandlerfaktor();
+    const h = document.getElementById('wfaktorHint');
+    if(h) h.textContent = r.total ? ('Berechneter Wandlerfaktor aus Schritt 2: '+r.total) : '';
+  }
   if(n===4) refreshChecklistVisibility();
-  if(n===5) buildSummary();
+  if(n===5){ buildSummary(); buildPhotoGallery(); }
   window.scrollTo(0,0);
 }
 
@@ -471,7 +493,7 @@ document.querySelectorAll('#choiceVt .choice').forEach(el=>{
 
 function bindStaticFields(){
   const map = {
-    anlName:'name', anlAdresse:'adresse', pruefer:'pruefer', pruefdatum:'datum'
+    anlName:'name', anlStrasse:'strasse', anlHausnr:'hausnr', anlPlz:'plz', anlOrt:'ort', pruefer:'pruefer', pruefdatum:'datum'
   };
   Object.entries(map).forEach(([id,key])=>{
     document.getElementById(id).addEventListener('input', e=>{
@@ -493,12 +515,16 @@ function bindStaticFields(){
     };
   });
   document.getElementById('btnGps').onclick = getGps;
-  document.getElementById('file-zaehler').addEventListener('change', e=>handlePhoto(e,'zaehler'));
+  document.getElementById('file-zaehler-cam').addEventListener('change', e=>handlePhoto(e,'zaehler'));
+  document.getElementById('file-zaehler-gal').addEventListener('change', e=>handlePhoto(e,'zaehler'));
 }
 
 function hydrateForm(){
   document.getElementById('anlName').value = state.standort.name||'';
-  document.getElementById('anlAdresse').value = state.standort.adresse||'';
+  document.getElementById('anlStrasse').value = state.standort.strasse||'';
+  document.getElementById('anlHausnr').value = state.standort.hausnr||'';
+  document.getElementById('anlPlz').value = state.standort.plz||'';
+  document.getElementById('anlOrt').value = state.standort.ort||'';
   document.getElementById('gpsField').value = state.standort.gps||'';
   document.getElementById('pruefer').value = state.standort.pruefer||'';
   if(state.ebene){
@@ -524,17 +550,42 @@ function getGps(){
     status.className='status-line err';
     return;
   }
-  navigator.geolocation.getCurrentPosition(pos=>{
+  navigator.geolocation.getCurrentPosition(async pos=>{
     const s = pos.coords.latitude.toFixed(6)+', '+pos.coords.longitude.toFixed(6);
     document.getElementById('gpsField').value = s;
     document.getElementById('gpsField').readOnly = false;
     state.standort.gps = s; saveDraft();
-    status.textContent = 'Position ermittelt (±'+Math.round(pos.coords.accuracy)+' m).'; status.className='status-line ok';
+    status.textContent = 'Position ermittelt (±'+Math.round(pos.coords.accuracy)+' m). Adresse wird nachgeschlagen...'; status.className='status-line ok';
+    await reverseGeocode(pos.coords.latitude, pos.coords.longitude);
   }, err=>{
     document.getElementById('gpsField').readOnly = false;
     status.textContent = 'Ortung nicht möglich ('+err.message+'). Bitte manuell eintragen.';
     status.className='status-line err';
   }, {enableHighAccuracy:true, timeout:8000});
+}
+
+async function reverseGeocode(lat, lon){
+  const status = document.getElementById('gpsStatus');
+  try{
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&addressdetails=1`);
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    const a = data.address || {};
+    const strasse = a.road || a.pedestrian || a.footway || a.path || '';
+    const hausnr = a.house_number || '';
+    const plz = a.postcode || '';
+    const ort = a.city || a.town || a.village || a.municipality || a.county || '';
+    if(strasse){ document.getElementById('anlStrasse').value = strasse; state.standort.strasse = strasse; }
+    if(hausnr){ document.getElementById('anlHausnr').value = hausnr; state.standort.hausnr = hausnr; }
+    if(plz){ document.getElementById('anlPlz').value = plz; state.standort.plz = plz; }
+    if(ort){ document.getElementById('anlOrt').value = ort; state.standort.ort = ort; }
+    saveDraft();
+    status.textContent = 'Position ermittelt. Adresse automatisch übernommen — bitte prüfen.';
+    status.className = 'status-line ok';
+  }catch(err){
+    status.textContent = 'Position ermittelt, Adresse konnte nicht automatisch nachgeschlagen werden (keine Verbindung?). Bitte manuell eintragen.';
+    status.className = 'status-line err';
+  }
 }
 document.getElementById('gpsField').addEventListener('input', e=>{ state.standort.gps=e.target.value; saveDraft(); });
 
@@ -579,8 +630,12 @@ function buildWandlerBlocks(){
       <div class="photo-row">
         <img class="thumb empty" id="thumb-${fid}">
         <div class="photo-actions">
-          <input type="file" accept="image/*" capture="environment" style="display:none" id="file-${fid}">
-          <button class="btn btn-sm" data-fid="${fid}" data-rid="${spec.id}" onclick="document.getElementById('file-${fid}').click()">📷 Foto Typenschild</button>
+          <input type="file" accept="image/*" capture="environment" style="display:none" id="file-${fid}-cam">
+          <input type="file" accept="image/*" style="display:none" id="file-${fid}-gal">
+          <div style="display:flex; gap:6px;">
+            <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${fid}-cam').click()">📷 Kamera</button>
+            <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${fid}-gal').click()">🖼️ Galerie</button>
+          </div>
           <div class="status-line" id="status-${fid}"></div>
         </div>
       </div>
@@ -600,11 +655,63 @@ function buildWandlerBlocks(){
     container.appendChild(block);
     block.querySelectorAll('input[data-field]').forEach(inp=>{
       inp.value = w.felder[inp.dataset.field] || '';
-      inp.addEventListener('input', e=>{ w.felder[inp.dataset.field] = e.target.value; saveDraft(); });
+      inp.addEventListener('input', e=>{ w.felder[inp.dataset.field] = e.target.value; saveDraft(); renderWfaktorBox(); });
     });
     if(w.photo) document.getElementById('thumb-'+fid).src = w.photo;
-    document.getElementById('file-'+fid).addEventListener('change', e=>handlePhoto(e,'wandler',spec.id));
+    document.getElementById('file-'+fid+'-cam').addEventListener('change', e=>handlePhoto(e,'wandler',spec.id));
+    document.getElementById('file-'+fid+'-gal').addEventListener('change', e=>handlePhoto(e,'wandler',spec.id));
   });
+  renderWfaktorBox();
+}
+
+/* ---------------- WANDLERFAKTOR ---------------- */
+function parseRatio(str){
+  if(!str) return null;
+  const m = String(str).match(/(\d+(?:[.,]\d+)?)\s*\/\s*(\d+(?:[.,]\d+)?)/);
+  if(!m) return null;
+  const p = parseFloat(m[1].replace(',','.'));
+  const s = parseFloat(m[2].replace(',','.'));
+  if(!s) return null;
+  return +(p/s).toFixed(4);
+}
+
+function computeWandlerfaktor(){
+  const cts = state.wandler.filter(w=>w.typ==='ct').map(w=>parseRatio(w.felder.uebersetzung)).filter(x=>x!=null);
+  const vts = state.wandler.filter(w=>w.typ==='vt').map(w=>parseRatio(w.felder.uebersetzung)).filter(x=>x!=null);
+  let warning = null, ctFactor = null, vtFactor = null;
+  if(cts.length){
+    ctFactor = cts[0];
+    if(cts.some(c=>Math.abs(c-ctFactor)>0.01)) warning = 'Stromwandler-Übersetzungen weichen zwischen den Phasen ab – bitte prüfen.';
+  }
+  if(vts.length){
+    vtFactor = vts[0];
+    if(vts.some(v=>Math.abs(v-vtFactor)>0.01)) warning = (warning?warning+' ':'')+'Spannungswandler-Übersetzungen weichen ab – bitte prüfen.';
+  }
+  let total = null;
+  if(ctFactor && state.ebene==='MS' && vtFactor) total = Math.round(ctFactor*vtFactor);
+  else if(ctFactor && state.ebene==='NS') total = Math.round(ctFactor);
+  return { ctFactor, vtFactor, total, warning };
+}
+
+function renderWfaktorBox(){
+  const el = document.getElementById('wfaktorBox');
+  if(!el) return;
+  const r = computeWandlerfaktor();
+  if(!r.ctFactor && !r.vtFactor){ el.innerHTML=''; return; }
+  let html = '<h3 style="margin-top:0;">Wandlerfaktor</h3>';
+  if(r.ctFactor) html += `<div class="summary-line"><span>Stromwandler-Faktor</span><span>${r.ctFactor}</span></div>`;
+  if(r.vtFactor) html += `<div class="summary-line"><span>Spannungswandler-Faktor</span><span>${r.vtFactor}</span></div>`;
+  if(r.total) html += `<div class="summary-line"><span><b>Gesamt-Wandlerfaktor</b></span><span><b>${r.total}</b></span></div>`;
+  if(r.warning) html += `<div class="hint warn">${r.warning}</div>`;
+  if(r.total) html += `<button class="btn btn-sm" style="margin-top:8px;" onclick="uebernehmeWfaktor(${r.total})">In Zählerfeld übernehmen →</button>`;
+  el.innerHTML = html;
+}
+
+function uebernehmeWfaktor(val){
+  state.zaehler.z_wfaktor = String(val);
+  const el = document.getElementById('z_wfaktor'); if(el) el.value = val;
+  saveDraft();
+  const h = document.getElementById('wfaktorHint'); if(h) h.textContent = 'Berechneter Wandlerfaktor aus Schritt 2: '+val+' (übernommen)';
 }
 
 /* ---------------- PHOTO + API EXTRACTION ---------------- */
@@ -766,18 +873,38 @@ function buildSummary(){
       if(state.checklist[id] && state.checklist[id].checked) visibleDone++;
     });
   });
+  const adresse = [ [state.standort.strasse, state.standort.hausnr].filter(Boolean).join(' '),
+                     [state.standort.plz, state.standort.ort].filter(Boolean).join(' ') ]
+                     .filter(Boolean).join(', ');
+  const r = computeWandlerfaktor();
   el.innerHTML = `
     <div class="summary-line"><span>Anlage</span><span>${state.standort.name||'–'}</span></div>
-    <div class="summary-line"><span>Adresse</span><span>${state.standort.adresse||'–'}</span></div>
+    <div class="summary-line"><span>Adresse</span><span>${adresse||'–'}</span></div>
     <div class="summary-line"><span>GPS</span><span>${state.standort.gps||'–'}</span></div>
     <div class="summary-line"><span>Spannungsebene</span><span>${state.ebene||'–'}</span></div>
     <div class="summary-line"><span>Messart</span><span>${state.messart||'–'}</span></div>
     <div class="summary-line"><span>Zählernummer</span><span>${state.zaehler.z_nummer||'–'}</span></div>
     <div class="summary-line"><span>Wandler erfasst</span><span>${state.wandler.length}</span></div>
+    <div class="summary-line"><span>Wandlerfaktor</span><span>${r.total || state.zaehler.z_wfaktor || '–'}</span></div>
     <div class="summary-line"><span>Checkliste</span><span>${visibleDone} / ${visibleTotal} erledigt</span></div>
     <div class="summary-line"><span>Prüfer</span><span>${state.standort.pruefer||'–'}</span></div>
     <div class="summary-line"><span>Datum</span><span>${document.getElementById('pruefdatum').value||'–'}</span></div>
   `;
+}
+
+function buildPhotoGallery(){
+  const el = document.getElementById('photoGallery');
+  if(!el) return;
+  let html = '';
+  if(state.zaehler.photo) html += photoTile(state.zaehler.photo, 'Zähler');
+  state.wandler.forEach(w=>{ if(w.photo) html += photoTile(w.photo, w.label); });
+  el.innerHTML = html || '<div class="hint">Noch keine Fotos aufgenommen.</div>';
+}
+function photoTile(src, label){
+  return `<div style="width:100px;">
+    <img src="${src}" style="width:100px;height:100px;object-fit:cover;border-radius:8px;border:1px solid var(--border-light);">
+    <div style="font-size:10px;color:var(--text-dim);text-align:center;margin-top:3px;">${label}</div>
+  </div>`;
 }
 
 function exportJson(){
