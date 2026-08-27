@@ -115,12 +115,24 @@
 
   @media print{
     header, footer.navbar, .no-print{display:none !important;}
-    body{background:#fff; color:#000; padding:0;}
+    body{background:#fff; color:#000; padding:0; font-size:10px;}
     .panel{display:block !important;}
-    .card{border:1px solid #999; background:#fff; page-break-inside:avoid;}
-    .card h2{color:#000;}
-    input, select, textarea{border:1px solid #999; color:#000; background:#fff;}
-    .check-item{border-bottom:1px solid #ccc;}
+    .card{border:1px solid #999; background:#fff; page-break-inside:avoid; padding:6px 8px; margin-bottom:5px;}
+    .card h2{color:#000; font-size:11.5px; margin-bottom:4px; padding-bottom:3px;}
+    .card h3{font-size:9.5px; margin:6px 0 3px;}
+    label{font-size:8px; margin:2px 0 1px;}
+    input, select, textarea{border:1px solid #999; color:#000; background:#fff; padding:2px 4px; font-size:9px;}
+    textarea{min-height:20px;}
+    .row{gap:4px;}
+    .check-item{border-bottom:1px solid #ccc; padding:2px 0;}
+    .check-item .txt{font-size:9.5px;}
+    .note-toggle{display:none;}
+    .summary-line{font-size:9.5px; padding:1px 0;}
+    .device-block{padding:6px; margin-bottom:5px;}
+    .photo-row .thumb{display:none;}
+    #photoGalleryCard{page-break-before: always;}
+    #photoGalleryCard img{width:160px !important; height:160px !important;}
+    #photoGalleryCard .hint{display:none;}
   }
 </style>
 </head>
@@ -136,6 +148,30 @@
 
   <!-- STEP 1: SETUP -->
   <div class="panel" id="panel-1">
+    <div class="card no-print">
+      <h2>⚙️ Einstellungen: Foto-Erkennung</h2>
+      <div class="hint">Standardmäßig läuft die Erkennung <b>lokal im Browser</b> (Tesseract.js) — kostenlos, funktioniert nach dem ersten Laden auch offline. Bei schwierigen Fotos (Regen, Reflexionen, Winkel) kannst du zusätzlich die Cloud-Erkennung (Anthropic) nutzen — dafür unten optional einrichten.</div>
+      <div class="status-line" id="tesseractStatus"></div>
+
+      <h3>Cloud-Erkennung (optional, kostenpflichtig)</h3>
+      <label>Worker-URL (empfohlen — Key bleibt verborgen)</label>
+      <input type="text" id="workerUrlInput" placeholder="https://vibn-proxy.dein-name.workers.dev">
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <button class="btn btn-sm" onclick="saveWorkerUrl()">Speichern</button>
+        <button class="btn btn-sm btn-ghost" onclick="clearWorkerUrl()">Entfernen</button>
+      </div>
+      <div class="status-line" id="workerUrlStatus"></div>
+
+      <h3>Alternative: direkter API-Key (nur zum schnellen Testen)</h3>
+      <label>Anthropic API-Key</label>
+      <input type="password" id="apiKeyInput" placeholder="sk-ant-...">
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <button class="btn btn-sm" onclick="saveApiKey()">Speichern</button>
+        <button class="btn btn-sm btn-ghost" onclick="clearApiKey()">Entfernen</button>
+      </div>
+      <div class="status-line" id="apiKeyStatus"></div>
+      <div class="hint warn">Ist eine Worker-URL hinterlegt, wird diese immer bevorzugt verwendet. Der direkte API-Key wird nur als Fallback genutzt, ist im Browser sichtbar und sollte mit einem Ausgabenlimit in der Anthropic Console abgesichert werden.</div>
+    </div>
     <div class="card">
       <h2>1 · Anlage &amp; Messart</h2>
       <label>Spannungsebene</label>
@@ -201,9 +237,11 @@
         <div class="photo-actions">
           <input type="file" accept="image/*" capture="environment" style="display:none" id="file-zaehler-cam">
           <input type="file" accept="image/*" style="display:none" id="file-zaehler-gal">
-          <div style="display:flex; gap:6px;">
-            <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-zaehler-cam').click()">📷 Kamera</button>
-            <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-zaehler-gal').click()">🖼️ Galerie</button>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+            <button class="btn btn-sm" onclick="document.getElementById('file-zaehler-cam').click()">📷 Kamera</button>
+            <button class="btn btn-sm" onclick="document.getElementById('file-zaehler-gal').click()">🖼️ Galerie</button>
+            <button class="btn btn-sm" onclick="runLocalOcr('zaehler')">🔍 Lokal (kostenlos)</button>
+            <button class="btn btn-sm" onclick="runCloudOcr('zaehler')">☁️ Cloud</button>
           </div>
           <div class="status-line" id="status-zaehler"></div>
         </div>
@@ -367,6 +405,10 @@ const CHECKLIST = [
 /* ---------------- INIT ---------------- */
 function init(){
   loadDraft();
+  const savedKey = getApiKey();
+  if(savedKey) document.getElementById('apiKeyInput').value = savedKey;
+  const savedWorker = getWorkerUrl();
+  if(savedWorker) document.getElementById('workerUrlInput').value = savedWorker;
   renderStepNav();
   buildMessartChoices();
   buildChecklist();
@@ -632,9 +674,11 @@ function buildWandlerBlocks(){
         <div class="photo-actions">
           <input type="file" accept="image/*" capture="environment" style="display:none" id="file-${fid}-cam">
           <input type="file" accept="image/*" style="display:none" id="file-${fid}-gal">
-          <div style="display:flex; gap:6px;">
-            <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${fid}-cam').click()">📷 Kamera</button>
-            <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${fid}-gal').click()">🖼️ Galerie</button>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+            <button class="btn btn-sm" onclick="document.getElementById('file-${fid}-cam').click()">📷 Kamera</button>
+            <button class="btn btn-sm" onclick="document.getElementById('file-${fid}-gal').click()">🖼️ Galerie</button>
+            <button class="btn btn-sm" onclick="runLocalOcr('wandler','${spec.id}')">🔍 Lokal (kostenlos)</button>
+            <button class="btn btn-sm" onclick="runCloudOcr('wandler','${spec.id}')">☁️ Cloud</button>
           </div>
           <div class="status-line" id="status-${fid}"></div>
         </div>
@@ -648,20 +692,59 @@ function buildWandlerBlocks(){
         <div><label>Klasse</label><input type="text" data-field="klasse" data-rid="${spec.id}"></div>
       </div>
       <div class="row">
-        <div><label>Bürde</label><input type="text" data-field="buerde" data-rid="${spec.id}"></div>
+        <div><label>Sollbürde (Typenschild)</label><input type="text" data-field="buerde" data-rid="${spec.id}" placeholder="z. B. 5 VA"></div>
         <div><label>Baujahr</label><input type="text" data-field="baujahr" data-rid="${spec.id}"></div>
+      </div>
+
+      <h3>Bürdemessung (${spec.typ==='ct'?'Strom':'Spannung'})</h3>
+      <div class="photo-row">
+        <img class="thumb empty" id="thumb-buerde-${spec.id}">
+        <div class="photo-actions">
+          <input type="file" accept="image/*" capture="environment" style="display:none" id="file-buerde-${spec.id}-cam">
+          <input type="file" accept="image/*" style="display:none" id="file-buerde-${spec.id}-gal">
+          <div style="display:flex; gap:6px;">
+            <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-buerde-${spec.id}-cam').click()">📷 Kamera</button>
+            <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-buerde-${spec.id}-gal').click()">🖼️ Galerie</button>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div><label>Gemessene Bürde (VA)</label><input type="text" data-field="gemessenebuerde" data-rid="${spec.id}"></div>
+        <div><label>Ergebnis</label>
+          <select data-field="buerde_ergebnis" data-rid="${spec.id}">
+            <option value="">– wählen –</option>
+            <option value="io">i.O.</option>
+            <option value="nio">n.i.O.</option>
+          </select>
+        </div>
       </div>
     `;
     container.appendChild(block);
-    block.querySelectorAll('input[data-field]').forEach(inp=>{
+    block.querySelectorAll('input[data-field], select[data-field]').forEach(inp=>{
       inp.value = w.felder[inp.dataset.field] || '';
       inp.addEventListener('input', e=>{ w.felder[inp.dataset.field] = e.target.value; saveDraft(); renderWfaktorBox(); });
+      inp.addEventListener('change', e=>{ w.felder[inp.dataset.field] = e.target.value; saveDraft(); renderWfaktorBox(); });
     });
     if(w.photo) document.getElementById('thumb-'+fid).src = w.photo;
+    if(w.buerdePhoto) document.getElementById('thumb-buerde-'+spec.id).src = w.buerdePhoto;
     document.getElementById('file-'+fid+'-cam').addEventListener('change', e=>handlePhoto(e,'wandler',spec.id));
     document.getElementById('file-'+fid+'-gal').addEventListener('change', e=>handlePhoto(e,'wandler',spec.id));
+    document.getElementById('file-buerde-'+spec.id+'-cam').addEventListener('change', e=>handleBuerdePhoto(e,spec.id));
+    document.getElementById('file-buerde-'+spec.id+'-gal').addEventListener('change', e=>handleBuerdePhoto(e,spec.id));
   });
   renderWfaktorBox();
+}
+
+async function handleBuerdePhoto(e, rid){
+  const file = e.target.files[0];
+  if(!file) return;
+  const base64 = await fileToBase64(file);
+  const dataUrl = 'data:image/jpeg;base64,'+base64;
+  const thumb = document.getElementById('thumb-buerde-'+rid);
+  thumb.src = dataUrl; thumb.classList.remove('empty');
+  const w = state.wandler.find(x=>x.rid===rid);
+  w.buerdePhoto = dataUrl;
+  saveDraft();
 }
 
 /* ---------------- WANDLERFAKTOR ---------------- */
@@ -728,18 +811,78 @@ const PROMPTS = {
   zaehler: `Du bekommst ein Foto eines Elektrizitätszählers (Typenschild). Extrahiere folgende Felder, sofern lesbar. Antworte AUSSCHLIESSLICH mit einem JSON-Objekt, ohne Markdown, ohne Erklärtext:
 {"z_nummer":"","z_id":"","z_hersteller":"","z_typ":"","z_klasse":"","z_baujahr":"","z_spannung":"","z_strom":"","z_zulassung":""}
 Wenn ein Feld nicht erkennbar ist, gib einen leeren String zurück. z_nummer ist die Zähler-/Gerätenummer (oft "Nr." oder große Ziffernfolge). z_id ist eine ggf. abweichende Identifikationsnummer (z. B. beginnend mit Buchstaben wie LGZ/E).`,
-  ct: `Du bekommst ein Foto eines Stromwandler-Typenschilds. Extrahiere folgende Felder, sofern lesbar. Antworte AUSSCHLIESSLICH mit JSON, ohne Markdown:
-{"seriennummer":"","typ":"","uebersetzung":"","klasse":"","buerde":"","baujahr":""}
-uebersetzung im Format z. B. "1000/5 A". typ = Hersteller + Typbezeichnung. Leere Felder als leeren String zurückgeben.`,
-  vt: `Du bekommst ein Foto eines Spannungswandler-Typenschilds. Extrahiere folgende Felder, sofern lesbar. Antworte AUSSCHLIESSLICH mit JSON, ohne Markdown:
-{"seriennummer":"","typ":"","uebersetzung":"","klasse":"","buerde":"","baujahr":""}
-uebersetzung im Format z. B. "20000/100 V". typ = Hersteller + Typbezeichnung. Leere Felder als leeren String zurückgeben.`
+  ct: `Du bekommst ein Foto eines Stromwandler-Typenschilds. Extrahiere NUR folgende zwei Felder, sofern lesbar. Antworte AUSSCHLIESSLICH mit JSON, ohne Markdown:
+{"seriennummer":"","uebersetzung":""}
+uebersetzung im Format z. B. "1000/5 A". Wenn ein Feld nicht erkennbar ist, leeren String zurückgeben.`,
+  vt: `Du bekommst ein Foto eines Spannungswandler-Typenschilds. Extrahiere NUR folgende zwei Felder, sofern lesbar. Antworte AUSSCHLIESSLICH mit JSON, ohne Markdown:
+{"seriennummer":"","uebersetzung":""}
+uebersetzung im Format z. B. "20000/100 V". Wenn ein Feld nicht erkennbar ist, leeren String zurückgeben.`
 };
 
+const API_KEY_LS = 'vibn_api_key';
+const WORKER_URL_LS = 'vibn_worker_url';
+function getApiKey(){ return localStorage.getItem(API_KEY_LS) || ''; }
+function saveApiKey(){
+  const v = document.getElementById('apiKeyInput').value.trim();
+  const status = document.getElementById('apiKeyStatus');
+  if(!v){ status.textContent='Bitte Key eingeben.'; status.className='status-line err'; return; }
+  localStorage.setItem(API_KEY_LS, v);
+  status.textContent = '✓ Key gespeichert (lokal in diesem Browser).';
+  status.className = 'status-line ok';
+}
+function clearApiKey(){
+  localStorage.removeItem(API_KEY_LS);
+  document.getElementById('apiKeyInput').value = '';
+  const status = document.getElementById('apiKeyStatus');
+  status.textContent = 'Key entfernt.'; status.className = 'status-line';
+}
+
+function getWorkerUrl(){ return localStorage.getItem(WORKER_URL_LS) || ''; }
+function saveWorkerUrl(){
+  const v = document.getElementById('workerUrlInput').value.trim();
+  const status = document.getElementById('workerUrlStatus');
+  if(!v){ status.textContent='Bitte Worker-URL eingeben.'; status.className='status-line err'; return; }
+  localStorage.setItem(WORKER_URL_LS, v);
+  status.textContent = '✓ Worker-URL gespeichert — wird ab jetzt für die Cloud-Erkennung genutzt.';
+  status.className = 'status-line ok';
+}
+function clearWorkerUrl(){
+  localStorage.removeItem(WORKER_URL_LS);
+  document.getElementById('workerUrlInput').value = '';
+  const status = document.getElementById('workerUrlStatus');
+  status.textContent = 'Worker-URL entfernt.'; status.className = 'status-line';
+}
+
 async function callClaudeVision(base64, promptKey){
+  const workerUrl = getWorkerUrl();
+
+  if(workerUrl){
+    const response = await fetch(workerUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: base64, prompt: PROMPTS[promptKey] })
+    });
+    if(!response.ok){
+      const t = await response.text();
+      throw new Error('Worker-Fehler '+response.status+': '+t.slice(0,150));
+    }
+    const data = await response.json();
+    const text = (data.content||[]).map(b=>b.text||'').join('\n') || data.text || JSON.stringify(data);
+    const clean = text.replace(/```json|```/g,'').trim();
+    return JSON.parse(clean);
+  }
+
+  const key = getApiKey();
+  if(!key){ const e = new Error('Kein API-Key oder Worker-URL hinterlegt (Einstellungen in Schritt 1).'); e.code='NO_KEY'; throw e; }
+
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": key,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true"
+    },
     body: JSON.stringify({
       model: "claude-sonnet-4-6",
       max_tokens: 1000,
@@ -752,10 +895,94 @@ async function callClaudeVision(base64, promptKey){
       }]
     })
   });
+  if(!response.ok){
+    const t = await response.text();
+    throw new Error('API-Fehler '+response.status+': '+t.slice(0,150));
+  }
   const data = await response.json();
   const text = (data.content||[]).map(b=>b.text||'').join('\n');
   const clean = text.replace(/```json|```/g,'').trim();
   return JSON.parse(clean);
+}
+
+/* ---------------- LOKALE OCR (Tesseract.js, kostenlos, offline nach 1. Laden) ---------------- */
+let tesseractLoading = null;
+function ensureTesseract(){
+  if(window.Tesseract) return Promise.resolve();
+  if(tesseractLoading) return tesseractLoading;
+  tesseractLoading = new Promise((res,rej)=>{
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js';
+    s.onload = ()=>res();
+    s.onerror = ()=>rej(new Error('Tesseract.js konnte nicht geladen werden (kein Internet beim ersten Aufruf?)'));
+    document.head.appendChild(s);
+  });
+  return tesseractLoading;
+}
+
+function applyOcrText(text, kind, rid){
+  const numMatches = text.match(/\d[\d.\s]{4,}\d/g) || [];
+  const cleaned = numMatches.map(s=>s.replace(/\s+/g,'')).sort((a,b)=>b.length-a.length);
+  const serial = cleaned[0] || '';
+  const ratioMatch = text.match(/(\d{1,6})\s*\/\s*\(?(\d{1,3})\)?\s*(A|V)?/i);
+  const ratio = ratioMatch ? (ratioMatch[1]+'/'+ratioMatch[2]+(ratioMatch[3]?(' '+ratioMatch[3].toUpperCase()):'')) : '';
+
+  if(kind==='zaehler'){
+    if(serial){ const el=document.getElementById('z_nummer'); if(el) el.value=serial; state.zaehler.z_nummer = serial; }
+  } else {
+    const w = state.wandler.find(x=>x.rid===rid);
+    if(serial){ w.felder.seriennummer = serial; const el=document.querySelector(`input[data-field="seriennummer"][data-rid="${rid}"]`); if(el) el.value = serial; }
+    if(ratio){ w.felder.uebersetzung = ratio; const el=document.querySelector(`input[data-field="uebersetzung"][data-rid="${rid}"]`); if(el) el.value = ratio; }
+    renderWfaktorBox();
+  }
+  saveDraft();
+}
+
+async function runLocalOcr(kind, rid){
+  const fid = kind==='zaehler' ? 'zaehler' : 'w_'+rid;
+  const status = document.getElementById('status-'+fid);
+  const photo = kind==='zaehler' ? state.zaehler.photo : (state.wandler.find(w=>w.rid===rid)||{}).photo;
+  if(!photo){ status.textContent='Bitte zuerst ein Foto aufnehmen.'; status.className='status-line err'; return; }
+  status.textContent = 'Lokale Erkennung wird vorbereitet...'; status.className='status-line';
+  try{
+    await ensureTesseract();
+    const { data:{ text } } = await Tesseract.recognize(photo, 'eng+deu', {
+      logger: m=>{ if(m.status && m.progress!=null) status.textContent = 'Lokal: '+m.status+' ('+Math.round(m.progress*100)+'%)'; }
+    });
+    applyOcrText(text, kind, rid);
+    status.textContent = '✓ Lokal erkannt (kostenlos) — bitte prüfen, bei Bedarf ☁️ Cloud nutzen.';
+    status.className = 'status-line ok';
+  }catch(err){
+    status.textContent = 'Lokale Erkennung fehlgeschlagen (' + String(err.message||err).slice(0,80) + '). Manuell eintragen oder ☁️ Cloud versuchen.';
+    status.className = 'status-line err';
+  }
+}
+
+async function runCloudOcr(kind, rid){
+  const fid = kind==='zaehler' ? 'zaehler' : 'w_'+rid;
+  const status = document.getElementById('status-'+fid);
+  const photo = kind==='zaehler' ? state.zaehler.photo : (state.wandler.find(w=>w.rid===rid)||{}).photo;
+  if(!photo){ status.textContent='Bitte zuerst ein Foto aufnehmen.'; status.className='status-line err'; return; }
+  const base64 = photo.split(',')[1];
+  status.textContent = 'Cloud-Analyse läuft...'; status.className='status-line';
+  try{
+    let promptKey = kind==='zaehler' ? 'zaehler' : (state.wandler.find(x=>x.rid===rid).typ==='ct' ? 'ct' : 'vt');
+    const result = await callClaudeVision(base64, promptKey);
+    if(kind==='zaehler'){
+      Object.entries(result).forEach(([k,v])=>{ if(v){ const el=document.getElementById(k); if(el){ el.value=v; state.zaehler[k]=v; } } });
+    } else {
+      const w = state.wandler.find(x=>x.rid===rid);
+      Object.entries(result).forEach(([k,v])=>{ if(v){ w.felder[k]=v; const el=document.querySelector(`input[data-field="${k}"][data-rid="${rid}"]`); if(el) el.value=v; } });
+      renderWfaktorBox();
+    }
+    saveDraft();
+    status.textContent = '✓ Cloud-Felder übernommen — bitte prüfen.';
+    status.className='status-line ok';
+  }catch(err){
+    if(err.code==='NO_KEY'){ status.textContent = 'Keine Cloud-Anbindung eingerichtet (Einstellungen Schritt 1). Lokale Erkennung nutzen oder manuell eintragen.'; }
+    else { status.textContent = 'Cloud-Erkennung fehlgeschlagen (' + String(err.message||err).slice(0,80) + ').'; }
+    status.className='status-line err';
+  }
 }
 
 async function handlePhoto(e, kind, rid){
@@ -763,7 +990,6 @@ async function handlePhoto(e, kind, rid){
   if(!file) return;
   const fid = kind==='zaehler' ? 'zaehler' : 'w_'+rid;
   const thumb = document.getElementById('thumb-'+fid);
-  const status = document.getElementById('status-'+fid);
   thumb.classList.remove('empty');
 
   const base64 = await fileToBase64(file);
@@ -774,28 +1000,7 @@ async function handlePhoto(e, kind, rid){
   else { const w = state.wandler.find(x=>x.rid===rid); w.photo = dataUrl; }
   saveDraft();
 
-  status.textContent = 'Analysiere Foto...'; status.className='status-line';
-  try{
-    let promptKey = kind==='zaehler' ? 'zaehler' : (state.wandler.find(x=>x.rid===rid).typ==='ct' ? 'ct' : 'vt');
-    const result = await callClaudeVision(base64, promptKey);
-
-    if(kind==='zaehler'){
-      Object.entries(result).forEach(([k,v])=>{
-        if(v){ const el=document.getElementById(k); if(el){ el.value=v; state.zaehler[k]=v; } }
-      });
-    } else {
-      const w = state.wandler.find(x=>x.rid===rid);
-      Object.entries(result).forEach(([k,v])=>{
-        if(v){ w.felder[k]=v; const el=document.querySelector(`input[data-field="${k}"][data-rid="${rid}"]`); if(el) el.value=v; }
-      });
-    }
-    saveDraft();
-    status.textContent = '✓ Felder automatisch übernommen — bitte prüfen.';
-    status.className='status-line ok';
-  }catch(err){
-    status.textContent = 'Automatische Erkennung nicht verfügbar (nur innerhalb von Claude nutzbar). Bitte Felder manuell eintragen.';
-    status.className='status-line err';
-  }
+  runLocalOcr(kind, rid);
 }
 
 /* ---------------- CHECKLIST ---------------- */
@@ -897,7 +1102,10 @@ function buildPhotoGallery(){
   if(!el) return;
   let html = '';
   if(state.zaehler.photo) html += photoTile(state.zaehler.photo, 'Zähler');
-  state.wandler.forEach(w=>{ if(w.photo) html += photoTile(w.photo, w.label); });
+  state.wandler.forEach(w=>{
+    if(w.photo) html += photoTile(w.photo, w.label);
+    if(w.buerdePhoto) html += photoTile(w.buerdePhoto, w.label+' — Bürdemessung');
+  });
   el.innerHTML = html || '<div class="hint">Noch keine Fotos aufgenommen.</div>';
 }
 function photoTile(src, label){

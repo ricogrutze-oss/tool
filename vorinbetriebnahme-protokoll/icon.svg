@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#211d18"/>
+      <stop offset="1" stop-color="#141210"/>
+    </linearGradient>
+    <linearGradient id="board" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a251e"/>
+      <stop offset="1" stop-color="#1c1915"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="128" height="128" rx="24" fill="url(#bg)"/>
+  <rect x="6" y="6" width="116" height="116" rx="20" fill="none" stroke="#3a332a" stroke-width="2"/>
+
+  <!-- Klemmbrett -->
+  <rect x="30" y="18" width="68" height="94" rx="8" fill="url(#board)" stroke="#4a4136" stroke-width="2"/>
+
+  <!-- Klemmclip oben -->
+  <rect x="50" y="10" width="28" height="16" rx="6" fill="#4a4136"/>
+  <rect x="55" y="14" width="18" height="8" rx="3" fill="#141210"/>
+
+  <!-- Checkliste -->
+  <g stroke="#a89a86" stroke-width="2.4" stroke-linecap="round">
+    <line x1="42" y1="40" x2="86" y2="40"/>
+    <line x1="42" y1="56" x2="86" y2="56"/>
+    <line x1="42" y1="72" x2="72" y2="72"/>
+  </g>
+
+  <!-- Häkchen-Boxen -->
+  <rect x="40" y="34" width="10" height="10" rx="2" fill="none" stroke="#f0a830" stroke-width="2"/>
+  <path d="M42 39.5 L45 42 L49 36" fill="none" stroke="#f0a830" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <rect x="40" y="50" width="10" height="10" rx="2" fill="none" stroke="#f0a830" stroke-width="2"/>
+  <path d="M42 55.5 L45 58 L49 52" fill="none" stroke="#f0a830" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <rect x="40" y="66" width="10" height="10" rx="2" fill="none" stroke="#4a4136" stroke-width="2"/>
+
+  <!-- Blitzsymbol als Messtechnik-Signatur, unten rechts auf dem Brett -->
+  <path d="M78 82 L66 100 L74 100 L70 116 L88 96 L79 96 Z" fill="#f0a830"/>
+</svg>
