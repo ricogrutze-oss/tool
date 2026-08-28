@@ -4,41 +4,23 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
 <title>Vorinbetriebnahme-Protokoll</title>
+<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
 <style>
   :root{
-    --bg:#141210;
-    --bg2:#1c1915;
-    --card:#211d18;
-    --border:#3a332a;
-    --border-light:#4a4136;
-    --amber:#f0a830;
-    --amber-dim:#a87a30;
-    --text:#eee7da;
-    --text-dim:#a89a86;
-    --ok:#5fae6b;
-    --warn:#d9534f;
-    --mono: 'Consolas','SFMono-Regular',Menlo,monospace;
+    --bg:#141210; --bg2:#1c1915; --card:#211d18; --border:#3a332a; --border-light:#4a4136;
+    --amber:#f0a830; --amber-dim:#a87a30; --text:#eee7da; --text-dim:#a89a86;
+    --ok:#5fae6b; --warn:#d9534f; --mono:'Consolas','SFMono-Regular',Menlo,monospace;
   }
   *{box-sizing:border-box;}
-  body{
-    margin:0; background:var(--bg); color:var(--text);
-    font-family:-apple-system,'Segoe UI',Roboto,sans-serif;
-    padding-bottom:90px;
-  }
-  header{
-    background:linear-gradient(180deg,#1c1915,#161310);
-    border-bottom:2px solid var(--amber-dim);
-    padding:14px 16px 10px;
-    position:sticky; top:0; z-index:20;
-  }
+  body{margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,'Segoe UI',Roboto,sans-serif; padding-bottom:90px;}
+  header{background:linear-gradient(180deg,#1c1915,#161310); border-bottom:2px solid var(--amber-dim); padding:14px 16px 10px; position:sticky; top:0; z-index:20;}
   header h1{margin:0 0 2px; font-size:17px; color:var(--amber); letter-spacing:.3px;}
   header .sub{font-size:11px; color:var(--text-dim);}
-  .steps{display:flex; gap:4px; margin-top:10px;}
-  .step{flex:1; text-align:center; padding:6px 2px; font-size:10.5px; border-radius:6px;
-    background:var(--bg2); color:var(--text-dim); border:1px solid var(--border); cursor:pointer;}
+  .steps{display:flex; gap:4px; margin-top:10px; flex-wrap:wrap;}
+  .step{flex:1; min-width:70px; text-align:center; padding:6px 2px; font-size:10px; border-radius:6px; background:var(--bg2); color:var(--text-dim); border:1px solid var(--border); cursor:pointer;}
   .step.active{background:var(--amber); color:#1a1410; font-weight:700; border-color:var(--amber);}
-  .step.done{color:var(--ok); border-color:var(--ok);}
-  .step.disabled{opacity:.35; pointer-events:none;}
+  .step.complete{border-color:var(--ok); color:var(--ok);}
+  .step.active.complete{background:var(--ok); color:#0e1a10; border-color:var(--ok);}
 
   main{padding:14px 14px 20px; max-width:640px; margin:0 auto;}
   .panel{display:none;}
@@ -66,8 +48,7 @@
   .choice.sel{border-color:var(--amber); background:#2a2013; color:var(--amber); font-weight:600;}
 
   button{font-family:inherit; cursor:pointer;}
-  .btn{padding:10px 16px; border-radius:8px; border:1px solid var(--border-light); background:#211d18;
-    color:var(--text); font-size:13.5px;}
+  .btn{padding:10px 16px; border-radius:8px; border:1px solid var(--border-light); background:#211d18; color:var(--text); font-size:13.5px;}
   .btn:active{transform:scale(.97);}
   .btn-amber{background:var(--amber); color:#1a1410; border-color:var(--amber); font-weight:700;}
   .btn-ghost{background:transparent; color:var(--text-dim);}
@@ -75,10 +56,10 @@
   .btn-block{width:100%;}
   .btn-danger{color:var(--warn); border-color:#5a2f2d;}
 
-  .photo-row{display:flex; gap:10px; align-items:center; margin:10px 0;}
-  .thumb{width:70px; height:70px; border-radius:8px; object-fit:cover; border:1px solid var(--border-light); background:#0d0b09; flex-shrink:0;}
-  .thumb.empty{display:flex; align-items:center; justify-content:center; color:var(--text-dim); font-size:22px;}
-  .photo-actions{display:flex; flex-direction:column; gap:6px; flex:1;}
+  .thumb{width:70px; height:70px; border-radius:8px; object-fit:cover; border:1px solid var(--border-light); background:#0d0b09; flex-shrink:0; display:block;}
+  .thumb.empty{background:#0d0b09;}
+  .photo-mini{flex:1;}
+  .photo-mini .thumb{width:100%; height:64px;}
   .status-line{font-size:11.5px; color:var(--text-dim); min-height:16px;}
   .status-line.ok{color:var(--ok);}
   .status-line.err{color:var(--warn);}
@@ -91,17 +72,12 @@
   .check-item{display:flex; gap:10px; align-items:flex-start; padding:8px 0; border-bottom:1px solid #221e18;}
   .check-item input[type=checkbox]{width:20px; height:20px; margin-top:1px; accent-color: var(--amber); flex-shrink:0;}
   .check-item .txt{flex:1; font-size:13px; line-height:1.35;}
-  .check-item .tag{display:inline-block; font-size:9px; padding:1px 5px; border-radius:4px; margin-left:6px; vertical-align:1px;}
-  .tag.ns{background:#1e3a2a; color:#7fd99a;}
-  .tag.ms{background:#3a2a1e; color:#e0a35c;}
-  .tag.beide{background:#232323; color:#999;}
   .note-toggle{font-size:10.5px; color:var(--text-dim); text-decoration:underline; margin-left:30px; cursor:pointer;}
   .note-field{margin:4px 0 6px 30px; display:none;}
   .note-field.open{display:block;}
   .note-field textarea{min-height:34px; font-family:inherit;}
 
-  footer.navbar{position:fixed; bottom:0; left:0; right:0; background:#171410; border-top:1px solid var(--border);
-    padding:10px 14px; display:flex; gap:10px; z-index:20;}
+  footer.navbar{position:fixed; bottom:0; left:0; right:0; background:#171410; border-top:1px solid var(--border); padding:10px 14px; display:flex; gap:10px; z-index:20;}
   footer.navbar .btn{flex:1;}
 
   .gps-box{display:flex; gap:8px; align-items:center;}
@@ -109,9 +85,10 @@
 
   .summary-line{display:flex; justify-content:space-between; font-size:13px; padding:5px 0; border-bottom:1px dotted var(--border);}
   .summary-line span:first-child{color:var(--text-dim);}
-
   .hint{font-size:11px; color:var(--text-dim); margin-top:6px; line-height:1.4;}
-  .hint.warn{color:#d9a45c;}
+
+  #scanOverlay{display:none; position:fixed; inset:0; background:#000; z-index:100; flex-direction:column; align-items:center; justify-content:center;}
+  #scanVideo{width:100%; max-width:480px; border:2px solid var(--amber);}
 
   @media print{
     header, footer.navbar, .no-print{display:none !important;}
@@ -125,14 +102,12 @@
     textarea{min-height:20px;}
     .row{gap:4px;}
     .check-item{border-bottom:1px solid #ccc; padding:2px 0;}
-    .check-item .txt{font-size:9.5px;}
     .note-toggle{display:none;}
     .summary-line{font-size:9.5px; padding:1px 0;}
     .device-block{padding:6px; margin-bottom:5px;}
-    .photo-row .thumb{display:none;}
+    .thumb{display:none;}
     #photoGalleryCard{page-break-before: always;}
-    #photoGalleryCard img{width:160px !important; height:160px !important;}
-    #photoGalleryCard .hint{display:none;}
+    #photoGalleryCard img{width:150px !important; height:150px !important;}
   }
 </style>
 </head>
@@ -144,66 +119,42 @@
   <div class="steps no-print" id="stepNav"></div>
 </header>
 
+<div id="scanOverlay">
+  <video id="scanVideo"></video>
+  <button class="btn btn-amber" style="margin-top:16px;" onclick="stopBarcodeScan()">Abbrechen</button>
+</div>
+
 <main>
 
-  <!-- STEP 1: SETUP -->
-  <div class="panel" id="panel-1">
-    <div class="card no-print">
-      <h2>⚙️ Einstellungen: Foto-Erkennung</h2>
-      <div class="hint">Standardmäßig läuft die Erkennung <b>lokal im Browser</b> (Tesseract.js) — kostenlos, funktioniert nach dem ersten Laden auch offline. Bei schwierigen Fotos (Regen, Reflexionen, Winkel) kannst du zusätzlich die Cloud-Erkennung (Anthropic) nutzen — dafür unten optional einrichten.</div>
-      <div class="status-line" id="tesseractStatus"></div>
-
-      <h3>Cloud-Erkennung (optional, kostenpflichtig)</h3>
-      <label>Worker-URL (empfohlen — Key bleibt verborgen)</label>
-      <input type="text" id="workerUrlInput" placeholder="https://vibn-proxy.dein-name.workers.dev">
-      <div style="display:flex; gap:8px; margin-top:8px;">
-        <button class="btn btn-sm" onclick="saveWorkerUrl()">Speichern</button>
-        <button class="btn btn-sm btn-ghost" onclick="clearWorkerUrl()">Entfernen</button>
-      </div>
-      <div class="status-line" id="workerUrlStatus"></div>
-
-      <h3>Alternative: direkter API-Key (nur zum schnellen Testen)</h3>
-      <label>Anthropic API-Key</label>
-      <input type="password" id="apiKeyInput" placeholder="sk-ant-...">
-      <div style="display:flex; gap:8px; margin-top:8px;">
-        <button class="btn btn-sm" onclick="saveApiKey()">Speichern</button>
-        <button class="btn btn-sm btn-ghost" onclick="clearApiKey()">Entfernen</button>
-      </div>
-      <div class="status-line" id="apiKeyStatus"></div>
-      <div class="hint warn">Ist eine Worker-URL hinterlegt, wird diese immer bevorzugt verwendet. Der direkte API-Key wird nur als Fallback genutzt, ist im Browser sichtbar und sollte mit einem Ausgabenlimit in der Anthropic Console abgesichert werden.</div>
-    </div>
+  <!-- SETUP -->
+  <div class="panel" id="panel-setup">
     <div class="card">
-      <h2>1 · Anlage &amp; Messart</h2>
+      <h2>Anlage &amp; Messart</h2>
       <label>Spannungsebene</label>
       <div class="choice-group" id="choiceEbene">
         <div class="choice" data-val="NS">Niederspannung</div>
         <div class="choice" data-val="MS">Mittelspannung</div>
+        <div class="choice" data-val="HS">Hochspannung</div>
       </div>
-
       <label style="margin-top:14px;">Messart</label>
       <div class="choice-group" id="choiceMessart"></div>
-
-      <div id="vtCountBox" style="display:none;">
-        <label>Spannungswandler-Schaltung</label>
-        <div class="choice-group" id="choiceVt">
-          <div class="choice" data-val="3">3 Stück (Sternschaltung)</div>
-          <div class="choice" data-val="2">2 Stück (V-/Aron-Schaltung)</div>
-        </div>
-      </div>
-      <div class="hint" id="messartHint"></div>
     </div>
-
     <div class="card">
       <h2>Standort</h2>
       <label>Anlagenbezeichnung / Messstellen-ID</label>
-      <input type="text" id="anlName" placeholder="z. B. -T1.1 / Trafostation Musterweg">
+      <input type="text" id="anlName">
+      <label>Anlagen-ID</label>
+      <input type="text" id="anlId">
+      <div class="row">
+        <div><label>Bezugsleistung (kW)</label><input type="text" id="anlBezug"></div>
+        <div><label>Einspeiseleistung (kW)</label><input type="text" id="anlEinspeise"></div>
+      </div>
       <label>GPS-Position</label>
       <div class="gps-box">
-        <input type="text" id="gpsField" placeholder="wird per GPS ermittelt oder manuell eintragen" readonly>
+        <input type="text" id="gpsField" readonly>
         <button class="btn btn-sm" id="btnGps">📍 Orten</button>
       </div>
       <div class="status-line" id="gpsStatus"></div>
-      <div class="hint">Nach der Ortung wird die Adresse automatisch über OpenStreetMap nachgeschlagen (Internetverbindung nötig) und kann danach angepasst werden.</div>
       <div class="row">
         <div><label>Straße</label><input type="text" id="anlStrasse"></div>
         <div style="max-width:90px;"><label>Hausnr.</label><input type="text" id="anlHausnr"></div>
@@ -213,81 +164,89 @@
         <div><label>Ort</label><input type="text" id="anlOrt"></div>
       </div>
       <label>Prüfer / Monteur</label>
-      <input type="text" id="pruefer" placeholder="Name">
+      <input type="text" id="pruefer">
       <label>Datum</label>
       <input type="date" id="pruefdatum">
     </div>
   </div>
 
-  <!-- STEP 2: WANDLER -->
-  <div class="panel" id="panel-2">
-    <div class="card" id="wandlerCard">
-      <h2>2 · Wandler</h2>
-      <div id="wandlerContainer"></div>
-      <div id="wfaktorBox"></div>
+  <!-- STROMWANDLER -->
+  <div class="panel" id="panel-ct">
+    <div class="card">
+      <h2>Stromwandler</h2>
+      <div id="ctContainer"></div>
+      <div id="wfaktorBoxCt"></div>
     </div>
   </div>
 
-  <!-- STEP 3: ZÄHLER -->
-  <div class="panel" id="panel-3">
+  <!-- SPANNUNGSWANDLER -->
+  <div class="panel" id="panel-vt">
     <div class="card">
-      <h2>3 · Zähler</h2>
-      <div class="photo-row">
-        <img class="thumb empty" id="thumb-zaehler">
-        <div class="photo-actions">
-          <input type="file" accept="image/*" capture="environment" style="display:none" id="file-zaehler-cam">
-          <input type="file" accept="image/*" style="display:none" id="file-zaehler-gal">
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
-            <button class="btn btn-sm" onclick="document.getElementById('file-zaehler-cam').click()">📷 Kamera</button>
-            <button class="btn btn-sm" onclick="document.getElementById('file-zaehler-gal').click()">🖼️ Galerie</button>
-            <button class="btn btn-sm" onclick="runLocalOcr('zaehler')">🔍 Lokal (kostenlos)</button>
-            <button class="btn btn-sm" onclick="runCloudOcr('zaehler')">☁️ Cloud</button>
-          </div>
-          <div class="status-line" id="status-zaehler"></div>
-        </div>
-      </div>
+      <h2>Spannungswandler</h2>
+      <div id="vtContainer"></div>
+      <div id="wfaktorBoxVt"></div>
+    </div>
+  </div>
 
+  <!-- KOMBIWANDLER -->
+  <div class="panel" id="panel-kombi">
+    <div class="card">
+      <h2>Kombiwandler</h2>
+      <div id="kombiContainer"></div>
+      <div id="wfaktorBoxKombi"></div>
+    </div>
+  </div>
+
+  <!-- ZÄHLER -->
+  <div class="panel" id="panel-zaehler">
+    <div class="card">
+      <h2>Zähler</h2>
       <label>Zählernummer</label>
-      <input type="text" id="z_nummer">
-      <label>Identifikationsnummer (falls abweichend)</label>
-      <input type="text" id="z_id">
-      <div class="row">
-        <div><label>Hersteller</label><input type="text" id="z_hersteller"></div>
-        <div><label>Typ</label><input type="text" id="z_typ"></div>
+      <div style="display:flex; gap:6px;">
+        <input type="text" id="z_nummer" style="flex:1;">
+        <button class="btn btn-sm" onclick="startBarcodeScan('z_nummer','status-zaehler-serial')">📡 Scan</button>
       </div>
-      <div class="row">
-        <div><label>Genauigkeitsklasse</label><input type="text" id="z_klasse"></div>
-        <div><label>Baujahr</label><input type="text" id="z_baujahr"></div>
-      </div>
-      <div class="row">
-        <div><label>Spannung</label><input type="text" id="z_spannung"></div>
-        <div><label>Strom</label><input type="text" id="z_strom"></div>
-      </div>
-      <label>Zulassung / Eichkennzeichen</label>
-      <input type="text" id="z_zulassung">
-      <label>Wandlerfaktor (parametriert)</label>
-      <input type="text" id="z_wfaktor" placeholder="z. B. 40000">
-      <div class="hint" id="wfaktorHint"></div>
-      <label>Zählerstand bei Inbetriebnahme</label>
-      <input type="text" id="z_stand" placeholder="alle Register, z. B. 1.8.0 = ...">
-      <label>Kommunikation (Modem/DLMS) — Anmerkungen</label>
-      <textarea id="z_kom" placeholder="SIM-Nr., Verbindungstest, IP..."></textarea>
+      <div class="status-line" id="status-zaehler-serial"></div>
+      <label style="margin-top:10px;">Fotos Zähler</label>
+      <div id="zaehlerPhotos"></div>
     </div>
   </div>
 
-  <!-- STEP 4: CHECKLISTE -->
-  <div class="panel" id="panel-4">
+  <!-- MODEM -->
+  <div class="panel" id="panel-modem">
     <div class="card">
-      <h2>4 · Prüf-Checkliste</h2>
-      <div class="hint warn">Diese Liste ist eine fachliche Orientierung, keine normative Vorgabe. Bitte anhand VDE-AR-N 4400, TAB des Netzbetreibers und interner Arbeitsanweisung ergänzen/prüfen.</div>
+      <h2>Modem / Kommunikation</h2>
+      <label>Seriennummer</label>
+      <div style="display:flex; gap:6px;">
+        <input type="text" id="modem_sim" style="flex:1;">
+        <button class="btn btn-sm" onclick="startBarcodeScan('modem_sim','status-modem-serial')">📡 Scan</button>
+      </div>
+      <div class="status-line" id="status-modem-serial"></div>
+      <label>Verbindungstest</label>
+      <select id="modem_verbindungstest">
+        <option value="">– wählen –</option>
+        <option value="io">erfolgreich</option>
+        <option value="nio">nicht erfolgreich</option>
+      </select>
+      <label>Notizen</label>
+      <textarea id="modem_notizen"></textarea>
+      <label style="margin-top:10px;">Foto Modem</label>
+      <div id="modemPhotos"></div>
+    </div>
+  </div>
+
+  <!-- CHECKLISTE -->
+  <div class="panel" id="panel-checkliste">
+    <div class="card">
+      <h2>Prüf-Checkliste</h2>
       <div id="checklistContainer"></div>
     </div>
   </div>
 
-  <!-- STEP 5: ABSCHLUSS -->
-  <div class="panel" id="panel-5">
+  <!-- ABSCHLUSS -->
+  <div class="panel" id="panel-abschluss">
     <div class="card">
-      <h2>5 · Zusammenfassung</h2>
+      <h2>Zusammenfassung</h2>
       <div id="summaryBox"></div>
     </div>
     <div class="card" id="photoGalleryCard">
@@ -295,21 +254,28 @@
       <div id="photoGallery" style="display:flex; flex-wrap:wrap; gap:10px;"></div>
     </div>
     <div class="card">
-      <h2>Ergebnis</h2>
+      <h2>Weitere Fotos</h2>
+      <div id="extraPhotosGrid" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+      <input type="file" accept="image/*" multiple style="display:none" id="extraPhotoInput">
+      <button class="btn btn-sm no-print" style="margin-top:8px;" onclick="document.getElementById('extraPhotoInput').click()">+ Foto(s) hinzufügen</button>
+      <div class="hint" id="extraPhotoHint"></div>
+    </div>
+    <div class="card">
+      <h2>Ergebnis &amp; Unterschrift</h2>
       <div class="choice-group" id="choiceErgebnis">
         <div class="choice" data-val="frei">Freigegeben</div>
         <div class="choice" data-val="maengel">Mängel / Nacharbeit</div>
       </div>
       <label>Mängel / Bemerkungen</label>
-      <textarea id="maengelText" placeholder="ggf. Mängel, offene Punkte, Nachprüftermin..."></textarea>
-      <label>Unterschrift Prüfer (Name genügt als Platzhalter)</label>
+      <textarea id="maengelText"></textarea>
+      <label>Unterschrift Prüfer</label>
       <input type="text" id="unterschrift">
     </div>
     <div class="card no-print">
       <h2>Export</h2>
       <button class="btn btn-amber btn-block" onclick="window.print()">🖨️ Drucken / Als PDF speichern</button>
-      <button class="btn btn-block" style="margin-top:8px;" onclick="exportJson()">⬇️ Protokoll als JSON exportieren</button>
-      <button class="btn btn-block btn-danger" style="margin-top:8px;" onclick="if(confirm('Neues, leeres Protokoll starten? Aktuelle Eingaben gehen verloren.'))resetAll()">🗑️ Neues Protokoll</button>
+      <button class="btn btn-block" style="margin-top:8px;" onclick="exportJson()">⬇️ Als JSON exportieren</button>
+      <button class="btn btn-block btn-danger" style="margin-top:8px;" onclick="if(confirm('Neues, leeres Protokoll starten?'))resetAll()">🗑️ Neues Protokoll</button>
     </div>
   </div>
 
@@ -322,33 +288,20 @@
 
 <script>
 /* ---------------- STATE ---------------- */
-const STEPS = ['Setup','Wandler','Zähler','Checkliste','Abschluss'];
-let step = 1;
-
 const state = {
-  ebene: null,           // NS | MS
-  messart: null,         // direkt | halbindirekt | wandler
-  vtCount: 3,
-  standort: { name:'', strasse:'', hausnr:'', plz:'', ort:'', gps:'', pruefer:'', datum:'' },
-  zaehler: {},
-  wandler: [],           // {rolle:'Stromwandler L1', typ:'ct'|'vt', felder:{...}, photo:null}
-  checklist: {},         // id -> {checked:bool, note:string}
-  abschluss: { ergebnis:'', maengel:'', unterschrift:'' }
+  ebene:null, messart:null, vtCount:3,
+  standort:{name:'',id:'',bezug:'',einspeise:'',strasse:'',hausnr:'',plz:'',ort:'',gps:'',pruefer:'',datum:''},
+  ct:null, vt:null,
+  zaehler:{photos:[null,null]},
+  modem:{typ:'',sim:'',verbindungstest:'',notizen:'',photos:[null,null]},
+  checklist:{},
+  abschluss:{ergebnis:'',maengel:'',unterschrift:'',weitereFotos:[]}
 };
+const LS_KEY = 'vibn_protokoll_draft_v2';
+function saveDraft(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){} }
+function loadDraft(){ try{ const raw=localStorage.getItem(LS_KEY); if(raw) Object.assign(state, JSON.parse(raw)); }catch(e){} }
 
-const LS_KEY = 'vibn_protokoll_draft_v1';
-
-function saveDraft(){
-  try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){}
-}
-function loadDraft(){
-  try{
-    const raw = localStorage.getItem(LS_KEY);
-    if(raw) Object.assign(state, JSON.parse(raw));
-  }catch(e){}
-}
-
-/* ---------------- CHECKLIST DEFINITION ---------------- */
+/* ---------------- CHECKLIST ---------------- */
 const CHECKLIST = [
   { cat:'Allgemein / Sichtprüfung', tag:'beide', items:[
     ['sicht_zugang','Zählerplatz / Wandlerraum sauber, trocken, frei zugänglich'],
@@ -363,206 +316,186 @@ const CHECKLIST = [
     ['ms_erdung','Erdung und Kurzschließung der Anlage vorgenommen'],
     ['ms_spannungsfrei','Spannungsfreiheit vor Wandleranschluss geprüft'],
   ]},
-  { cat:'Wandlerprüfung (bei Wandlermessung)', tag:'wandler', items:[
-    ['w_typenschild','Typenschilddaten mit Bestellung/Netzberechnung abgeglichen (Übersetzung, Klasse, Bürde)'],
+  { cat:'Wandlerprüfung', tag:'wandler', items:[
+    ['w_typenschild','Typenschilddaten mit Bestellung/Netzberechnung abgeglichen'],
     ['w_sek_klemmen','Sekundärklemmen S1/S2 korrekt zugeordnet und fest angezogen'],
     ['w_prim_klemmen','Primärklemmen P1/P2 in Energieflussrichtung korrekt'],
-    ['w_ks_bruecken','Kurzschlussbrücken vor/während Zähleranschluss korrekt gesetzt bzw. entfernt'],
-    ['w_erdung_sek','Sekundärkreis der Stromwandler einseitig geerdet (i. d. R. S2)'],
+    ['w_ks_bruecken','Kurzschlussbrücken korrekt gesetzt bzw. entfernt'],
+    ['w_erdung_sek','Sekundärkreis der Stromwandler einseitig geerdet'],
     ['w_sicherungen','Spannungswandler-Sicherungen bestückt und funktionsfähig'],
     ['w_isolation','Isolationswiderstand der Sekundärverdrahtung gemessen'],
-    ['w_buerde','Bürde der Sekundärverdrahtung (Länge/Querschnitt) im zulässigen Bereich'],
   ]},
   { cat:'Anschluss- und Verdrahtungsprüfung', tag:'beide', items:[
     ['v_klemmenplan','Klemmenbezeichnung mit Schaltplan abgeglichen'],
-    ['v_drehmoment','Alle Klemmen mit Drehmomentschlüssel nachgezogen (Sollwert dokumentiert)'],
+    ['v_drehmoment','Alle Klemmen mit Drehmomentschlüssel nachgezogen'],
     ['v_beschriftung','Aderleitungen eindeutig beschriftet'],
     ['v_ks_fest','Kurzschlussfestigkeit des Sekundärkreises geprüft'],
     ['v_schirmung','Schirmung / Erdung der Messleitungen korrekt aufgelegt'],
   ]},
   { cat:'Spannungs- und Stromprüfung', tag:'beide', items:[
     ['s_sternspannung','Spannung L1-N, L2-N, L3-N gemessen und dokumentiert'],
-    ['s_verkettete','Verkettete Spannung L1-L2, L2-L3, L3-L1 gemessen und dokumentiert'],
+    ['s_verkettete','Verkettete Spannung L1-L2, L2-L3, L3-L1 gemessen'],
     ['s_drehfeld','Drehfeldrichtung geprüft (rechtsdrehend)'],
     ['s_strom','Stromaufnahme je Phase plausibilisiert'],
-    ['s_vektor','Vektordiagramm / Winkelmessung mit Prüfgerät durchgeführt'],
+    ['s_vektor','Vektordiagramm / Winkelmessung durchgeführt'],
   ]},
-  { cat:'Zähler', tag:'beide', items:[
-    ['z_nummer_check','Zählernummer mit Bestellung / Zählerdatenbank abgeglichen'],
-    ['z_stand_check','Zählerstand bei Inbetriebnahme dokumentiert (alle Register)'],
+  { cat:'Zähler & Modem', tag:'beide', items:[
+    ['z_nummer_check','Zählernummer mit Bestellung abgeglichen'],
+    ['z_stand_check','Zählerstand bei Inbetriebnahme dokumentiert'],
     ['z_faktor_check','Wandlerfaktor im Zähler korrekt parametriert'],
     ['z_uhrzeit','Datum/Uhrzeit im Zähler synchron'],
     ['z_kom_check','Kommunikationsmodul funktionsfähig, Verbindungstest erfolgreich'],
-    ['z_fehlercode','Anzeige ohne Fehlercode (kein F.F, kein Rückstellzähler-Fehler)'],
   ]},
   { cat:'Abschluss', tag:'beide', items:[
     ['a_plombierung','Plombierung durchgeführt, Plombennummern dokumentiert'],
-    ['a_fotos','Foto-Dokumentation vollständig (Zähler, Wandler, Klemmen, Schrank)'],
-    ['a_unterschrift','Protokoll unterschrieben (Prüfer / ggf. Anlagenbetreiber)'],
+    ['a_fotos','Foto-Dokumentation vollständig'],
+    ['a_unterschrift','Protokoll unterschrieben'],
   ]},
 ];
 
-/* ---------------- INIT ---------------- */
-function init(){
-  loadDraft();
-  const savedKey = getApiKey();
-  if(savedKey) document.getElementById('apiKeyInput').value = savedKey;
-  const savedWorker = getWorkerUrl();
-  if(savedWorker) document.getElementById('workerUrlInput').value = savedWorker;
-  renderStepNav();
-  buildMessartChoices();
-  buildChecklist();
-  buildWandlerBlocks();
-  bindStaticFields();
-  hydrateForm();
-  showStep(1);
-  document.getElementById('pruefdatum').value = state.standort.datum || new Date().toISOString().slice(0,10);
-}
+/* ---------------- PANELS / NAVIGATION ---------------- */
+function isMSorHS(){ return state.ebene==='MS' || state.ebene==='HS'; }
+const PANEL_DEFS = [
+  {id:'setup', label:'Setup'},
+  {id:'ct', label:'Stromwandler', cond:()=> (isMSorHS() && state.messart==='wandler') || state.messart==='halbindirekt'},
+  {id:'vt', label:'Spannungswandler', cond:()=> isMSorHS() && state.messart==='wandler'},
+  {id:'kombi', label:'Kombiwandler', cond:()=> isMSorHS() && state.messart==='kombiwandler'},
+  {id:'zaehler', label:'Zähler'},
+  {id:'modem', label:'Modem'},
+  {id:'checkliste', label:'Checkliste'},
+  {id:'abschluss', label:'Abschluss'},
+];
+let stepIndex = 0;
+function activePanels(){ return PANEL_DEFS.filter(p=> p.cond ? p.cond() : true); }
 
 function renderStepNav(){
   const nav = document.getElementById('stepNav');
+  const panels = activePanels();
+  if(stepIndex >= panels.length) stepIndex = 0;
   nav.innerHTML = '';
-  STEPS.forEach((s,i)=>{
+  panels.forEach((p,i)=>{
     const d = document.createElement('div');
-    d.className = 'step';
-    d.textContent = (i+1)+' '+s;
-    d.dataset.n = i+1;
-    d.onclick = ()=>{ if(canGoTo(i+1)) showStep(i+1); };
+    const complete = isStepComplete(p.id);
+    d.className = 'step' + (i===stepIndex?' active':'') + (complete?' complete':'');
+    d.textContent = (i+1)+' '+p.label + (complete?' ✓':'');
+    d.onclick = ()=>{ if(i<=stepIndex || (state.ebene && state.messart)) showStepByIndex(i); };
     nav.appendChild(d);
   });
 }
-function canGoTo(n){
-  if(n<=2) return true;
-  return !!state.ebene && !!state.messart;
-}
-function updateStepNav(){
-  document.querySelectorAll('.step').forEach(el=>{
-    const n = +el.dataset.n;
-    el.classList.toggle('active', n===step);
-    el.classList.toggle('done', n<step);
-    el.classList.toggle('disabled', !canGoTo(n));
-  });
-}
+function updateStepCompletionUI(){ renderStepNav(); }
 
-function showStep(n){
-  step = n;
+function showStepByIndex(i){
+  const panels = activePanels();
+  if(i<0 || i>=panels.length) return;
+  stepIndex = i;
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  document.getElementById('panel-'+n).classList.add('active');
-  updateStepNav();
-  document.getElementById('btnBack').style.visibility = n===1 ? 'hidden' : 'visible';
-  document.getElementById('btnNext').textContent = n===5 ? 'Fertig ✓' : 'Weiter →';
-  if(n===2) buildWandlerBlocks();
-  if(n===3){
-    const r = computeWandlerfaktor();
-    const h = document.getElementById('wfaktorHint');
-    if(h) h.textContent = r.total ? ('Berechneter Wandlerfaktor aus Schritt 2: '+r.total) : '';
-  }
-  if(n===4) refreshChecklistVisibility();
-  if(n===5){ buildSummary(); buildPhotoGallery(); }
+  document.getElementById('panel-'+panels[i].id).classList.add('active');
+  renderStepNav();
+  document.getElementById('btnBack').style.visibility = i===0 ? 'hidden' : 'visible';
+  document.getElementById('btnNext').textContent = i===panels.length-1 ? 'Fertig ✓' : 'Weiter →';
+  if(panels[i].id==='ct') buildCtBlocks();
+  if(panels[i].id==='vt') buildVtBlocks();
+  if(panels[i].id==='kombi') buildKombiBlocks();
+  if(panels[i].id==='checkliste') refreshChecklistVisibility();
+  if(panels[i].id==='abschluss'){ buildSummary(); buildPhotoGallery(); buildExtraPhotos(); }
   window.scrollTo(0,0);
 }
 
 document.getElementById('btnNext').onclick = ()=>{
-  if(step===1 && (!state.ebene || !state.messart)){
+  const panels = activePanels();
+  if(panels[stepIndex].id==='setup' && (!state.ebene || !state.messart)){
     alert('Bitte Spannungsebene und Messart wählen.'); return;
   }
-  if(step<5) showStep(step+1);
+  if(stepIndex < panels.length-1) showStepByIndex(stepIndex+1);
 };
-document.getElementById('btnBack').onclick = ()=>{ if(step>1) showStep(step-1); };
+document.getElementById('btnBack').onclick = ()=>{ if(stepIndex>0) showStepByIndex(stepIndex-1); };
 
-/* ---------------- STEP 1: SETUP ---------------- */
-document.querySelectorAll('#choiceEbene .choice').forEach(el=>{
-  el.onclick = ()=>{
-    state.ebene = el.dataset.val;
-    document.querySelectorAll('#choiceEbene .choice').forEach(c=>c.classList.remove('sel'));
-    el.classList.add('sel');
-    buildMessartChoices();
-    saveDraft();
-  };
-});
+/* ---------------- COMPLETION CHECK ---------------- */
+function isStepComplete(id){
+  switch(id){
+    case 'setup': return !!(state.ebene && state.messart && state.standort.name && state.standort.pruefer && state.standort.datum);
+    case 'ct': return !!(state.ct && state.ct.primaer && state.ct.sekundaer && state.ct.phases.every(p=>p.seriennummer));
+    case 'vt': return !!(state.vt && state.vt.primaer && state.vt.sekundaer && state.vt.phases.every(p=>p.seriennummer));
+    case 'kombi': return !!(state.kombi && state.kombi.primaerA && state.kombi.sekundaerA && state.kombi.primaerV && state.kombi.sekundaerV && state.kombi.phases.every(p=>p.seriennummer));
+    case 'zaehler': return !!state.zaehler.z_nummer;
+    case 'modem': return !!(state.modem.sim || state.modem.notizen);
+    case 'checkliste': {
+      const hasWandler = isMSorHS() || (state.ebene==='NS' && state.messart==='halbindirekt');
+      let all = true;
+      CHECKLIST.forEach(cat=>{
+        let show = true;
+        if(cat.tag==='ms') show = isMSorHS();
+        if(cat.tag==='wandler') show = hasWandler;
+        if(show) cat.items.forEach(([iid])=>{ if(!(state.checklist[iid] && state.checklist[iid].checked)) all=false; });
+      });
+      return all;
+    }
+    case 'abschluss': return !!(state.abschluss.ergebnis && state.abschluss.unterschrift);
+  }
+  return false;
+}
+
+/* ---------------- INIT ---------------- */
+function init(){
+  loadDraft();
+  ensureCtState(); ensureVtState(); ensureKombiState();
+  bindSetup();
+  buildChecklist();
+  bindZaehlerModem();
+  hydrateForm();
+  renderStepNav();
+  showStepByIndex(0);
+  document.getElementById('pruefdatum').value = state.standort.datum || new Date().toISOString().slice(0,10);
+}
+
+/* ---------------- SETUP ---------------- */
+function bindSetup(){
+  document.querySelectorAll('#choiceEbene .choice').forEach(el=>{
+    el.onclick = ()=>{
+      state.ebene = el.dataset.val;
+      document.querySelectorAll('#choiceEbene .choice').forEach(c=>c.classList.remove('sel'));
+      el.classList.add('sel');
+      state.messart = null;
+      buildMessartChoices(); renderStepNav(); saveDraft();
+    };
+  });
+  const map = {anlName:'name', anlId:'id', anlBezug:'bezug', anlEinspeise:'einspeise', anlStrasse:'strasse', anlHausnr:'hausnr', anlPlz:'plz', anlOrt:'ort', pruefer:'pruefer', pruefdatum:'datum'};
+  Object.entries(map).forEach(([id,key])=>{
+    document.getElementById(id).addEventListener('input', e=>{ state.standort[key]=e.target.value; saveDraft(); updateStepCompletionUI(); });
+  });
+  document.getElementById('gpsField').addEventListener('input', e=>{ state.standort.gps=e.target.value; saveDraft(); });
+  document.getElementById('btnGps').onclick = getGps;
+}
 
 function buildMessartChoices(){
   const box = document.getElementById('choiceMessart');
   box.innerHTML = '';
   let options = [];
-  if(state.ebene==='NS'){
-    options = [
-      ['direkt','Direktmessung'],
-      ['halbindirekt','Halbindirekt (3 Stromwandler)'],
-    ];
-  } else if(state.ebene==='MS'){
-    options = [ ['wandler','Wandlermessung (3 CT + Spannungswandler)'] ];
-  } else {
-    box.innerHTML = '<div class="hint">Bitte zuerst Spannungsebene wählen.</div>';
-    return;
+  if(state.ebene==='NS') options = [['direkt','Direktmessung'],['halbindirekt','Halbindirekt (3 Stromwandler)']];
+  else if(isMSorHS()){
+    options=[['wandler','Wandlermessung (getrennt)'],['kombiwandler','Kombiwandler']];
+    if(!state.messart) state.messart='wandler';
   }
+  else { box.innerHTML='<div class="hint">Bitte zuerst Spannungsebene wählen.</div>'; return; }
   options.forEach(([val,label])=>{
     const d = document.createElement('div');
-    d.className = 'choice' + (state.messart===val ? ' sel':'');
-    d.textContent = label;
-    d.dataset.val = val;
+    d.className = 'choice'+(state.messart===val?' sel':'');
+    d.textContent = label; d.dataset.val = val;
     d.onclick = ()=>{
       state.messart = val;
       document.querySelectorAll('#choiceMessart .choice').forEach(c=>c.classList.remove('sel'));
       d.classList.add('sel');
-      document.getElementById('vtCountBox').style.display = (val==='wandler') ? 'block' : 'none';
-      updateMessartHint();
-      buildWandlerBlocks();
-      buildChecklist();
-      saveDraft();
+      renderStepNav(); saveDraft();
     };
     box.appendChild(d);
   });
-  updateMessartHint();
-  if(state.ebene==='MS') state.messart='wandler';
-}
-function updateMessartHint(){
-  const el = document.getElementById('messartHint');
-  if(state.ebene==='NS' && state.messart==='direkt') el.textContent='Direktmessung: kein Stromwandler nötig, Schritt 3 entfällt.';
-  else if(state.ebene==='NS' && state.messart==='halbindirekt') el.textContent='Halbindirekte Messung: 3 Stromwandler (je Phase 1), keine Spannungswandler.';
-  else if(state.ebene==='MS') el.textContent='Mittelspannung: 3 Stromwandler + Spannungswandler (Anzahl unten wählen).';
-  else el.textContent='';
-}
-document.querySelectorAll('#choiceVt .choice').forEach(el=>{
-  el.onclick = ()=>{
-    state.vtCount = +el.dataset.val;
-    document.querySelectorAll('#choiceVt .choice').forEach(c=>c.classList.remove('sel'));
-    el.classList.add('sel');
-    buildWandlerBlocks();
-    saveDraft();
-  };
-});
-
-function bindStaticFields(){
-  const map = {
-    anlName:'name', anlStrasse:'strasse', anlHausnr:'hausnr', anlPlz:'plz', anlOrt:'ort', pruefer:'pruefer', pruefdatum:'datum'
-  };
-  Object.entries(map).forEach(([id,key])=>{
-    document.getElementById(id).addEventListener('input', e=>{
-      state.standort[key] = e.target.value; saveDraft();
-    });
-  });
-  ['z_nummer','z_id','z_hersteller','z_typ','z_klasse','z_baujahr','z_spannung','z_strom','z_zulassung','z_wfaktor','z_stand','z_kom'].forEach(id=>{
-    document.getElementById(id).addEventListener('input', e=>{
-      state.zaehler[id] = e.target.value; saveDraft();
-    });
-  });
-  document.getElementById('maengelText').addEventListener('input', e=>{ state.abschluss.maengel = e.target.value; saveDraft(); });
-  document.getElementById('unterschrift').addEventListener('input', e=>{ state.abschluss.unterschrift = e.target.value; saveDraft(); });
-  document.querySelectorAll('#choiceErgebnis .choice').forEach(el=>{
-    el.onclick = ()=>{
-      state.abschluss.ergebnis = el.dataset.val;
-      document.querySelectorAll('#choiceErgebnis .choice').forEach(c=>c.classList.remove('sel'));
-      el.classList.add('sel'); saveDraft();
-    };
-  });
-  document.getElementById('btnGps').onclick = getGps;
-  document.getElementById('file-zaehler-cam').addEventListener('change', e=>handlePhoto(e,'zaehler'));
-  document.getElementById('file-zaehler-gal').addEventListener('change', e=>handlePhoto(e,'zaehler'));
 }
 
 function hydrateForm(){
   document.getElementById('anlName').value = state.standort.name||'';
+  document.getElementById('anlId').value = state.standort.id||'';
+  document.getElementById('anlBezug').value = state.standort.bezug||'';
+  document.getElementById('anlEinspeise').value = state.standort.einspeise||'';
   document.getElementById('anlStrasse').value = state.standort.strasse||'';
   document.getElementById('anlHausnr').value = state.standort.hausnr||'';
   document.getElementById('anlPlz').value = state.standort.plz||'';
@@ -572,40 +505,66 @@ function hydrateForm(){
   if(state.ebene){
     document.querySelectorAll('#choiceEbene .choice').forEach(c=>c.classList.toggle('sel', c.dataset.val===state.ebene));
     buildMessartChoices();
+    document.querySelectorAll('#choiceMessart .choice').forEach(c=>c.classList.toggle('sel', c.dataset.val===state.messart));
   }
-  Object.entries(state.zaehler).forEach(([id,val])=>{
-    const el = document.getElementById(id); if(el) el.value = val;
-  });
+
+  const zEl = document.getElementById('z_nummer'); if(zEl) zEl.value = state.zaehler.z_nummer||'';
+  document.getElementById('modem_sim').value = state.modem.sim||'';
+  document.getElementById('modem_verbindungstest').value = state.modem.verbindungstest||'';
+  document.getElementById('modem_notizen').value = state.modem.notizen||'';
+
   document.getElementById('maengelText').value = state.abschluss.maengel||'';
   document.getElementById('unterschrift').value = state.abschluss.unterschrift||'';
-  if(state.abschluss.ergebnis){
-    document.querySelectorAll('#choiceErgebnis .choice').forEach(c=>c.classList.toggle('sel', c.dataset.val===state.abschluss.ergebnis));
-  }
-  if(state.zaehler.photo) document.getElementById('thumb-zaehler').src = state.zaehler.photo;
+  if(state.abschluss.ergebnis) document.querySelectorAll('#choiceErgebnis .choice').forEach(c=>c.classList.toggle('sel', c.dataset.val===state.abschluss.ergebnis));
+
+  document.getElementById('zaehlerPhotos').innerHTML = twoPhotoRowHtml('zaehler');
+  document.getElementById('modemPhotos').innerHTML = onePhotoRowHtml('modem');
+  bindTwoPhotoSlots('zaehler', state.zaehler, 'z_nummer');
+  bindOnePhotoSlot('modem', state.modem, null);
 }
 
+function bindZaehlerModem(){
+  document.getElementById('z_nummer').addEventListener('input', e=>{ state.zaehler.z_nummer=e.target.value; saveDraft(); updateStepCompletionUI(); });
+  document.getElementById('modem_sim').addEventListener('input', e=>{ state.modem.sim=e.target.value; saveDraft(); updateStepCompletionUI(); });
+  document.getElementById('modem_verbindungstest').addEventListener('change', e=>{ state.modem.verbindungstest=e.target.value; saveDraft(); });
+  document.getElementById('modem_notizen').addEventListener('input', e=>{ state.modem.notizen=e.target.value; saveDraft(); updateStepCompletionUI(); });
+  document.getElementById('maengelText').addEventListener('input', e=>{ state.abschluss.maengel=e.target.value; saveDraft(); });
+  document.getElementById('unterschrift').addEventListener('input', e=>{ state.abschluss.unterschrift=e.target.value; saveDraft(); updateStepCompletionUI(); });
+  document.querySelectorAll('#choiceErgebnis .choice').forEach(el=>{
+    el.onclick = ()=>{
+      state.abschluss.ergebnis = el.dataset.val;
+      document.querySelectorAll('#choiceErgebnis .choice').forEach(c=>c.classList.remove('sel'));
+      el.classList.add('sel'); saveDraft(); updateStepCompletionUI();
+    };
+  });
+  document.getElementById('extraPhotoInput').addEventListener('change', async e=>{
+    const files = Array.from(e.target.files);
+    for(const file of files){
+      if(state.abschluss.weitereFotos.length>=20){ alert('Maximal 20 zusätzliche Fotos.'); break; }
+      const b64 = await fileToBase64(file);
+      state.abschluss.weitereFotos.push('data:image/jpeg;base64,'+b64);
+    }
+    saveDraft(); buildExtraPhotos();
+    e.target.value = '';
+  });
+}
+
+/* ---------------- GPS ---------------- */
 function getGps(){
   const status = document.getElementById('gpsStatus');
   status.textContent = 'Standort wird ermittelt...'; status.className='status-line';
-  if(!navigator.geolocation){
-    status.textContent = 'Geolocation vom Browser/Umgebung nicht unterstützt. Bitte manuell eintragen.';
-    status.className='status-line err';
-    return;
-  }
+  if(!navigator.geolocation){ status.textContent='Geolocation nicht unterstützt.'; status.className='status-line err'; return; }
   navigator.geolocation.getCurrentPosition(async pos=>{
     const s = pos.coords.latitude.toFixed(6)+', '+pos.coords.longitude.toFixed(6);
-    document.getElementById('gpsField').value = s;
-    document.getElementById('gpsField').readOnly = false;
+    document.getElementById('gpsField').value = s; document.getElementById('gpsField').readOnly=false;
     state.standort.gps = s; saveDraft();
-    status.textContent = 'Position ermittelt (±'+Math.round(pos.coords.accuracy)+' m). Adresse wird nachgeschlagen...'; status.className='status-line ok';
+    status.textContent = 'Position ermittelt. Adresse wird nachgeschlagen...'; status.className='status-line ok';
     await reverseGeocode(pos.coords.latitude, pos.coords.longitude);
   }, err=>{
-    document.getElementById('gpsField').readOnly = false;
-    status.textContent = 'Ortung nicht möglich ('+err.message+'). Bitte manuell eintragen.';
-    status.className='status-line err';
+    document.getElementById('gpsField').readOnly=false;
+    status.textContent = 'Ortung nicht möglich ('+err.message+').'; status.className='status-line err';
   }, {enableHighAccuracy:true, timeout:8000});
 }
-
 async function reverseGeocode(lat, lon){
   const status = document.getElementById('gpsStatus');
   try{
@@ -613,394 +572,473 @@ async function reverseGeocode(lat, lon){
     if(!res.ok) throw new Error('HTTP '+res.status);
     const data = await res.json();
     const a = data.address || {};
-    const strasse = a.road || a.pedestrian || a.footway || a.path || '';
-    const hausnr = a.house_number || '';
-    const plz = a.postcode || '';
-    const ort = a.city || a.town || a.village || a.municipality || a.county || '';
-    if(strasse){ document.getElementById('anlStrasse').value = strasse; state.standort.strasse = strasse; }
-    if(hausnr){ document.getElementById('anlHausnr').value = hausnr; state.standort.hausnr = hausnr; }
-    if(plz){ document.getElementById('anlPlz').value = plz; state.standort.plz = plz; }
-    if(ort){ document.getElementById('anlOrt').value = ort; state.standort.ort = ort; }
+    const strasse = a.road||a.pedestrian||a.footway||a.path||'';
+    const hausnr = a.house_number||'';
+    const plz = a.postcode||'';
+    const ort = a.city||a.town||a.village||a.municipality||a.county||'';
+    if(strasse){ document.getElementById('anlStrasse').value=strasse; state.standort.strasse=strasse; }
+    if(hausnr){ document.getElementById('anlHausnr').value=hausnr; state.standort.hausnr=hausnr; }
+    if(plz){ document.getElementById('anlPlz').value=plz; state.standort.plz=plz; }
+    if(ort){ document.getElementById('anlOrt').value=ort; state.standort.ort=ort; }
     saveDraft();
-    status.textContent = 'Position ermittelt. Adresse automatisch übernommen — bitte prüfen.';
-    status.className = 'status-line ok';
+    status.textContent = 'Adresse automatisch übernommen — bitte prüfen.'; status.className='status-line ok';
   }catch(err){
-    status.textContent = 'Position ermittelt, Adresse konnte nicht automatisch nachgeschlagen werden (keine Verbindung?). Bitte manuell eintragen.';
-    status.className = 'status-line err';
+    status.textContent = 'Adresse konnte nicht automatisch ermittelt werden.'; status.className='status-line err';
   }
 }
-document.getElementById('gpsField').addEventListener('input', e=>{ state.standort.gps=e.target.value; saveDraft(); });
 
-/* ---------------- WANDLER BLOCKS ---------------- */
-function buildWandlerBlocks(){
-  const container = document.getElementById('wandlerContainer');
-  container.innerHTML = '';
-  let list = [];
-  if(state.ebene==='NS' && state.messart==='halbindirekt'){
-    list = [
-      {id:'ct1', label:'Stromwandler L1', typ:'ct'},
-      {id:'ct2', label:'Stromwandler L2', typ:'ct'},
-      {id:'ct3', label:'Stromwandler L3', typ:'ct'},
-    ];
-  } else if(state.ebene==='MS'){
-    list = [
-      {id:'ct1', label:'Stromwandler L1', typ:'ct'},
-      {id:'ct2', label:'Stromwandler L2', typ:'ct'},
-      {id:'ct3', label:'Stromwandler L3', typ:'ct'},
-    ];
-    const vtN = state.vtCount||3;
-    for(let i=1;i<=vtN;i++) list.push({id:'vt'+i, label:'Spannungswandler '+(vtN===2?['L1-L2','L2-L3'][i-1]:'L'+i), typ:'vt'});
-  } else {
-    container.innerHTML = '<div class="hint">Bei Direktmessung sind keine Wandler zu erfassen. Weiter zu Schritt 4.</div>';
-    return;
-  }
-
-  list.forEach(spec=>{
-    if(!state.wandler.find(w=>w.rid===spec.id)){
-      state.wandler.push({rid:spec.id, label:spec.label, typ:spec.typ, felder:{}, photo:null});
-    }
-  });
-  state.wandler = state.wandler.filter(w=>list.find(l=>l.id===w.rid));
-
-  list.forEach(spec=>{
-    const w = state.wandler.find(x=>x.rid===spec.id);
-    const block = document.createElement('div');
-    block.className = 'device-block';
-    const fid = 'w_'+spec.id;
-    block.innerHTML = `
-      <h4>${spec.label}</h4>
-      <div class="photo-row">
-        <img class="thumb empty" id="thumb-${fid}">
-        <div class="photo-actions">
-          <input type="file" accept="image/*" capture="environment" style="display:none" id="file-${fid}-cam">
-          <input type="file" accept="image/*" style="display:none" id="file-${fid}-gal">
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
-            <button class="btn btn-sm" onclick="document.getElementById('file-${fid}-cam').click()">📷 Kamera</button>
-            <button class="btn btn-sm" onclick="document.getElementById('file-${fid}-gal').click()">🖼️ Galerie</button>
-            <button class="btn btn-sm" onclick="runLocalOcr('wandler','${spec.id}')">🔍 Lokal (kostenlos)</button>
-            <button class="btn btn-sm" onclick="runCloudOcr('wandler','${spec.id}')">☁️ Cloud</button>
-          </div>
-          <div class="status-line" id="status-${fid}"></div>
-        </div>
-      </div>
-      <div class="row">
-        <div><label>Seriennummer</label><input type="text" data-field="seriennummer" data-rid="${spec.id}"></div>
-        <div><label>Hersteller / Typ</label><input type="text" data-field="typ" data-rid="${spec.id}"></div>
-      </div>
-      <div class="row">
-        <div><label>Übersetzung</label><input type="text" data-field="uebersetzung" data-rid="${spec.id}" placeholder="${spec.typ==='ct'?'z. B. 1000/5 A':'z. B. 20000/100 V'}"></div>
-        <div><label>Klasse</label><input type="text" data-field="klasse" data-rid="${spec.id}"></div>
-      </div>
-      <div class="row">
-        <div><label>Sollbürde (Typenschild)</label><input type="text" data-field="buerde" data-rid="${spec.id}" placeholder="z. B. 5 VA"></div>
-        <div><label>Baujahr</label><input type="text" data-field="baujahr" data-rid="${spec.id}"></div>
-      </div>
-
-      <h3>Bürdemessung (${spec.typ==='ct'?'Strom':'Spannung'})</h3>
-      <div class="photo-row">
-        <img class="thumb empty" id="thumb-buerde-${spec.id}">
-        <div class="photo-actions">
-          <input type="file" accept="image/*" capture="environment" style="display:none" id="file-buerde-${spec.id}-cam">
-          <input type="file" accept="image/*" style="display:none" id="file-buerde-${spec.id}-gal">
-          <div style="display:flex; gap:6px;">
-            <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-buerde-${spec.id}-cam').click()">📷 Kamera</button>
-            <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-buerde-${spec.id}-gal').click()">🖼️ Galerie</button>
-          </div>
-        </div>
-      </div>
-      <div class="row">
-        <div><label>Gemessene Bürde (VA)</label><input type="text" data-field="gemessenebuerde" data-rid="${spec.id}"></div>
-        <div><label>Ergebnis</label>
-          <select data-field="buerde_ergebnis" data-rid="${spec.id}">
-            <option value="">– wählen –</option>
-            <option value="io">i.O.</option>
-            <option value="nio">n.i.O.</option>
-          </select>
-        </div>
-      </div>
-    `;
-    container.appendChild(block);
-    block.querySelectorAll('input[data-field], select[data-field]').forEach(inp=>{
-      inp.value = w.felder[inp.dataset.field] || '';
-      inp.addEventListener('input', e=>{ w.felder[inp.dataset.field] = e.target.value; saveDraft(); renderWfaktorBox(); });
-      inp.addEventListener('change', e=>{ w.felder[inp.dataset.field] = e.target.value; saveDraft(); renderWfaktorBox(); });
+/* ---------------- BARCODE SCAN ---------------- */
+let currentScanControls = null;
+async function startBarcodeScan(targetId, statusId){
+  const status = document.getElementById(statusId);
+  if(status){ status.textContent='Kamera wird gestartet...'; status.className='status-line'; }
+  if(!window.ZXing){ if(status){ status.textContent='Scan-Bibliothek nicht geladen (kein Internet?). Bitte manuell eintragen.'; status.className='status-line err'; } return; }
+  try{
+    const reader = new ZXing.BrowserMultiFormatReader();
+    document.getElementById('scanOverlay').style.display = 'flex';
+    const devices = await ZXing.BrowserMultiFormatReader.listVideoInputDevices();
+    const deviceId = devices.length ? devices[devices.length-1].deviceId : undefined;
+    reader.decodeFromVideoDevice(deviceId, 'scanVideo', (result, err, controls)=>{
+      currentScanControls = controls;
+      if(result){
+        const el = document.getElementById(targetId);
+        if(el){ el.value = result.getText(); el.dispatchEvent(new Event('input')); }
+        if(status){ status.textContent = '✓ Erkannt: '+result.getText(); status.className='status-line ok'; }
+        controls.stop();
+        document.getElementById('scanOverlay').style.display = 'none';
+      }
     });
-    if(w.photo) document.getElementById('thumb-'+fid).src = w.photo;
-    if(w.buerdePhoto) document.getElementById('thumb-buerde-'+spec.id).src = w.buerdePhoto;
-    document.getElementById('file-'+fid+'-cam').addEventListener('change', e=>handlePhoto(e,'wandler',spec.id));
-    document.getElementById('file-'+fid+'-gal').addEventListener('change', e=>handlePhoto(e,'wandler',spec.id));
-    document.getElementById('file-buerde-'+spec.id+'-cam').addEventListener('change', e=>handleBuerdePhoto(e,spec.id));
-    document.getElementById('file-buerde-'+spec.id+'-gal').addEventListener('change', e=>handleBuerdePhoto(e,spec.id));
+  }catch(err){
+    if(status){ status.textContent = 'Scan fehlgeschlagen ('+String(err.message||err).slice(0,70)+'). Bitte manuell eintragen.'; status.className='status-line err'; }
+    document.getElementById('scanOverlay').style.display = 'none';
+  }
+}
+function stopBarcodeScan(){
+  document.getElementById('scanOverlay').style.display = 'none';
+  try{ if(currentScanControls) currentScanControls.stop(); }catch(e){}
+}
+async function tryDecodeFromDataUrl(dataUrl, targetId){
+  try{
+    if(!window.ZXing) return;
+    const reader = new ZXing.BrowserMultiFormatReader();
+    const result = await reader.decodeFromImageUrl(dataUrl);
+    const el = document.getElementById(targetId);
+    if(el && result && !el.value){ el.value = result.getText(); el.dispatchEvent(new Event('input')); }
+  }catch(err){ /* optional, silent fallback */ }
+}
+
+/* ---------------- PHOTO HELPERS ---------------- */
+function fileToBase64(file){
+  return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(file); });
+}
+function twoPhotoRowHtml(prefix){
+  return `<div class="row" style="margin:6px 0;">
+    <div class="photo-mini">
+      <img class="thumb empty" id="thumb-${prefix}-1">
+      <input type="file" accept="image/*" capture="environment" style="display:none" id="file-${prefix}-1-cam">
+      <input type="file" accept="image/*" style="display:none" id="file-${prefix}-1-gal">
+      <div style="display:flex;gap:4px;margin-top:4px;">
+        <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${prefix}-1-cam').click()">📷</button>
+        <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${prefix}-1-gal').click()">🖼️</button>
+      </div>
+    </div>
+    <div class="photo-mini">
+      <img class="thumb empty" id="thumb-${prefix}-2">
+      <input type="file" accept="image/*" capture="environment" style="display:none" id="file-${prefix}-2-cam">
+      <input type="file" accept="image/*" style="display:none" id="file-${prefix}-2-gal">
+      <div style="display:flex;gap:4px;margin-top:4px;">
+        <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${prefix}-2-cam').click()">📷</button>
+        <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${prefix}-2-gal').click()">🖼️</button>
+      </div>
+    </div>
+  </div>`;
+}
+function onePhotoRowHtml(prefix){
+  return `<div style="max-width:160px;">
+    <img class="thumb empty" id="thumb-${prefix}-1" style="width:100%; height:120px;">
+    <input type="file" accept="image/*" capture="environment" style="display:none" id="file-${prefix}-1-cam">
+    <input type="file" accept="image/*" style="display:none" id="file-${prefix}-1-gal">
+    <div style="display:flex;gap:4px;margin-top:4px;">
+      <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${prefix}-1-cam').click()">📷</button>
+      <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${prefix}-1-gal').click()">🖼️</button>
+    </div>
+  </div>`;
+}
+function bindOnePhotoSlot(prefix, obj, decodeTargetId){
+  ['cam','gal'].forEach(mode=>{
+    const inp = document.getElementById(`file-${prefix}-1-${mode}`);
+    if(!inp) return;
+    inp.addEventListener('change', async e=>{
+      const file = e.target.files[0]; if(!file) return;
+      const b64 = await fileToBase64(file);
+      const url = 'data:image/jpeg;base64,'+b64;
+      const th = document.getElementById(`thumb-${prefix}-1`);
+      if(th){ th.src = url; th.classList.remove('empty'); }
+      obj.photos[0] = url;
+      saveDraft(); updateStepCompletionUI();
+      if(decodeTargetId) tryDecodeFromDataUrl(url, decodeTargetId);
+    });
   });
+  if(obj.photos[0]){ const t=document.getElementById(`thumb-${prefix}-1`); if(t) t.src=obj.photos[0]; }
+}
+function bindTwoPhotoSlots(prefix, obj, decodeTargetId){
+  [1,2].forEach(idx=>{
+    ['cam','gal'].forEach(mode=>{
+      const inp = document.getElementById(`file-${prefix}-${idx}-${mode}`);
+      if(!inp) return;
+      inp.addEventListener('change', async e=>{
+        const file = e.target.files[0]; if(!file) return;
+        const b64 = await fileToBase64(file);
+        const url = 'data:image/jpeg;base64,'+b64;
+        const th = document.getElementById(`thumb-${prefix}-${idx}`);
+        if(th){ th.src = url; th.classList.remove('empty'); }
+        obj.photos[idx-1] = url;
+        saveDraft(); updateStepCompletionUI();
+        if(idx===1 && decodeTargetId) tryDecodeFromDataUrl(url, decodeTargetId);
+      });
+    });
+  });
+  if(obj.photos[0]){ const t=document.getElementById(`thumb-${prefix}-1`); if(t) t.src=obj.photos[0]; }
+  if(obj.photos[1]){ const t=document.getElementById(`thumb-${prefix}-2`); if(t) t.src=obj.photos[1]; }
+}
+async function handleSimplePhoto(e, setter, thumbId){
+  const file = e.target.files[0]; if(!file) return;
+  const b64 = await fileToBase64(file);
+  const url = 'data:image/jpeg;base64,'+b64;
+  const th = document.getElementById(thumbId);
+  if(th){ th.src = url; th.classList.remove('empty'); }
+  setter(url); saveDraft(); updateStepCompletionUI();
+}
+
+/* ---------------- WANDLER (CT/VT) ---------------- */
+function ensureCtState(){
+  if(!state.ct) state.ct = {typ:'',primaer:'',sekundaer:'',klasse:'',sollbuerde:'',baujahr:'',phases:[]};
+  ['ct1','ct2','ct3'].forEach((rid,i)=>{
+    if(!state.ct.phases.find(p=>p.rid===rid)) state.ct.phases.push({rid, label:'Stromwandler L'+(i+1), seriennummer:'', photos:[null,null], buerdePhoto:null, gemessenebuerde:'', ergebnis:''});
+  });
+  state.ct.phases = state.ct.phases.filter(p=>['ct1','ct2','ct3'].includes(p.rid));
+}
+function ensureVtState(){
+  if(!state.vt) state.vt = {primaer:'',sekundaer:'100 V',klasse:'',sollbuerde:'',phases:[]};
+  const labels = ['L1','L2','L3'];
+  const need = labels.map((_,i)=>'vt'+(i+1));
+  need.forEach((rid,i)=>{
+    let p = state.vt.phases.find(x=>x.rid===rid);
+    if(!p){ p = {rid, label:'Spannungswandler '+labels[i], seriennummer:'', photos:[null,null], buerdePhoto:null, gemessenebuerde:'', ergebnis:''}; state.vt.phases.push(p); }
+    else p.label = 'Spannungswandler '+labels[i];
+  });
+  state.vt.phases = state.vt.phases.filter(p=>need.includes(p.rid));
+}
+
+function groupFieldsHtml(prefix, opts){
+  let html = `<h3 style="margin-top:0;">${opts.title}</h3>`;
+  if(opts.showTyp) html += `<label>Hersteller / Typ</label><input type="text" id="${prefix}_typ">`;
+  html += `<div class="row">
+      <div><label>Primär (${opts.unit})</label><input type="text" id="${prefix}_primaer" placeholder="${opts.primaerPlaceholder||''}"></div>
+      <div><label>Sekundär (${opts.unit})</label>
+        ${opts.sekundaerOptions
+          ? `<select id="${prefix}_sekundaer"><option value="">– wählen –</option>${opts.sekundaerOptions.map(o=>`<option value="${o}">${o}</option>`).join('')}</select>`
+          : `<input type="text" id="${prefix}_sekundaer">`}
+      </div>
+    </div>
+    <div class="row">
+      <div><label>Klasse</label>
+        <select id="${prefix}_klasse">
+          <option value="">– wählen –</option>
+          ${opts.klasseOptions.map(k=>`<option value="${k}">${k}</option>`).join('')}
+        </select>
+      </div>
+      <div><label>Wandlerbürde</label>
+        <select id="${prefix}_sollbuerde">
+          <option value="">– wählen –</option>
+          ${opts.buerdeOptions.map(b=>`<option value="${b}">${b}</option>`).join('')}
+        </select>
+      </div>
+    </div>`;
+  if(opts.showBaujahr) html += `<label>Baujahr</label><input type="text" id="${prefix}_baujahr">`;
+  return html;
+}
+function bindGroupFields(prefix, groupObj){
+  ['typ','primaer','sekundaer','klasse','sollbuerde','baujahr'].forEach(f=>{
+    const el = document.getElementById(prefix+'_'+f);
+    if(!el) return;
+    el.value = groupObj[f]||'';
+    const evt = el.tagName==='SELECT' ? 'change' : 'input';
+    el.addEventListener(evt, e=>{
+      groupObj[f]=e.target.value; saveDraft(); renderWfaktorBox(); updateStepCompletionUI();
+      if(f==='sollbuerde') recomputeBuerdeDisplays(prefix, groupObj);
+    });
+  });
+}
+function phaseBlockHtml(prefix, p){
+  const base = prefix+'-'+p.rid;
+  return `<div class="device-block">
+    <h4>${p.label}</h4>
+    <label>Seriennummer</label>
+    <div style="display:flex; gap:6px;">
+      <input type="text" id="${base}-serial" style="flex:1;">
+      <button class="btn btn-sm" onclick="startBarcodeScan('${base}-serial','status-${base}')">📡 Scan</button>
+    </div>
+    <div class="status-line" id="status-${base}"></div>
+    <label style="margin-top:8px;">Fotos Typenschild</label>
+    <div id="photos-${base}"></div>
+    <label style="margin-top:8px;">Bürdemessung</label>
+    <div class="row">
+      <div>
+        <img class="thumb empty" id="thumb-${base}-buerde" style="margin-bottom:6px;">
+        <input type="file" accept="image/*" capture="environment" style="display:none" id="file-${base}-buerde-cam">
+        <input type="file" accept="image/*" style="display:none" id="file-${base}-buerde-gal">
+        <div style="display:flex;gap:4px;">
+          <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${base}-buerde-cam').click()">📷</button>
+          <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${base}-buerde-gal').click()">🖼️</button>
+        </div>
+      </div>
+      <div>
+        <label>Gemessen (VA)</label><input type="text" id="${base}-gemessen">
+        <label>Ergebnis (automatisch)</label>
+        <div class="status-line" id="${base}-ergebnis-display" style="font-weight:600;"></div>
+      </div>
+    </div>
+  </div>`;
+}
+function bindPhaseBlock(prefix, p, groupObj){
+  const base = prefix+'-'+p.rid;
+  const serialEl = document.getElementById(base+'-serial');
+  serialEl.value = p.seriennummer||'';
+  serialEl.addEventListener('input', e=>{ p.seriennummer=e.target.value; saveDraft(); updateStepCompletionUI(); });
+
+  document.getElementById('photos-'+base).innerHTML = twoPhotoRowHtml(base);
+  bindTwoPhotoSlots(base, p, base+'-serial');
+
+  if(p.buerdePhoto) document.getElementById('thumb-'+base+'-buerde').src = p.buerdePhoto;
+  document.getElementById('file-'+base+'-buerde-cam').addEventListener('change', e=>handleSimplePhoto(e, val=>{p.buerdePhoto=val;}, 'thumb-'+base+'-buerde'));
+  document.getElementById('file-'+base+'-buerde-gal').addEventListener('change', e=>handleSimplePhoto(e, val=>{p.buerdePhoto=val;}, 'thumb-'+base+'-buerde'));
+
+  const gEl = document.getElementById(base+'-gemessen'); gEl.value=p.gemessenebuerde||'';
+  gEl.addEventListener('input', e=>{ p.gemessenebuerde=e.target.value; saveDraft(); updateBuerdeDisplay(base, groupObj, p); });
+  updateBuerdeDisplay(base, groupObj, p);
+}
+
+function parseNum(str){
+  if(!str) return null;
+  const m = String(str).match(/(\d+(?:[.,]\d+)?)/);
+  if(!m) return null;
+  return parseFloat(m[1].replace(',','.'));
+}
+function computeBuerdeErgebnis(sollStr, gemessenStr){
+  const s = parseNum(sollStr), g = parseNum(gemessenStr);
+  if(!s || g==null) return null;
+  const percent = (g/s)*100;
+  if(percent < 25) return {status:'unter', text:'n.i.O. – unterbürdet ('+percent.toFixed(0)+'%)'};
+  if(percent > 100) return {status:'ueber', text:'n.i.O. – überbürdet ('+percent.toFixed(0)+'%)'};
+  return {status:'io', text:'i.O. ('+percent.toFixed(0)+'%)'};
+}
+function updateBuerdeDisplay(base, groupObj, p){
+  const el = document.getElementById(base+'-ergebnis-display');
+  if(!el) return;
+  const r = computeBuerdeErgebnis(groupObj?groupObj.sollbuerde:null, p.gemessenebuerde);
+  if(!r){ el.textContent=''; el.className='status-line'; p.ergebnis=''; return; }
+  el.textContent = r.text;
+  el.className = 'status-line ' + (r.status==='io' ? 'ok':'err');
+  p.ergebnis = r.status;
+}
+function recomputeBuerdeDisplays(prefix, groupObj){
+  groupObj.phases.forEach(p=> updateBuerdeDisplay(prefix+'-'+p.rid, groupObj, p));
+}
+
+function buildCtBlocks(){
+  ensureCtState();
+  const c = document.getElementById('ctContainer');
+  c.innerHTML = groupFieldsHtml('ct', {
+    title:'Stromwandler (gilt für alle 3 Phasen)', unit:'A',
+    showTyp:false, showBaujahr:false, primaerPlaceholder:'z. B. 1000',
+    sekundaerOptions:['1 A','5 A'],
+    klasseOptions:['0.5S','0.2S','0.1'], buerdeOptions:['5 VA','10 VA','15 VA']
+  });
+  state.ct.phases.forEach(p=>{ c.innerHTML += phaseBlockHtml('ct', p); });
+  bindGroupFields('ct', state.ct);
+  state.ct.phases.forEach(p=>bindPhaseBlock('ct', p, state.ct));
+  renderWfaktorBox();
+}
+function buildVtBlocks(){
+  ensureVtState();
+  const c = document.getElementById('vtContainer');
+  c.innerHTML = groupFieldsHtml('vt', {
+    title:'Spannungswandler (gilt für alle Phasen)', unit:'V',
+    showTyp:false, showBaujahr:false, primaerPlaceholder:'z. B. 20000',
+    sekundaerOptions:['100 V'],
+    klasseOptions:['0.5','0.2','0.1'], buerdeOptions:['5 VA','10 VA','15 VA']
+  });
+  state.vt.phases.forEach(p=>{ c.innerHTML += phaseBlockHtml('vt', p); });
+  bindGroupFields('vt', state.vt);
+  state.vt.phases.forEach(p=>bindPhaseBlock('vt', p, state.vt));
   renderWfaktorBox();
 }
 
-async function handleBuerdePhoto(e, rid){
-  const file = e.target.files[0];
-  if(!file) return;
-  const base64 = await fileToBase64(file);
-  const dataUrl = 'data:image/jpeg;base64,'+base64;
-  const thumb = document.getElementById('thumb-buerde-'+rid);
-  thumb.src = dataUrl; thumb.classList.remove('empty');
-  const w = state.wandler.find(x=>x.rid===rid);
-  w.buerdePhoto = dataUrl;
-  saveDraft();
+/* ---------------- KOMBIWANDLER ---------------- */
+function ensureKombiState(){
+  if(!state.kombi) state.kombi = {primaerA:'',sekundaerA:'',klasseA:'',buerdeA:'',primaerV:'',sekundaerV:'100 V',klasseV:'',buerdeV:'',phases:[]};
+  ['k1','k2','k3'].forEach((rid,i)=>{
+    if(!state.kombi.phases.find(p=>p.rid===rid)) state.kombi.phases.push({rid, label:'Kombiwandler L'+(i+1), seriennummer:'', photos:[null,null], buerdePhoto:null, gemessenA:'', ergebnisA:'', gemessenV:'', ergebnisV:''});
+  });
+  state.kombi.phases = state.kombi.phases.filter(p=>['k1','k2','k3'].includes(p.rid));
+}
+function kombiGroupHtml(){
+  return `<h3 style="margin-top:0;">Kombiwandler (Strom + Spannung, gilt für alle 3 Phasen)</h3>
+  <h3 style="margin-top:10px;">Stromteil</h3>
+  <div class="row">
+    <div><label>Primär (A)</label><input type="text" id="kombi_primaerA" placeholder="z. B. 1000"></div>
+    <div><label>Sekundär (A)</label>
+      <select id="kombi_sekundaerA"><option value="">– wählen –</option><option value="1 A">1 A</option><option value="5 A">5 A</option></select>
+    </div>
+  </div>
+  <div class="row">
+    <div><label>Klasse Strom</label>
+      <select id="kombi_klasseA"><option value="">– wählen –</option><option value="0.5S">0.5S</option><option value="0.2S">0.2S</option><option value="0.1">0.1</option></select>
+    </div>
+    <div><label>Wandlerbürde Strom</label>
+      <select id="kombi_buerdeA"><option value="">– wählen –</option><option value="5 VA">5 VA</option><option value="10 VA">10 VA</option><option value="15 VA">15 VA</option></select>
+    </div>
+  </div>
+  <h3 style="margin-top:14px;">Spannungsteil</h3>
+  <div class="row">
+    <div><label>Primär (V)</label><input type="text" id="kombi_primaerV" placeholder="z. B. 20000"></div>
+    <div><label>Sekundär (V)</label>
+      <select id="kombi_sekundaerV"><option value="">– wählen –</option><option value="100 V">100 V</option></select>
+    </div>
+  </div>
+  <div class="row">
+    <div><label>Klasse Spannung</label>
+      <select id="kombi_klasseV"><option value="">– wählen –</option><option value="0.5">0.5</option><option value="0.2">0.2</option><option value="0.1">0.1</option></select>
+    </div>
+    <div><label>Wandlerbürde Spannung</label>
+      <select id="kombi_buerdeV"><option value="">– wählen –</option><option value="5 VA">5 VA</option><option value="10 VA">10 VA</option><option value="15 VA">15 VA</option></select>
+    </div>
+  </div>`;
+}
+function bindKombiGroupFields(){
+  ['primaerA','sekundaerA','klasseA','buerdeA','primaerV','sekundaerV','klasseV','buerdeV'].forEach(f=>{
+    const el = document.getElementById('kombi_'+f);
+    if(!el) return;
+    el.value = state.kombi[f]||'';
+    const evt = el.tagName==='SELECT' ? 'change' : 'input';
+    el.addEventListener(evt, e=>{
+      state.kombi[f]=e.target.value; saveDraft(); renderWfaktorBox(); updateStepCompletionUI();
+      if(f==='buerdeA' || f==='buerdeV') recomputeKombiBuerdeDisplays();
+    });
+  });
+}
+function kombiPhaseBlockHtml(p){
+  const base = 'kombi-'+p.rid;
+  return `<div class="device-block">
+    <h4>${p.label}</h4>
+    <label>Seriennummer</label>
+    <div style="display:flex; gap:6px;">
+      <input type="text" id="${base}-serial" style="flex:1;">
+      <button class="btn btn-sm" onclick="startBarcodeScan('${base}-serial','status-${base}')">📡 Scan</button>
+    </div>
+    <div class="status-line" id="status-${base}"></div>
+    <label style="margin-top:8px;">Fotos Typenschild</label>
+    <div id="photos-${base}"></div>
+    <label style="margin-top:8px;">Bürdemessung</label>
+    <div class="row">
+      <div>
+        <img class="thumb empty" id="thumb-${base}-buerde" style="margin-bottom:6px;">
+        <input type="file" accept="image/*" capture="environment" style="display:none" id="file-${base}-buerde-cam">
+        <input type="file" accept="image/*" style="display:none" id="file-${base}-buerde-gal">
+        <div style="display:flex;gap:4px;">
+          <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${base}-buerde-cam').click()">📷</button>
+          <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${base}-buerde-gal').click()">🖼️</button>
+        </div>
+      </div>
+      <div>
+        <label>Gemessen Strom (VA)</label><input type="text" id="${base}-gemessenA">
+        <div class="status-line" id="${base}-ergebnisA-display" style="font-weight:600;"></div>
+        <label style="margin-top:8px;">Gemessen Spannung (VA)</label><input type="text" id="${base}-gemessenV">
+        <div class="status-line" id="${base}-ergebnisV-display" style="font-weight:600;"></div>
+      </div>
+    </div>
+  </div>`;
+}
+function updateKombiBuerdeDisplay(p, kind){
+  const base = 'kombi-'+p.rid;
+  const el = document.getElementById(base+'-ergebnis'+kind+'-display');
+  if(!el) return;
+  const soll = kind==='A' ? state.kombi.buerdeA : state.kombi.buerdeV;
+  const gemessen = kind==='A' ? p.gemessenA : p.gemessenV;
+  const r = computeBuerdeErgebnis(soll, gemessen);
+  if(!r){ el.textContent=''; el.className='status-line'; if(kind==='A') p.ergebnisA=''; else p.ergebnisV=''; return; }
+  el.textContent = (kind==='A'?'Strom: ':'Spannung: ')+r.text;
+  el.className = 'status-line ' + (r.status==='io'?'ok':'err');
+  if(kind==='A') p.ergebnisA = r.status; else p.ergebnisV = r.status;
+}
+function recomputeKombiBuerdeDisplays(){
+  if(!state.kombi) return;
+  state.kombi.phases.forEach(p=>{ updateKombiBuerdeDisplay(p,'A'); updateKombiBuerdeDisplay(p,'V'); });
+}
+function bindKombiPhaseBlock(p){
+  const base = 'kombi-'+p.rid;
+  const serialEl = document.getElementById(base+'-serial');
+  serialEl.value = p.seriennummer||'';
+  serialEl.addEventListener('input', e=>{ p.seriennummer=e.target.value; saveDraft(); updateStepCompletionUI(); });
+
+  document.getElementById('photos-'+base).innerHTML = twoPhotoRowHtml(base);
+  bindTwoPhotoSlots(base, p, base+'-serial');
+
+  if(p.buerdePhoto) document.getElementById('thumb-'+base+'-buerde').src = p.buerdePhoto;
+  document.getElementById('file-'+base+'-buerde-cam').addEventListener('change', e=>handleSimplePhoto(e, val=>{p.buerdePhoto=val;}, 'thumb-'+base+'-buerde'));
+  document.getElementById('file-'+base+'-buerde-gal').addEventListener('change', e=>handleSimplePhoto(e, val=>{p.buerdePhoto=val;}, 'thumb-'+base+'-buerde'));
+
+  const gAEl = document.getElementById(base+'-gemessenA'); gAEl.value=p.gemessenA||'';
+  gAEl.addEventListener('input', e=>{ p.gemessenA=e.target.value; saveDraft(); updateKombiBuerdeDisplay(p,'A'); });
+  const gVEl = document.getElementById(base+'-gemessenV'); gVEl.value=p.gemessenV||'';
+  gVEl.addEventListener('input', e=>{ p.gemessenV=e.target.value; saveDraft(); updateKombiBuerdeDisplay(p,'V'); });
+
+  updateKombiBuerdeDisplay(p,'A');
+  updateKombiBuerdeDisplay(p,'V');
+}
+function buildKombiBlocks(){
+  ensureKombiState();
+  const c = document.getElementById('kombiContainer');
+  c.innerHTML = kombiGroupHtml();
+  state.kombi.phases.forEach(p=>{ c.innerHTML += kombiPhaseBlockHtml(p); });
+  bindKombiGroupFields();
+  state.kombi.phases.forEach(p=>bindKombiPhaseBlock(p));
+  renderWfaktorBox();
 }
 
 /* ---------------- WANDLERFAKTOR ---------------- */
-function parseRatio(str){
-  if(!str) return null;
-  const m = String(str).match(/(\d+(?:[.,]\d+)?)\s*\/\s*(\d+(?:[.,]\d+)?)/);
-  if(!m) return null;
-  const p = parseFloat(m[1].replace(',','.'));
-  const s = parseFloat(m[2].replace(',','.'));
-  if(!s) return null;
+function ratioOf(g){
+  if(!g) return null;
+  const p = parseNum(g.primaer);
+  const s = parseNum(g.sekundaer);
+  if(!p || !s) return null;
   return +(p/s).toFixed(4);
 }
-
 function computeWandlerfaktor(){
-  const cts = state.wandler.filter(w=>w.typ==='ct').map(w=>parseRatio(w.felder.uebersetzung)).filter(x=>x!=null);
-  const vts = state.wandler.filter(w=>w.typ==='vt').map(w=>parseRatio(w.felder.uebersetzung)).filter(x=>x!=null);
-  let warning = null, ctFactor = null, vtFactor = null;
-  if(cts.length){
-    ctFactor = cts[0];
-    if(cts.some(c=>Math.abs(c-ctFactor)>0.01)) warning = 'Stromwandler-Übersetzungen weichen zwischen den Phasen ab – bitte prüfen.';
-  }
-  if(vts.length){
-    vtFactor = vts[0];
-    if(vts.some(v=>Math.abs(v-vtFactor)>0.01)) warning = (warning?warning+' ':'')+'Spannungswandler-Übersetzungen weichen ab – bitte prüfen.';
+  let ctFactor, vtFactor;
+  if(state.messart==='kombiwandler' && state.kombi){
+    ctFactor = ratioOf({primaer:state.kombi.primaerA, sekundaer:state.kombi.sekundaerA});
+    vtFactor = ratioOf({primaer:state.kombi.primaerV, sekundaer:state.kombi.sekundaerV});
+  } else {
+    ctFactor = ratioOf(state.ct);
+    vtFactor = ratioOf(state.vt);
   }
   let total = null;
-  if(ctFactor && state.ebene==='MS' && vtFactor) total = Math.round(ctFactor*vtFactor);
+  if(ctFactor && isMSorHS() && vtFactor) total = Math.round(ctFactor*vtFactor);
   else if(ctFactor && state.ebene==='NS') total = Math.round(ctFactor);
-  return { ctFactor, vtFactor, total, warning };
+  return {ctFactor, vtFactor, total};
 }
-
 function renderWfaktorBox(){
-  const el = document.getElementById('wfaktorBox');
-  if(!el) return;
   const r = computeWandlerfaktor();
-  if(!r.ctFactor && !r.vtFactor){ el.innerHTML=''; return; }
-  let html = '<h3 style="margin-top:0;">Wandlerfaktor</h3>';
-  if(r.ctFactor) html += `<div class="summary-line"><span>Stromwandler-Faktor</span><span>${r.ctFactor}</span></div>`;
-  if(r.vtFactor) html += `<div class="summary-line"><span>Spannungswandler-Faktor</span><span>${r.vtFactor}</span></div>`;
-  if(r.total) html += `<div class="summary-line"><span><b>Gesamt-Wandlerfaktor</b></span><span><b>${r.total}</b></span></div>`;
-  if(r.warning) html += `<div class="hint warn">${r.warning}</div>`;
-  if(r.total) html += `<button class="btn btn-sm" style="margin-top:8px;" onclick="uebernehmeWfaktor(${r.total})">In Zählerfeld übernehmen →</button>`;
-  el.innerHTML = html;
-}
-
-function uebernehmeWfaktor(val){
-  state.zaehler.z_wfaktor = String(val);
-  const el = document.getElementById('z_wfaktor'); if(el) el.value = val;
-  saveDraft();
-  const h = document.getElementById('wfaktorHint'); if(h) h.textContent = 'Berechneter Wandlerfaktor aus Schritt 2: '+val+' (übernommen)';
-}
-
-/* ---------------- PHOTO + API EXTRACTION ---------------- */
-function fileToBase64(file){
-  return new Promise((res,rej)=>{
-    const r = new FileReader();
-    r.onload = ()=>res(r.result.split(',')[1]);
-    r.onerror = rej;
-    r.readAsDataURL(file);
-  });
-}
-
-const PROMPTS = {
-  zaehler: `Du bekommst ein Foto eines Elektrizitätszählers (Typenschild). Extrahiere folgende Felder, sofern lesbar. Antworte AUSSCHLIESSLICH mit einem JSON-Objekt, ohne Markdown, ohne Erklärtext:
-{"z_nummer":"","z_id":"","z_hersteller":"","z_typ":"","z_klasse":"","z_baujahr":"","z_spannung":"","z_strom":"","z_zulassung":""}
-Wenn ein Feld nicht erkennbar ist, gib einen leeren String zurück. z_nummer ist die Zähler-/Gerätenummer (oft "Nr." oder große Ziffernfolge). z_id ist eine ggf. abweichende Identifikationsnummer (z. B. beginnend mit Buchstaben wie LGZ/E).`,
-  ct: `Du bekommst ein Foto eines Stromwandler-Typenschilds. Extrahiere NUR folgende zwei Felder, sofern lesbar. Antworte AUSSCHLIESSLICH mit JSON, ohne Markdown:
-{"seriennummer":"","uebersetzung":""}
-uebersetzung im Format z. B. "1000/5 A". Wenn ein Feld nicht erkennbar ist, leeren String zurückgeben.`,
-  vt: `Du bekommst ein Foto eines Spannungswandler-Typenschilds. Extrahiere NUR folgende zwei Felder, sofern lesbar. Antworte AUSSCHLIESSLICH mit JSON, ohne Markdown:
-{"seriennummer":"","uebersetzung":""}
-uebersetzung im Format z. B. "20000/100 V". Wenn ein Feld nicht erkennbar ist, leeren String zurückgeben.`
-};
-
-const API_KEY_LS = 'vibn_api_key';
-const WORKER_URL_LS = 'vibn_worker_url';
-function getApiKey(){ return localStorage.getItem(API_KEY_LS) || ''; }
-function saveApiKey(){
-  const v = document.getElementById('apiKeyInput').value.trim();
-  const status = document.getElementById('apiKeyStatus');
-  if(!v){ status.textContent='Bitte Key eingeben.'; status.className='status-line err'; return; }
-  localStorage.setItem(API_KEY_LS, v);
-  status.textContent = '✓ Key gespeichert (lokal in diesem Browser).';
-  status.className = 'status-line ok';
-}
-function clearApiKey(){
-  localStorage.removeItem(API_KEY_LS);
-  document.getElementById('apiKeyInput').value = '';
-  const status = document.getElementById('apiKeyStatus');
-  status.textContent = 'Key entfernt.'; status.className = 'status-line';
-}
-
-function getWorkerUrl(){ return localStorage.getItem(WORKER_URL_LS) || ''; }
-function saveWorkerUrl(){
-  const v = document.getElementById('workerUrlInput').value.trim();
-  const status = document.getElementById('workerUrlStatus');
-  if(!v){ status.textContent='Bitte Worker-URL eingeben.'; status.className='status-line err'; return; }
-  localStorage.setItem(WORKER_URL_LS, v);
-  status.textContent = '✓ Worker-URL gespeichert — wird ab jetzt für die Cloud-Erkennung genutzt.';
-  status.className = 'status-line ok';
-}
-function clearWorkerUrl(){
-  localStorage.removeItem(WORKER_URL_LS);
-  document.getElementById('workerUrlInput').value = '';
-  const status = document.getElementById('workerUrlStatus');
-  status.textContent = 'Worker-URL entfernt.'; status.className = 'status-line';
-}
-
-async function callClaudeVision(base64, promptKey){
-  const workerUrl = getWorkerUrl();
-
-  if(workerUrl){
-    const response = await fetch(workerUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ image: base64, prompt: PROMPTS[promptKey] })
-    });
-    if(!response.ok){
-      const t = await response.text();
-      throw new Error('Worker-Fehler '+response.status+': '+t.slice(0,150));
-    }
-    const data = await response.json();
-    const text = (data.content||[]).map(b=>b.text||'').join('\n') || data.text || JSON.stringify(data);
-    const clean = text.replace(/```json|```/g,'').trim();
-    return JSON.parse(clean);
+  let html = '';
+  if(r.ctFactor || r.vtFactor){
+    html = '<h3 style="margin-top:14px;">Wandlerfaktor</h3>';
+    if(r.ctFactor) html += `<div class="summary-line"><span>Stromwandler-Faktor</span><span>${r.ctFactor}</span></div>`;
+    if(r.vtFactor) html += `<div class="summary-line"><span>Spannungswandler-Faktor</span><span>${r.vtFactor}</span></div>`;
+    if(r.total) html += `<div class="summary-line"><span><b>Gesamt-Wandlerfaktor</b></span><span><b>${r.total}</b></span></div>`;
   }
-
-  const key = getApiKey();
-  if(!key){ const e = new Error('Kein API-Key oder Worker-URL hinterlegt (Einstellungen in Schritt 1).'); e.code='NO_KEY'; throw e; }
-
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": key,
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerous-direct-browser-access": "true"
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1000,
-      messages: [{
-        role: "user",
-        content: [
-          { type: "image", source: { type: "base64", media_type: "image/jpeg", data: base64 } },
-          { type: "text", text: PROMPTS[promptKey] }
-        ]
-      }]
-    })
-  });
-  if(!response.ok){
-    const t = await response.text();
-    throw new Error('API-Fehler '+response.status+': '+t.slice(0,150));
-  }
-  const data = await response.json();
-  const text = (data.content||[]).map(b=>b.text||'').join('\n');
-  const clean = text.replace(/```json|```/g,'').trim();
-  return JSON.parse(clean);
-}
-
-/* ---------------- LOKALE OCR (Tesseract.js, kostenlos, offline nach 1. Laden) ---------------- */
-let tesseractLoading = null;
-function ensureTesseract(){
-  if(window.Tesseract) return Promise.resolve();
-  if(tesseractLoading) return tesseractLoading;
-  tesseractLoading = new Promise((res,rej)=>{
-    const s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js';
-    s.onload = ()=>res();
-    s.onerror = ()=>rej(new Error('Tesseract.js konnte nicht geladen werden (kein Internet beim ersten Aufruf?)'));
-    document.head.appendChild(s);
-  });
-  return tesseractLoading;
-}
-
-function applyOcrText(text, kind, rid){
-  const numMatches = text.match(/\d[\d.\s]{4,}\d/g) || [];
-  const cleaned = numMatches.map(s=>s.replace(/\s+/g,'')).sort((a,b)=>b.length-a.length);
-  const serial = cleaned[0] || '';
-  const ratioMatch = text.match(/(\d{1,6})\s*\/\s*\(?(\d{1,3})\)?\s*(A|V)?/i);
-  const ratio = ratioMatch ? (ratioMatch[1]+'/'+ratioMatch[2]+(ratioMatch[3]?(' '+ratioMatch[3].toUpperCase()):'')) : '';
-
-  if(kind==='zaehler'){
-    if(serial){ const el=document.getElementById('z_nummer'); if(el) el.value=serial; state.zaehler.z_nummer = serial; }
-  } else {
-    const w = state.wandler.find(x=>x.rid===rid);
-    if(serial){ w.felder.seriennummer = serial; const el=document.querySelector(`input[data-field="seriennummer"][data-rid="${rid}"]`); if(el) el.value = serial; }
-    if(ratio){ w.felder.uebersetzung = ratio; const el=document.querySelector(`input[data-field="uebersetzung"][data-rid="${rid}"]`); if(el) el.value = ratio; }
-    renderWfaktorBox();
-  }
-  saveDraft();
-}
-
-async function runLocalOcr(kind, rid){
-  const fid = kind==='zaehler' ? 'zaehler' : 'w_'+rid;
-  const status = document.getElementById('status-'+fid);
-  const photo = kind==='zaehler' ? state.zaehler.photo : (state.wandler.find(w=>w.rid===rid)||{}).photo;
-  if(!photo){ status.textContent='Bitte zuerst ein Foto aufnehmen.'; status.className='status-line err'; return; }
-  status.textContent = 'Lokale Erkennung wird vorbereitet...'; status.className='status-line';
-  try{
-    await ensureTesseract();
-    const { data:{ text } } = await Tesseract.recognize(photo, 'eng+deu', {
-      logger: m=>{ if(m.status && m.progress!=null) status.textContent = 'Lokal: '+m.status+' ('+Math.round(m.progress*100)+'%)'; }
-    });
-    applyOcrText(text, kind, rid);
-    status.textContent = '✓ Lokal erkannt (kostenlos) — bitte prüfen, bei Bedarf ☁️ Cloud nutzen.';
-    status.className = 'status-line ok';
-  }catch(err){
-    status.textContent = 'Lokale Erkennung fehlgeschlagen (' + String(err.message||err).slice(0,80) + '). Manuell eintragen oder ☁️ Cloud versuchen.';
-    status.className = 'status-line err';
-  }
-}
-
-async function runCloudOcr(kind, rid){
-  const fid = kind==='zaehler' ? 'zaehler' : 'w_'+rid;
-  const status = document.getElementById('status-'+fid);
-  const photo = kind==='zaehler' ? state.zaehler.photo : (state.wandler.find(w=>w.rid===rid)||{}).photo;
-  if(!photo){ status.textContent='Bitte zuerst ein Foto aufnehmen.'; status.className='status-line err'; return; }
-  const base64 = photo.split(',')[1];
-  status.textContent = 'Cloud-Analyse läuft...'; status.className='status-line';
-  try{
-    let promptKey = kind==='zaehler' ? 'zaehler' : (state.wandler.find(x=>x.rid===rid).typ==='ct' ? 'ct' : 'vt');
-    const result = await callClaudeVision(base64, promptKey);
-    if(kind==='zaehler'){
-      Object.entries(result).forEach(([k,v])=>{ if(v){ const el=document.getElementById(k); if(el){ el.value=v; state.zaehler[k]=v; } } });
-    } else {
-      const w = state.wandler.find(x=>x.rid===rid);
-      Object.entries(result).forEach(([k,v])=>{ if(v){ w.felder[k]=v; const el=document.querySelector(`input[data-field="${k}"][data-rid="${rid}"]`); if(el) el.value=v; } });
-      renderWfaktorBox();
-    }
-    saveDraft();
-    status.textContent = '✓ Cloud-Felder übernommen — bitte prüfen.';
-    status.className='status-line ok';
-  }catch(err){
-    if(err.code==='NO_KEY'){ status.textContent = 'Keine Cloud-Anbindung eingerichtet (Einstellungen Schritt 1). Lokale Erkennung nutzen oder manuell eintragen.'; }
-    else { status.textContent = 'Cloud-Erkennung fehlgeschlagen (' + String(err.message||err).slice(0,80) + ').'; }
-    status.className='status-line err';
-  }
-}
-
-async function handlePhoto(e, kind, rid){
-  const file = e.target.files[0];
-  if(!file) return;
-  const fid = kind==='zaehler' ? 'zaehler' : 'w_'+rid;
-  const thumb = document.getElementById('thumb-'+fid);
-  thumb.classList.remove('empty');
-
-  const base64 = await fileToBase64(file);
-  const dataUrl = 'data:image/jpeg;base64,'+base64;
-  thumb.src = dataUrl;
-
-  if(kind==='zaehler'){ state.zaehler.photo = dataUrl; }
-  else { const w = state.wandler.find(x=>x.rid===rid); w.photo = dataUrl; }
-  saveDraft();
-
-  runLocalOcr(kind, rid);
+  ['wfaktorBoxCt','wfaktorBoxVt','wfaktorBoxKombi'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML = html; });
 }
 
 /* ---------------- CHECKLIST ---------------- */
@@ -1009,11 +1047,9 @@ function buildChecklist(){
   container.innerHTML = '';
   CHECKLIST.forEach(cat=>{
     const catDiv = document.createElement('div');
-    catDiv.className = 'check-cat';
-    catDiv.dataset.tag = cat.tag;
+    catDiv.className = 'check-cat'; catDiv.dataset.tag = cat.tag;
     const title = document.createElement('div');
-    title.className = 'check-cat-title';
-    title.textContent = cat.cat;
+    title.className = 'check-cat-title'; title.textContent = cat.cat;
     catDiv.appendChild(title);
     cat.items.forEach(([id,label])=>{
       if(!state.checklist[id]) state.checklist[id] = {checked:false, note:''};
@@ -1024,22 +1060,19 @@ function buildChecklist(){
         <div style="flex:1;">
           <div class="txt">${label}</div>
           <span class="note-toggle" data-id="${id}">+ Notiz</span>
-          <div class="note-field" id="notefield-${id}"><textarea id="note-${id}" placeholder="Bemerkung, Messwert..."></textarea></div>
-        </div>
-      `;
+          <div class="note-field" id="notefield-${id}"><textarea id="note-${id}"></textarea></div>
+        </div>`;
       catDiv.appendChild(item);
     });
     container.appendChild(catDiv);
   });
-
   Object.keys(state.checklist).forEach(id=>{
-    const chk = document.getElementById('chk-'+id);
-    if(!chk) return;
+    const chk = document.getElementById('chk-'+id); if(!chk) return;
     chk.checked = state.checklist[id].checked;
-    chk.addEventListener('change', e=>{ state.checklist[id].checked = e.target.checked; saveDraft(); });
+    chk.addEventListener('change', e=>{ state.checklist[id].checked=e.target.checked; saveDraft(); updateStepCompletionUI(); });
     const note = document.getElementById('note-'+id);
     note.value = state.checklist[id].note;
-    note.addEventListener('input', e=>{ state.checklist[id].note = e.target.value; saveDraft(); });
+    note.addEventListener('input', e=>{ state.checklist[id].note=e.target.value; saveDraft(); });
   });
   document.querySelectorAll('.note-toggle').forEach(t=>{
     t.onclick = ()=>{
@@ -1049,38 +1082,30 @@ function buildChecklist(){
     };
   });
 }
-
 function refreshChecklistVisibility(){
-  const hasWandler = (state.ebene==='MS') || (state.ebene==='NS' && state.messart==='halbindirekt');
+  const hasWandler = isMSorHS() || (state.ebene==='NS' && state.messart==='halbindirekt');
   document.querySelectorAll('.check-cat').forEach(cat=>{
     const tag = cat.dataset.tag;
     let show = true;
-    if(tag==='ms') show = state.ebene==='MS';
+    if(tag==='ms') show = isMSorHS();
     if(tag==='wandler') show = hasWandler;
     cat.style.display = show ? '' : 'none';
   });
 }
 
-/* ---------------- SUMMARY / EXPORT ---------------- */
+/* ---------------- SUMMARY / GALLERY / EXPORT ---------------- */
 function buildSummary(){
   const el = document.getElementById('summaryBox');
-  const done = Object.values(state.checklist).filter(c=>c.checked).length;
-  const total = Object.values(state.checklist).length;
-  let visibleTotal = 0, visibleDone = 0;
-  document.querySelectorAll('.check-cat').forEach(()=>{}); // ensure built
-  const hasWandler = (state.ebene==='MS') || (state.ebene==='NS' && state.messart==='halbindirekt');
+  const hasWandler = isMSorHS() || (state.ebene==='NS' && state.messart==='halbindirekt');
+  let visibleTotal=0, visibleDone=0;
   CHECKLIST.forEach(cat=>{
     let show = true;
-    if(cat.tag==='ms') show = state.ebene==='MS';
+    if(cat.tag==='ms') show = isMSorHS();
     if(cat.tag==='wandler') show = hasWandler;
-    if(show) cat.items.forEach(([id])=>{
-      visibleTotal++;
-      if(state.checklist[id] && state.checklist[id].checked) visibleDone++;
-    });
+    if(show) cat.items.forEach(([id])=>{ visibleTotal++; if(state.checklist[id] && state.checklist[id].checked) visibleDone++; });
   });
-  const adresse = [ [state.standort.strasse, state.standort.hausnr].filter(Boolean).join(' '),
-                     [state.standort.plz, state.standort.ort].filter(Boolean).join(' ') ]
-                     .filter(Boolean).join(', ');
+  const adresse = [ [state.standort.strasse,state.standort.hausnr].filter(Boolean).join(' '),
+                     [state.standort.plz,state.standort.ort].filter(Boolean).join(' ') ].filter(Boolean).join(', ');
   const r = computeWandlerfaktor();
   el.innerHTML = `
     <div class="summary-line"><span>Anlage</span><span>${state.standort.name||'–'}</span></div>
@@ -1089,24 +1114,11 @@ function buildSummary(){
     <div class="summary-line"><span>Spannungsebene</span><span>${state.ebene||'–'}</span></div>
     <div class="summary-line"><span>Messart</span><span>${state.messart||'–'}</span></div>
     <div class="summary-line"><span>Zählernummer</span><span>${state.zaehler.z_nummer||'–'}</span></div>
-    <div class="summary-line"><span>Wandler erfasst</span><span>${state.wandler.length}</span></div>
-    <div class="summary-line"><span>Wandlerfaktor</span><span>${r.total || state.zaehler.z_wfaktor || '–'}</span></div>
+    <div class="summary-line"><span>Wandlerfaktor</span><span>${r.total || '–'}</span></div>
     <div class="summary-line"><span>Checkliste</span><span>${visibleDone} / ${visibleTotal} erledigt</span></div>
     <div class="summary-line"><span>Prüfer</span><span>${state.standort.pruefer||'–'}</span></div>
     <div class="summary-line"><span>Datum</span><span>${document.getElementById('pruefdatum').value||'–'}</span></div>
   `;
-}
-
-function buildPhotoGallery(){
-  const el = document.getElementById('photoGallery');
-  if(!el) return;
-  let html = '';
-  if(state.zaehler.photo) html += photoTile(state.zaehler.photo, 'Zähler');
-  state.wandler.forEach(w=>{
-    if(w.photo) html += photoTile(w.photo, w.label);
-    if(w.buerdePhoto) html += photoTile(w.buerdePhoto, w.label+' — Bürdemessung');
-  });
-  el.innerHTML = html || '<div class="hint">Noch keine Fotos aufgenommen.</div>';
 }
 function photoTile(src, label){
   return `<div style="width:100px;">
@@ -1114,6 +1126,40 @@ function photoTile(src, label){
     <div style="font-size:10px;color:var(--text-dim);text-align:center;margin-top:3px;">${label}</div>
   </div>`;
 }
+function buildPhotoGallery(){
+  const el = document.getElementById('photoGallery'); if(!el) return;
+  let html = '';
+  if(state.zaehler.photos[0]) html += photoTile(state.zaehler.photos[0], 'Zähler 1');
+  if(state.zaehler.photos[1]) html += photoTile(state.zaehler.photos[1], 'Zähler 2');
+  if(state.modem.photos[0]) html += photoTile(state.modem.photos[0], 'Modem');
+  (state.ct?state.ct.phases:[]).forEach(p=>{
+    if(p.photos[0]) html += photoTile(p.photos[0], p.label+' 1');
+    if(p.photos[1]) html += photoTile(p.photos[1], p.label+' 2');
+    if(p.buerdePhoto) html += photoTile(p.buerdePhoto, p.label+' Bürde');
+  });
+  (state.vt?state.vt.phases:[]).forEach(p=>{
+    if(p.photos[0]) html += photoTile(p.photos[0], p.label+' 1');
+    if(p.photos[1]) html += photoTile(p.photos[1], p.label+' 2');
+    if(p.buerdePhoto) html += photoTile(p.buerdePhoto, p.label+' Bürde');
+  });
+  (state.kombi?state.kombi.phases:[]).forEach(p=>{
+    if(p.photos[0]) html += photoTile(p.photos[0], p.label+' 1');
+    if(p.photos[1]) html += photoTile(p.photos[1], p.label+' 2');
+    if(p.buerdePhoto) html += photoTile(p.buerdePhoto, p.label+' Bürde');
+  });
+  el.innerHTML = html || '<div class="hint">Noch keine Fotos aufgenommen.</div>';
+}
+function buildExtraPhotos(){
+  const grid = document.getElementById('extraPhotosGrid'); if(!grid) return;
+  grid.innerHTML = state.abschluss.weitereFotos.map((src,i)=>`
+    <div style="width:80px; position:relative;">
+      <img src="${src}" style="width:80px;height:80px;object-fit:cover;border-radius:6px;border:1px solid var(--border-light);">
+      <button class="btn btn-sm no-print" style="position:absolute;top:-6px;right:-6px;padding:2px 6px;border-radius:50%;" onclick="removeExtraPhoto(${i})">✕</button>
+    </div>`).join('');
+  const hint = document.getElementById('extraPhotoHint');
+  if(hint) hint.textContent = state.abschluss.weitereFotos.length+' / 20 Fotos angehängt.';
+}
+function removeExtraPhoto(i){ state.abschluss.weitereFotos.splice(i,1); saveDraft(); buildExtraPhotos(); }
 
 function exportJson(){
   state.standort.datum = document.getElementById('pruefdatum').value;
@@ -1124,13 +1170,9 @@ function exportJson(){
   a.download = 'vibn_'+name+'_'+(document.getElementById('pruefdatum').value||'')+'.json';
   a.click();
 }
+function resetAll(){ localStorage.removeItem(LS_KEY); location.reload(); }
 
-function resetAll(){
-  localStorage.removeItem(LS_KEY);
-  location.reload();
-}
-
-document.getElementById('pruefdatum').addEventListener('input', e=>{ state.standort.datum=e.target.value; saveDraft(); });
+document.getElementById('pruefdatum').addEventListener('input', e=>{ state.standort.datum=e.target.value; saveDraft(); updateStepCompletionUI(); });
 
 init();
 </script>
