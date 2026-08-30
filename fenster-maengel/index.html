@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fenster & Glasaustausch — Mängelprotokoll</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#121821; --panel2:#182130; --edge:#243044;
+    --amber:#ffb020; --text:#e7edf5; --text-dim:#8ea0b8; --red:#ff5d5d; --green:#37e08a;
+    --mono:'SF Mono',ui-monospace,Consolas,monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    padding-bottom:90px;
+  }
+  header{ padding:16px; text-align:center; border-bottom:1px solid var(--edge); }
+  header h1{ margin:0; font-size:16px; }
+  header h1 b{ color:var(--amber); }
+  .backhome{
+    position:fixed; top:10px; left:10px; z-index:9999;
+    background:rgba(11,15,20,0.85); color:var(--amber);
+    border:1px solid var(--edge); border-radius:20px;
+    padding:7px 14px; font-size:13px; font-weight:600;
+    text-decoration:none; backdrop-filter:blur(6px);
+  }
+  main{ max-width:720px; margin:0 auto; padding:14px 14px 40px; }
+
+  .card{ background:var(--panel); border:1px solid var(--edge); border-radius:14px; padding:14px; margin-bottom:14px; }
+  .card h2{ font-size:13px; text-transform:uppercase; letter-spacing:.05em; color:var(--text-dim); margin:0 0 10px; }
+
+  .fields{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .field{ display:flex; flex-direction:column; gap:4px; }
+  .field.full{ grid-column:1/-1; }
+  .field label{ font-size:11px; color:var(--text-dim); }
+  .field input, .field select, .field textarea{
+    background:#0d1319; border:1px solid var(--edge); color:var(--text);
+    padding:9px 10px; border-radius:8px; font-size:14px; font-family:inherit;
+  }
+  .field textarea{ min-height:50px; resize:vertical; }
+
+  button{ font-family:inherit; cursor:pointer; }
+  .btn{
+    background:var(--panel2); border:1px solid var(--edge); color:var(--text);
+    padding:9px 14px; border-radius:9px; font-size:13px; font-weight:600;
+  }
+  .btn.primary{ background:var(--amber); color:#1a1300; border-color:var(--amber); }
+  .btn.danger{ background:#2a1414; border-color:#5a2020; color:var(--red); }
+  .btn.block{ width:100%; }
+  .btn.small{ padding:6px 10px; font-size:12px; }
+
+  .roomcard{ background:var(--panel2); border:1px solid var(--edge); border-radius:12px; padding:12px; margin-bottom:12px; }
+  .roomhead{ display:flex; gap:8px; align-items:flex-end; margin-bottom:10px; }
+  .roomhead .field{ flex:1; }
+  .roomhead .rm{ background:none; border:none; color:var(--red); font-size:18px; padding:6px; flex-shrink:0; }
+
+  .winpicker{
+    display:none; grid-template-columns:repeat(3,1fr); gap:8px; margin:10px 0; padding:10px;
+    background:#0d1319; border:1px solid var(--edge); border-radius:10px;
+  }
+  .winpicker.open{ display:grid; }
+  .wintile{
+    display:flex; flex-direction:column; align-items:center; gap:5px; padding:8px 4px;
+    background:var(--panel2); border:1px solid var(--edge); border-radius:8px; cursor:pointer;
+  }
+  .wintile svg{ width:36px; height:32px; }
+  .wintile span{ font-size:9.5px; text-align:center; color:var(--text-dim); line-height:1.2; }
+
+  .windowblock{ background:var(--panel); border:1px solid var(--edge); border-radius:10px; padding:10px; margin-top:10px; }
+  .winhead{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .winhead svg{ width:26px; height:24px; flex-shrink:0; }
+  .winhead .wname{ flex:1; font-size:13px; font-weight:700; }
+  .winhead .wtype{ font-size:10.5px; color:var(--text-dim); }
+  .winhead .rm{ background:none; border:none; color:var(--red); font-size:16px; padding:4px; }
+
+  .scheibe{ border-top:1px solid var(--edge); padding-top:8px; margin-top:8px; }
+  .scheibe .sname{ font-size:12px; font-weight:600; color:var(--amber); margin-bottom:6px; }
+
+  .mangelitem{
+    display:flex; gap:8px; align-items:center; background:#0d1319; border:1px solid var(--edge);
+    border-radius:8px; padding:7px 9px; margin-bottom:6px;
+  }
+  .mangelitem .mthumb{
+    width:32px; height:32px; border-radius:6px; background:var(--panel2); flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; overflow:hidden; font-size:14px;
+  }
+  .mangelitem .mthumb img{ width:100%; height:100%; object-fit:cover; cursor:zoom-in; }
+  .mangelitem .mtext{ flex:1; min-width:0; }
+  .mangelitem .mtyp{ font-size:11.5px; font-weight:600; }
+  .mangelitem .mnote{ font-size:10.5px; color:var(--text-dim); margin-top:1px; }
+  .mangelitem .mrm{ background:none; border:none; color:var(--red); font-size:15px; padding:4px; flex-shrink:0; }
+
+  .addmangel-form{
+    display:none; background:#0d1319; border:1px solid var(--edge); border-radius:8px; padding:10px; margin-top:6px;
+  }
+  .addmangel-form.open{ display:block; }
+  .addmangel-form .field{ margin-bottom:8px; }
+  .photobtn{
+    display:flex; align-items:center; gap:8px; background:var(--panel2); border:1px solid var(--edge);
+    border-radius:8px; padding:8px 10px; font-size:12.5px; color:var(--text-dim); cursor:pointer; margin-bottom:8px;
+  }
+  .photobtn.has-photo{ color:var(--green); border-color:var(--green); }
+  .addmangel-actions{ display:flex; gap:8px; }
+  .addmangel-actions button{ flex:1; }
+
+  .addbtn-row{ margin-top:8px; }
+
+  .overlay-bg{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:1000;
+    align-items:center; justify-content:center; padding:20px;
+  }
+  .overlay-bg.open{ display:flex; }
+  .overlay-bg img{ max-width:92vw; max-height:85vh; border-radius:10px; object-fit:contain; }
+
+  .footerbar{
+    position:fixed; bottom:0; left:0; right:0; background:var(--panel); border-top:1px solid var(--edge);
+    padding:10px 14px; display:flex; gap:10px; z-index:500;
+  }
+  .footerbar button{ flex:1; }
+
+  .empty{ text-align:center; color:var(--text-dim); font-size:12.5px; padding:16px; }
+</style>
+</head>
+<body>
+
+<a href="../" class="backhome">← Toolbox</a>
+
+<header>
+  <h1>🪟 <b>Fenster & Glasaustausch</b> — Mängelprotokoll</h1>
+</header>
+
+<main>
+
+  <div class="card">
+    <h2>Projektdaten</h2>
+    <div class="fields">
+      <div class="field"><label>Straße</label><input type="text" id="pStrasse"></div>
+      <div class="field"><label>Hausnummer</label><input type="text" id="pHausnr"></div>
+      <div class="field full"><label>Name / Auftraggeber (optional)</label><input type="text" id="pName"></div>
+    </div>
+  </div>
+
+  <div id="roomsContainer"></div>
+
+  <button class="btn primary block" id="addRoomBtn">+ Raum hinzufügen</button>
+
+  <div class="empty" id="noRoomsHint">Noch kein Raum angelegt — oben „+ Raum hinzufügen" antippen.</div>
+
+</main>
+
+<div class="footerbar">
+  <button class="btn danger" id="resetBtn">🗑 Alles zurücksetzen</button>
+  <button class="btn primary" id="pdfBtn">📄 PDF-Bericht erstellen</button>
+</div>
+
+<div class="overlay-bg" id="imgOverlay">
+  <img id="imgOverlayPic" src="" alt="">
+</div>
+
+<script>
+(() => {
+  const STORAGE_KEY = 'fenster_maengel_v1';
+
+  const MANGEL_TYPES = [
+    'Silikon unsauber verarbeitet',
+    'Silikonnaht zu klein/dünn',
+    'Abplatzung an Glasleisten',
+    'Starke Abplatzung an Glasleisten',
+    'Tiefe Kratzer im Holz (vom Abschaben)',
+    'Altes Silikon nicht richtig entfernt',
+    'Silikonnaht undicht',
+    'Holzsplitterung durch unsachgemäße Montage',
+    'Verunreinigte/verschmierte Scheibe mit Silikon',
+    'Glasleiste unzureichend befestigt',
+    'Glasleiste beschädigt/verzogen beim Ausbau',
+    'Kratzer im Glas',
+    'Beschlag zwischen den Scheiben (undichte Isolierverglasung)',
+    'Dichtungsband beschädigt/fehlt',
+    'Sonstiges (Freitext)',
+  ];
+
+  const WINDOW_TYPES = {
+    ein:      { label:'Einflügelig',              wings:1, oberlicht:false },
+    ein_ob:   { label:'Einflügelig mit Oberlicht', wings:1, oberlicht:true  },
+    zwei:     { label:'Zweiflügelig',              wings:2, oberlicht:false },
+    zwei_ob:  { label:'Zweiflügelig mit Oberlicht',wings:2, oberlicht:true  },
+    drei:     { label:'Dreiflügelig',              wings:3, oberlicht:false },
+    drei_ob:  { label:'Dreiflügelig mit Oberlicht',wings:3, oberlicht:true  },
+  };
+
+  function windowSVG(typeKey, color){
+    color = color || 'var(--amber)';
+    const t = WINDOW_TYPES[typeKey];
+    const w = 60, hTotal = 52, obH = t.oberlicht ? 14 : 0;
+    const bodyY = obH, bodyH = hTotal - obH;
+    let svg = `<svg viewBox="0 0 ${w} ${hTotal}" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="${color}" stroke-width="3">`;
+    svg += `<rect x="2" y="2" width="${w-4}" height="${hTotal-4}" rx="2"/>`;
+    if(t.oberlicht){
+      svg += `<line x1="2" y1="${obH}" x2="${w-2}" y2="${obH}" stroke-width="2.5"/>`;
+    }
+    for(let i=1;i<t.wings;i++){
+      const x = 2 + (w-4)*i/t.wings;
+      svg += `<line x1="${x}" y1="${bodyY}" x2="${x}" y2="${hTotal-2}" stroke-width="2.5"/>`;
+    }
+    svg += `</svg>`;
+    return svg;
+  }
+
+  // ---------- State ----------
+  let state = loadState();
+
+  function loadState(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(raw) return JSON.parse(raw);
+    }catch(e){}
+    return { project:{strasse:'',hausnr:'',name:''}, rooms:[] };
+  }
+  function saveState(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+  function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+  // ---------- Projektdaten ----------
+  const pStrasse = document.getElementById('pStrasse');
+  const pHausnr = document.getElementById('pHausnr');
+  const pName = document.getElementById('pName');
+  pStrasse.value = state.project.strasse || '';
+  pHausnr.value = state.project.hausnr || '';
+  pName.value = state.project.name || '';
+  [pStrasse,pHausnr,pName].forEach(el => el.addEventListener('input', () => {
+    state.project = { strasse:pStrasse.value, hausnr:pHausnr.value, name:pName.value };
+    saveState();
+  }));
+
+  // ---------- Foto: einlesen + verkleinern ----------
+  function readAndResizeImage(file){
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 900;
+          let w = img.width, h = img.height;
+          if(w > h && w > maxDim){ h = h*maxDim/w; w = maxDim; }
+          else if(h > maxDim){ w = w*maxDim/h; h = maxDim; }
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', 0.72));
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // ---------- Rendering ----------
+  const roomsContainer = document.getElementById('roomsContainer');
+  const noRoomsHint = document.getElementById('noRoomsHint');
+
+  function render(){
+    noRoomsHint.style.display = state.rooms.length ? 'none' : 'block';
+    roomsContainer.innerHTML = state.rooms.map(room => roomHTML(room)).join('');
+    wireRooms();
+  }
+
+  function roomHTML(room){
+    return `
+      <div class="roomcard" data-room="${room.id}">
+        <div class="roomhead">
+          <div class="field"><label>Etage</label><input type="text" class="etageInput" value="${escapeAttr(room.etage)}" placeholder="z. B. 2. OG"></div>
+          <div class="field"><label>Raum</label><input type="text" class="raumInput" value="${escapeAttr(room.raumname)}" placeholder="z. B. Wohnzimmer"></div>
+          <button class="rm rmRoom" title="Raum entfernen">✕</button>
+        </div>
+
+        ${room.windows.map(w => windowBlockHTML(room.id, w)).join('')}
+
+        <div class="winpicker" id="picker-${room.id}">
+          ${Object.entries(WINDOW_TYPES).map(([key,t]) => `
+            <div class="wintile" data-type="${key}">
+              ${windowSVG(key)}
+              <span>${t.label}</span>
+            </div>`).join('')}
+        </div>
+        <div class="addbtn-row">
+          <button class="btn small addWindowBtn">+ Fenster hinzufügen</button>
+        </div>
+      </div>`;
+  }
+
+  function windowBlockHTML(roomId, w){
+    const t = WINDOW_TYPES[w.typ];
+    return `
+      <div class="windowblock" data-window="${w.id}">
+        <div class="winhead">
+          ${windowSVG(w.typ)}
+          <div style="flex:1;">
+            <div class="wname">${escapeHtml(w.name)}</div>
+            <div class="wtype">${t.label}</div>
+          </div>
+          <button class="rm rmWindow" title="Fenster entfernen">✕</button>
+        </div>
+        ${w.scheiben.map(s => scheibeHTML(w.id, s)).join('')}
+      </div>`;
+  }
+
+  function scheibeHTML(windowId, s){
+    return `
+      <div class="scheibe" data-scheibe="${s.id}">
+        <div class="sname">${escapeHtml(s.name)}</div>
+        ${s.maengel.map(m => mangelItemHTML(s.id, m)).join('')}
+        <button class="btn small addMangelBtn">+ Mangel hinzufügen</button>
+        <div class="addmangel-form" id="form-${s.id}">
+          <div class="field">
+            <label>Mangel</label>
+            <select class="mangelSelect">
+              ${MANGEL_TYPES.map(mt => `<option value="${escapeAttr(mt)}">${escapeHtml(mt)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="field">
+            <label>Notiz (optional, bei „Sonstiges" bitte ausfüllen)</label>
+            <textarea class="mangelNote" placeholder="Zusätzliche Beschreibung…"></textarea>
+          </div>
+          <label class="photobtn">
+            <input type="file" accept="image/*" capture="environment" class="mangelPhoto" style="display:none;">
+            📷 <span class="photoLabel">Foto aufnehmen</span>
+          </label>
+          <div class="addmangel-actions">
+            <button class="btn cancelMangelBtn">Abbrechen</button>
+            <button class="btn primary saveMangelBtn">Speichern</button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function mangelItemHTML(scheibeId, m){
+    const thumb = m.foto ? `<img src="${m.foto}" alt="">` : '⚠️';
+    return `
+      <div class="mangelitem" data-mangel="${m.id}">
+        <div class="mthumb">${thumb}</div>
+        <div class="mtext">
+          <div class="mtyp">${escapeHtml(m.typ)}</div>
+          ${m.notiz ? `<div class="mnote">${escapeHtml(m.notiz)}</div>` : ''}
+        </div>
+        <button class="mrm rmMangel" title="Entfernen">✕</button>
+      </div>`;
+  }
+
+  function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function escapeAttr(s){ return escapeHtml(s); }
+
+  // ---------- Event Wiring ----------
+  function wireRooms(){
+    document.querySelectorAll('.roomcard').forEach(card => {
+      const roomId = card.dataset.room;
+      const room = state.rooms.find(r => r.id === roomId);
+
+      card.querySelector('.etageInput').addEventListener('input', (e) => { room.etage = e.target.value; saveState(); });
+      card.querySelector('.raumInput').addEventListener('input', (e) => { room.raumname = e.target.value; saveState(); });
+      card.querySelector('.rmRoom').addEventListener('click', () => {
+        if(confirm('Diesen Raum inkl. aller Fenster und Mängel entfernen?')){
+          state.rooms = state.rooms.filter(r => r.id !== roomId);
+          saveState(); render();
+        }
+      });
+
+      card.querySelector('.addWindowBtn').addEventListener('click', () => {
+        document.getElementById('picker-'+roomId).classList.toggle('open');
+      });
+      card.querySelectorAll('.wintile').forEach(tile => {
+        tile.addEventListener('click', () => {
+          const typeKey = tile.dataset.type;
+          const t = WINDOW_TYPES[typeKey];
+          const winCount = room.windows.length + 1;
+          const scheiben = [];
+          for(let i=1;i<=t.wings;i++) scheiben.push({ id: uid(), name: 'Scheibe '+i, maengel: [] });
+          if(t.oberlicht) scheiben.push({ id: uid(), name: 'Oberlicht', maengel: [] });
+          room.windows.push({ id: uid(), typ: typeKey, name: 'Fenster '+winCount, scheiben });
+          saveState(); render();
+        });
+      });
+
+      card.querySelectorAll('.windowblock').forEach(wb => {
+        const windowId = wb.dataset.window;
+        const win = room.windows.find(w => w.id === windowId);
+
+        wb.querySelector('.rmWindow').addEventListener('click', () => {
+          if(confirm('Dieses Fenster inkl. aller Mängel entfernen?')){
+            room.windows = room.windows.filter(w => w.id !== windowId);
+            saveState(); render();
+          }
+        });
+
+        wb.querySelectorAll('.scheibe').forEach(sc => {
+          const scheibeId = sc.dataset.scheibe;
+          const scheibe = win.scheiben.find(s => s.id === scheibeId);
+
+          sc.querySelectorAll('.rmMangel').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+              const mangelId = e.target.closest('.mangelitem').dataset.mangel;
+              scheibe.maengel = scheibe.maengel.filter(m => m.id !== mangelId);
+              saveState(); render();
+            });
+          });
+
+          sc.querySelectorAll('.mthumb img').forEach(img => {
+            img.addEventListener('click', () => {
+              document.getElementById('imgOverlayPic').src = img.src;
+              document.getElementById('imgOverlay').classList.add('open');
+            });
+          });
+
+          const formEl = sc.querySelector('.addmangel-form');
+          sc.querySelector('.addMangelBtn').addEventListener('click', () => formEl.classList.add('open'));
+          sc.querySelector('.cancelMangelBtn').addEventListener('click', () => formEl.classList.remove('open'));
+
+          const photoInput = sc.querySelector('.mangelPhoto');
+          const photoLabel = sc.querySelector('.photoLabel');
+          const photoBtn = sc.querySelector('.photobtn');
+          let pendingPhoto = null;
+          photoInput.addEventListener('change', async () => {
+            if(photoInput.files[0]){
+              photoLabel.textContent = '… wird verkleinert';
+              pendingPhoto = await readAndResizeImage(photoInput.files[0]);
+              photoLabel.textContent = '✓ Foto aufgenommen';
+              photoBtn.classList.add('has-photo');
+            }
+          });
+
+          sc.querySelector('.saveMangelBtn').addEventListener('click', () => {
+            const typ = sc.querySelector('.mangelSelect').value;
+            const notiz = sc.querySelector('.mangelNote').value.trim();
+            scheibe.maengel.push({ id: uid(), typ, notiz, foto: pendingPhoto });
+            saveState(); render();
+          });
+        });
+      });
+    });
+  }
+
+  document.getElementById('addRoomBtn').addEventListener('click', () => {
+    state.rooms.push({ id: uid(), etage:'', raumname:'', windows: [] });
+    saveState(); render();
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    if(confirm('Wirklich ALLE Projektdaten, Räume, Fenster und Mängel unwiderruflich löschen?')){
+      state = { project:{strasse:'',hausnr:'',name:''}, rooms:[] };
+      pStrasse.value=''; pHausnr.value=''; pName.value='';
+      saveState(); render();
+    }
+  });
+
+  document.getElementById('imgOverlay').addEventListener('click', () => {
+    document.getElementById('imgOverlay').classList.remove('open');
+  });
+
+  // ---------- PDF-Bericht ----------
+  document.getElementById('pdfBtn').addEventListener('click', () => {
+    const totalMaengel = state.rooms.reduce((a,r) => a + r.windows.reduce((b,w) => b + w.scheiben.reduce((c,s)=>c+s.maengel.length,0), 0), 0);
+    if(!totalMaengel){ alert('Noch keine Mängel erfasst.'); return; }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p','mm','a4');
+    let y = 18;
+
+    doc.setFontSize(16);
+    doc.setTextColor(20);
+    doc.text('Mängelprotokoll — Fenster & Glasaustausch', 14, y);
+    y += 8;
+    doc.setFontSize(10);
+    doc.setTextColor(90);
+    const adresse = [state.project.strasse, state.project.hausnr].filter(Boolean).join(' ');
+    doc.text(`Objekt: ${adresse || '–'}`, 14, y); y += 5;
+    if(state.project.name){ doc.text(`Name: ${state.project.name}`, 14, y); y += 5; }
+    doc.text(`Datum: ${new Date().toLocaleDateString('de-DE')}`, 14, y); y += 5;
+    doc.text(`Erfasste Mängel gesamt: ${totalMaengel}`, 14, y); y += 9;
+
+    state.rooms.forEach(room => {
+      if(!room.windows.length) return;
+      if(y > 265){ doc.addPage(); y = 18; }
+      doc.setFontSize(13);
+      doc.setTextColor(20);
+      doc.setDrawColor(255,176,32);
+      doc.setFillColor(255,176,32);
+      doc.rect(14, y-4.5, 182, 7, 'F');
+      doc.setTextColor(26,19,0);
+      doc.text(`${room.etage || 'Etage –'} · ${room.raumname || 'Raum'}`, 17, y);
+      y += 9;
+      doc.setTextColor(20);
+
+      room.windows.forEach(win => {
+        const t = WINDOW_TYPES[win.typ];
+        if(y > 270){ doc.addPage(); y = 18; }
+        doc.setFontSize(11);
+        doc.setFont(undefined,'bold');
+        doc.text(`${win.name} (${t.label})`, 14, y);
+        doc.setFont(undefined,'normal');
+        y += 6;
+
+        win.scheiben.forEach(sch => {
+          if(!sch.maengel.length) return;
+          if(y > 270){ doc.addPage(); y = 18; }
+          doc.setFontSize(10);
+          doc.setTextColor(60);
+          doc.text(sch.name, 18, y);
+          y += 5;
+
+          sch.maengel.forEach(m => {
+            if(y > 255){ doc.addPage(); y = 18; }
+            let imgH = 0;
+            if(m.foto){
+              try{ doc.addImage(m.foto, 'JPEG', 20, y, 22, 22); imgH = 22; }catch(e){}
+            }
+            doc.setFontSize(9.5);
+            doc.setTextColor(20);
+            doc.text('• ' + m.typ, 46, y+5, {maxWidth:145});
+            let ny = y + 5;
+            if(m.notiz){
+              doc.setFontSize(8.5);
+              doc.setTextColor(110);
+              ny += 5;
+              doc.text(m.notiz, 46, ny, {maxWidth:145});
+            }
+            y += Math.max(imgH, 12) + 4;
+          });
+          y += 2;
+        });
+        y += 3;
+      });
+      y += 4;
+    });
+
+    doc.setFontSize(8);
+    doc.setTextColor(150);
+    doc.text('Erstellt mit der Toolbox — Fenster & Glasaustausch', 14, 290);
+
+    const pad = n => String(n).padStart(2,'0');
+    const now = new Date();
+    const fname = `Maengelprotokoll_${state.project.strasse||'Objekt'}${state.project.hausnr||''}_${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}.pdf`.replace(/\s+/g,'_');
+    doc.save(fname);
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
