@@ -89,6 +89,11 @@
 
   #scanOverlay{display:none; position:fixed; inset:0; background:#000; z-index:100; flex-direction:column; align-items:center; justify-content:center;}
   #scanVideo{width:100%; max-width:480px; border:2px solid var(--amber);}
+  #libOverlay{display:none; position:fixed; inset:0; background:rgba(10,8,6,.92); z-index:90; overflow-y:auto;}
+  #libOverlay .card{max-width:600px; margin:16px auto;}
+  .lib-entry{border:1px solid var(--border); border-radius:8px; padding:8px 10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;}
+  .lib-entry .info{font-size:12.5px;}
+  .lib-entry .info b{color:var(--amber);}
 
   @media print{
     header, footer.navbar, .no-print{display:none !important;}
@@ -122,6 +127,59 @@
 <div id="scanOverlay">
   <video id="scanVideo"></video>
   <button class="btn btn-amber" style="margin-top:16px;" onclick="stopBarcodeScan()">Abbrechen</button>
+</div>
+
+<div id="libOverlay">
+  <div class="card">
+    <h2>📚 Typenbibliothek</h2>
+    <div class="hint">Einmal hinterlegte Wandlertypen werden ab sofort per Foto automatisch erkannt (Abgleich über einen eindeutigen Erkennungstext, z. B. Artikelnummer vom Typenschild).</div>
+    <div id="libList" style="margin-top:10px;"></div>
+    <h3>Neuer Eintrag</h3>
+    <label>Bezeichnung</label>
+    <input type="text" id="lib_name" placeholder="z. B. EFEN EPSA 613">
+    <label>Art</label>
+    <select id="lib_kind">
+      <option value="ct">Stromwandler</option>
+      <option value="vt">Spannungswandler</option>
+      <option value="kombi">Kombiwandler</option>
+    </select>
+    <label>Erkennungstext (exakter Code vom Typenschild, z. B. Artikelnummer)</label>
+    <input type="text" id="lib_matchcode" placeholder="z. B. 2446-005">
+
+    <div id="libFieldsCtVt">
+      <div class="row">
+        <div><label>Primär</label><input type="text" id="lib_primaer"></div>
+        <div><label>Sekundär</label><input type="text" id="lib_sekundaer"></div>
+      </div>
+      <div class="row">
+        <div><label>Klasse</label><input type="text" id="lib_klasse"></div>
+        <div><label>Wandlerbürde</label><input type="text" id="lib_buerde"></div>
+      </div>
+    </div>
+    <div id="libFieldsKombi" style="display:none;">
+      <h3 style="margin-top:6px;">Stromteil</h3>
+      <div class="row">
+        <div><label>Primär A</label><input type="text" id="lib_primaerA"></div>
+        <div><label>Sekundär A</label><input type="text" id="lib_sekundaerA"></div>
+      </div>
+      <div class="row">
+        <div><label>Klasse A</label><input type="text" id="lib_klasseA"></div>
+        <div><label>Bürde A</label><input type="text" id="lib_buerdeA"></div>
+      </div>
+      <h3>Spannungsteil</h3>
+      <div class="row">
+        <div><label>Primär V</label><input type="text" id="lib_primaerV"></div>
+        <div><label>Sekundär V</label><input type="text" id="lib_sekundaerV"></div>
+      </div>
+      <div class="row">
+        <div><label>Klasse V</label><input type="text" id="lib_klasseV"></div>
+        <div><label>Bürde V</label><input type="text" id="lib_buerdeV"></div>
+      </div>
+    </div>
+
+    <button class="btn btn-amber btn-block" style="margin-top:10px;" onclick="addLibraryEntry()">+ Eintrag speichern</button>
+    <button class="btn btn-block" style="margin-top:8px;" onclick="closeLibrary()">Schließen</button>
+  </div>
 </div>
 
 <main>
@@ -167,6 +225,15 @@
       <input type="text" id="pruefer">
       <label>Datum</label>
       <input type="date" id="pruefdatum">
+    </div>
+  </div>
+
+  <!-- RISO -->
+  <div class="panel" id="panel-riso">
+    <div class="card">
+      <h2>Isolationswiderstand (Riso)</h2>
+      <div class="hint">Prüfspannung: 500 V DC. Jede Ader einzeln abklemmen, gegen alle anderen Adern und Erde messen, danach wieder anklemmen. Bei mehrfacher Messung jeweils den kleinsten gemessenen Wert eintragen.</div>
+      <div id="risoFields"></div>
     </div>
   </div>
 
@@ -291,7 +358,8 @@
 const state = {
   ebene:null, messart:null, vtCount:3,
   standort:{name:'',id:'',bezug:'',einspeise:'',strasse:'',hausnr:'',plz:'',ort:'',gps:'',pruefer:'',datum:''},
-  ct:null, vt:null,
+  ct:null, vt:null, kombi:null,
+  riso:{iL1:'',iL2:'',iL3:'',uL1:'',uL2:'',uL3:''},
   zaehler:{photos:[null,null]},
   modem:{typ:'',sim:'',verbindungstest:'',notizen:'',photos:[null,null]},
   checklist:{},
@@ -355,8 +423,69 @@ const CHECKLIST = [
 
 /* ---------------- PANELS / NAVIGATION ---------------- */
 function isMSorHS(){ return state.ebene==='MS' || state.ebene==='HS'; }
+
+/* ---------------- RISO ---------------- */
+function risoRowHtml(id, label, desc){
+  return `<div style="margin-bottom:14px; padding-bottom:10px; border-bottom:1px dashed var(--border);">
+    <label style="color:var(--amber); font-weight:600; margin-bottom:2px;">${label}</label>
+    <div class="hint" style="margin-top:0;">${desc}</div>
+    <input type="text" id="riso_${id}" placeholder="MΩ — kleinster gemessener Wert">
+  </div>`;
+}
+function buildRisoFields(){
+  const hasCurrent = isMSorHS() || (state.ebene==='NS' && state.messart==='halbindirekt');
+  const hasVoltage = isMSorHS();
+  const container = document.getElementById('risoFields');
+  let html = '';
+  if(hasCurrent || hasVoltage){
+    html += `<div class="no-print" style="margin-bottom:16px; padding-bottom:14px; border-bottom:2px solid var(--amber-dim);">
+      <label style="color:var(--amber);">Wert für alle Messungen übernehmen</label>
+      <div style="display:flex; gap:6px;">
+        <input type="text" id="riso_alle" placeholder="MΩ">
+        <button class="btn btn-sm btn-amber" onclick="applyRisoToAll()">Übernehmen</button>
+      </div>
+      <div class="hint">Trägt den Wert in alle Messungen unten ein — im Protokoll bleiben trotzdem alle Einzelmessungen einzeln aufgeführt.</div>
+    </div>`;
+  }
+  if(hasCurrent){
+    html += risoRowHtml('iL1', 'Stromwandler L1', 'Ader L1 abklemmen, gegen alle anderen Adern + Erde messen, danach wieder anklemmen.');
+    html += risoRowHtml('iL2', 'Stromwandler L2', 'Ader L2 abklemmen, messen, wieder anklemmen.');
+    html += risoRowHtml('iL3', 'Stromwandler L3', 'Ader L3 abklemmen, messen, wieder anklemmen.');
+  }
+  if(hasVoltage){
+    html += risoRowHtml('uL1', 'Spannungswandler L1', 'Ader L1 abklemmen, gegen alle anderen Adern + Erde messen, danach wieder anklemmen.');
+    html += risoRowHtml('uL2', 'Spannungswandler L2', 'Ader L2 abklemmen, messen, wieder anklemmen.');
+    html += risoRowHtml('uL3', 'Spannungswandler L3', 'Ader L3 abklemmen, messen, wieder anklemmen.');
+  }
+  if(!html) html = '<div class="hint">Bei Direktmessung ist keine gesonderte Wandler-Isolationsmessung erforderlich.</div>';
+  container.innerHTML = html;
+  bindRisoFields();
+}
+function applyRisoToAll(){
+  const val = document.getElementById('riso_alle').value.trim();
+  if(!val) return;
+  const hasCurrent = isMSorHS() || (state.ebene==='NS' && state.messart==='halbindirekt');
+  const hasVoltage = isMSorHS();
+  const ids = [...(hasCurrent?['iL1','iL2','iL3']:[]), ...(hasVoltage?['uL1','uL2','uL3']:[])];
+  ids.forEach(id=>{
+    const el = document.getElementById('riso_'+id);
+    if(el) el.value = val;
+    state.riso[id] = val;
+  });
+  saveDraft(); updateStepCompletionUI();
+}
+function bindRisoFields(){
+  ['iL1','iL2','iL3','uL1','uL2','uL3'].forEach(id=>{
+    const el = document.getElementById('riso_'+id);
+    if(!el) return;
+    el.value = state.riso[id]||'';
+    el.addEventListener('input', e=>{ state.riso[id]=e.target.value; saveDraft(); updateStepCompletionUI(); });
+  });
+}
+
 const PANEL_DEFS = [
   {id:'setup', label:'Setup'},
+  {id:'riso', label:'Riso', cond:()=> isMSorHS() || (state.ebene==='NS' && state.messart==='halbindirekt')},
   {id:'ct', label:'Stromwandler', cond:()=> (isMSorHS() && state.messart==='wandler') || state.messart==='halbindirekt'},
   {id:'vt', label:'Spannungswandler', cond:()=> isMSorHS() && state.messart==='wandler'},
   {id:'kombi', label:'Kombiwandler', cond:()=> isMSorHS() && state.messart==='kombiwandler'},
@@ -393,6 +522,7 @@ function showStepByIndex(i){
   renderStepNav();
   document.getElementById('btnBack').style.visibility = i===0 ? 'hidden' : 'visible';
   document.getElementById('btnNext').textContent = i===panels.length-1 ? 'Fertig ✓' : 'Weiter →';
+  if(panels[i].id==='riso') buildRisoFields();
   if(panels[i].id==='ct') buildCtBlocks();
   if(panels[i].id==='vt') buildVtBlocks();
   if(panels[i].id==='kombi') buildKombiBlocks();
@@ -414,6 +544,13 @@ document.getElementById('btnBack').onclick = ()=>{ if(stepIndex>0) showStepByInd
 function isStepComplete(id){
   switch(id){
     case 'setup': return !!(state.ebene && state.messart && state.standort.name && state.standort.pruefer && state.standort.datum);
+    case 'riso': {
+      const hasCurrent = isMSorHS() || (state.ebene==='NS' && state.messart==='halbindirekt');
+      const hasVoltage = isMSorHS();
+      if(!hasCurrent && !hasVoltage) return true;
+      const need = [...(hasCurrent?['iL1','iL2','iL3']:[]), ...(hasVoltage?['uL1','uL2','uL3']:[])];
+      return need.every(k=>state.riso[k]);
+    }
     case 'ct': return !!(state.ct && state.ct.primaer && state.ct.sekundaer && state.ct.phases.every(p=>p.seriennummer));
     case 'vt': return !!(state.vt && state.vt.primaer && state.vt.sekundaer && state.vt.phases.every(p=>p.seriennummer));
     case 'kombi': return !!(state.kombi && state.kombi.primaerA && state.kombi.sekundaerA && state.kombi.primaerV && state.kombi.sekundaerV && state.kombi.phases.every(p=>p.seriennummer));
@@ -438,6 +575,7 @@ function isStepComplete(id){
 /* ---------------- INIT ---------------- */
 function init(){
   loadDraft();
+  loadLibrary();
   ensureCtState(); ensureVtState(); ensureKombiState();
   bindSetup();
   buildChecklist();
@@ -587,6 +725,146 @@ async function reverseGeocode(lat, lon){
   }
 }
 
+/* ---------------- TYPENBIBLIOTHEK ---------------- */
+const LIB_KEY = 'vibn_typenbibliothek_v1';
+let library = [];
+function loadLibrary(){ try{ const raw=localStorage.getItem(LIB_KEY); library = raw?JSON.parse(raw):[]; }catch(e){ library=[]; } }
+function saveLibrary(){ try{ localStorage.setItem(LIB_KEY, JSON.stringify(library)); }catch(e){} }
+
+function openLibrary(){ document.getElementById('libOverlay').style.display='block'; renderLibList(); }
+function closeLibrary(){ document.getElementById('libOverlay').style.display='none'; }
+
+document.getElementById('lib_kind').addEventListener('change', e=>{
+  const isKombi = e.target.value==='kombi';
+  document.getElementById('libFieldsCtVt').style.display = isKombi ? 'none':'block';
+  document.getElementById('libFieldsKombi').style.display = isKombi ? 'block':'none';
+});
+
+function renderLibList(){
+  const el = document.getElementById('libList');
+  if(!library.length){ el.innerHTML = '<div class="hint">Noch keine Einträge.</div>'; return; }
+  const kindLabel = {ct:'Stromwandler', vt:'Spannungswandler', kombi:'Kombiwandler'};
+  el.innerHTML = library.map(l=>`
+    <div class="lib-entry">
+      <div class="info"><b>${l.name}</b><br>${kindLabel[l.kind]||l.kind} · Code: ${l.matchCode}</div>
+      <button class="btn btn-sm btn-danger" onclick="removeLibraryEntry('${l.id}')">✕</button>
+    </div>`).join('');
+}
+function removeLibraryEntry(id){
+  library = library.filter(l=>l.id!==id);
+  saveLibrary(); renderLibList();
+}
+function addLibraryEntry(){
+  const name = document.getElementById('lib_name').value.trim();
+  const kind = document.getElementById('lib_kind').value;
+  const matchCode = document.getElementById('lib_matchcode').value.trim();
+  if(!name || !matchCode){ alert('Bitte Bezeichnung und Erkennungstext eintragen.'); return; }
+  const entry = { id: 'lib_'+Date.now(), name, kind, matchCode };
+  if(kind==='kombi'){
+    ['primaerA','sekundaerA','klasseA','buerdeA','primaerV','sekundaerV','klasseV','buerdeV'].forEach(f=>{
+      entry[f] = document.getElementById('lib_'+f).value.trim();
+    });
+  } else {
+    ['primaer','sekundaer','klasse','buerde'].forEach(f=>{
+      entry[f] = document.getElementById('lib_'+f).value.trim();
+    });
+  }
+  library.push(entry); saveLibrary(); renderLibList();
+  ['lib_name','lib_matchcode','lib_primaer','lib_sekundaer','lib_klasse','lib_buerde','lib_primaerA','lib_sekundaerA','lib_klasseA','lib_buerdeA','lib_primaerV','lib_sekundaerV','lib_klasseV','lib_buerdeV'].forEach(id=>{
+    const el = document.getElementById(id); if(el) el.value='';
+  });
+}
+function matchLibrary(text, kind){
+  const clean = text.replace(/\s+/g,'').toUpperCase();
+  let best = null;
+  library.filter(l=>l.kind===kind).forEach(l=>{
+    const code = (l.matchCode||'').replace(/\s+/g,'').toUpperCase();
+    if(code && clean.includes(code)){
+      if(!best || code.length > (best.matchCode||'').replace(/\s+/g,'').length) best = l;
+    }
+  });
+  return best;
+}
+function applyLibraryEntry(prefix, groupObj, entry){
+  if(entry.kind==='kombi'){
+    ['primaerA','sekundaerA','klasseA','buerdeA','primaerV','sekundaerV','klasseV','buerdeV'].forEach(f=>{
+      if(entry[f]){ groupObj[f]=entry[f]; const el=document.getElementById('kombi_'+f); if(el) el.value=entry[f]; }
+    });
+    recomputeKombiBuerdeDisplays();
+  } else {
+    ['primaer','sekundaer','klasse'].forEach(f=>{
+      if(entry[f]){ groupObj[f]=entry[f]; const el=document.getElementById(prefix+'_'+f); if(el) el.value=entry[f]; }
+    });
+    if(entry.buerde){ groupObj.sollbuerde=entry.buerde; const el=document.getElementById(prefix+'_sollbuerde'); if(el) el.value=entry.buerde; }
+    recomputeBuerdeDisplays(prefix, groupObj);
+  }
+  saveDraft(); renderWfaktorBox(); updateStepCompletionUI();
+}
+
+/* ---------------- LOKALE TEXTERKENNUNG (Tesseract.js) ---------------- */
+let tesseractLoading = null;
+function ensureTesseract(){
+  if(window.Tesseract) return Promise.resolve();
+  if(tesseractLoading) return tesseractLoading;
+  tesseractLoading = new Promise((res,rej)=>{
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js';
+    s.onload = ()=>res();
+    s.onerror = ()=>rej(new Error('Texterkennung konnte nicht geladen werden (kein Internet beim ersten Aufruf?)'));
+    document.head.appendChild(s);
+  });
+  return tesseractLoading;
+}
+function groupRecognitionHtml(prefix){
+  return `<div style="margin-bottom:12px;">
+    <label>Typenschild-Foto (automatische Erkennung aus Bibliothek)</label>
+    <div style="display:flex; gap:8px; align-items:flex-start;">
+      <img class="thumb empty" id="thumb-${prefix}-typenschild">
+      <div style="display:flex; flex-direction:column; gap:4px; flex:1;">
+        <input type="file" accept="image/*" capture="environment" style="display:none" id="file-${prefix}-typenschild-cam">
+        <input type="file" accept="image/*" style="display:none" id="file-${prefix}-typenschild-gal">
+        <div style="display:flex; gap:4px;">
+          <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${prefix}-typenschild-cam').click()">📷 Kamera</button>
+          <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${prefix}-typenschild-gal').click()">🖼️ Galerie</button>
+        </div>
+        <div class="status-line" id="status-${prefix}-typenschild"></div>
+      </div>
+    </div>
+  </div>`;
+}
+function bindGroupRecognition(prefix, groupObj, kind){
+  ['cam','gal'].forEach(mode=>{
+    const inp = document.getElementById(`file-${prefix}-typenschild-${mode}`);
+    if(!inp) return;
+    inp.addEventListener('change', async e=>{
+      const file = e.target.files[0]; if(!file) return;
+      const b64 = await fileToBase64(file);
+      const url = 'data:image/jpeg;base64,'+b64;
+      const th = document.getElementById(`thumb-${prefix}-typenschild`);
+      if(th){ th.src=url; th.classList.remove('empty'); }
+      const status = document.getElementById(`status-${prefix}-typenschild`);
+      status.textContent = 'Erkenne Typenschild...'; status.className='status-line';
+      try{
+        await ensureTesseract();
+        const { data:{ text } } = await Tesseract.recognize(url, 'eng+deu', {
+          logger: m=>{ if(m.status && m.progress!=null) status.textContent = 'Erkennung: '+m.status+' ('+Math.round(m.progress*100)+'%)'; }
+        });
+        const match = matchLibrary(text, kind);
+        if(match){
+          applyLibraryEntry(prefix, groupObj, match);
+          status.textContent = '✓ Erkannt: '+match.name; status.className='status-line ok';
+        } else {
+          status.textContent = 'Kein bekannter Typ erkannt — manuell eintragen oder in der Bibliothek ergänzen.';
+          status.className = 'status-line err';
+        }
+      }catch(err){
+        status.textContent = 'Erkennung fehlgeschlagen (' + String(err.message||err).slice(0,70) + ').';
+        status.className = 'status-line err';
+      }
+    });
+  });
+}
+
 /* ---------------- BARCODE SCAN ---------------- */
 let currentScanControls = null;
 async function startBarcodeScan(targetId, statusId){
@@ -596,7 +874,7 @@ async function startBarcodeScan(targetId, statusId){
   try{
     const reader = new ZXing.BrowserMultiFormatReader();
     document.getElementById('scanOverlay').style.display = 'flex';
-    const devices = await ZXing.BrowserMultiFormatReader.listVideoInputDevices();
+    const devices = await reader.listVideoInputDevices();
     const deviceId = devices.length ? devices[devices.length-1].deviceId : undefined;
     reader.decodeFromVideoDevice(deviceId, 'scanVideo', (result, err, controls)=>{
       currentScanControls = controls;
@@ -849,13 +1127,16 @@ function recomputeBuerdeDisplays(prefix, groupObj){
 function buildCtBlocks(){
   ensureCtState();
   const c = document.getElementById('ctContainer');
-  c.innerHTML = groupFieldsHtml('ct', {
-    title:'Stromwandler (gilt für alle 3 Phasen)', unit:'A',
-    showTyp:false, showBaujahr:false, primaerPlaceholder:'z. B. 1000',
-    sekundaerOptions:['1 A','5 A'],
-    klasseOptions:['0.5S','0.2S','0.1'], buerdeOptions:['5 VA','10 VA','15 VA']
-  });
+  c.innerHTML = '<div class="no-print" style="margin-bottom:10px;"><button class="btn btn-sm" onclick="openLibrary()">📚 Typenbibliothek verwalten</button></div>'
+    + groupRecognitionHtml('ct')
+    + groupFieldsHtml('ct', {
+      title:'Stromwandler (gilt für alle 3 Phasen)', unit:'A',
+      showTyp:false, showBaujahr:false, primaerPlaceholder:'z. B. 1000',
+      sekundaerOptions:['1 A','5 A'],
+      klasseOptions:['0.5S','0.2S','0.1'], buerdeOptions:['5 VA','10 VA','15 VA']
+    });
   state.ct.phases.forEach(p=>{ c.innerHTML += phaseBlockHtml('ct', p); });
+  bindGroupRecognition('ct', state.ct, 'ct');
   bindGroupFields('ct', state.ct);
   state.ct.phases.forEach(p=>bindPhaseBlock('ct', p, state.ct));
   renderWfaktorBox();
@@ -863,13 +1144,16 @@ function buildCtBlocks(){
 function buildVtBlocks(){
   ensureVtState();
   const c = document.getElementById('vtContainer');
-  c.innerHTML = groupFieldsHtml('vt', {
-    title:'Spannungswandler (gilt für alle Phasen)', unit:'V',
-    showTyp:false, showBaujahr:false, primaerPlaceholder:'z. B. 20000',
-    sekundaerOptions:['100 V'],
-    klasseOptions:['0.5','0.2','0.1'], buerdeOptions:['5 VA','10 VA','15 VA']
-  });
+  c.innerHTML = '<div class="no-print" style="margin-bottom:10px;"><button class="btn btn-sm" onclick="openLibrary()">📚 Typenbibliothek verwalten</button></div>'
+    + groupRecognitionHtml('vt')
+    + groupFieldsHtml('vt', {
+      title:'Spannungswandler (gilt für alle Phasen)', unit:'V',
+      showTyp:false, showBaujahr:false, primaerPlaceholder:'z. B. 20000',
+      sekundaerOptions:['100 V'],
+      klasseOptions:['0.5','0.2','0.1'], buerdeOptions:['5 VA','10 VA','15 VA']
+    });
   state.vt.phases.forEach(p=>{ c.innerHTML += phaseBlockHtml('vt', p); });
+  bindGroupRecognition('vt', state.vt, 'vt');
   bindGroupFields('vt', state.vt);
   state.vt.phases.forEach(p=>bindPhaseBlock('vt', p, state.vt));
   renderWfaktorBox();
@@ -1000,8 +1284,11 @@ function bindKombiPhaseBlock(p){
 function buildKombiBlocks(){
   ensureKombiState();
   const c = document.getElementById('kombiContainer');
-  c.innerHTML = kombiGroupHtml();
+  c.innerHTML = '<div class="no-print" style="margin-bottom:10px;"><button class="btn btn-sm" onclick="openLibrary()">📚 Typenbibliothek verwalten</button></div>'
+    + groupRecognitionHtml('kombi')
+    + kombiGroupHtml();
   state.kombi.phases.forEach(p=>{ c.innerHTML += kombiPhaseBlockHtml(p); });
+  bindGroupRecognition('kombi', state.kombi, 'kombi');
   bindKombiGroupFields();
   state.kombi.phases.forEach(p=>bindKombiPhaseBlock(p));
   renderWfaktorBox();
@@ -1107,6 +1394,8 @@ function buildSummary(){
   const adresse = [ [state.standort.strasse,state.standort.hausnr].filter(Boolean).join(' '),
                      [state.standort.plz,state.standort.ort].filter(Boolean).join(' ') ].filter(Boolean).join(', ');
   const r = computeWandlerfaktor();
+  const risoVals = Object.values(state.riso).map(v=>parseNum(v)).filter(v=>v!=null);
+  const risoMin = risoVals.length ? Math.min(...risoVals) : null;
   el.innerHTML = `
     <div class="summary-line"><span>Anlage</span><span>${state.standort.name||'–'}</span></div>
     <div class="summary-line"><span>Adresse</span><span>${adresse||'–'}</span></div>
@@ -1115,6 +1404,7 @@ function buildSummary(){
     <div class="summary-line"><span>Messart</span><span>${state.messart||'–'}</span></div>
     <div class="summary-line"><span>Zählernummer</span><span>${state.zaehler.z_nummer||'–'}</span></div>
     <div class="summary-line"><span>Wandlerfaktor</span><span>${r.total || '–'}</span></div>
+    <div class="summary-line"><span>Riso (kleinster Wert)</span><span>${risoMin!=null ? risoMin+' MΩ' : '–'}</span></div>
     <div class="summary-line"><span>Checkliste</span><span>${visibleDone} / ${visibleTotal} erledigt</span></div>
     <div class="summary-line"><span>Prüfer</span><span>${state.standort.pruefer||'–'}</span></div>
     <div class="summary-line"><span>Datum</span><span>${document.getElementById('pruefdatum').value||'–'}</span></div>
