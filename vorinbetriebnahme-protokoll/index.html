@@ -305,6 +305,19 @@
   <!-- CHECKLISTE -->
   <div class="panel" id="panel-checkliste">
     <div class="card">
+      <h2>Absicherung</h2>
+      <label>Sicherung *</label>
+      <div class="choice-group" id="choiceSicherung">
+        <div class="choice" data-val="3polig">3-Polig Z 10A</div>
+        <div class="choice" data-val="schmelz">Schmelzsicherung 10A (nur bei NS)</div>
+        <div class="choice" data-val="sonstiges">Sonstiges</div>
+      </div>
+      <div id="sicherungSonstigesBox" style="display:none; margin-top:8px;">
+        <label>Sonstiges — bitte angeben</label>
+        <input type="text" id="sicherungSonstigesText">
+      </div>
+    </div>
+    <div class="card">
       <h2>Prüf-Checkliste</h2>
       <div id="checklistContainer"></div>
     </div>
@@ -360,6 +373,7 @@ const state = {
   standort:{name:'',id:'',bezug:'',einspeise:'',strasse:'',hausnr:'',plz:'',ort:'',gps:'',pruefer:'',datum:''},
   ct:null, vt:null, kombi:null,
   riso:{iL1:'',iL2:'',iL3:'',uL1:'',uL2:'',uL3:''},
+  absicherung:{sicherung:'', sonstigesText:''},
   zaehler:{photos:[null,null]},
   modem:{typ:'',sim:'',verbindungstest:'',notizen:'',photos:[null,null]},
   checklist:{},
@@ -371,34 +385,38 @@ function loadDraft(){ try{ const raw=localStorage.getItem(LS_KEY); if(raw) Objec
 
 /* ---------------- CHECKLIST ---------------- */
 const CHECKLIST = [
-  { cat:'Allgemein / Sichtprüfung', tag:'beide', items:[
-    ['sicht_zugang','Zählerplatz / Wandlerraum sauber, trocken, frei zugänglich'],
-    ['sicht_beschriftung','Beschriftung / Anlagenkennzeichnung vorhanden und korrekt'],
-    ['sicht_schrank','Schrank / Kiosk unbeschädigt, Tür/Schloss funktionsfähig'],
-    ['sicht_plombierfaehig','Plombierstellen vorhanden und plombierfähig'],
-    ['sicht_ueberspannung','Überspannungs-/Blitzschutz vorhanden (falls gefordert)'],
+  { cat:'Wandler', tag:'wandler', items:[
+    ['w_einbaulage','Einbaulage Stromwandler P1 (Netzbetreiber) / P2 (Kunde)'],
+    ['w_klemmverbindung','Klemmverbindung geprüft'],
+    ['w_erdung_min4','Erdung vorhanden (min. 4 mm² Cu)'],
+    ['w_erdung_ks_strom','Erdung und Kurzschluss der nicht verwendeten Kerne (Strom)','Gemäß TAB ist die Verwendung von Stromwandlern für Schutzgeräte nicht zulässig. Die nicht benötigten Kerne sind am Wandler kurzgeschlossen. Für die Schutzgeräte sind Kabelumbauwandler einzusetzen.'],
+    ['w_erdung_spannung','Erdung der nicht verwendeten Kerne (Spannung)'],
+  ]},
+  { cat:'Plombiert', tag:'wandler', items:[
+    ['p_spannungspfad','Spannungspfadsicherung'],
+    ['p_messzelle','Messzelle / Wandlerabdeckung'],
+    ['p_zaehler_modem','Zähler / Modem'],
+    ['p_pruefklemme','Prüfklemme'],
+  ]},
+  { cat:'Zähler', tag:'beide', items:[
+    ['z_bedienbereich','Bedienbereich ausreichend (frei zu haltender Arbeits- und Bedienbereich: min. 1,2 m Tiefe, je 0,3 m seitlich, min. 2 m Höhe)'],
+  ]},
+  { cat:'Verdrahtung', tag:'beide', items:[
+    ['v_phasengleich','Phasengleichheit von Strom und Spannung'],
+    ['v_geschirmt','Geschirmte Leitung geerdet'],
+    ['v_querschnitt','Querschnitt ausreichend'],
+    ['v_kabelverlegung','Kabelverlegung ohne Beschädigung'],
+  ]},
+  { cat:'Prüfklemme', tag:'beide', items:[
+    ['pk_klemmverbindung','Klemmverbindung geprüft'],
+    ['pk_geschlossen','Strom und Spannung geschlossen'],
+    ['pk_bruecken_offen','Strombrücken offen'],
   ]},
   { cat:'Sicherheit (nur MS)', tag:'ms', items:[
     ['ms_5regeln','Fünf Sicherheitsregeln beachtet, Anlage spannungsfrei geschaltet'],
     ['ms_schaltauftrag','Schaltauftrag / Schaltberechtigung vorhanden'],
     ['ms_erdung','Erdung und Kurzschließung der Anlage vorgenommen'],
     ['ms_spannungsfrei','Spannungsfreiheit vor Wandleranschluss geprüft'],
-  ]},
-  { cat:'Wandlerprüfung', tag:'wandler', items:[
-    ['w_typenschild','Typenschilddaten mit Bestellung/Netzberechnung abgeglichen'],
-    ['w_sek_klemmen','Sekundärklemmen S1/S2 korrekt zugeordnet und fest angezogen'],
-    ['w_prim_klemmen','Primärklemmen P1/P2 in Energieflussrichtung korrekt'],
-    ['w_ks_bruecken','Kurzschlussbrücken korrekt gesetzt bzw. entfernt'],
-    ['w_erdung_sek','Sekundärkreis der Stromwandler einseitig geerdet'],
-    ['w_sicherungen','Spannungswandler-Sicherungen bestückt und funktionsfähig'],
-    ['w_isolation','Isolationswiderstand der Sekundärverdrahtung gemessen'],
-  ]},
-  { cat:'Anschluss- und Verdrahtungsprüfung', tag:'beide', items:[
-    ['v_klemmenplan','Klemmenbezeichnung mit Schaltplan abgeglichen'],
-    ['v_drehmoment','Alle Klemmen mit Drehmomentschlüssel nachgezogen'],
-    ['v_beschriftung','Aderleitungen eindeutig beschriftet'],
-    ['v_ks_fest','Kurzschlussfestigkeit des Sekundärkreises geprüft'],
-    ['v_schirmung','Schirmung / Erdung der Messleitungen korrekt aufgelegt'],
   ]},
   { cat:'Spannungs- und Stromprüfung', tag:'beide', items:[
     ['s_sternspannung','Spannung L1-N, L2-N, L3-N gemessen und dokumentiert'],
@@ -407,15 +425,7 @@ const CHECKLIST = [
     ['s_strom','Stromaufnahme je Phase plausibilisiert'],
     ['s_vektor','Vektordiagramm / Winkelmessung durchgeführt'],
   ]},
-  { cat:'Zähler & Modem', tag:'beide', items:[
-    ['z_nummer_check','Zählernummer mit Bestellung abgeglichen'],
-    ['z_stand_check','Zählerstand bei Inbetriebnahme dokumentiert'],
-    ['z_faktor_check','Wandlerfaktor im Zähler korrekt parametriert'],
-    ['z_uhrzeit','Datum/Uhrzeit im Zähler synchron'],
-    ['z_kom_check','Kommunikationsmodul funktionsfähig, Verbindungstest erfolgreich'],
-  ]},
   { cat:'Abschluss', tag:'beide', items:[
-    ['a_plombierung','Plombierung durchgeführt, Plombennummern dokumentiert'],
     ['a_fotos','Foto-Dokumentation vollständig'],
     ['a_unterschrift','Protokoll unterschrieben'],
   ]},
@@ -558,7 +568,7 @@ function isStepComplete(id){
     case 'modem': return !!(state.modem.sim || state.modem.notizen);
     case 'checkliste': {
       const hasWandler = isMSorHS() || (state.ebene==='NS' && state.messart==='halbindirekt');
-      let all = true;
+      let all = !!state.absicherung.sicherung;
       CHECKLIST.forEach(cat=>{
         let show = true;
         if(cat.tag==='ms') show = isMSorHS();
@@ -1338,7 +1348,7 @@ function buildChecklist(){
     const title = document.createElement('div');
     title.className = 'check-cat-title'; title.textContent = cat.cat;
     catDiv.appendChild(title);
-    cat.items.forEach(([id,label])=>{
+    cat.items.forEach(([id,label,itemHint])=>{
       if(!state.checklist[id]) state.checklist[id] = {checked:false, note:''};
       const item = document.createElement('div');
       item.className = 'check-item';
@@ -1346,6 +1356,7 @@ function buildChecklist(){
         <input type="checkbox" id="chk-${id}">
         <div style="flex:1;">
           <div class="txt">${label}</div>
+          ${itemHint ? `<div class="hint" style="margin-top:2px;">${itemHint}</div>` : ''}
           <span class="note-toggle" data-id="${id}">+ Notiz</span>
           <div class="note-field" id="notefield-${id}"><textarea id="note-${id}"></textarea></div>
         </div>`;
@@ -1368,6 +1379,20 @@ function buildChecklist(){
       t.textContent = f.classList.contains('open') ? '− Notiz' : '+ Notiz';
     };
   });
+
+  document.querySelectorAll('#choiceSicherung .choice').forEach(el=>{
+    el.classList.toggle('sel', state.absicherung.sicherung===el.dataset.val);
+    el.onclick = ()=>{
+      state.absicherung.sicherung = el.dataset.val;
+      document.querySelectorAll('#choiceSicherung .choice').forEach(c=>c.classList.remove('sel'));
+      el.classList.add('sel');
+      document.getElementById('sicherungSonstigesBox').style.display = el.dataset.val==='sonstiges' ? 'block' : 'none';
+      saveDraft(); updateStepCompletionUI();
+    };
+  });
+  document.getElementById('sicherungSonstigesBox').style.display = state.absicherung.sicherung==='sonstiges' ? 'block' : 'none';
+  document.getElementById('sicherungSonstigesText').value = state.absicherung.sonstigesText||'';
+  document.getElementById('sicherungSonstigesText').addEventListener('input', e=>{ state.absicherung.sonstigesText=e.target.value; saveDraft(); });
 }
 function refreshChecklistVisibility(){
   const hasWandler = isMSorHS() || (state.ebene==='NS' && state.messart==='halbindirekt');
