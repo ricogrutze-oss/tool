@@ -141,10 +141,11 @@ input::placeholder{color:var(--muted);}
 #test{padding:0;}
 .step-hdr{
   background:var(--card);border-bottom:1px solid var(--border);
-  padding:.6rem 1rem;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+  padding:.65rem 1rem;display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;position:sticky;top:0;z-index:20;
 }
-.step-n{font-family:var(--mono);font-size:.62rem;color:var(--muted);}
-.step-l{font-weight:700;font-size:.92rem;color:var(--accent);}
+.step-n{font-family:var(--mono);font-size:.65rem;color:var(--muted);}
+.step-l{font-weight:700;font-size:1.15rem;color:var(--accent);}
 .pips{display:flex;gap:4px;}
 .pip{width:20px;height:4px;background:var(--border);border-radius:2px;}
 .pip.done{background:var(--green);}.pip.cur{background:var(--accent);}
@@ -858,7 +859,7 @@ input::placeholder{color:var(--muted);}
     </div>
   </div>
 
-  <button class="btn no-print" onclick="window.print()">🖨 Protokoll drucken</button>
+  <button class="btn no-print" onclick="printPDF()">🖨 Protokoll drucken (PDF)</button>
   <button class="btn email no-print" onclick="sendEmail()">✉ Per E-Mail senden</button>
   <button class="btn sec no-print" onclick="showHistory()" style="width:100%;">📋 Prüfhistorie ansehen</button>
   <div style="display:flex;gap:.5rem;" class="no-print">
@@ -965,7 +966,7 @@ function clearCfgSig(){
   cfgHasData=false;
 }
 
-function saveCfgSig(){
+async function saveCfgSig(){
   if(!cfgSigCtx||!cfgHasData){alert('Bitte zuerst unterschreiben.');return;}
   const dataUrl=$('cfg-sig-pad').toDataURL('image/png');
   try{localStorage.setItem(LS+'signature',dataUrl);}catch(e){}
@@ -981,13 +982,13 @@ function loadCfgSigPreview(){
   }catch(e){}
 }
 
-function savePrueferFromCfg(){
+async function savePrueferFromCfg(){
   const v=$('cfg-pruefer').value.trim();
   try{localStorage.setItem(LS+'pruefer',v);}catch(e){}
   alert('Name gespeichert: '+v);
 }
 
-function renderHistoryInline(){
+async function renderHistoryInline(){
   const list=$('hist-list-inline');
   if(!list)return;
   let hist=[];
@@ -1006,10 +1007,9 @@ function renderHistoryInline(){
       <div class="hist-icon">${icon}</div>
       <div class="hist-info">
         <div class="hist-title">${e.harnessId||e.zaehlerNr||'Anlage'}</div>
-        <div class="hist-sub">${e.anlageKw?e.anlageKw+' kWp':'—'} · ${e.gpsAddr||e.prAdresse||'Kein Standort'}</div>
+        <div class="hist-sub">${e.anlageKw?e.anlageKw+' kWp':'—'} · ${e.datum||'—'} · ${e.gpsAddr||e.prAdresse||''}</div>
       </div>
-      <div class="hist-date">${e.datum||'—'}</div>
-      <button class="hist-del" onclick="event.stopPropagation();deleteHistEntry(${i});renderHistoryInline()">×</button>
+      <button class="hist-del" onclick="event.stopPropagation();deleteHistEntry(${e.ts})">×</button>
     `;
     item.addEventListener('click',()=>loadHistoryEntry(e));
     list.appendChild(item);
@@ -1017,6 +1017,78 @@ function renderHistoryInline(){
 }
 
 function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$(id).classList.add('active');}
+// ══════════════════════════════════════════════════════════════
+// IndexedDB Storage (replaces localStorage — 500 MB limit)
+// ══════════════════════════════════════════════════════════════
+const DB_NAME='fre-test-v1', DB_VER=1;
+let _db=null;
+
+async function openDB(){
+  if(_db)return _db;
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open(DB_NAME,DB_VER);
+    r.onupgradeneeded=e=>{
+      const d=e.target.result;
+      if(!d.objectStoreNames.contains('kv'))    d.createObjectStore('kv');
+      if(!d.objectStoreNames.contains('history'))d.createObjectStore('history',{keyPath:'ts'});
+    };
+    r.onsuccess=e=>{_db=e.target.result;res(_db);};
+    r.onerror  =e=>rej(e.target.error);
+  });
+}
+async function dbGet(key){
+  const d=await openDB();
+  return new Promise((res,rej)=>{
+    const r=d.transaction('kv','readonly').objectStore('kv').get(key);
+    r.onsuccess=()=>res(r.result??null);
+    r.onerror  =()=>rej(r.error);
+  });
+}
+async function dbSet(key,val){
+  const d=await openDB();
+  return new Promise((res,rej)=>{
+    const r=d.transaction('kv','readwrite').objectStore('kv').put(val,key);
+    r.onsuccess=()=>res();r.onerror=()=>rej(r.error);
+  });
+}
+async function dbDel(key){
+  const d=await openDB();
+  return new Promise((res,rej)=>{
+    const r=d.transaction('kv','readwrite').objectStore('kv').delete(key);
+    r.onsuccess=()=>res();r.onerror=()=>rej(r.error);
+  });
+}
+async function dbHistGetAll(){
+  const d=await openDB();
+  return new Promise((res,rej)=>{
+    const r=d.transaction('history','readonly').objectStore('history').getAll();
+    r.onsuccess=()=>res(r.result??[]);r.onerror=()=>rej(r.error);
+  });
+}
+async function dbHistPut(entry){
+  const d=await openDB();
+  return new Promise((res,rej)=>{
+    const r=d.transaction('history','readwrite').objectStore('history').put(entry);
+    r.onsuccess=()=>res();r.onerror=()=>rej(r.error);
+  });
+}
+async function dbHistDel(ts){
+  const d=await openDB();
+  return new Promise((res,rej)=>{
+    const r=d.transaction('history','readwrite').objectStore('history').delete(ts);
+    r.onsuccess=()=>res();r.onerror=()=>rej(r.error);
+  });
+}
+async function dbClearAll(){
+  const d=await openDB();
+  return new Promise((res,rej)=>{
+    const t=d.transaction(['kv','history'],'readwrite');
+    t.objectStore('kv').clear();
+    t.objectStore('history').clear();
+    t.oncomplete=()=>res();t.onerror=()=>rej(t.error);
+  });
+}
+
 function showHistory(){show('setup');switchTab('hist');}
 
 // ── STEPS DEFINITIONS ────────────────────────────────────────
@@ -1045,10 +1117,10 @@ let STEPS=STEPS_VOLL;
 // ── HISTORY ──────────────────────────────────────────────────
 const MAX_HISTORY=10;
 
-function saveToHistory(){
+async function saveToHistory(){
   if(!ST.results||ST.results.length===0)return;
   try{
-    const hist=JSON.parse(localStorage.getItem(LS+'history')||'[]');
+    const hist=await dbHistGetAll();
     const anyFail=ST.results.some(r=>!r.pass);
     const anyWarn=ST.results.some(r=>r.sunLimited&&r.pass);
     const overall=anyFail?(ST.results.some(r=>r.overLimit)?'fail':'warn'):anyWarn?'warn':'ok';
@@ -1068,18 +1140,26 @@ function saveToHistory(){
       numImpulse:ST.numImpulse,
       gpsCoords:ST.gpsCoords,
       gpsAddr:ST.gpsAddr,
-      results:ST.results,
+      // Strip stepPhoto from results to save localStorage space — store separately
+      results:ST.results.map(r=>({...r,stepPhoto:null})),
       overall,
       prAdresse:$('p-adr').value,
-      prPruefer:$('p-pruefer').value,
+      prPruefer:$('p-pruefer').value||localStorage.getItem(LS+'pruefer')||'',
       prZaehler:$('p-zaehler').value,
       prBemerk:$('p-bemerk').value,
       prFhe:$('p-fhe').value,
       prFae:$('p-fae').value,
     };
-    hist.push(entry);
-    if(hist.length>MAX_HISTORY) hist.shift(); // remove oldest
-    localStorage.setItem(LS+'history', JSON.stringify(hist));
+    // Generate and store PDF blob
+    let pdfBlob=null;
+    try{const doc=buildPDF();pdfBlob=doc.output('blob');}catch(e){}
+    entry.pdfBlob=pdfBlob;
+    // Keep max MAX_HISTORY entries
+    if(hist.length>=MAX_HISTORY){
+      const oldest=hist.sort((a,b)=>a.ts-b.ts)[0];
+      if(oldest)await dbHistDel(oldest.ts);
+    }
+    await dbHistPut(entry);
   }catch(e){console.warn('History save:',e);}
 }
 
@@ -1087,40 +1167,24 @@ function showHistory(){show('setup');switchTab('hist');}
 
 function renderHistoryList(){/* kept for compat */renderHistoryInline();}
 
-function loadHistoryEntry(e){
-  // Restore ST from history entry
-  ST.results=e.results||[];
-  ST.refPower=e.refPower||null;
-  ST.anlageKw=e.anlageKw||null; ST.anlageFak=e.anlageFak||1; ST.anlageBase=e.anlageBase||null;
-  ST.wandler=e.wandler||1; ST.impConst=e.impConst||1000; ST.numImpulse=e.numImpulse||10;
-  ST.gpsCoords=e.gpsCoords||null; ST.gpsAddr=e.gpsAddr||'';
-  ST.anlageNr=e.harnessId||''; ST.zaehlerNr=e.zaehlerNr||'';
-  ST.fheNr=e.fheNr||''; ST.faeCode=e.faeCode||'';
-  ST.photos=[];
-  renderProto();
-  renderPhotos();
-  if(e.prAdresse)$('p-adr').value=e.prAdresse;
-  if(e.prPruefer)$('p-pruefer').value=e.prPruefer;
-  if(e.prZaehler)$('p-zaehler').value=e.prZaehler;
-  if(e.prBemerk)$('p-bemerk').value=e.prBemerk;
-  if(e.prFhe)$('p-fhe').value=e.prFhe;
-  if(e.prFae)$('p-fae').value=e.prFae;
-  if(e.datum)$('p-datum').value=e.datum;
-  loadSig();
-  show('proto');
+async function loadHistoryEntry(e){
+  // Open stored PDF directly
+  if(e.pdfBlob){
+    const url=URL.createObjectURL(e.pdfBlob);
+    window.open(url,'_blank');
+    setTimeout(()=>URL.revokeObjectURL(url),15000);
+  } else {
+    alert('Kein PDF gespeichert für diesen Eintrag.');
+  }
 }
 
-function deleteHistEntry(i){
+async function deleteHistEntry(ts){
   if(!confirm('Diesen Eintrag löschen?'))return;
-  try{
-    const hist=JSON.parse(localStorage.getItem(LS+'history')||'[]');
-    hist.splice(i,1);
-    localStorage.setItem(LS+'history',JSON.stringify(hist));
-    renderHistoryList();
-  }catch(e){}
+  try{await dbHistDel(ts);}catch(e){}
+  await renderHistoryInline();
 }
 
-function clearAll(){
+async function clearAll(){
   if(!confirm('Wirklich ALLES löschen?\n(Historie, Unterschrift, Prüfername, aktuelle Testdaten)'))return;
   try{
     [LS+'test',LS+'photos',LS+'history',LS+'signature',LS+'pruefer'].forEach(k=>{
@@ -1188,7 +1252,7 @@ function clearSig(){
 }
 function clearSigPad(){clearSig();}
 
-function saveSig(){
+async function saveSig(){
   if(!sigCtx||!sigHasData){alert('Bitte zuerst unterschreiben.');return;}
   const dataUrl=$('sig-pad').toDataURL('image/png');
   try{localStorage.setItem(LS+'signature',dataUrl);}catch(e){}
@@ -1267,10 +1331,10 @@ function renderPhotos(){
   const btn=$('photo-btn');
   if(btn) btn.style.display=ST.photos.length>=4?'none':'flex';
 }
-const LS='fae-pv:';
-function saveSetup(){
+// Storage: IndexedDB (see idb* functions below)
+async function saveSetup(){
   try{
-    localStorage.setItem(LS+'setup', JSON.stringify({
+    await dbSet('setup',{
       impSel:$('imp-sel').value,
       impCustom:$('imp-custom').value,
       anlageKw:$('anlage-kw').value,
@@ -1286,14 +1350,14 @@ function saveSetup(){
       zaehlerNr:$('zaehler-nr').value,
       fheNr:$('fhe-nr').value,
       faeCode:$('fae-code').value,
-    }));
-  }catch(e){}
+    });
+  }catch(e){console.warn('saveSetup',e);}
 }
-function loadSetup(){
+async function loadSetup(){
   // Default email pre-fill
   $('email-1').value='rico.grzenner@avacon.de';
   try{
-    const d=JSON.parse(localStorage.getItem(LS+'setup')||'null');
+    const d=await dbGet('setup');
     if(!d)return;
     if(d.impSel){$('imp-sel').value=d.impSel;onImpChange();}
     if(d.impCustom)$('imp-custom').value=d.impCustom;
@@ -1316,25 +1380,27 @@ function loadSetup(){
     onFaktorChange();
   }catch(e){}
 }
-window.addEventListener('DOMContentLoaded', ()=>{
-  loadSetup();
-  loadPruefer();
+window.addEventListener('DOMContentLoaded', async ()=>{
+  await loadSetup();
+  await loadPruefer();
+  initCfgSigPad();
+  await loadCfgSigPreview();
   // Show "letzten Test laden" button if saved test exists
   try{
-    const t=localStorage.getItem(LS+'test');
-    if(t){
-      const d=JSON.parse(t);
+    const d=await dbGet('test');
+    if(d){
+      const _d=d; // already object
       const btn=document.createElement('button');
       btn.className='btn sec';
       btn.style.cssText='width:100%;max-width:430px;text-align:center;';
-      btn.textContent=`📋 Letzten Test laden (${d.datum||'?'})`;
+      btn.textContent=`📋 Letzten Test laden (${_d.datum||'?'})`;
       btn.onclick=loadSavedTest;
       $('setup').querySelector('.s-inner').appendChild(btn);
     }
   }catch(e){}
 });
 
-function saveTest(){
+async function saveTest(){
   try{
     const payload={
       results:ST.results, refPower:ST.refPower,
@@ -1349,19 +1415,17 @@ function saveTest(){
       prBemerk:$('p-bemerk').value,
       datum:$('p-datum').value,
     };
-    localStorage.setItem(LS+'test', JSON.stringify(payload));
+    await dbSet('test', payload);
     // Step photos stored separately
-    try{localStorage.setItem(LS+'stepPhotos', JSON.stringify(ST.stepPhotos));}
-    catch{console.warn('Step-Fotos zu groß für localStorage');}
+    try{await dbSet('stepPhotos', ST.stepPhotos);}catch(e){}
     // Photos stored separately (can be large)
-    try{localStorage.setItem(LS+'photos', JSON.stringify(ST.photos));}
-    catch{console.warn('Fotos zu groß für localStorage');}
+    try{await dbSet('photos', ST.photos);}catch(e){}
   }catch(e){}
 }
 
-function loadSavedTest(){
+async function loadSavedTest(){
   try{
-    const d=JSON.parse(localStorage.getItem(LS+'test')||'null');
+    const d=await dbGet('test');
     if(!d){alert('Keine gespeicherten Daten gefunden.');return;}
     ST.results=d.results||[];
     ST.refPower=d.refPower||null;
@@ -1385,7 +1449,7 @@ function loadSavedTest(){
   }catch(e){alert('Fehler beim Laden: '+e.message);}
 }
 
-function deleteTest(){
+async function deleteTest(){
   if(!confirm('Aktuellen Testdaten und Fotos löschen?\n(Historie und Unterschrift bleiben erhalten)'))return;
   try{localStorage.removeItem(LS+'test');localStorage.removeItem(LS+'photos');localStorage.removeItem(LS+'stepPhotos');}catch(e){}
   ST.photos=[];
@@ -2096,7 +2160,8 @@ function updateStepUI(){
   $('tol-sec').style.display=(!s.isRef&&!s.isZero)?'block':'none';
   $('btn-zero').style.display=(s.isZero&&!s.isEV)?'block':'none';
   $('btn-ok').disabled=true;
-  $('btn-ok').textContent=s.isEV?'⚡ Eigenverbrauch bestätigen':s.isZero?'✓ Messwert bestätigen':'✓ Bestätigen';
+  $('btn-ok').textContent=s.isEV?'⚡ Eigenverbrauch bestätigen':
+    s.isZero?`✓ Stufe 0 % bestätigen`:`✓ Stufe ${s.pct} % bestätigen`;
   $('cam-hint').textContent=s.isEV?'P− messen — Zähler zeigt Bezug (Eigenverbrauch)':
     s.isZero?'Kein Impuls erwartet – LED still':'ROI auf LED — antippen zum Positionieren';
   setPDir(s.pDirDef);
@@ -2167,25 +2232,49 @@ function advance(){
 }
 
 // ── PROTOCOL ────────────────────────────────────────────────
-function showProto(){
+async function showProto(){
   if(ST.stream){ST.stream.getTracks().forEach(t=>t.stop());ST.stream=null;}
   cancelAnimationFrame(ST.raf);
   camOpen=false;
   renderProto();
   renderPhotos();
   $('p-datum').value=new Date().toLocaleDateString('de-DE');
-  loadPruefer();
+  await loadPruefer();
   initSigPad();
-  loadSig();
+  await loadSig();
   // Auto-save prüfer on change
   $('p-pruefer').onblur=savePruefer;
-  saveTest();
-  saveToHistory(); // push to history ring buffer
+  await saveTest();
+  await saveToHistory();
   show('proto');
 }
 
-// ── PDF & EMAIL ───────────────────────────────────────────────
-function buildPDF(){
+// ── PRINT via PDF (same as email) ────────────────────────────
+async function printPDF(){
+  let doc;
+  try{doc=await buildPDF();}
+  catch(e){alert('PDF-Fehler: '+e.message);return;}
+  const blob=doc.output('blob');
+  const url=URL.createObjectURL(blob);
+  const win=window.open(url,'_blank');
+  if(!win) doc.save(`FRE-Protokoll-${$('p-nr').value||'Anlage'}.pdf`);
+  setTimeout(()=>URL.revokeObjectURL(url),10000);
+}
+
+// ── EMAIL ADDRESSES from localStorage fallback ────────────────
+async function getEmails(){
+  let e1=$('email-1')?.value||'';
+  let e2=$('email-2')?.value||'';
+  let e3=$('email-3')?.value||'';
+  if(!e1&&!e2&&!e3){
+    try{
+      const d=await dbGet('setup')||{};
+      e1=d.email1||'';e2=d.email2||'';e3=d.email3||'';
+    }catch{}
+  }
+  return [e1,e2,e3].filter(Boolean);
+}
+async function buildPDF(){
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF({unit:'mm',format:'a4'});
   const pw=210,lm=15,rw=pw-lm*2;
@@ -2240,7 +2329,6 @@ function buildPDF(){
     ['FRE-Code',                 $('p-fae').value||'—'],
     ['Adresse',                  adresseDisplay],
     ['Generatorleistung',        genLeistungStr],
-    ['Impulskonstante',          ST.impConst+' imp/kWh'],
     ['Wandlerfaktor',            ST.wandler>1?Math.round(ST.wandler).toString():'Direktmessung'],
   ];
   if(gpsCoordsLine) info.push(['GPS-Koordinaten', gpsCoordsLine]);
@@ -2326,7 +2414,7 @@ function buildPDF(){
 
   // Signature line
   try{
-    const sigData=localStorage.getItem(LS+'signature');
+    const sigData=await dbGet('signature');
     if(sigData){
       doc.addImage(sigData,'PNG',lm,y,60,18,'','FAST');
       doc.line(lm,y+20,lm+65,y+20);
@@ -2382,11 +2470,11 @@ function buildPDF(){
 }
 
 async function sendEmail(){
-  const emails=[$('email-1').value,$('email-2').value,$('email-3').value].filter(Boolean);
-  const subject=`FRE Prüfprotokoll – ${$('p-nr').value||'Anlage'} – ${$('p-datum').value}`;
+  const emails=await getEmails();
+  const subject=`FRE Pruefprotokoll – ${$('p-nr').value||'Anlage'} – ${$('p-datum').value}`;
 
   let doc;
-  try{ doc=buildPDF(); }
+  try{ doc=await buildPDF(); }
   catch(e){
     alert('PDF-Erzeugung fehlgeschlagen: '+e.message+'\nBitte jsPDF-Skript laden (HTTPS erforderlich).');
     return;
