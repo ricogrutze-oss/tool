@@ -439,6 +439,10 @@ hr.sep{border:none;border-top:1px solid var(--panel-border);margin:16px 0;}
       <option value="">– Vorlage wählen –</option>
       <option value="direkt">Direktmessung (NS, bis 63/100 A)</option>
       <option value="halbindirekt">Halbindirekte Messung (Stromwandler, NS bis 1000 A)</option>
+      <option value="umspannwerk">Umspannwerk (Beispiel: 2 Trafos → Sammelschiene → mehrere Zähler)</option>
+      <option value="umspannwerk_voll">Umspannwerk komplett (3× Eingangsmessung+Trafo, Sammelschiene, Untermessungen, Eigenbedarf)</option>
+      <option value="umspannwerk_dreiwickler">Umspannwerk Dreiwicklungstrafo (1 OS, 2 US-Ebenen, je eigene Sammelschiene)</option>
+      <option value="umspannwerk_vierwickler">Umspannwerk Vierwicklungstrafo (1 OS, 3 US-Ebenen, je eigene Sammelschiene)</option>
       <option value="indirekt">Indirekte Messung (Strom-/Spannungswandler, MS/HS)</option>
       <optgroup label="MK A · Einzelne Erzeugungsanlage">
         <option value="a1">MK A1 · Volleinspeisung</option>
@@ -476,6 +480,10 @@ hr.sep{border:none;border-top:1px solid var(--panel-border);margin:16px 0;}
     <button class="symbol-btn" data-add="trafo">
       <span class="ic"><svg viewBox="0 0 26 26"><circle cx="13" cy="13" r="10" fill="none" stroke="#1c2733" stroke-width="2"/><circle cx="13" cy="9" r="5.5" fill="none" stroke="#1c2733" stroke-width="1.3"/><circle cx="13" cy="17" r="5.5" fill="none" stroke="#1c2733" stroke-width="1.3"/></svg></span>
       Transformator (MS/NS-Übergang)
+    </button>
+    <button class="symbol-btn" data-add="sammelschiene">
+      <span class="ic"><svg viewBox="0 0 26 26"><rect x="2" y="11" width="22" height="4" fill="#1c2733"/><line x1="6" y1="15" x2="4" y2="20" stroke="#1c2733" stroke-width="1.3"/><line x1="13" y1="15" x2="13" y2="20" stroke="#1c2733" stroke-width="1.3"/><line x1="20" y1="15" x2="22" y2="20" stroke="#1c2733" stroke-width="1.3"/></svg></span>
+      Sammelschiene
     </button>
     <button class="symbol-btn" data-add="zaehler">
       <span class="ic"><svg viewBox="0 0 26 26"><rect x="3" y="4" width="20" height="18" fill="none" stroke="#1c2733" stroke-width="2"/><rect x="3" y="4" width="20" height="6" fill="#1c2733"/><text x="13" y="18" font-size="8" text-anchor="middle" font-family="IBM Plex Mono">kWh</text></svg></span>
@@ -599,11 +607,14 @@ const TYPE_DEFS = {
   steuerung:   { w:64,  h:64,  shape:'circle' },
   fae:         { w:56,  h:56,  shape:'circle' },
   trafo:       { w:90,  h:90,  shape:'circle' },
+  sammelschiene: { w:260, h:34, shape:'busbar' },
   notiz:       { w:170, h:90,  shape:'note' },
   text:        { w:140, h:34,  shape:'text' }
 };
 
 const NETZFORMEN = ['230 V','400 V','20 kV','110 kV'];
+// Normspannungsebenen (DIN/IEC-Reihe) zur Auswahl an Trafowicklungen, statt Freitext
+const TRAFO_SPANNUNGEN = ['0,4 kV','6 kV','10 kV','15 kV','20 kV','30 kV','60 kV','110 kV','220 kV','380 kV'];
 const ZAEHLERTYPEN = ['Direktmessung (ohne Wandler)','Halbindirekte Messung (nur Stromwandler)','Indirekte Messung (Strom- und Spannungswandler)'];
 const ANLAGENTYPEN = ['Bezug / Verbraucher','PV-Erzeugungsanlage','BHKW-Erzeugungsanlage','Windkraftanlage','Speicher (Batterie)','PV + Speicher (DC-gekoppelt)','Wärmepumpe (steuerbar)','Klimaanlage (steuerbar)','Ladeeinrichtung / Wallbox (steuerbar)'];
 const VERBRAUCHER_ARTIG = [0,6,7,8]; // Anlagentypen, die wie ein Verbraucher (Zacken-Symbol) dargestellt werden
@@ -624,7 +635,8 @@ function defaultProps(type){
   if(type==='anlage') return { anlagentyp: ANLAGENTYPEN[0], label:'', anlagennummer:'', leistung:'', kapazitaet:'', kwp:'', wechselrichterKw:'', ladeleistung:'', status:'vorhanden' };
   if(type==='steuerung') return { label:'Steuerungseinrichtung', anlagennummer:'', status:'vorhanden' };
   if(type==='fae') return { label:'FAE (Freischaltelement)', anlagennummer:'', status:'vorhanden' };
-  if(type==='trafo') return { label:'Transformator', primaerspannung:'20 kV', sekundaerspannung:'0,4 kV', leistungKva:'', anlagennummer:'', status:'vorhanden' };
+  if(type==='trafo') return { label:'Transformator', primaerspannung:'110 kV', sekundaerspannung:'20 kV', sekundaerspannung2:'', sekundaerspannung3:'', leistungKva:'', anlagennummer:'', status:'vorhanden' };
+  if(type==='sammelschiene') return { label:'Sammelschiene', spannungsebene:'20 kV', anlagennummer:'', status:'vorhanden' };
   if(type==='notiz') return { label:'Notiz eintragen…' };
   if(type==='text') return { label:'Text' };
   return {};
@@ -689,6 +701,7 @@ const ALLOWED_PTS = {
   steuerung:   ['n','e'],
   fae:         ['e'],
   trafo:       ['n','s'],
+  sammelschiene: ['n','s'],
   notiz:       [],
   text:        []
 };
@@ -937,20 +950,41 @@ function drawShape(g, n){
     const circ = document.createElementNS(SVGNS,'circle');
     circ.setAttribute('r', r); circ.setAttribute('class','node-shape'+(n.props.status==='geplant'?' planned':''));
     g.appendChild(circ);
-    // Klassisches Trafo-Symbol: zwei überlappende Kreise (Wicklungen)
-    [[-1,-8],[1,8]].forEach(([dir,dy])=>{
+    // Klassisches Trafo-Symbol: überlappende Kreise je Wicklung (1 OS + bis zu 3 US)
+    const secCount = [n.props.sekundaerspannung, n.props.sekundaerspannung2, n.props.sekundaerspannung3].filter(Boolean).length;
+    let windingCircles;
+    if(secCount>=3) windingCircles = [[0,-11],[-11,4],[0,10],[11,4]];       // OS oben, 3 US im Fächer
+    else if(secCount===2) windingCircles = [[0,-9],[-8,7],[8,7]];          // OS oben, 2 US im Dreieck
+    else windingCircles = [[0,-8],[0,8]];                                  // OS/US übereinander
+    windingCircles.forEach(([cx,cy])=>{
       const c = document.createElementNS(SVGNS,'circle');
-      c.setAttribute('cx',0); c.setAttribute('cy',dy); c.setAttribute('r',13);
+      c.setAttribute('cx',cx); c.setAttribute('cy',cy); c.setAttribute('r', secCount>=2?10:13);
       c.setAttribute('fill','none'); c.setAttribute('stroke','#1c2733'); c.setAttribute('stroke-width','1.4');
       g.appendChild(c);
     });
-    addLabel(g, n.props.primaerspannung||'', -r-8, 'lbl-type');
-    const specLine = [n.props.sekundaerspannung||'', n.props.leistungKva?n.props.leistungKva+' kVA':''].filter(Boolean).join(' · ');
+    addLabel(g, `OS: ${n.props.primaerspannung||'–'}`, -r-8, 'lbl-type');
+    const usLabel = secCount>=2
+      ? [n.props.sekundaerspannung&&`US1: ${n.props.sekundaerspannung}`, n.props.sekundaerspannung2&&`US2: ${n.props.sekundaerspannung2}`, n.props.sekundaerspannung3&&`US3: ${n.props.sekundaerspannung3}`].filter(Boolean).join(' / ')
+      : `US: ${n.props.sekundaerspannung||'–'}`;
     addLabel(g, n.props.label||'Transformator', r+14, 'lbl-sub');
-    addLabel(g, specLine, r+28, 'lbl-sub');
-    if(n.props.anlagennummer) addLabel(g, n.props.anlagennummer, r+42, 'lbl-sub');
+    addLabel(g, usLabel, r+28, 'lbl-sub');
+    const kvaLine = n.props.leistungKva ? n.props.leistungKva+' kVA' : '';
+    if(kvaLine) addLabel(g, kvaLine, r+42, 'lbl-sub');
+    if(n.props.anlagennummer) addLabel(g, n.props.anlagennummer, r+(kvaLine?56:42), 'lbl-sub');
     if(n.props.status==='geplant'){
-      addLabel(g, '(geplant)', r+ (n.props.anlagennummer?56:42), 'lbl-planned');
+      addLabel(g, '(geplant)', r+ (kvaLine&&n.props.anlagennummer?70:(kvaLine||n.props.anlagennummer?56:42)), 'lbl-planned');
+    }
+  } else if(n.type==='sammelschiene'){
+    const bar = document.createElementNS(SVGNS,'rect');
+    bar.setAttribute('x',-w/2); bar.setAttribute('y',-5);
+    bar.setAttribute('width',w); bar.setAttribute('height',10);
+    bar.setAttribute('class','node-shape'+(n.props.status==='geplant'?' planned':''));
+    g.appendChild(bar);
+    addLabel(g, n.props.spannungsebene||'', -22, 'lbl-type');
+    const line2 = [n.props.label||'Sammelschiene', n.props.anlagennummer].filter(Boolean).join(' · ');
+    addLabel(g, line2, 26, 'lbl-sub');
+    if(n.props.status==='geplant'){
+      addLabel(g, '(geplant)', 40, 'lbl-planned');
     }
   } else if(n.type==='notiz'){
     const rect = document.createElementNS(SVGNS,'rect');
@@ -1478,10 +1512,19 @@ function renderProps(){
       box.appendChild(hint2);
     } else if(n.type==='trafo'){
       box.appendChild(fieldText('Bezeichnung', n.props.label, v=>{ n.props.label=v; render(); }, 'z.B. Transformator'));
-      box.appendChild(fieldText('Primärspannung', n.props.primaerspannung, v=>{ n.props.primaerspannung=v; render(); }, 'z.B. 20 kV'));
-      box.appendChild(fieldText('Sekundärspannung', n.props.sekundaerspannung, v=>{ n.props.sekundaerspannung=v; render(); }, 'z.B. 0,4 kV'));
+      box.appendChild(fieldSelect('Oberspannungsseite (OS)', n.props.primaerspannung, TRAFO_SPANNUNGEN, v=>{ n.props.primaerspannung=v; render(); }));
+      box.appendChild(fieldSelect('Unterspannungsseite 1 (US1)', n.props.sekundaerspannung, TRAFO_SPANNUNGEN, v=>{ n.props.sekundaerspannung=v; render(); }));
+      box.appendChild(fieldSelect('Unterspannungsseite 2 (US2, optional)', n.props.sekundaerspannung2||'', ['', ...TRAFO_SPANNUNGEN], v=>{ n.props.sekundaerspannung2=v; render(); renderProps(); }));
+      if(n.props.sekundaerspannung2){
+        box.appendChild(fieldSelect('Unterspannungsseite 3 (US3, optional)', n.props.sekundaerspannung3||'', ['', ...TRAFO_SPANNUNGEN], v=>{ n.props.sekundaerspannung3=v; render(); }));
+      }
       box.appendChild(fieldText('Nennleistung (kVA)', n.props.leistungKva, v=>{ n.props.leistungKva=v; render(); }, 'z.B. 630'));
       box.appendChild(fieldText('Anlagennummer', n.props.anlagennummer, v=>{ n.props.anlagennummer=v; render(); }, 'z.B. ONT-12'));
+      box.appendChild(fieldCheckbox('In Planung (noch nicht vorhanden)', n.props.status==='geplant', v=>{ n.props.status = v ? 'geplant' : 'vorhanden'; render(); }));
+    } else if(n.type==='sammelschiene'){
+      box.appendChild(fieldText('Bezeichnung', n.props.label, v=>{ n.props.label=v; render(); }, 'z.B. Sammelschiene I'));
+      box.appendChild(fieldSelect('Spannungsebene', n.props.spannungsebene, TRAFO_SPANNUNGEN, v=>{ n.props.spannungsebene=v; render(); }));
+      box.appendChild(fieldText('Anlagennummer', n.props.anlagennummer, v=>{ n.props.anlagennummer=v; render(); }, 'z.B. SS-1'));
       box.appendChild(fieldCheckbox('In Planung (noch nicht vorhanden)', n.props.status==='geplant', v=>{ n.props.status = v ? 'geplant' : 'vorhanden'; render(); }));
     } else if(n.type==='notiz'){
       box.appendChild(fieldTextarea('Notiztext', n.props.label, v=>{ n.props.label=v; render(); }, 'z.B. Zähler wird 2027 im Zuge der Sanierung getauscht'));
@@ -1620,6 +1663,108 @@ function loadTemplate(key){
     const n1 = addNode('netz', cx, 100, {locked:true, props:{netzform:'20 kV'}, silent:true});
     const n2 = addNode('zaehler', cx, 260, {locked:true, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[2], messlokation:'Z1', stromPrimaer:'300', stromSekundaer:'5', spannungPrimaer:'20000', spannungSekundaer:'100'}, silent:true});
     conns.push(conn(n1,'s',n2,'n',true));
+
+  } else if(key==='umspannwerk'){ // Beispiel: ankommende Leitung → 2 Trafos → gemeinsame Sammelschiene → mehrere Messungen
+    const n1 = addNode('netz', cx, 60, {locked:true, props:{netzform:'110 kV'}, silent:true});
+    const n2 = addNode('trafo', cx-160, 220, {locked:false, props:{primaerspannung:'110 kV', sekundaerspannung:'20 kV', leistungKva:'25000', label:'Trafo 1'}, silent:true});
+    const n3 = addNode('trafo', cx+160, 220, {locked:false, props:{primaerspannung:'110 kV', sekundaerspannung:'20 kV', leistungKva:'25000', label:'Trafo 2'}, silent:true});
+    const n4 = addNode('sammelschiene', cx, 380, {locked:false, extPoints:['s'], props:{spannungsebene:'20 kV', label:'Sammelschiene I'}, silent:true});
+    const n5 = addNode('zaehler', cx-220, 520, {locked:false, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[2], messlokation:'Z1', stromPrimaer:'300', stromSekundaer:'5', spannungPrimaer:'20000', spannungSekundaer:'100'}, silent:true});
+    const n6 = addNode('zaehler', cx+30, 520, {locked:false, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[2], messlokation:'Z2', stromPrimaer:'300', stromSekundaer:'5', spannungPrimaer:'20000', spannungSekundaer:'100'}, silent:true});
+    const n7 = addNode('zaehler', cx+280, 520, {locked:false, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[2], messlokation:'Z3', stromPrimaer:'300', stromSekundaer:'5', spannungPrimaer:'20000', spannungSekundaer:'100'}, silent:true});
+    conns.push(conn(n1,'s',n2,'n',true));
+    conns.push(conn(n1,'s',n3,'n',true));
+    conns.push(conn(n2,'s',n4,'n',false));
+    conns.push(conn(n3,'s',n4,'n',false));
+    conns.push(conn(n4,'s',n5,'n',false));
+    conns.push(conn(n4,'s',n6,'n',false));
+    conns.push(conn(n4,'s',n7,'n',false));
+
+  } else if(key==='umspannwerk_voll'){ // Vollständig: 3× (110kV-Messung → Trafo) → 20kV-Sammelschiene → Untermessungen + Eigenbedarf
+    const n1 = addNode('netz', cx, 0, {locked:true, props:{netzform:'110 kV'}, silent:true});
+    const hsZaehlerProps = { zaehlertyp:ZAEHLERTYPEN[2], stromPrimaer:'300', stromSekundaer:'5', spannungPrimaer:'110000', spannungSekundaer:'100' };
+
+    const n2 = addNode('zaehler', cx-200, 160, {locked:false, extPoints:['s'], props:{...hsZaehlerProps, messlokation:'ZM1', label:'Messung vor Trafo 1'}, silent:true});
+    const n3 = addNode('trafo', cx-200, 340, {locked:false, props:{primaerspannung:'110 kV', sekundaerspannung:'20 kV', leistungKva:'25000', label:'Trafo 1'}, silent:true});
+
+    const n4 = addNode('zaehler', cx, 160, {locked:false, extPoints:['s'], props:{...hsZaehlerProps, messlokation:'ZM2', label:'Messung vor Trafo 2'}, silent:true});
+    const n5 = addNode('trafo', cx, 340, {locked:false, props:{primaerspannung:'110 kV', sekundaerspannung:'20 kV', leistungKva:'25000', label:'Trafo 2'}, silent:true});
+
+    const n6 = addNode('zaehler', cx+200, 160, {locked:false, extPoints:['s'], props:{...hsZaehlerProps, messlokation:'ZM3', label:'Messung vor Trafo 3'}, silent:true});
+    const n7 = addNode('trafo', cx+200, 340, {locked:false, props:{primaerspannung:'110 kV', sekundaerspannung:'20 kV', leistungKva:'25000', label:'Trafo 3'}, silent:true});
+
+    const n8 = addNode('sammelschiene', cx, 500, {locked:false, extPoints:['s'], props:{spannungsebene:'20 kV', label:'Sammelschiene 20 kV'}, silent:true});
+
+    const n9 = addNode('zaehler', cx-260, 640, {locked:false, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[2], messlokation:'Z1', stromPrimaer:'300', stromSekundaer:'5', spannungPrimaer:'20000', spannungSekundaer:'100'}, silent:true});
+    const n10 = addNode('zaehler', cx-30, 640, {locked:false, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[2], messlokation:'Z2', stromPrimaer:'300', stromSekundaer:'5', spannungPrimaer:'20000', spannungSekundaer:'100'}, silent:true});
+    const n11 = addNode('zaehler', cx+200, 640, {locked:false, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[2], messlokation:'Z3', stromPrimaer:'300', stromSekundaer:'5', spannungPrimaer:'20000', spannungSekundaer:'100'}, silent:true});
+
+    // Eigenbedarf: eigener kleiner Trafo 20 kV → 0,4 kV, dahinter der Eigenbedarfszähler
+    const n12 = addNode('trafo', cx+460, 640, {locked:false, props:{primaerspannung:'20 kV', sekundaerspannung:'0,4 kV', leistungKva:'250', label:'Trafo Eigenbedarf'}, silent:true});
+    const n13 = addNode('zaehler', cx+460, 800, {locked:false, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[1], messlokation:'ZEB', label:'Eigenbedarfszähler', stromPrimaer:'100', stromSekundaer:'5'}, silent:true});
+    const n14 = addNode('anlage', cx+460, 940, {locked:false, props:{anlagentyp:ANLAGENTYPEN[0], label:'Eigenbedarf Umspannwerk'}, silent:true});
+
+    conns.push(conn(n1,'s',n2,'n',true));
+    conns.push(conn(n2,'s',n3,'n',false));
+    conns.push(conn(n1,'s',n4,'n',true));
+    conns.push(conn(n4,'s',n5,'n',false));
+    conns.push(conn(n1,'s',n6,'n',true));
+    conns.push(conn(n6,'s',n7,'n',false));
+    conns.push(conn(n3,'s',n8,'n',false));
+    conns.push(conn(n5,'s',n8,'n',false));
+    conns.push(conn(n7,'s',n8,'n',false));
+    conns.push(conn(n8,'s',n9,'n',false));
+    conns.push(conn(n8,'s',n10,'n',false));
+    conns.push(conn(n8,'s',n11,'n',false));
+    conns.push(conn(n8,'s',n12,'n',false));
+    conns.push(conn(n12,'s',n13,'n',false));
+    conns.push(conn(n13,'s',n14,'n',false));
+
+  } else if(key==='umspannwerk_dreiwickler'){ // 1 Trafo mit 2 Unterspannungsseiten (z.B. OS 110kV, US1 20kV, US2 10kV) → je eigene Sammelschiene
+    const n1 = addNode('netz', cx, 0, {locked:true, props:{netzform:'110 kV'}, silent:true});
+    const n2 = addNode('zaehler', cx, 160, {locked:false, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[2], messlokation:'ZM1', label:'Messung vor Trafo', stromPrimaer:'300', stromSekundaer:'5', spannungPrimaer:'110000', spannungSekundaer:'100'}, silent:true});
+    const n3 = addNode('trafo', cx, 320, {locked:false, props:{primaerspannung:'110 kV', sekundaerspannung:'20 kV', sekundaerspannung2:'10 kV', leistungKva:'25000', label:'Dreiwicklungstrafo'}, silent:true});
+    const n4 = addNode('sammelschiene', cx-200, 480, {locked:false, extPoints:['s'], props:{spannungsebene:'20 kV', label:'Sammelschiene 20 kV'}, silent:true});
+    const n5 = addNode('sammelschiene', cx+200, 480, {locked:false, extPoints:['s'], props:{spannungsebene:'10 kV', label:'Sammelschiene 10 kV'}, silent:true});
+    const n6 = addNode('zaehler', cx-200, 640, {locked:false, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[2], messlokation:'Z1', stromPrimaer:'300', stromSekundaer:'5', spannungPrimaer:'20000', spannungSekundaer:'100'}, silent:true});
+    const n7 = addNode('zaehler', cx+200, 640, {locked:false, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[2], messlokation:'Z2', stromPrimaer:'300', stromSekundaer:'5', spannungPrimaer:'10000', spannungSekundaer:'100'}, silent:true});
+    const n8 = addNode('trafo', cx+450, 640, {locked:false, props:{primaerspannung:'10 kV', sekundaerspannung:'0,4 kV', leistungKva:'250', label:'Trafo Eigenbedarf'}, silent:true});
+    const n9 = addNode('zaehler', cx+450, 800, {locked:false, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[1], messlokation:'ZEB', label:'Eigenbedarfszähler', stromPrimaer:'100', stromSekundaer:'5'}, silent:true});
+    const n10 = addNode('anlage', cx+450, 940, {locked:false, props:{anlagentyp:ANLAGENTYPEN[0], label:'Eigenbedarf Umspannwerk'}, silent:true});
+    conns.push(conn(n1,'s',n2,'n',true));
+    conns.push(conn(n2,'s',n3,'n',false));
+    conns.push(conn(n3,'s',n4,'n',false));
+    conns.push(conn(n3,'s',n5,'n',false));
+    conns.push(conn(n4,'s',n6,'n',false));
+    conns.push(conn(n5,'s',n7,'n',false));
+    conns.push(conn(n5,'s',n8,'n',false));
+    conns.push(conn(n8,'s',n9,'n',false));
+    conns.push(conn(n9,'s',n10,'n',false));
+
+  } else if(key==='umspannwerk_vierwickler'){ // 1 Trafo mit 3 Unterspannungsseiten (z.B. OS 110kV, US1 30kV, US2 15kV, US3 10kV) → je eigene Sammelschiene
+    const n1 = addNode('netz', cx, 0, {locked:true, props:{netzform:'110 kV'}, silent:true});
+    const n2 = addNode('zaehler', cx, 160, {locked:false, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[2], messlokation:'ZM1', label:'Messung vor Trafo', stromPrimaer:'300', stromSekundaer:'5', spannungPrimaer:'110000', spannungSekundaer:'100'}, silent:true});
+    const n3 = addNode('trafo', cx, 320, {locked:false, props:{primaerspannung:'110 kV', sekundaerspannung:'30 kV', sekundaerspannung2:'15 kV', sekundaerspannung3:'10 kV', leistungKva:'40000', label:'Vierwicklungstrafo'}, silent:true});
+    const n4 = addNode('sammelschiene', cx-300, 480, {locked:false, extPoints:['s'], props:{spannungsebene:'30 kV', label:'Sammelschiene 30 kV'}, silent:true});
+    const n5 = addNode('sammelschiene', cx, 480, {locked:false, extPoints:['s'], props:{spannungsebene:'15 kV', label:'Sammelschiene 15 kV'}, silent:true});
+    const n6 = addNode('sammelschiene', cx+300, 480, {locked:false, extPoints:['s'], props:{spannungsebene:'10 kV', label:'Sammelschiene 10 kV'}, silent:true});
+    const n7 = addNode('zaehler', cx-300, 640, {locked:false, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[2], messlokation:'Z1', stromPrimaer:'300', stromSekundaer:'5', spannungPrimaer:'30000', spannungSekundaer:'100'}, silent:true});
+    const n8 = addNode('zaehler', cx, 640, {locked:false, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[2], messlokation:'Z2', stromPrimaer:'300', stromSekundaer:'5', spannungPrimaer:'15000', spannungSekundaer:'100'}, silent:true});
+    const n9 = addNode('zaehler', cx+300, 640, {locked:false, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[2], messlokation:'Z3', stromPrimaer:'300', stromSekundaer:'5', spannungPrimaer:'10000', spannungSekundaer:'100'}, silent:true});
+    const n10 = addNode('trafo', cx+560, 640, {locked:false, props:{primaerspannung:'10 kV', sekundaerspannung:'0,4 kV', leistungKva:'250', label:'Trafo Eigenbedarf'}, silent:true});
+    const n11 = addNode('zaehler', cx+560, 800, {locked:false, extPoints:['s'], props:{zaehlertyp:ZAEHLERTYPEN[1], messlokation:'ZEB', label:'Eigenbedarfszähler', stromPrimaer:'100', stromSekundaer:'5'}, silent:true});
+    const n12 = addNode('anlage', cx+560, 940, {locked:false, props:{anlagentyp:ANLAGENTYPEN[0], label:'Eigenbedarf Umspannwerk'}, silent:true});
+    conns.push(conn(n1,'s',n2,'n',true));
+    conns.push(conn(n2,'s',n3,'n',false));
+    conns.push(conn(n3,'s',n4,'n',false));
+    conns.push(conn(n3,'s',n5,'n',false));
+    conns.push(conn(n3,'s',n6,'n',false));
+    conns.push(conn(n4,'s',n7,'n',false));
+    conns.push(conn(n5,'s',n8,'n',false));
+    conns.push(conn(n6,'s',n9,'n',false));
+    conns.push(conn(n6,'s',n10,'n',false));
+    conns.push(conn(n10,'s',n11,'n',false));
+    conns.push(conn(n11,'s',n12,'n',false));
 
   } else if(key==='a1'){ // Volleinspeisung: ein Zähler (Bezug+Lieferung), volle Einspeisung der EA
     const n1 = addNode('netz', cx, 100, {locked:true, props:{netzform:'400 V'}, silent:true});
@@ -2070,7 +2215,10 @@ function buildExportSvgDataUrl(){
   if(anlTypes.has(ANLAGENTYPEN[5])) legendItems.push('○ geteilt (G + Batterie) = PV + Speicher, DC-gekoppelt');
   if(nodes.some(n=>n.type==='steuerung')) legendItems.push('○ „S" = Steuerungseinrichtung (Steuergerät)');
   if(nodes.some(n=>n.type==='fae')) legendItems.push('○ „FAE" = Freischaltelement');
-  if(nodes.some(n=>n.type==='trafo')) legendItems.push('○ zwei Kreise übereinander = Transformator (MS/NS-Übergang)');
+  if(nodes.some(n=>n.type==='trafo' && !n.props.sekundaerspannung2)) legendItems.push('○ zwei Kreise übereinander = Transformator (MS/NS-Übergang)');
+  if(nodes.some(n=>n.type==='trafo' && n.props.sekundaerspannung2 && !n.props.sekundaerspannung3)) legendItems.push('○ drei Kreise im Dreieck = Dreiwicklungstransformator');
+  if(nodes.some(n=>n.type==='trafo' && n.props.sekundaerspannung3)) legendItems.push('○ vier Kreise im Fächer = Vierwicklungstransformator');
+  if(nodes.some(n=>n.type==='sammelschiene')) legendItems.push('▬ Balken = Sammelschiene');
   if(nodes.some(n=>n.type==='notiz')) legendItems.push('▭ gelbe Haftnotiz = Anmerkung');
   const netzVoltageClasses = new Set(nodes.filter(n=>n.type==='netz').map(n=>voltageClass(n.props.netzform)));
   if(netzVoltageClasses.size>1) legendItems.push('Netz-Farbe: grün = NS, blau = MS, rot = HS');
