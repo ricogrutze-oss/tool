@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>FRE Test – PV Anlage</title>
+<title>FRE + NA-Schutz Test – PV Anlage</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
@@ -39,6 +39,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);}
 .tab.active{background:rgba(240,165,0,.15);color:var(--accent);}
 
 /* Back link */
+.back-link{
   display:flex;align-items:center;gap:.35rem;
   font-family:var(--mono);font-size:.68rem;color:var(--muted);
   text-decoration:none;padding:.3rem 0;
@@ -57,7 +58,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);}
 .s-row{display:flex;gap:.5rem;align-items:stretch;}
 .s-lbl{font-family:var(--mono);font-size:.62rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.25rem;}
 
-input[type=number],input[type=text],select{
+input[type=number],input[type=text],input[type=email],select{
   background:var(--card);border:1px solid var(--border);color:var(--text);
   font-family:var(--mono);font-size:.92rem;padding:.55rem .75rem;outline:none;width:100%;
 }
@@ -220,7 +221,6 @@ input::placeholder{color:var(--muted);}
 .pfield.full{grid-column:1/-1;}
 .pfield input{font-size:.82rem;padding:.48rem .65rem;}
 
-/* Pulse count control */
 /* Detection controls */
 .det-ctrl{background:#0a0e14;border-bottom:1px solid var(--border);flex-shrink:0;}
 .det-rows{padding:.5rem .9rem .6rem;display:flex;flex-direction:column;gap:.4rem;}
@@ -304,12 +304,6 @@ input::placeholder{color:var(--muted);}
 .cam-toggle-btn::after{content:'▼';margin-left:auto;font-size:.65rem;}
 .cam-toggle-btn.open::after{content:'▲';}
 
-/* Manual primary styling */
-.manual-ctrl{
-  padding:.6rem 1rem .7rem;border-top:1px solid var(--border);
-  border-bottom:1px solid var(--border);flex-shrink:0;
-}
-
 /* P+/P- Direction chips */
 .pdir-row{
   display:flex;align-items:center;gap:.5rem;padding:.35rem 1rem;
@@ -387,6 +381,47 @@ input::placeholder{color:var(--muted);}
 .man-kw-calc{font-family:var(--mono);font-size:.7rem;color:var(--accent);}
 .manual-active{background:rgba(240,165,0,.08);border-color:rgba(240,165,0,.3);}
 
+/* ── NA-SCHUTZ ── */
+#na{padding:0;}
+.na-body{padding:.8rem 1rem 1.2rem;display:flex;flex-direction:column;gap:.9rem;max-width:560px;width:100%;margin:0 auto;}
+.na-hint{font-family:var(--mono);font-size:.66rem;line-height:1.5;color:var(--muted);}
+.na-hint.warn{color:var(--accent);}
+.na-card{
+  background:var(--card);border:1px solid var(--border);border-left:3px solid var(--border);
+  padding:.6rem .7rem;display:flex;flex-direction:column;gap:.45rem;
+}
+.na-card.ok{border-left-color:var(--green);}
+.na-card.fail{border-left-color:var(--red);}
+.na-card.open{border-left-color:var(--accent);}
+.na-card.ng{opacity:.6;}
+.na-card-hdr{display:flex;align-items:baseline;gap:.5rem;}
+.na-k{font-family:var(--mono);color:var(--accent);font-size:.9rem;min-width:2.6rem;}
+.na-l{font-size:.8rem;font-weight:600;flex:1;}
+.na-st{font-family:var(--mono);font-size:.68rem;text-align:right;}
+.na-st.ok{color:var(--green);} .na-st.fail{color:var(--red);}
+.na-st.open{color:var(--accent);} .na-st.ng{color:var(--muted);}
+.na-grid{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;}
+.na-f{display:flex;flex-direction:column;gap:.15rem;}
+.na-f span{font-family:var(--mono);font-size:.58rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;}
+.na-f input,.na-f select{font-size:.85rem;padding:.42rem .55rem;}
+.na-win{font-family:var(--mono);font-size:.62rem;color:var(--muted);line-height:1.5;}
+.na-opts{display:flex;gap:1rem;flex-wrap:wrap;}
+.na-chk{display:flex;align-items:center;gap:.5rem;padding:.5rem 0;border-bottom:1px solid var(--border);}
+.na-chk-t{flex:1;font-size:.8rem;line-height:1.35;}
+.tri{display:flex;gap:.25rem;flex-shrink:0;}
+.tri-b{
+  background:var(--card);border:1px solid var(--border);color:var(--muted);
+  font-family:var(--mono);font-size:.66rem;padding:.3rem .5rem;cursor:pointer;border-radius:10px;
+}
+.tri-b.on.ok{background:rgba(63,185,80,.15);border-color:var(--green);color:var(--green);}
+.tri-b.on.fail{background:rgba(248,81,73,.15);border-color:var(--red);color:var(--red);}
+.tri-b.on.ng{background:rgba(125,133,144,.2);border-color:var(--muted);color:var(--text);}
+.na-rtable th,.na-rtable td{font-size:.68rem;padding:.4rem .35rem;}
+.na-rtable td:nth-child(5),.na-rtable td:nth-child(6){text-align:center;}
+.na-plist{font-family:var(--mono);font-size:.72rem;display:flex;flex-direction:column;gap:.3rem;}
+.na-plist .r{display:flex;gap:.5rem;}
+.na-plist .r b{min-width:4.5rem;font-weight:400;}
+
 /* ── PRINT ── */
 @media print{
   .no-print{display:none!important;}
@@ -398,14 +433,11 @@ input::placeholder{color:var(--muted);}
     font-family:Helvetica,Arial,sans-serif;font-size:9pt;
   }
   .p-hdr{color:#000;font-size:14pt;font-weight:bold;}
-  /* Meta table */
   .p-meta{display:grid;grid-template-columns:1fr 1fr;gap:.15cm .4cm;}
   .p-meta-item .ml{color:#555;font-size:7pt;text-transform:uppercase;letter-spacing:.03em;font-family:Helvetica,Arial,sans-serif;}
   .p-meta-item .mv{color:#000;font-size:8.5pt;font-family:Helvetica,Arial,sans-serif;letter-spacing:0;word-break:break-word;}
-  /* GPS box */
   .gps-box{background:#f8f8f8;border:1px solid #ccc;border-left:3px solid #2d6a4f;padding:4pt 8pt;}
   .gps-box .ga,.gps-box .gc{color:#333;}
-  /* All text in print: no mono font, no letter-spacing */
   #proto *{font-family:Helvetica,Arial,sans-serif!important;letter-spacing:0!important;}
   #proto .rtable{font-size:8.5pt;}
   .rtable th{
@@ -415,28 +447,24 @@ input::placeholder{color:var(--muted);}
   .rtable td{padding:5pt 4pt;border-bottom:none;color:#000;}
   .rtable td:nth-child(2),.rtable td:nth-child(3),.rtable td:nth-child(4){text-align:right;}
   .pi{color:#2d6a4f;font-weight:bold;} .fi{color:#c00;font-weight:bold;} .wi{color:#c07800;font-weight:bold;}
-  /* Gesamt banner */
   .gesamt{border:1pt solid #ccc;padding:4pt 8pt;font-weight:bold;font-size:9pt;}
   .gesamt.ok{color:#2d6a4f;border-color:#2d6a4f;}
   .gesamt.warn{color:#c07800;border-color:#c07800;}
   .gesamt.fail{color:#c00;border-color:#c00;}
-  /* Fields */
+  .sec-hdr{color:#000;border-bottom:1pt solid #999;}
   .pfields{display:grid;grid-template-columns:1fr 1fr;gap:.3cm .4cm;margin-top:.3cm;}
   .pfield input{border-bottom:1pt solid #999;border-top:none;border-left:none;border-right:none;
     color:#000;background:white;font-size:8.5pt;padding:1pt 0;width:100%;}
   .pfield.full{grid-column:1/-1;}
-  /* Signature */
   .sig-wrap{display:none!important;}
   #sig-display{display:block!important;margin-top:.4cm;}
   #sig-display img{max-height:18mm;border-bottom:1pt solid #999;display:block;}
   #sig-display p{font-size:7pt;color:#555;margin-top:2pt;}
-  /* Photos on separate page */
   .photo-section{page-break-before:always;margin-top:0;}
   .photo-grid{display:grid;grid-template-columns:1fr 1fr;gap:.4cm;}
   .photo-item{aspect-ratio:4/3;break-inside:avoid;}
   .photo-item img{width:100%;height:100%;object-fit:cover;}
   .pdel{display:none!important;}
-  /* Step photo captions */
   #step-photos-proto{display:flex!important;flex-wrap:wrap;gap:.3cm;}
   #step-photos-proto div img{width:4cm;height:4cm;object-fit:cover;}
 }
@@ -460,7 +488,7 @@ input::placeholder{color:var(--muted);}
 
   <div class="s-title">
     <h1>Funk-Rundsteuer&shy;empfänger-Test</h1>
-    <p>PV-Anlage · Einspeisemanagement gem. § 9 EEG 2023</p>
+    <p>PV-Anlage · Einspeisemanagement gem. § 9 EEG 2023 · NA-Schutz gem. VDE-AR-N 4105</p>
   </div>
 
   <!-- ANLAGE -->
@@ -493,7 +521,7 @@ input::placeholder{color:var(--muted);}
     <div>
       <div class="s-lbl">FRE-Seriennummer</div>
       <div class="s-row">
-        <input type="text" id="fhe-nr" placeholder="FRE-Seriennummer-Nummer eingeben" style="flex:1;"/>
+        <input type="text" id="fhe-nr" placeholder="FRE-Seriennummer eingeben" style="flex:1;"/>
         <button class="btn sec" onclick="openQR('fhe-nr')">📷 QR</button>
       </div>
     </div>
@@ -507,8 +535,19 @@ input::placeholder{color:var(--muted);}
     </div>
   </div>
 
-  <!-- MESSUNG -->
+  <!-- PRÜFUMFANG -->
   <div class="s-section">
+    <div class="sec-hdr">Prüfumfang</div>
+    <select id="pruef-umfang" onchange="onUmfang(true)">
+      <option value="fre">Nur FRE-Test</option>
+      <option value="fre_na">FRE-Test + NA-Schutz</option>
+      <option value="na">Nur NA-Schutz</option>
+    </select>
+    <div class="na-hint" id="na-hint"></div>
+  </div>
+
+  <!-- MESSUNG -->
+  <div class="s-section" id="sec-messung">
     <div class="sec-hdr">Messung</div>
 
     <div>
@@ -774,11 +813,65 @@ input::placeholder{color:var(--muted);}
   </div>
 </div>
 
+<!-- ═══ NA-SCHUTZ ═══ -->
+<div id="na" class="screen">
+  <div class="step-hdr">
+    <div>
+      <div class="step-n" id="na-step-n">NA-Schutz · VDE-AR-N 4105</div>
+      <div class="step-l">NA-Schutz</div>
+    </div>
+    <button class="btn sec" onclick="naCancel()" style="width:auto;padding:.4rem .9rem;">Abbrechen</button>
+  </div>
+  <div class="na-body">
+
+    <div class="s-section">
+      <div class="sec-hdr">Foto NA-Schutz</div>
+      <div id="na-foto-box" style="display:none;" class="photo-item">
+        <img id="na-foto-img" alt="NA-Schutz"/>
+        <button class="pdel" onclick="naFotoDel()">×</button>
+      </div>
+      <button class="btn sec" id="na-foto-btn" onclick="naFotoTake()" style="width:100%;text-align:center;">📷 Foto NA-Schutz aufnehmen</button>
+      <input type="file" id="na-foto-inp" accept="image/*" capture="environment" style="display:none" onchange="naFotoTaken(this)">
+    </div>
+
+    <div class="s-section">
+      <div class="sec-hdr">Ausführung NA-Schutz</div>
+      <div class="na-hint" id="na-art-hint"></div>
+      <div class="radio-row" style="flex-direction:column;gap:.6rem;">
+        <label class="radio-lbl" id="na-art-int-lbl">
+          <input type="radio" name="na-art" value="integriert" onchange="naSet('art',this.value)"> Integriert im Wechselrichter
+        </label>
+        <label class="radio-lbl">
+          <input type="radio" name="na-art" value="extern" onchange="naSet('art',this.value)"> Externes Schaltgerät (zentraler NA-Schutz + Kuppelschalter)
+        </label>
+      </div>
+    </div>
+
+    <div class="s-section">
+      <div class="sec-hdr">Funktionsprüfung</div>
+      <div class="na-chk" style="border-bottom:none;">
+        <div class="na-chk-t">NA-Schutz löst aus / Anlage trennt vom Netz</div>
+        <div class="tri">
+          <button class="tri-b" id="na-f-ok" onclick="naSet('func','ok')">i.O.</button>
+          <button class="tri-b" id="na-f-fail" onclick="naSet('func','fail')">Mangel</button>
+        </div>
+      </div>
+      <label class="na-f"><span>Ausschaltzeit (ms) – optional</span>
+        <input type="number" inputmode="decimal" id="na-taus" step="1" placeholder="z.B. 120" oninput="naSet('tAus',this.value)"></label>
+      <label class="na-f"><span>Bemerkung – optional</span>
+        <input type="text" id="na-bemerk" oninput="naSet('bemerk',this.value)"></label>
+    </div>
+
+    <div id="na-sum" class="gesamt"></div>
+    <button class="btn grn" onclick="naFinish()">✓ NA-Prüfung abschließen → Protokoll</button>
+  </div>
+</div>
+
 <!-- ═══ PROTOCOL ═══ -->
 <div id="proto" class="screen">
   <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:.2rem;">
     <a href="../" class="back-link no-print">Übersicht</a>
-    <div class="p-hdr" style="flex:1;">FRE Prüfprotokoll</div>
+    <div class="p-hdr" id="p-title" style="flex:1;">FRE Prüfprotokoll</div>
     <div style="width:5rem;"></div>
   </div>
 
@@ -791,12 +884,16 @@ input::placeholder{color:var(--muted);}
     <div class="gc" id="gps-pc">—</div>
   </div>
 
-  <table class="rtable">
-    <thead><tr>
-      <th>Stufe</th><th>Soll (kW)</th><th>Ist (kW)</th><th>% Basis</th><th>Ergebnis</th>
-    </tr></thead>
-    <tbody id="rtbody"></tbody>
-  </table>
+  <div id="fre-proto">
+    <table class="rtable">
+      <thead><tr>
+        <th>Stufe</th><th>Soll (kW)</th><th>Ist (kW)</th><th>% Basis</th><th>Ergebnis</th>
+      </tr></thead>
+      <tbody id="rtbody"></tbody>
+    </table>
+  </div>
+
+  <div id="na-proto" style="display:none;flex-direction:column;gap:.6rem;"></div>
 
   <div class="pfields">
     <div class="pfield full">
@@ -887,6 +984,7 @@ input::placeholder{color:var(--muted);}
 
 <script>
 'use strict';
+const LS='fre-test-';
 const U=400,S3=Math.sqrt(3);
 const toA=kw=>kw*1000/(U*S3);
 const f=(v,d)=>v.toFixed(d);
@@ -906,6 +1004,8 @@ const ST={
   stable:false, curPwr:null, lastPulseMs:0, manualPwr:null,
   sensitivity:50, refractory:40, useIR:false,
   qrStream:null, qrRaf:null, qrRunning:false, bdector:null, qrTarget:'anlage-nr',
+  umfang:'fre',            // 'fre' | 'fre_na' | 'na'
+  na:null,                 // NA-Schutz-Prüfdaten
 };
 
 function switchTab(tab){
@@ -954,9 +1054,7 @@ function initCfgSigPad(){
     cfgLastX=p.x;cfgLastY=p.y;cfgHasData=true;
   },{passive:false});
   c.addEventListener('touchend',()=>cfgDrawing=false);
-  // Load existing signature preview
   loadCfgSigPreview();
-  // Load saved name
   try{const v=localStorage.getItem(LS+'pruefer');if(v)$('cfg-pruefer').value=v;}catch(e){}
 }
 
@@ -992,22 +1090,23 @@ async function renderHistoryInline(){
   const list=$('hist-list-inline');
   if(!list)return;
   let hist=[];
-  try{hist=JSON.parse(localStorage.getItem(LS+'history')||'[]');}catch(e){}
+  try{hist=await dbHistGetAll();}catch(e){}
+  hist.sort((a,b)=>a.ts-b.ts);
   list.innerHTML='';
   if(hist.length===0){
     list.innerHTML='<div class="hist-empty">Noch keine Tests gespeichert.</div>';
     return;
   }
-  [...hist].reverse().forEach((e,ri)=>{
-    const i=hist.length-1-ri;
+  [...hist].reverse().forEach(e=>{
     const icon=e.overall==='ok'?'✓':e.overall==='warn'?'⚠':'✗';
+    const scope=e.umfang==='na'?'NA':e.umfang==='fre_na'?'FRE+NA':'FRE';
     const item=document.createElement('div');
     item.className='hist-item '+e.overall;
     item.innerHTML=`
       <div class="hist-icon">${icon}</div>
       <div class="hist-info">
         <div class="hist-title">${e.harnessId||e.zaehlerNr||'Anlage'}</div>
-        <div class="hist-sub">${e.anlageKw?e.anlageKw+' kWp':'—'} · ${e.datum||'—'} · ${e.gpsAddr||e.prAdresse||''}</div>
+        <div class="hist-sub">${scope} · ${e.anlageKw?e.anlageKw+' kWp':'—'} · ${e.datum||'—'} · ${e.gpsAddr||e.prAdresse||''}</div>
       </div>
       <button class="hist-del" onclick="event.stopPropagation();deleteHistEntry(${e.ts})">×</button>
     `;
@@ -1016,9 +1115,9 @@ async function renderHistoryInline(){
   });
 }
 
-function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$(id).classList.add('active');}
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$(id).classList.add('active');$(id).scrollTop=0;}
 // ══════════════════════════════════════════════════════════════
-// IndexedDB Storage (replaces localStorage — 500 MB limit)
+// IndexedDB Storage
 // ══════════════════════════════════════════════════════════════
 const DB_NAME='fre-test-v1', DB_VER=1;
 let _db=null;
@@ -1079,11 +1178,10 @@ async function dbHistDel(ts){
     r.onsuccess=()=>res();r.onerror=()=>rej(r.error);
   });
 }
-async function dbClearAll(){
+async function dbHistClear(){
   const d=await openDB();
   return new Promise((res,rej)=>{
-    const t=d.transaction(['kv','history'],'readwrite');
-    t.objectStore('kv').clear();
+    const t=d.transaction('history','readwrite');
     t.objectStore('history').clear();
     t.oncomplete=()=>res();t.onerror=()=>rej(t.error);
   });
@@ -1114,19 +1212,146 @@ const STEPS_UEBERSCHUSS=[
 ];
 let STEPS=STEPS_VOLL;
 
+// ══════════════════════════════════════════════════════════════
+// NA-SCHUTZ (VDE-AR-N 4105) – Kurzprüfung
+// ══════════════════════════════════════════════════════════════
+const NA_THRESHOLD_KW=30;      // ab > 30 kW NA-Prüfung vorschlagen
+const NA_EXTERN_KW=135;        // > 135 kW: externes Schaltgerät Pflicht
+const NA_ART_TXT={integriert:'Integriert im Wechselrichter',extern:'Externes Schaltgerät'};
+
+function naExternPflicht(){return ST.anlageKw!=null&&ST.anlageKw>NA_EXTERN_KW;}
+
+function naInit(){
+  ST.na={art:naExternPflicht()?'extern':null,func:null,tAus:'',bemerk:'',foto:null};
+}
+
+function naOverall(){
+  if(!ST.na) return null;
+  const n=ST.na;
+  if(n.func==='fail') return {cls:'fail',txt:'✗ NA-Schutz NICHT BESTANDEN',pdf:'NICHT BESTANDEN'};
+  if(n.art==='integriert'&&naExternPflicht())
+    return {cls:'fail',txt:`✗ NA-Schutz: > ${NA_EXTERN_KW} kW externes Schaltgerät erforderlich`,pdf:`MANGEL - > ${NA_EXTERN_KW} kW externes Schaltgeraet erforderlich`};
+  if(n.func!=='ok'||!n.art) return {cls:'warn',txt:'⚠ NA-Schutz nicht vollständig geprüft',pdf:'nicht vollstaendig geprueft'};
+  return {cls:'ok',txt:'✓ NA-Schutz BESTANDEN',pdf:'BESTANDEN'};
+}
+
+function renderNAScreen(){
+  const n=ST.na, pflicht=naExternPflicht();
+  const kw=ST.anlageKw;
+  $('na-art-hint').className='na-hint'+(pflicht?' warn':'');
+  $('na-art-hint').textContent=pflicht
+    ?`Anlage ${kw} kW > ${NA_EXTERN_KW} kW → externes Schaltgerät vorgeschrieben.`
+    :`${NA_THRESHOLD_KW}–${NA_EXTERN_KW} kW: im Wechselrichter integriert oder externes Schaltgerät zulässig.`;
+  document.querySelectorAll('input[name=na-art]').forEach(r=>{
+    r.checked=r.value===n.art;
+    if(r.value==='integriert') r.disabled=pflicht;
+  });
+  $('na-art-int-lbl').style.opacity=pflicht?'.4':'1';
+  $('na-taus').value=n.tAus; $('na-bemerk').value=n.bemerk;
+  renderNAFoto(); renderNAFunc(); updateNASummary();
+}
+function renderNAFunc(){
+  $('na-f-ok').className='tri-b'+(ST.na.func==='ok'?' on ok':'');
+  $('na-f-fail').className='tri-b'+(ST.na.func==='fail'?' on fail':'');
+}
+function naSet(k,v){
+  if(k==='func') v=ST.na.func===v?null:v;
+  ST.na[k]=v;
+  if(k==='func') renderNAFunc();
+  updateNASummary();
+}
+function updateNASummary(){
+  const o=naOverall(), el=$('na-sum');
+  if(!o||!el) return;
+  el.className='gesamt '+o.cls; el.textContent=o.txt;
+}
+
+function naFotoTake(){$('na-foto-inp').value='';$('na-foto-inp').click();}
+function naFotoTaken(inp){
+  const file=inp.files[0];if(!file)return;
+  compressPhoto(file,800,0.70).then(d=>{if(d){ST.na.foto=d;renderNAFoto();}});
+}
+function naFotoDel(){ST.na.foto=null;renderNAFoto();}
+function renderNAFoto(){
+  const has=!!ST.na.foto;
+  $('na-foto-box').style.display=has?'block':'none';
+  if(has) $('na-foto-img').src=ST.na.foto;
+  $('na-foto-btn').textContent=has?'📷 Foto ersetzen':'📷 Foto NA-Schutz aufnehmen';
+}
+
+function openNA(){
+  if(ST.stream){ST.stream.getTracks().forEach(t=>t.stop());ST.stream=null;}
+  cancelAnimationFrame(ST.raf);
+  renderNAScreen();
+  $('na-step-n').textContent=(ST.umfang==='fre_na'?'Teil 2 · ':'')+'NA-Schutz · '+(ST.anlageKw?ST.anlageKw+' kW':'');
+  show('na');
+}
+
+function naFinish(){
+  const n=ST.na;
+  if(!n.art){alert('Bitte Ausführung des NA-Schutzes wählen.');return;}
+  if(!n.func&&!confirm('Funktionsprüfung nicht bewertet.\nTrotzdem abschließen?'))return;
+  showProto();
+}
+
+function naCancel(){
+  if(!confirm('NA-Prüfung abbrechen und zurück zum Start?\n(Eingaben dieser Prüfung gehen verloren)'))return;
+  show('setup');
+}
+
+function renderNAProto(){
+  const box=$('na-proto');
+  if(!ST.na){box.style.display='none';box.innerHTML='';return;}
+  const n=ST.na, o=naOverall();
+  const fTxt=n.func==='ok'?'<span class="pi" style="font-size:.85rem;">✓ i.O.</span>'
+    :n.func==='fail'?'<span class="fi" style="font-size:.85rem;">✗ Mangel</span>'
+    :'<span class="wi" style="font-size:.85rem;">nicht bewertet</span>';
+  const esc=t=>String(t).replace(/</g,'&lt;');
+  const meta=[
+    ['Ausführung', n.art?NA_ART_TXT[n.art]:'—'],
+    ['Funktion', fTxt],
+    ['Ausschaltzeit', n.tAus!==''&&n.tAus!=null?esc(n.tAus)+' ms':'—'],
+  ];
+  if(n.bemerk) meta.push(['Bemerkung NA', esc(n.bemerk)]);
+  let h=`<div class="sec-hdr">NA-Schutz (VDE-AR-N 4105)</div>
+    <div class="p-meta">${meta.map(([l,v])=>`<div class="p-meta-item"><span class="ml">${l}</span><span class="mv">${v}</span></div>`).join('')}</div>`;
+  if(n.foto) h+=`<img src="${n.foto}" alt="NA-Schutz" style="width:100%;max-width:260px;border:1px solid var(--border);border-radius:2px;">`;
+  box.innerHTML=h;
+  box.style.display='flex';
+}
+
 // ── HISTORY ──────────────────────────────────────────────────
 const MAX_HISTORY=10;
+const RANK={ok:0,warn:1,fail:2};
+
+function freOverall(){
+  if(!ST.results||ST.results.length===0) return null;
+  let anyOverFail=false, anyUnderFail=false, anyWarn=false;
+  ST.results.forEach(r=>{
+    if(!r.pass){ if(r.overLimit) anyOverFail=true; else anyUnderFail=true; }
+    else if(r.sunLimited) anyWarn=true;
+  });
+  if(anyOverFail)  return {cls:'fail',txt:'✗ FRE NICHT BESTANDEN – Übereinspeisung erkannt'};
+  if(anyUnderFail) return {cls:'warn',txt:'⚠ FRE NICHT BESTANDEN – Mindereinspeisung'};
+  if(anyWarn)      return {cls:'warn',txt:'⚠ FRE BESTANDEN – Sonnen-limitiert (nicht vollst. prüfbar)'};
+  return {cls:'ok',txt:'✓ FRE VOLLSTÄNDIG BESTANDEN'};
+}
+function combinedOverall(){
+  const parts=[freOverall(),naOverall()].filter(Boolean);
+  if(!parts.length) return null;
+  const cls=parts.reduce((a,p)=>RANK[p.cls]>RANK[a]?p.cls:a,'ok');
+  return {cls,parts};
+}
 
 async function saveToHistory(){
-  if(!ST.results||ST.results.length===0)return;
+  const ov=combinedOverall();
+  if(!ov)return;
   try{
     const hist=await dbHistGetAll();
-    const anyFail=ST.results.some(r=>!r.pass);
-    const anyWarn=ST.results.some(r=>r.sunLimited&&r.pass);
-    const overall=anyFail?(ST.results.some(r=>r.overLimit)?'fail':'warn'):anyWarn?'warn':'ok';
     const entry={
       ts:Date.now(),
       datum:new Date().toLocaleDateString('de-DE'),
+      umfang:ST.umfang,
       harnessId:ST.anlageNr,
       zaehlerNr:ST.zaehlerNr,
       fheNr:ST.fheNr,
@@ -1140,9 +1365,9 @@ async function saveToHistory(){
       numImpulse:ST.numImpulse,
       gpsCoords:ST.gpsCoords,
       gpsAddr:ST.gpsAddr,
-      // Strip stepPhoto from results to save localStorage space — store separately
       results:ST.results.map(r=>({...r,stepPhoto:null})),
-      overall,
+      na:ST.na?JSON.parse(JSON.stringify(ST.na)):null,
+      overall:ov.cls,
       prAdresse:$('p-adr').value,
       prPruefer:$('p-pruefer').value||localStorage.getItem(LS+'pruefer')||'',
       prZaehler:$('p-zaehler').value,
@@ -1150,11 +1375,9 @@ async function saveToHistory(){
       prFhe:$('p-fhe').value,
       prFae:$('p-fae').value,
     };
-    // Generate and store PDF blob
     let pdfBlob=null;
-    try{const doc=buildPDF();pdfBlob=doc.output('blob');}catch(e){}
+    try{const doc=await buildPDF();pdfBlob=doc.output('blob');}catch(e){}
     entry.pdfBlob=pdfBlob;
-    // Keep max MAX_HISTORY entries
     if(hist.length>=MAX_HISTORY){
       const oldest=hist.sort((a,b)=>a.ts-b.ts)[0];
       if(oldest)await dbHistDel(oldest.ts);
@@ -1163,12 +1386,9 @@ async function saveToHistory(){
   }catch(e){console.warn('History save:',e);}
 }
 
-function showHistory(){show('setup');switchTab('hist');}
-
 function renderHistoryList(){/* kept for compat */renderHistoryInline();}
 
 async function loadHistoryEntry(e){
-  // Open stored PDF directly
   if(e.pdfBlob){
     const url=URL.createObjectURL(e.pdfBlob);
     window.open(url,'_blank');
@@ -1186,16 +1406,15 @@ async function deleteHistEntry(ts){
 
 async function clearAll(){
   if(!confirm('Wirklich ALLES löschen?\n(Historie, Unterschrift, Prüfername, aktuelle Testdaten)'))return;
-  try{
-    [LS+'test',LS+'photos',LS+'history',LS+'signature',LS+'pruefer'].forEach(k=>{
-      try{localStorage.removeItem(k);}catch(e){}
-    });
-  }catch(e){}
-  ST.results=[];ST.photos=[];ST.refPower=null;
+  [LS+'signature',LS+'pruefer'].forEach(k=>{try{localStorage.removeItem(k);}catch(e){}});
+  try{await dbDel('test');await dbDel('photos');await dbDel('stepPhotos');await dbHistClear();}catch(e){}
+  ST.results=[];ST.photos=[];ST.refPower=null;ST.na=null;
   clearSigPad();
   $('sig-display').style.display='none';
+  const pv=$('cfg-sig-preview');if(pv)pv.style.display='none';
   alert('Alles gelöscht.');
   show('setup');
+  renderHistoryInline();
 }
 
 // ── PRÜFER NAME (persistent) ──────────────────────────────────
@@ -1288,7 +1507,7 @@ function onPhotoTaken(input){
   compressPhoto(file,800,0.70).then(dataUrl=>{
     ST.photos.push(dataUrl);
     renderPhotos();
-    saveTest(); // auto-save after each photo
+    saveTest();
   });
 }
 
@@ -1331,7 +1550,7 @@ function renderPhotos(){
   const btn=$('photo-btn');
   if(btn) btn.style.display=ST.photos.length>=4?'none':'flex';
 }
-// Storage: IndexedDB (see idb* functions below)
+
 async function saveSetup(){
   try{
     await dbSet('setup',{
@@ -1354,7 +1573,6 @@ async function saveSetup(){
   }catch(e){console.warn('saveSetup',e);}
 }
 async function loadSetup(){
-  // Default email pre-fill
   $('email-1').value='rico.grzenner@avacon.de';
   try{
     const d=await dbGet('setup');
@@ -1382,18 +1600,17 @@ async function loadSetup(){
 }
 window.addEventListener('DOMContentLoaded', async ()=>{
   await loadSetup();
-  await loadPruefer();
+  onUmfang(false);
+  loadPruefer();
   initCfgSigPad();
-  await loadCfgSigPreview();
-  // Show "letzten Test laden" button if saved test exists
+  loadCfgSigPreview();
   try{
     const d=await dbGet('test');
     if(d){
-      const _d=d; // already object
       const btn=document.createElement('button');
       btn.className='btn sec';
       btn.style.cssText='width:100%;max-width:430px;text-align:center;';
-      btn.textContent=`📋 Letzten Test laden (${_d.datum||'?'})`;
+      btn.textContent=`📋 Letzten Test laden (${d.datum||'?'})`;
       btn.onclick=loadSavedTest;
       $('setup').querySelector('.s-inner').appendChild(btn);
     }
@@ -1406,9 +1623,11 @@ async function saveTest(){
       results:ST.results, refPower:ST.refPower,
       anlageKw:ST.anlageKw, anlageFak:ST.anlageFak, anlageBase:ST.anlageBase,
       wandler:ST.wandler, impConst:ST.impConst, numImpulse:ST.numImpulse,
+      einspeisemodus:ST.einspeisemodus, eigenverbrauch:ST.eigenverbrauch,
       gpsCoords:ST.gpsCoords, gpsAddr:ST.gpsAddr,
       anlageNr:ST.anlageNr, zaehlerNr:ST.zaehlerNr,
       fheNr:ST.fheNr, faeCode:ST.faeCode,
+      umfang:ST.umfang, na:ST.na,
       prAdresse:$('p-adr').value,
       prPruefer:$('p-pruefer').value,
       prZaehler:$('p-zaehler').value,
@@ -1416,9 +1635,7 @@ async function saveTest(){
       datum:$('p-datum').value,
     };
     await dbSet('test', payload);
-    // Step photos stored separately
     try{await dbSet('stepPhotos', ST.stepPhotos);}catch(e){}
-    // Photos stored separately (can be large)
     try{await dbSet('photos', ST.photos);}catch(e){}
   }catch(e){}
 }
@@ -1431,13 +1648,13 @@ async function loadSavedTest(){
     ST.refPower=d.refPower||null;
     ST.anlageKw=d.anlageKw||null; ST.anlageFak=d.anlageFak||1; ST.anlageBase=d.anlageBase||null;
     ST.wandler=d.wandler||1; ST.impConst=d.impConst||1000; ST.numImpulse=d.numImpulse||10;
+    ST.einspeisemodus=d.einspeisemodus||'voll'; ST.eigenverbrauch=d.eigenverbrauch??null;
     ST.gpsCoords=d.gpsCoords||null; ST.gpsAddr=d.gpsAddr||'';
     ST.anlageNr=d.anlageNr||''; ST.zaehlerNr=d.zaehlerNr||'';
     ST.fheNr=d.fheNr||''; ST.faeCode=d.faeCode||'';
-    // Load step photos
-    try{ST.stepPhotos=JSON.parse(localStorage.getItem(LS+'stepPhotos')||'{}');}catch(e){ST.stepPhotos={};}
-    // Load photos
-    try{ST.photos=JSON.parse(localStorage.getItem(LS+'photos')||'[]');}catch(e){ST.photos=[];}
+    ST.umfang=d.umfang||'fre'; ST.na=d.na||null;
+    try{ST.stepPhotos=await dbGet('stepPhotos')||{};}catch(e){ST.stepPhotos={};}
+    try{ST.photos=await dbGet('photos')||[];}catch(e){ST.photos=[];}
     renderProto();
     renderPhotos();
     if(d.prAdresse)$('p-adr').value=d.prAdresse;
@@ -1445,23 +1662,27 @@ async function loadSavedTest(){
     if(d.prZaehler)$('p-zaehler').value=d.prZaehler;
     if(d.prBemerk)$('p-bemerk').value=d.prBemerk;
     if(d.datum)$('p-datum').value=d.datum;
+    initSigPad();
+    loadSig();
     show('proto');
   }catch(e){alert('Fehler beim Laden: '+e.message);}
 }
 
 async function deleteTest(){
   if(!confirm('Aktuellen Testdaten und Fotos löschen?\n(Historie und Unterschrift bleiben erhalten)'))return;
-  try{localStorage.removeItem(LS+'test');localStorage.removeItem(LS+'photos');localStorage.removeItem(LS+'stepPhotos');}catch(e){}
+  try{await dbDel('test');await dbDel('photos');await dbDel('stepPhotos');}catch(e){}
   ST.photos=[];
   renderPhotos();
   alert('Testdaten gelöscht.');
   show('setup');
 }
 
-// Render protocol from ST (used by loadSavedTest and showProto)
+// Render protocol from ST
 function renderProto(){
+  const hasFRE=ST.results.length>0;
+  $('p-title').textContent=hasFRE&&ST.na?'FRE + NA-Schutz Prüfprotokoll':ST.na?'NA-Schutz Prüfprotokoll':'FRE Prüfprotokoll';
   const meta=$('p-meta');meta.innerHTML='';
-  const mdata=[
+  const mdata=hasFRE?[
     ['Einspeisemodus', ST.einspeisemodus==='ueberschuss'?'Überschusseinspeisung':'Volleinspeisung'],
     ['Generatorleistung', ST.anlageKw?ST.anlageKw.toFixed(1)+' kWp':'—'],
     ['Ertragsfaktor',   ST.anlageFak?(ST.anlageFak.toFixed(2)+' → '+(ST.anlageBase||0).toFixed(1)+' kW'):'—'],
@@ -1470,6 +1691,8 @@ function renderProto(){
     ['Ref. 100 % (PV)', ST.refPower!=null?f(Math.abs(ST.refPower),3)+' kW':'—'],
     ['Eigenverbrauch Pe',ST.eigenverbrauch!=null?f(ST.eigenverbrauch,3)+' kW':'—'],
     ['Basis Teststufen', ST.anlageBase?ST.anlageBase.toFixed(1)+' kW':'—'],
+  ]:[
+    ['Generatorleistung', ST.anlageKw?ST.anlageKw.toFixed(1)+' kWp':'—'],
   ];
   mdata.forEach(([l,v])=>{
     const d=document.createElement('div');d.className='p-meta-item';
@@ -1485,23 +1708,20 @@ function renderProto(){
   }else{
     $('gps-proto').style.display='none';
   }
+  $('fre-proto').style.display=hasFRE?'block':'none';
   const tb=$('rtbody');tb.innerHTML='';
-  let anyOverFail=false, anyUnderFail=false, anyWarn=false;
   const isVoll=ST.einspeisemodus!=='ueberschuss';
   ST.results.forEach(r=>{
-    // Normalize: Volleinspeisung always positive for display
     const dispPwr = (isVoll && !r.isEVStep) ? Math.abs(r.pwr) : r.pwr;
     const dispPct = r.pctOfBase!==null ? Math.abs(r.pctOfBase) : null;
     const tr=document.createElement('tr');
-    // Soll: always show the numeric target (100% → anlageBase, others → pct% of base)
     const sollStr=f(r.tgt,3);
     const pctStr=dispPct!=null?f(dispPct,1)+' %':'—';
-    const icon_pass=!r.pass;
     let icon, rowStyle='';
     if(!r.pass){
-      if(r.overLimit){icon='<span class="fi" style="font-size:1.25rem;">✗</span>';rowStyle='background:rgba(248,81,73,.06);';anyOverFail=true;}
-      else{icon='<span class="wi" style="font-size:1.25rem;">⚠</span>';rowStyle='background:rgba(240,165,0,.06);';anyUnderFail=true;}
-    }else if(r.sunLimited){icon='<span class="wi" style="font-size:1.25rem;">⚠</span>';anyWarn=true;}
+      if(r.overLimit){icon='<span class="fi" style="font-size:1.25rem;">✗</span>';rowStyle='background:rgba(248,81,73,.06);';}
+      else{icon='<span class="wi" style="font-size:1.25rem;">⚠</span>';rowStyle='background:rgba(240,165,0,.06);';}
+    }else if(r.sunLimited){icon='<span class="wi" style="font-size:1.25rem;">⚠</span>';}
     else{icon='<span class="pi" style="font-size:1.25rem;">✓</span>';}
     tr.style.cssText=rowStyle;
     tr.innerHTML=
@@ -1512,23 +1732,13 @@ function renderProto(){
       `<td style="text-align:center">${icon}</td>`;
     tb.appendChild(tr);
   });
-  // Overall result banner
+  // Overall result banner (FRE + NA kombiniert)
   const banner=$('gesamt-banner');
-  if(ST.results.length>0){
+  const ov=combinedOverall();
+  if(ov){
     banner.style.display='block';
-    if(anyOverFail){
-      banner.className='gesamt fail';
-      banner.textContent='✗ NICHT BESTANDEN – Übereinspeisung erkannt';
-    }else if(anyUnderFail){
-      banner.className='gesamt warn';
-      banner.textContent='⚠ NICHT BESTANDEN – Mindereinspeisung';
-    }else if(anyWarn){
-      banner.className='gesamt warn';
-      banner.textContent='⚠ BESTANDEN – Sonnen-limitiert (nicht vollst. prüfbar)';
-    }else{
-      banner.className='gesamt ok';
-      banner.textContent='✓ VOLLSTÄNDIG BESTANDEN';
-    }
+    banner.className='gesamt '+ov.cls;
+    banner.innerHTML=ov.parts.map(p=>p.txt).join('<br>');
   }else{banner.style.display='none';}
   $('p-nr').value=ST.anlageNr;
   $('p-zaehler').value=ST.zaehlerNr||'';
@@ -1544,22 +1754,44 @@ function renderProto(){
     tb.parentElement.after(spContainer);
   }
   spContainer.innerHTML='';
-  const stepsWithPhotos=ST.results.filter(r=>r.stepPhoto);
-  stepsWithPhotos.forEach(r=>{
+  ST.results.filter(r=>r.stepPhoto).forEach(r=>{
     const div=document.createElement('div');
     div.style.cssText='display:flex;flex-direction:column;align-items:center;gap:.15rem;';
     div.innerHTML=`<img src="${r.stepPhoto}" style="width:80px;height:80px;object-fit:cover;border:1px solid var(--border);border-radius:2px;"/>`+
       `<span style="font-family:var(--mono);font-size:.55rem;color:var(--muted);">${r.lbl}</span>`;
     spContainer.appendChild(div);
   });
+
+  renderNAProto();
 }
 
 // ── SETUP LOGIC ──────────────────────────────────────────────
+let umfangUserSet=false;
+function onUmfang(byUser){
+  if(byUser) umfangUserSet=true;
+  else if(!umfangUserSet){
+    const kw=parseFloat($('anlage-kw').value);
+    $('pruef-umfang').value=(!isNaN(kw)&&kw>NA_THRESHOLD_KW)?'fre_na':'fre';
+  }
+  const v=$('pruef-umfang').value;
+  const kw=parseFloat($('anlage-kw').value);
+  const hint=$('na-hint');
+  if(v==='fre'&&!isNaN(kw)&&kw>NA_THRESHOLD_KW){
+    hint.className='na-hint warn';
+    hint.textContent=`⚠ Anlage > ${NA_THRESHOLD_KW} kW – NA-Schutz-Prüfung erforderlich. Nicht vergessen.`;
+  }else if(v!=='fre'){
+    hint.className='na-hint';
+    hint.textContent='NA-Schutz: Foto, Ausführung (integriert / extern), Funktion und Ausschaltzeit'+(v==='fre_na'?' – im Anschluss an den FRE-Test.':'.');
+  }else{
+    hint.className='na-hint';
+    hint.textContent=`NA-Schutz-Prüfung wird ab ${NA_THRESHOLD_KW} kW automatisch vorgeschlagen.`;
+  }
+  $('sec-messung').style.display=v==='na'?'none':'flex';
+}
 function onAnlageKwChange(){
   const kw=parseFloat($('anlage-kw').value);
+  onUmfang(false);
   if(isNaN(kw)||kw<=0){$('anlage-eff').textContent='= — kW';return;}
-  // Auto-set factor to 0.70 for systems < 100 kW
-  const fak=parseFloat($('anlage-fak').value)||1;
   if(kw<100){
     if(parseFloat($('anlage-fak').value)===1.00||parseFloat($('anlage-fak').value)===1){
       $('anlage-fak').value='0.60';
@@ -1604,12 +1836,12 @@ function onEmodus(){
   $('ev-hint').style.display=v==='ueberschuss'?'block':'none';
 }
 
-function startTest(){
+async function startTest(){
   saveSetup();
-  $('imp-n').textContent=ST.numImpulse;
-  setTimeout(()=>setImpLive(ST.impConst),100);
   const impSel=$('imp-sel').value;
   ST.impConst=impSel==='custom'?parseInt($('imp-custom').value)||1000:parseInt(impSel);
+  $('imp-n').textContent=ST.numImpulse;
+  setTimeout(()=>setImpLive(ST.impConst),100);
   if(document.querySelector('input[name=mtyp]:checked').value==='direkt') ST.wandler=1;
   ST.anlageKw=parseFloat($('anlage-kw').value)||null;
   ST.anlageFak=parseFloat($('anlage-fak').value)||1;
@@ -1619,11 +1851,14 @@ function startTest(){
   ST.fheNr=$('fhe-nr').value.trim();
   ST.faeCode=$('fae-code').value.trim();
   ST.einspeisemodus=document.querySelector('input[name=emodus]:checked').value;
-  // Select step sequence based on mode
+  ST.umfang=$('pruef-umfang').value;
   STEPS = ST.einspeisemodus==='ueberschuss' ? STEPS_UEBERSCHUSS : STEPS_VOLL;
   ST.eigenverbrauch=null;
-  ST.pDir=1; // reset to P+
-  ST.step=0;ST.refPower=null;ST.results=[];
+  ST.pDir=1;
+  ST.step=0;ST.refPower=null;ST.results=[];ST.stepPhotos={};ST.photos=[];
+  ST.na=null;
+  if(ST.umfang!=='fre') naInit();
+  if(ST.umfang==='na'){openNA();return;}
   initTestCam();
   show('test');
 }
@@ -1690,7 +1925,7 @@ async function openQR(targetId){
       $('qr-status').textContent='Kamera aktiv — Automatische Erkennung nicht unterstützt. Bitte manuell eingeben.';
     }
   }catch(e){
-    $('qr-status').textContent='Kamera nicht verfügbar: '+(e.message||'Fehler')+'<br>Bitte manuell eingeben.';
+    $('qr-status').textContent='Kamera nicht verfügbar: '+(e.message||'Fehler')+' – bitte manuell eingeben.';
   }
 }
 async function qrLoopNative(){
@@ -1738,10 +1973,8 @@ function toggleCam(){
   $('cam-toggle-btn').classList.toggle('open',camOpen);
   $('cam-toggle-btn').textContent=camOpen?'📷 Kamera-Impulse ausblenden':'📷 Kamera-Impulse einblenden';
   if(camOpen&&!ST.stream){
-    // Start camera only when user opens the panel
     startCam();
   }else if(!camOpen&&ST.stream){
-    // Stop camera when closed to save battery
     cancelAnimationFrame(ST.raf);
     ST.stream.getTracks().forEach(t=>t.stop());
     ST.stream=null;
@@ -1782,7 +2015,6 @@ ovl.addEventListener('click',e=>{
   resetPulseData();
 });
 
-// Detection parameter controls
 function onSens(el){ST.sensitivity=+el.value;$('sens-val').textContent=el.value+' %';}
 function onRefr(el){ST.refractory=+el.value;$('refr-val').textContent=el.value+' ms';}
 function toggleIR(){
@@ -1790,23 +2022,19 @@ function toggleIR(){
   $('ir-tog').classList.toggle('on',ST.useIR);
 }
 
-// Scope canvas – scrolling raw signal + threshold line
 function drawScope(lum, minL, maxL){
   const sc=$('scope-cv');
   if(!sc) return;
   const ctx=sc.getContext('2d');
   const w=sc.offsetWidth||300, h=40;
   if(sc.width!==w) sc.width=w;
-  // Scroll left
   const img=ctx.getImageData(1,0,w-1,h);
   ctx.putImageData(img,0,0);
   ctx.clearRect(w-1,0,1,h);
-  // Signal sample
   const range=maxL-minL||1;
   const y=h-1-Math.round(((lum-minL)/range)*(h-2));
   ctx.fillStyle=ST.inPulse?'#f0a500':'#3fb950';
   ctx.fillRect(w-1,Math.max(0,Math.min(h-1,y)),1,2);
-  // Threshold line
   const thr=minL+range*(ST.sensitivity/100);
   const ty=h-1-Math.round(((thr-minL)/range)*(h-2));
   ctx.fillStyle='rgba(88,166,255,0.6)';
@@ -1823,7 +2051,6 @@ function startDetection(){
   function getLum(data){
     let s=0;
     if(ST.useIR){
-      // IR mode: red channel only
       for(let i=0;i<data.length;i+=4) s+=data[i];
     } else {
       for(let i=0;i<data.length;i+=4) s+=0.299*data[i]+0.587*data[i+1]+0.114*data[i+2];
@@ -1840,7 +2067,6 @@ function startDetection(){
       fbuf.width=vw; fbuf.height=vh;
       ovlc.width=vw; ovlc.height=vh;
       lastW=vw; lastH=vh;
-      // Default ROI: center 22% × 22% (Blinkzähler-style fixed box)
       if(!ST.roi){
         const rw=Math.round(vw*0.22), rh=Math.round(vh*0.22);
         ST.roi={x:Math.round((vw-rw)/2), y:Math.round((vh-rh)/2), w:rw, h:rh};
@@ -1852,37 +2078,28 @@ function startDetection(){
 
     if(ST.roi){
       const{x,y,w,h}=ST.roi;
-      // Draw ROI rectangle with corner marks
       const cm=10;
       oc.lineWidth=1.5;
       oc.strokeStyle=ST.inPulse?'#f0a500':'rgba(255,255,255,.55)';
       oc.strokeRect(x,y,w,h);
-      // Orange corner marks
       [[x,y,1,1],[x+w,y,-1,1],[x,y+h,1,-1],[x+w,y+h,-1,-1]].forEach(([cx,cy,dx,dy])=>{
         oc.strokeStyle='#f0a500'; oc.lineWidth=2;
         oc.beginPath();oc.moveTo(cx+dx*cm,cy);oc.lineTo(cx,cy);oc.lineTo(cx,cy+dy*cm);oc.stroke();
       });
 
-      // Sample brightness in ROI
       const x0=Math.max(0,x), y0=Math.max(0,y);
       const sw=Math.min(vw-x0,w), sh=Math.min(vh-y0,h);
       if(sw>0&&sh>0){
         const lum=getLum(fctx.getImageData(x0,y0,sw,sh).data);
-
-        // Rolling brightness history ~90 frames ≈ 3s at 30fps
         ST.brightHist.push(lum);
         if(ST.brightHist.length>90) ST.brightHist.shift();
-
         const minL=Math.min(...ST.brightHist);
         const maxL=Math.max(...ST.brightHist);
         const range=maxL-minL;
-
         drawScope(lum, minL, maxL);
-
-        if(range>5){ // need at least 5 luma units of contrast
+        if(range>5){
           const thr=minL+range*(ST.sensitivity/100);
           const now=Date.now();
-
           if(!ST.inPulse && lum>thr && (now-ST.lastPulseMs)>ST.refractory){
             ST.inPulse=true;
             ST.lastPulseMs=now;
@@ -1903,13 +2120,11 @@ function startDetection(){
 
 function setImpLive(val){
   ST.impConst=val;
-  // Update chip active state
   document.querySelectorAll('.imp-chip').forEach(c=>{
-    c.classList.toggle('active', parseInt(c.textContent.replace('.','')==='' ? 0 : c.textContent.replace(/\./g,''))==val);
+    c.classList.toggle('active', parseInt(c.textContent.replace(/\./g,''))===val);
   });
   const lv=$('imp-live-val');
   if(lv) lv.textContent='→ '+val.toLocaleString('de-DE')+' imp/kWh aktiv';
-  // Clear pulses so next reading uses new constant from scratch
   ST.pulses=[];ST.brightHist=[];ST.stable=false;ST.curPwr=null;
 }
 
@@ -1936,13 +2151,11 @@ function removeStepPhoto(){
 }
 function clearStepPhotoUI(){
   const p=$('step-photo-preview');if(p)p.style.display='none';
-  // Show photo for current step if it was already taken
   if(ST.stepPhotos[ST.step]) showStepPhotoPreview(ST.stepPhotos[ST.step]);
 }
 function onManKw(){
   const kw=parseFloat($('man-kw').value);
   if(!isNaN(kw)){
-    // Back-calculate A: primary side (no CT factor)
     const a=(Math.abs(kw)*1000)/(400*S3);
     $('man-a').value=f(a,2);
     $('man-a-kw').textContent=`→ ${f(kw,3)} kW`;
@@ -1953,7 +2166,6 @@ function onManKw(){
 function onManA(){
   const a=parseFloat($('man-a').value);
   if(!isNaN(a)){
-    // Primary side current → P = I × √3 × 400V / 1000  (NO Wandlerfaktor)
     const kw=a*400*S3/1000;
     $('man-kw').value=f(kw,3);
     $('man-a-kw').textContent=`→ ${f(kw,3)} kW`;
@@ -1964,7 +2176,6 @@ function onManA(){
 function useManual(){
   const kw=parseFloat($('man-kw').value);
   if(isNaN(kw)){alert('Bitte kW oder A eingeben.');return;}
-  // Apply pDir sign for Überschusseinspeisung
   const directed=kw*ST.pDir;
   ST.manualPwr=directed;
   ST.curPwr=directed;
@@ -1993,7 +2204,6 @@ function setPDir(dir){
   ST.pDir=dir;
   $('pdir-plus').classList.toggle('active',dir===1);
   $('pdir-minus').classList.toggle('active',dir===-1);
-  // Clear pulses so measurement restarts cleanly
   ST.pulses=[];ST.brightHist=[];ST.stable=false;ST.curPwr=null;
 }
 
@@ -2008,17 +2218,12 @@ function calcPwr(){
   if(rec.length<2)return null;
   let tot=0;for(let i=1;i<rec.length;i++)tot+=rec[i]-rec[i-1];
   const avgMs=tot/(rec.length-1);
-  // Apply pDir: P+ = positive (Einspeisung), P- = negative (Verbrauch)
   return (3600000/(avgMs*ST.impConst))*ST.wandler*ST.pDir;
 }
-// Corrected PV power for Überschusseinspeisung:
-// PV = Pe − directed_P
-// At step 1 (P+, import): directed_P = +Pe → PV = Pe − Pe = 0 (only used to record Pe)
-// At step 2 exporting (P−, calcPwr = negative): PV = Pe − (−|G−Pe|) = Pe + (G−Pe) = G ✓
-// At step 2 importing (P+, calcPwr = positive): PV = Pe − (Pe−G) = G ✓
+// PV = Pe − directed_P (Überschusseinspeisung)
 function getPVPower(directedPwr){
   if(ST.einspeisemodus==='ueberschuss'&&ST.eigenverbrauch!==null){
-    return ST.eigenverbrauch - directedPwr; // Pe − P
+    return ST.eigenverbrauch - directedPwr;
   }
   return directedPwr;
 }
@@ -2035,20 +2240,17 @@ function isStable(){
 
 function updatePwrDisplay(){
   const step=STEPS[ST.step];
+  if(!step) return;
   const isManual=ST.manualPwr!==null;
   const isUE=ST.einspeisemodus==='ueberschuss';
   let rawPwr=isManual?ST.manualPwr:calcPwr();
-  // In Volleinspeisung: always positive (feed-in = magnitude, sign irrelevant)
-  // In Überschusseinspeisung: keep sign (needed for Pe−P formula)
   const pwr = (rawPwr!==null && !isUE && !step.isEV) ? Math.abs(rawPwr) : rawPwr;
   ST.curPwr=pwr;
   if(!isManual) ST.stable=isStable();
 
-  // Wandlerfaktor hint
   $('pwfak').textContent=ST.wandler>1?`× ${ST.wandler.toFixed(2)} (Wandler)`:
     (isUE&&ST.eigenverbrauch!==null?`E = ${ST.eigenverbrauch.toFixed(3)} kW`:'');
 
-  // EV info bar
   const evInfo=$('ev-info');
   if(isUE&&ST.eigenverbrauch!==null&&evInfo){
     evInfo.style.display='block';
@@ -2065,8 +2267,7 @@ function updatePwrDisplay(){
     $('btn-ok').disabled=true;return;
   }
 
-  // Show measurement
-  $('pkw').className=isManual?'':'';
+  $('pkw').className='';
   $('pkw').textContent=f(pwr,3);
   const manTag=isManual?' 🖊':'';
   $('pamps').textContent=step.isEV
@@ -2075,12 +2276,11 @@ function updatePwrDisplay(){
       ?`P=${f(pwr,3)} kW → PV = ${f(getPVPower(pwr),3)} kW${manTag}`
       :`${f(toA(Math.abs(pwr)),2)} A @ 400V/√3${manTag}`);
 
-  // The effective power for comparisons
   const effectivePwr = isUE ? getPVPower(pwr) : pwr;
 
   if(step.isEV){
     if(ST.stable){
-      const peOk=pwr>=0; // positive = P+ import = normal; negative = P- = FRE might not work
+      const peOk=pwr>=0;
       setBadge(peOk?'ref':'fail',
         peOk?`⚡ Pe = ${f(pwr,3)} kW — bereit`:`⚠ P negativ — FRE prüfen! Pe = ${f(pwr,3)} kW`);
       $('btn-ok').disabled=false;
@@ -2108,7 +2308,6 @@ function updatePwrDisplay(){
     const overLimit=effectivePwr>pMax;
     const underNom=effectivePwr<pMinNom;
     updateTolBar(effectivePwr,pMinNom,pMax,pNom);
-    // Range info
     const ri=$('range-info');
     if(ri&&base) ri.textContent=
       `Soll: ${f(pNom,3)} kW | Erlaubt: ${f(pMinNom,3)} – ${f(pMax,3)} kW`+
@@ -2118,7 +2317,6 @@ function updatePwrDisplay(){
     else if(underNom){setBadge('ok','⚠ SONNEN-LIMITIERT – BESTANDEN');$('btn-ok').disabled=false;}
     else{setBadge('ok',`✓ IN BEREICH (${step.pct-step.tol}–${step.pct+step.tol} %)`);$('btn-ok').disabled=false;}
   }else{
-    // 0% step: 0–5% allowed
     const base=ST.anlageBase||ST.refPower;
     const pMax5=base*0.05;
     const over5=Math.abs(effectivePwr)>pMax5;
@@ -2148,15 +2346,16 @@ function setBadge(type,txt){const el=$('badge');el.className='badge '+type;el.te
 // ── TEST FLOW ────────────────────────────────────────────────
 function updateStepUI(){
   const s=STEPS[ST.step];
-  $('step-n').textContent=`Schritt ${ST.step+1} / ${STEPS.length}`;
+  const total=STEPS.length+(ST.na?1:0);
+  $('step-n').textContent=`Schritt ${ST.step+1} / ${total}`+(ST.na?' (inkl. NA-Schutz)':'');
   $('step-l').textContent=s.lbl;
   $('instr').innerHTML=s.instr;
   const pips=$('pips');pips.innerHTML='';
-  STEPS.forEach((_,i)=>{
+  for(let i=0;i<total;i++){
     const p=document.createElement('div');
     p.className='pip'+(i<ST.step?' done':i===ST.step?' cur':'');
     pips.appendChild(p);
-  });
+  }
   $('tol-sec').style.display=(!s.isRef&&!s.isZero)?'block':'none';
   $('btn-zero').style.display=(s.isZero&&!s.isEV)?'block':'none';
   $('btn-ok').disabled=true;
@@ -2165,9 +2364,8 @@ function updateStepUI(){
   $('cam-hint').textContent=s.isEV?'P− messen — Zähler zeigt Bezug (Eigenverbrauch)':
     s.isZero?'Kein Impuls erwartet – LED still':'ROI auf LED — antippen zum Positionieren';
   setPDir(s.pDirDef);
-  // P+/P- chips only relevant for Überschusseinspeisung
   const pdirRow=document.querySelector('.pdir-row');
-  if(pdirRow) pdirRow.style.display=ST.einspeisemodus==='ueberschuss'?'flex':'none'; // auto-set direction for this step
+  if(pdirRow) pdirRow.style.display=ST.einspeisemodus==='ueberschuss'?'flex':'none';
   if(s.isZero&&!s.isEV) setBadge('wait','👁 Einspeisung gesperrt – kein Impuls erwartet');
   if(s.isEV) setBadge('wait','⚡ P− messen – Eigenverbrauch');
 }
@@ -2185,15 +2383,11 @@ function confirmStep(){
   const s=STEPS[ST.step],pwr=ST.curPwr||0;
   const isUE=ST.einspeisemodus==='ueberschuss';
   if(s.isEV){
-    // Pe = directed measurement at step 1
-    // Normal (FAE OK, P+, import): pwr = +50 → Pe = +50
-    // FAE fails (P-, exporting): pwr = negative → Pe negative (will show as warning)
-    ST.eigenverbrauch = pwr; // Pe = P_step1 (directed, with sign)
+    ST.eigenverbrauch = pwr;
     addResult(pwr,true,true);
     advance();return;
   }
   const rawCur=ST.curPwr||0;
-  // Volleinspeisung: always positive; Überschusseinspeisung: keep sign for Pe-P
   const effectivePwr=isUE?getPVPower(rawCur):(s.isEV?rawCur:Math.abs(rawCur));
   if(s.isRef){
     ST.refPower=effectivePwr;
@@ -2206,7 +2400,7 @@ function confirmStep(){
     addResult(effectivePwr,effectivePwr<=pMax);
   }else{
     const base=ST.anlageBase||ST.refPower;
-    addResult(effectivePwr,!ST.curPwr||Math.abs(effectivePwr)<=base*0.05); // 5% erlaubt
+    addResult(effectivePwr,!ST.curPwr||Math.abs(effectivePwr)<=base*0.05);
   }
   advance();
 }
@@ -2227,7 +2421,10 @@ function advance(){
   ST.step++;
   resetManual();
   clearStepPhotoUI();
-  if(ST.step>=STEPS.length)showProto();
+  if(ST.step>=STEPS.length){
+    if(ST.na) openNA();
+    else showProto();
+  }
   else{resetPulse();updateStepUI();}
 }
 
@@ -2239,17 +2436,16 @@ async function showProto(){
   renderProto();
   renderPhotos();
   $('p-datum').value=new Date().toLocaleDateString('de-DE');
-  await loadPruefer();
+  loadPruefer();
   initSigPad();
-  await loadSig();
-  // Auto-save prüfer on change
+  loadSig();
   $('p-pruefer').onblur=savePruefer;
+  show('proto');
   await saveTest();
   await saveToHistory();
-  show('proto');
 }
 
-// ── PRINT via PDF (same as email) ────────────────────────────
+// ── PRINT via PDF ────────────────────────────────────────────
 async function printPDF(){
   let doc;
   try{doc=await buildPDF();}
@@ -2257,11 +2453,10 @@ async function printPDF(){
   const blob=doc.output('blob');
   const url=URL.createObjectURL(blob);
   const win=window.open(url,'_blank');
-  if(!win) doc.save(`FRE-Protokoll-${$('p-nr').value||'Anlage'}.pdf`);
+  if(!win) doc.save(`Pruefprotokoll-${$('p-nr').value||'Anlage'}.pdf`);
   setTimeout(()=>URL.revokeObjectURL(url),10000);
 }
 
-// ── EMAIL ADDRESSES from localStorage fallback ────────────────
 async function getEmails(){
   let e1=$('email-1')?.value||'';
   let e2=$('email-2')?.value||'';
@@ -2274,42 +2469,50 @@ async function getEmails(){
   }
   return [e1,e2,e3].filter(Boolean);
 }
+
+function protoTitle(){
+  const hasFRE=ST.results.length>0;
+  if(hasFRE&&ST.na) return 'FRE + NA-Schutz Pruefprotokoll';
+  if(ST.na) return 'NA-Schutz Pruefprotokoll';
+  return 'FRE Pruefprotokoll';
+}
+
 async function buildPDF(){
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF({unit:'mm',format:'a4'});
   const pw=210,lm=15,rw=pw-lm*2;
   let y=15;
+  const need=h=>{if(y+h>285){doc.addPage();y=15;}};
 
-  // Header
-  doc.setFontSize(14);doc.setFont('helvetica','bold');
-  doc.text('FRE Prüfprotokoll – PV Anlage',lm,y);y+=7;
-  const pruefer=$('p-pruefer').value||(()=>{try{return localStorage.getItem(LS+'pruefer')||''}catch(e){return ''}})();
-  doc.setFontSize(9);doc.setFont('helvetica','normal');
-  doc.setTextColor(100);
-  doc.text(`Datum: ${$('p-datum').value}   Prüfer: ${pruefer||'—'}`,lm,y);
-  y+=5;doc.setTextColor(0);
-  doc.line(lm,y,lm+rw,y);y+=5;
-
-  // German number format for PDF (comma as decimal separator)
   const fDE=(v,d)=>v.toFixed(d).replace('.',',');
-
-  // jsPDF Helvetica has no Unicode — replace problematic chars to avoid letter-spacing glitch
+  // jsPDF Helvetica: nur Latin-1
   const pdfTxt=(s)=>String(s)
     .replace(/§/g,'Par.')
     .replace(/≤/g,'<=')
     .replace(/≥/g,'>=')
-    .replace(/\u00AD/g,'')   // soft hyphen
-    .replace(/[^\x00-\xFF]/g,'?'); // any other non-latin1
+    .replace(/[–—]/g,'-')
+    .replace(/→/g,'->')
+    .replace(/[„“]/g,'"')
+    .replace(/\u00AD/g,'')
+    .replace(/[^\x00-\xFF]/g,'?');
 
-  // Anlage info — single address (GPS if available, otherwise manual)
+  // Header
+  doc.setFontSize(14);doc.setFont('helvetica','bold');
+  doc.text(protoTitle().replace('Pruef','Prüf')+' - PV Anlage',lm,y);y+=7;
+  const pruefer=$('p-pruefer').value||(()=>{try{return localStorage.getItem(LS+'pruefer')||''}catch(e){return ''}})();
+  doc.setFontSize(9);doc.setFont('helvetica','normal');
+  doc.setTextColor(100);
+  doc.text(pdfTxt(`Datum: ${$('p-datum').value}   Prüfer: ${pruefer||'-'}`),lm,y);
+  y+=5;doc.setTextColor(0);
+  doc.line(lm,y,lm+rw,y);y+=5;
+
+  // Anlage info
   doc.setFontSize(9);doc.setFont('helvetica','bold');doc.text('Anlage',lm,y);y+=4;
   doc.setFont('helvetica','normal');
-  // Determine address: GPS address takes priority, then manual field
-  const adresseDisplay = ST.gpsAddr || $('p-adr').value || '—';
+  const adresseDisplay = ST.gpsAddr || $('p-adr').value || '-';
   const gpsCoordsLine = ST.gpsCoords
     ?`${ST.gpsCoords.lat.toFixed(6)}° N, ${ST.gpsCoords.lng.toFixed(6)}° E ±${Math.round(ST.gpsCoords.acc)}m`
     :null;
-  // Smart Generatorleistung display
   let genLeistungStr;
   if(ST.anlageKw){
     const baseKw=ST.anlageBase||0;
@@ -2320,17 +2523,20 @@ async function buildPDF(){
       const pct=Math.round(fak*100);
       genLeistungStr=`${fDE(ST.anlageKw,1)} kWp -> ${fDE(baseKw,1)} kW (${pct}%-Begrenzung gem. Par. 9 EEG 2023)`;
     }
-  } else { genLeistungStr='—'; }
+  } else { genLeistungStr='-'; }
 
+  const hasFRE=ST.results.length>0;
   const info=[
-    ['Harness-ID', $('p-nr').value||'—'],
-    ['Zählernummer',             $('p-zaehler').value||'—'],
-    ['FRE-Seriennummer',                  $('p-fhe').value||'—'],
-    ['FRE-Code',                 $('p-fae').value||'—'],
-    ['Adresse',                  adresseDisplay],
-    ['Generatorleistung',        genLeistungStr],
-    ['Wandlerfaktor',            ST.wandler>1?Math.round(ST.wandler).toString():'Direktmessung'],
+    ['Harness-ID', $('p-nr').value||'-'],
+    ['Zählernummer', $('p-zaehler').value||'-'],
   ];
+  if(hasFRE){
+    info.push(['FRE-Seriennummer', $('p-fhe').value||'-']);
+    info.push(['FRE-Code', $('p-fae').value||'-']);
+  }
+  info.push(['Adresse', adresseDisplay]);
+  info.push(['Generatorleistung', genLeistungStr]);
+  if(hasFRE) info.push(['Wandlerfaktor', ST.wandler>1?Math.round(ST.wandler).toString():'Direktmessung']);
   if(gpsCoordsLine) info.push(['GPS-Koordinaten', gpsCoordsLine]);
   if($('p-bemerk').value) info.push(['Bemerkungen', $('p-bemerk').value]);
   info.forEach(([l,v])=>{
@@ -2342,61 +2548,96 @@ async function buildPDF(){
   });
   y+=3;doc.line(lm,y,lm+rw,y);y+=5;
 
-  // Results table
-  doc.setFont('helvetica','bold');doc.text('Testergebnisse',lm,y);y+=5;
-  const cols=[40,28,28,22,22];
-  const hdrs=['Stufe','Soll (kW)','Ist (kW)','% Basis','Ergebnis'];
-  // Overall result line
-  const hasFail=ST.results.some(r=>!r.pass);
-  const hasWarn=ST.results.some(r=>r.sunLimited&&r.pass);
-  const gesamtTxt=hasFail?'NICHT BESTANDEN':hasWarn?'BESTANDEN – sonnen-limitiert':'VOLLSTÄNDIG BESTANDEN';
-  doc.setFontSize(10);doc.setFont('helvetica','bold');
-  doc.setTextColor(hasFail?200:0, hasFail?0:(hasWarn?165:150), 0);
-  doc.text('Gesamtergebnis: '+gesamtTxt, lm, y);
-  doc.setTextColor(0); y+=6;
-  // Header row
-  doc.setFillColor(240,240,240);doc.rect(lm,y-4,rw,6,'F');
-  doc.setFontSize(8);doc.setFont('helvetica','bold');
-  let x=lm;
-  hdrs.forEach((h,i)=>{doc.text(h,x+1,y);x+=cols[i];});
-  y+=3;doc.line(lm,y,lm+rw,y);y+=4;
-  doc.setFont('helvetica','normal');
-  const isVollPDF=ST.einspeisemodus!=='ueberschuss';
-  ST.results.forEach(r=>{
-    const dispPwr=(isVollPDF&&!r.isEVStep)?Math.abs(r.pwr):r.pwr;
-    const dispPct=r.pctOfBase!=null?Math.abs(r.pctOfBase):null;
-    const sollStr=fDE(r.tgt,3);
-    const pctStr=dispPct!=null?fDE(dispPct,1)+' %':'—';
-    const resultTxt=!r.pass?(r.overLimit?'ÜBEREINSP.':'UNTEREINSP.'):r.sunLimited?'OK (Sonne)':'OK';
-    const row=[r.lbl,sollStr,fDE(dispPwr,3),pctStr,resultTxt];
-    x=lm;
-    row.forEach((v,i)=>{
-      if(i===4){
-        if(!r.pass&&r.overLimit) doc.setTextColor(200,0,0);
-        else if(!r.pass||r.sunLimited) doc.setTextColor(200,120,0);
-        else doc.setTextColor(0,150,0);
-      }
-      doc.text(String(v),x+1,y);
-      doc.setTextColor(0);
-      x+=cols[i];
+  // ── FRE Results table ──
+  if(hasFRE){
+    doc.setFontSize(9);doc.setFont('helvetica','bold');doc.text('FRE-Test - Einspeisemanagement',lm,y);y+=5;
+    const cols=[40,28,28,22,22];
+    const hdrs=['Stufe','Soll (kW)','Ist (kW)','% Basis','Ergebnis'];
+    const hasFail=ST.results.some(r=>!r.pass);
+    const hasWarn=ST.results.some(r=>r.sunLimited&&r.pass);
+    const gesamtTxt=hasFail?'NICHT BESTANDEN':hasWarn?'BESTANDEN - sonnen-limitiert':'VOLLSTÄNDIG BESTANDEN';
+    doc.setFontSize(10);doc.setFont('helvetica','bold');
+    doc.setTextColor(hasFail?200:0, hasFail?0:(hasWarn?165:150), 0);
+    doc.text('Ergebnis FRE: '+gesamtTxt, lm, y);
+    doc.setTextColor(0); y+=6;
+    doc.setFillColor(240,240,240);doc.rect(lm,y-4,rw,6,'F');
+    doc.setFontSize(8);doc.setFont('helvetica','bold');
+    let x=lm;
+    hdrs.forEach((h,i)=>{doc.text(h,x+1,y);x+=cols[i];});
+    y+=3;doc.line(lm,y,lm+rw,y);y+=4;
+    doc.setFont('helvetica','normal');
+    const isVollPDF=ST.einspeisemodus!=='ueberschuss';
+    ST.results.forEach(r=>{
+      const dispPwr=(isVollPDF&&!r.isEVStep)?Math.abs(r.pwr):r.pwr;
+      const dispPct=r.pctOfBase!=null?Math.abs(r.pctOfBase):null;
+      const sollStr=fDE(r.tgt,3);
+      const pctStr=dispPct!=null?fDE(dispPct,1)+' %':'-';
+      const resultTxt=!r.pass?(r.overLimit?'ÜBEREINSP.':'UNTEREINSP.'):r.sunLimited?'OK (Sonne)':'OK';
+      const row=[pdfTxt(r.lbl),sollStr,fDE(dispPwr,3),pctStr,resultTxt];
+      x=lm;
+      row.forEach((v,i)=>{
+        if(i===4){
+          if(!r.pass&&r.overLimit) doc.setTextColor(200,0,0);
+          else if(!r.pass||r.sunLimited) doc.setTextColor(200,120,0);
+          else doc.setTextColor(0,150,0);
+        }
+        doc.text(String(v),x+1,y);
+        doc.setTextColor(0);
+        x+=cols[i];
+      });
+      y+=7;
     });
-    y+=7; // row height — no dividing lines between rows
-  });
-  y+=4;
+    y+=4;
+  }
 
-  // ── Step photos (Messgerät-Fotos) auf Seite 1 ──────────────
+  // ── NA-Schutz ──
+  if(ST.na){
+    const n=ST.na, ov=naOverall();
+    need(40);
+    doc.line(lm,y,lm+rw,y);y+=5;
+    doc.setFontSize(9);doc.setFont('helvetica','bold');
+    doc.text('NA-Schutz (VDE-AR-N 4105)',lm,y);y+=5;
+    doc.setFontSize(10);
+    if(ov.cls==='fail') doc.setTextColor(200,0,0);
+    else if(ov.cls==='warn') doc.setTextColor(200,120,0);
+    else doc.setTextColor(0,150,0);
+    doc.text(pdfTxt('Ergebnis NA-Schutz: '+ov.pdf),lm,y);
+    doc.setTextColor(0);y+=6;
+    doc.setFontSize(9);
+    const ninfo=[
+      ['Ausführung', n.art?NA_ART_TXT[n.art]:'-'],
+      ['Funktion', n.func==='ok'?'i.O.':n.func==='fail'?'MANGEL':'nicht bewertet'],
+      ['Ausschaltzeit', n.tAus!==''&&n.tAus!=null?n.tAus+' ms':'-'],
+    ];
+    if(n.bemerk) ninfo.push(['Bemerkung', n.bemerk]);
+    const infoTop=y;
+    ninfo.forEach(([l,v])=>{
+      doc.setFont('helvetica','bold');doc.text(pdfTxt(l)+':',lm,y);
+      doc.setFont('helvetica','normal');
+      const lines=doc.splitTextToSize(pdfTxt(v),n.foto?70:rw-42);
+      doc.text(lines,lm+42,y);
+      y+=4.5*lines.length;
+    });
+    if(n.foto){
+      const fw=45,fh=45;
+      try{doc.addImage(n.foto,'JPEG',lm+rw-fw,infoTop-4,fw,fh,'','FAST');doc.rect(lm+rw-fw,infoTop-4,fw,fh);}catch(e){}
+      y=Math.max(y,infoTop-4+fh+2);
+    }
+    y+=4;
+  }
+
+  // ── Step photos (Messgerät-Fotos) ──
   const stepWithPhotos=ST.results.filter(r=>r.stepPhoto);
   if(stepWithPhotos.length>0){
+    const photoSize=40, photoGap=2;
+    need(photoSize+16);
     y+=4;
     doc.setFontSize(8);doc.setFont('helvetica','bold');
     doc.text('Messgerät-Fotos',lm,y);y+=4;
-    const photoSize=40; // 40mm × 40mm
-    const photoCols=4;
-    const photoGap=2;
     stepWithPhotos.forEach((r,i)=>{
       const px=lm+i*(photoSize+photoGap);
       const py=y;
-      if(px+photoSize>lm+rw){return;} // max 4 per row
+      if(px+photoSize>lm+rw){return;}
       try{
         doc.addImage(r.stepPhoto,'JPEG',px,py,photoSize,photoSize,'','FAST');
       }catch(e){
@@ -2404,62 +2645,54 @@ async function buildPDF(){
       }
       doc.rect(px,py,photoSize,photoSize);
       doc.setFontSize(6);doc.setTextColor(80);
-      // Step label + value below photo
-      doc.text(r.lbl,px+1,py+photoSize+3);
+      doc.text(pdfTxt(r.lbl),px+1,py+photoSize+3);
       doc.text(f(r.pwr,3)+' kW',px+1,py+photoSize+7);
       doc.setTextColor(0);
     });
-    if(stepWithPhotos.length>0) y+=photoSize+10;
+    y+=photoSize+10;
   }
 
-  // Signature line
-  try{
-    const sigData=await dbGet('signature');
-    if(sigData){
+  // Signature
+  need(28);
+  let sigData=null;
+  try{sigData=localStorage.getItem(LS+'signature');}catch(e){}
+  if(!sigData){try{sigData=await dbGet('signature');}catch(e){}}
+  if(sigData){
+    try{
       doc.addImage(sigData,'PNG',lm,y,60,18,'','FAST');
       doc.line(lm,y+20,lm+65,y+20);
-      doc.setFontSize(7);doc.text(pruefer||'Prüfer',lm,y+24);
-    } else {
-      doc.line(lm,y+10,lm+60,y+10);
-      doc.setFontSize(8);doc.text('Unterschrift Prüfer',lm,y+14);
-    }
-  }catch(e){
+      doc.setFontSize(7);doc.text(pdfTxt(pruefer||'Prüfer'),lm,y+24);
+    }catch(e){sigData=null;}
+  }
+  if(!sigData){
     doc.line(lm,y+10,lm+60,y+10);
     doc.setFontSize(8);doc.text('Unterschrift Prüfer',lm,y+14);
   }
 
-  // ── PAGE 2: PHOTOS ──────────────────────────────────────────
+  // ── PHOTOS page ──
   const photos=ST.photos.filter(Boolean);
   if(photos.length>0){
     doc.addPage();
     doc.setFontSize(12);doc.setFont('helvetica','bold');doc.setTextColor(0);
     doc.text('Fotodokumentation',lm,14);
     doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(100);
-    doc.text(`${$('p-nr').value||'—'} · ${$('p-datum').value}`,lm,19);
+    doc.text(pdfTxt(`${$('p-nr').value||'-'} · ${$('p-datum').value}`),lm,19);
     doc.setTextColor(0);
     doc.line(lm,21,lm+rw,21);
-
-    // 2×2 grid layout: each cell 85mm × 110mm
     const cellW=85,cellH=110,gap=10;
     const positions=[
-      [lm,       26      ],
-      [lm+cellW+gap, 26  ],
-      [lm,       26+cellH+gap],
-      [lm+cellW+gap, 26+cellH+gap],
+      [lm,26],[lm+cellW+gap,26],
+      [lm,26+cellH+gap],[lm+cellW+gap,26+cellH+gap],
     ];
-
     photos.slice(0,4).forEach((src,i)=>{
       const[px,py]=positions[i];
       try{
-        // Draw border first
         doc.setDrawColor(180);doc.rect(px,py,cellW,cellH);
         doc.addImage(src,'JPEG',px,py,cellW,cellH,'','FAST');
       }catch(e){
-        // If image fails, show placeholder box
         doc.setFillColor(240,240,240);doc.rect(px,py,cellW,cellH,'F');
         doc.setFontSize(9);doc.text('Foto '+(i+1),px+cellW/2,py+cellH/2,{align:'center'});
       }
-      // Caption
       doc.setFontSize(7);doc.setTextColor(80);
       doc.text(`Foto ${i+1}`,px+1,py+cellH+4);
       doc.setTextColor(0);
@@ -2471,7 +2704,7 @@ async function buildPDF(){
 
 async function sendEmail(){
   const emails=await getEmails();
-  const subject=`FRE Pruefprotokoll – ${$('p-nr').value||'Anlage'} – ${$('p-datum').value}`;
+  const subject=`${protoTitle()} – ${$('p-nr').value||'Anlage'} – ${$('p-datum').value}`;
 
   let doc;
   try{ doc=await buildPDF(); }
@@ -2481,31 +2714,29 @@ async function sendEmail(){
   }
 
   const blob=doc.output('blob');
-  const fname=`FRE-Protokoll-${($('p-nr').value||'Anlage').replace(/\s/g,'_')}.pdf`;
+  const fname=`Pruefprotokoll-${($('p-nr').value||'Anlage').replace(/\s/g,'_')}.pdf`;
   const file=new File([blob],fname,{type:'application/pdf'});
 
-  // Try Web Share API (Android / iOS – attaches PDF to email app)
   if(navigator.canShare&&navigator.canShare({files:[file]})){
     try{
       await navigator.share({
         title:subject,
-        text:'Im Anhang das FRE Prüfprotokoll.',
+        text:'Im Anhang das Prüfprotokoll.',
         files:[file],
       });
       return;
     }catch(e){
-      if(e.name==='AbortError')return; // user cancelled
+      if(e.name==='AbortError')return;
     }
   }
 
-  // Fallback: download PDF + open mailto
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
   a.href=url;a.download=fname;a.click();
   setTimeout(()=>{
     URL.revokeObjectURL(url);
     if(emails.length>0){
-      const body=encodeURIComponent(`Guten Tag,\n\nim Anhang das FRE Prüfprotokoll für Anlage ${$('p-nr').value||'—'}.\n\nMit freundlichen Grüßen`);
+      const body=encodeURIComponent(`Guten Tag,\n\nim Anhang das Prüfprotokoll für Anlage ${$('p-nr').value||'—'}.\n\nMit freundlichen Grüßen`);
       window.open(`mailto:${emails.join(',')}?subject=${encodeURIComponent(subject)}&body=${body}`);
     }
   },500);
@@ -2513,7 +2744,7 @@ async function sendEmail(){
 
 function restart(){
   Object.assign(ST,{step:0,refPower:null,anlageBase:null,results:[],photos:[],stepPhotos:{},
-    eigenverbrauch:null,pDir:1,manualPwr:null,
+    eigenverbrauch:null,pDir:1,manualPwr:null,na:null,
     pulses:[],brightHist:[],inPulse:false,stable:false,curPwr:null,
     roi:null,stream:null,lastPulseMs:0});
   STEPS=STEPS_VOLL;
