@@ -647,7 +647,7 @@ input::placeholder{color:var(--muted);}
       </div>
       <div id="cfg-sig-preview" style="display:none;margin-top:.75rem;">
         <div class="s-lbl">Gespeicherte Unterschrift:</div>
-        <img id="cfg-sig-img" style="max-height:65px;border-bottom:1px solid var(--border);display:block;margin-top:.3rem;"/>
+        <img id="cfg-sig-img" style="max-height:65px;background:#fff;padding:4px;border-bottom:1px solid var(--border);display:block;margin-top:.3rem;"/>
       </div>
     </div>
 
@@ -929,17 +929,12 @@ input::placeholder{color:var(--muted);}
       <input type="text" id="p-bemerk" placeholder="Notizen, Besonderheiten …"/>
     </div>
 
-    <!-- Unterschrift Prüfer – Seite 1 -->
-    <div class="pfield full sig-wrap no-print">
-      <div class="s-lbl">Unterschrift Prüfer <span style="color:var(--muted);font-size:.6rem;">(dauerhaft gespeichert)</span></div>
-      <canvas id="sig-pad" width="800" height="200"></canvas>
-      <div class="sig-actions">
-        <button class="btn sec" onclick="clearSig()" style="flex:1;">Neu zeichnen</button>
-        <button class="btn" onclick="saveSig()" style="flex:2;background:var(--accent);color:#000;">✓ Speichern</button>
-      </div>
-    </div>
-    <div id="sig-display" class="pfield full">
-      <img id="sig-img" alt="Unterschrift" style="max-height:70px;border-bottom:1px solid #555;display:block;"/>
+    <!-- Unterschrift Prüfer: immer die in den Einstellungen gespeicherte -->
+    <div id="sig-display" class="pfield full" style="display:block;">
+      <div class="s-lbl no-print">Unterschrift Prüfer <span style="color:var(--muted);font-size:.6rem;">(aus Einstellungen)</span></div>
+      <img id="sig-img" alt="Unterschrift" style="display:none;max-height:70px;background:#fff;padding:4px;border-radius:2px;"/>
+      <p id="sig-missing" class="no-print" style="display:none;font-family:var(--mono);font-size:.7rem;color:var(--accent);">
+        Keine Unterschrift gespeichert – bitte unter ⚙ Einstellungen hinterlegen.</p>
       <p id="sig-name-print" style="font-family:var(--mono);font-size:.65rem;color:var(--muted);margin-top:.2rem;"></p>
     </div>
 
@@ -957,7 +952,8 @@ input::placeholder{color:var(--muted);}
   </div>
 
   <button class="btn no-print" onclick="printPDF()">🖨 Protokoll drucken (PDF)</button>
-  <button class="btn email no-print" onclick="sendEmail()">✉ Per E-Mail senden</button>
+  <button class="btn email no-print" onclick="sendEmail()">✉ PDF teilen (Outlook) – Empfänger in Zwischenablage</button>
+  <button class="btn email no-print" onclick="sendEmailOutlook()" style="background:#0f4c9e;">✉ Outlook mit Empfänger öffnen – PDF selbst anhängen</button>
   <button class="btn sec no-print" onclick="showHistory()" style="width:100%;">📋 Prüfhistorie ansehen</button>
   <div style="display:flex;gap:.5rem;" class="no-print">
     <button class="btn sec" style="flex:1;color:var(--accent);border-color:var(--accent);" onclick="deleteTest()">🗑 Test löschen</button>
@@ -1058,6 +1054,41 @@ function initCfgSigPad(){
   try{const v=localStorage.getItem(LS+'pruefer');if(v)$('cfg-pruefer').value=v;}catch(e){}
 }
 
+async function getSignature(){
+  let d=null;
+  try{d=localStorage.getItem(LS+'signature');}catch(e){}
+  if(!d){try{d=await dbGet('signature');}catch(e){}}
+  return d||null;
+}
+// Unterschrift auf weißen Hintergrund, auf Tinte zuschneiden, als JPEG (zuverlässig in jsPDF)
+async function sigForPdf(){
+  const src=await getSignature();
+  if(!src) return null;
+  return new Promise(res=>{
+    const img=new Image();
+    img.onload=()=>{
+      const c=document.createElement('canvas');c.width=img.width;c.height=img.height;
+      const x=c.getContext('2d');x.drawImage(img,0,0);
+      const d=x.getImageData(0,0,c.width,c.height).data;
+      let x0=c.width,y0=c.height,x1=-1,y1=-1;
+      for(let yy=0;yy<c.height;yy++)for(let xx=0;xx<c.width;xx++){
+        const i=(yy*c.width+xx)*4;
+        if(d[i+3]>40&&d[i]<200){if(xx<x0)x0=xx;if(xx>x1)x1=xx;if(yy<y0)y0=yy;if(yy>y1)y1=yy;}
+      }
+      if(x1<0){res(null);return;}
+      const pad=10;x0=Math.max(0,x0-pad);y0=Math.max(0,y0-pad);
+      x1=Math.min(c.width-1,x1+pad);y1=Math.min(c.height-1,y1+pad);
+      const w=x1-x0+1,h=y1-y0+1;
+      const o=document.createElement('canvas');o.width=w;o.height=h;
+      const ox=o.getContext('2d');ox.fillStyle='#fff';ox.fillRect(0,0,w,h);
+      ox.drawImage(c,x0,y0,w,h,0,0,w,h);
+      res({url:o.toDataURL('image/jpeg',0.92),w,h});
+    };
+    img.onerror=()=>res(null);
+    img.src=src;
+  });
+}
+
 function clearCfgSig(){
   if(!cfgSigCtx)return;
   cfgSigCtx.clearRect(0,0,$('cfg-sig-pad').width,$('cfg-sig-pad').height);
@@ -1068,13 +1099,14 @@ async function saveCfgSig(){
   if(!cfgSigCtx||!cfgHasData){alert('Bitte zuerst unterschreiben.');return;}
   const dataUrl=$('cfg-sig-pad').toDataURL('image/png');
   try{localStorage.setItem(LS+'signature',dataUrl);}catch(e){}
+  try{await dbSet('signature',dataUrl);}catch(e){}
   loadCfgSigPreview();
   alert('Unterschrift gespeichert ✓');
 }
 
-function loadCfgSigPreview(){
+async function loadCfgSigPreview(){
   try{
-    const d=localStorage.getItem(LS+'signature');
+    const d=await getSignature();
     const preview=$('cfg-sig-preview'), img=$('cfg-sig-img');
     if(d&&preview&&img){img.src=d;preview.style.display='block';}
   }catch(e){}
@@ -1409,8 +1441,8 @@ async function clearAll(){
   [LS+'signature',LS+'pruefer'].forEach(k=>{try{localStorage.removeItem(k);}catch(e){}});
   try{await dbDel('test');await dbDel('photos');await dbDel('stepPhotos');await dbHistClear();}catch(e){}
   ST.results=[];ST.photos=[];ST.refPower=null;ST.na=null;
-  clearSigPad();
-  $('sig-display').style.display='none';
+  try{await dbDel('signature');}catch(e){}
+  try{$('sig-img').style.display='none';}catch(e){}
   const pv=$('cfg-sig-preview');if(pv)pv.style.display='none';
   alert('Alles gelöscht.');
   show('setup');
@@ -1479,11 +1511,11 @@ async function saveSig(){
   alert('Unterschrift gespeichert.');
 }
 
-function loadSig(){
-  try{
-    const d=localStorage.getItem(LS+'signature');
-    if(d){showSigDisplay(d);}
-  }catch(e){}
+async function loadSig(){
+  const d=await getSignature();
+  $('sig-img').style.display=d?'block':'none';
+  $('sig-missing').style.display=d?'none':'block';
+  if(d) showSigDisplay(d);
 }
 
 function showSigDisplay(dataUrl){
@@ -2655,14 +2687,15 @@ async function buildPDF(){
   // Signature
   need(28);
   let sigData=null;
-  try{sigData=localStorage.getItem(LS+'signature');}catch(e){}
-  if(!sigData){try{sigData=await dbGet('signature');}catch(e){}}
-  if(sigData){
+  const sigJ=await sigForPdf();
+  if(sigJ){
     try{
-      doc.addImage(sigData,'PNG',lm,y,60,18,'','FAST');
-      doc.line(lm,y+20,lm+65,y+20);
+      const h=18, w=Math.min(70, h*sigJ.w/sigJ.h);
+      doc.addImage(sigJ.url,'JPEG',lm,y,w,h);
+      doc.line(lm,y+20,lm+70,y+20);
       doc.setFontSize(7);doc.text(pdfTxt(pruefer||'Prüfer'),lm,y+24);
-    }catch(e){sigData=null;}
+      sigData=true;
+    }catch(e){console.warn('Signatur PDF:',e);}
   }
   if(!sigData){
     doc.line(lm,y+10,lm+60,y+10);
@@ -2702,44 +2735,67 @@ async function buildPDF(){
   return doc;
 }
 
+function toast(msg,ms=5000){
+  let t=$('toast');
+  if(!t){t=document.createElement('div');t.id='toast';t.className='no-print';
+    t.style.cssText='position:fixed;left:50%;bottom:1.2rem;transform:translateX(-50%);z-index:300;max-width:92vw;'+
+      'background:#1a73e8;color:#fff;font-family:var(--sans);font-size:.85rem;padding:.7rem 1rem;border-radius:4px;'+
+      'box-shadow:0 4px 16px rgba(0,0,0,.5);text-align:center;line-height:1.4;';
+    document.body.appendChild(t);}
+  t.innerHTML=msg;t.style.display='block';
+  clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',ms);
+}
+
+function mailSubject(){return `${protoTitle().replace('Pruef','Prüf')} – ${$('p-nr').value||'Anlage'} – ${$('p-datum').value}`;}
+function mailBody(){return `Guten Tag,\n\nim Anhang das Prüfprotokoll für Anlage ${$('p-nr').value||'—'}.\n\nMit freundlichen Grüßen\n${$('p-pruefer').value||''}`;}
+function pdfName(){return `Pruefprotokoll-${($('p-nr').value||'Anlage').replace(/\s/g,'_')}.pdf`;}
+
+// Variante 1: PDF über Teilen-Menü (z.B. Outlook) – Empfänger liegen in der Zwischenablage
 async function sendEmail(){
+  // Sofort (noch mit Nutzer-Klick) Empfänger in die Zwischenablage legen
   const emails=await getEmails();
-  const subject=`${protoTitle()} – ${$('p-nr').value||'Anlage'} – ${$('p-datum').value}`;
+  let copied=false;
+  if(emails.length&&navigator.clipboard){
+    try{await navigator.clipboard.writeText(emails.join('; '));copied=true;}catch(e){}
+  }
 
   let doc;
   try{ doc=await buildPDF(); }
-  catch(e){
-    alert('PDF-Erzeugung fehlgeschlagen: '+e.message+'\nBitte jsPDF-Skript laden (HTTPS erforderlich).');
-    return;
-  }
-
+  catch(e){alert('PDF-Erzeugung fehlgeschlagen: '+e.message+'\nBitte jsPDF-Skript laden (HTTPS erforderlich).');return;}
   const blob=doc.output('blob');
-  const fname=`Pruefprotokoll-${($('p-nr').value||'Anlage').replace(/\s/g,'_')}.pdf`;
-  const file=new File([blob],fname,{type:'application/pdf'});
+  const file=new File([blob],pdfName(),{type:'application/pdf'});
 
   if(navigator.canShare&&navigator.canShare({files:[file]})){
+    if(copied) toast('📋 Empfänger kopiert – in Outlook im Feld „An“ lange drücken → Einfügen',8000);
     try{
-      await navigator.share({
-        title:subject,
-        text:'Im Anhang das Prüfprotokoll.',
-        files:[file],
-      });
+      await navigator.share({title:mailSubject(),text:mailBody(),files:[file]});
       return;
     }catch(e){
       if(e.name==='AbortError')return;
     }
   }
+  // Teilen nicht möglich (z.B. PC) → Outlook mit Empfängern öffnen, PDF herunterladen
+  openMailWithRecipients(blob,emails);
+}
 
+// Variante 2: Outlook direkt mit Empfänger/Betreff/Text öffnen, PDF wird heruntergeladen
+async function sendEmailOutlook(){
+  const emails=await getEmails();
+  if(!emails.length){alert('Bitte zuerst unter ⚙ Einstellungen eine E-Mail-Adresse eintragen.');return;}
+  let doc;
+  try{ doc=await buildPDF(); }
+  catch(e){alert('PDF-Erzeugung fehlgeschlagen: '+e.message);return;}
+  openMailWithRecipients(doc.output('blob'),emails);
+}
+
+function openMailWithRecipients(blob,emails){
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
-  a.href=url;a.download=fname;a.click();
-  setTimeout(()=>{
-    URL.revokeObjectURL(url);
-    if(emails.length>0){
-      const body=encodeURIComponent(`Guten Tag,\n\nim Anhang das Prüfprotokoll für Anlage ${$('p-nr').value||'—'}.\n\nMit freundlichen Grüßen`);
-      window.open(`mailto:${emails.join(',')}?subject=${encodeURIComponent(subject)}&body=${body}`);
-    }
-  },500);
+  a.href=url;a.download=pdfName();document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),15000);
+  toast('📎 PDF wurde heruntergeladen („'+pdfName()+'“) – bitte in der E-Mail anhängen',9000);
+  const mailto=`mailto:${emails.join(',')}?subject=${encodeURIComponent(mailSubject())}&body=${encodeURIComponent(mailBody())}`;
+  setTimeout(()=>{window.location.href=mailto;},600);
 }
 
 function restart(){
