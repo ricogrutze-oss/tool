@@ -380,9 +380,12 @@ class BleT{
     const cs=(S.bleS||'').toLowerCase();
     const opt=[...KNOWN_UART,'device_information','battery_service'];if(cs)opt.unshift(cs);
     this.dev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:opt});
-    this.dev.addEventListener('gattserverdisconnected',()=>{log('INFO','Bluetooth-Verbindung beendet');setConn(false);});
-    status('Verbinde mit '+(this.dev.name||'Gerät')+' …');
-    const srv=await this.dev.gatt.connect();
+    this.dev.addEventListener('gattserverdisconnected',()=>{log('WARN','Bluetooth-Verbindung vom Kopf/System getrennt');if(T===this)setConn(false);});
+    await this.attach();}
+  /* (Wieder-)Verbinden mit dem bereits gewählten Kopf – ohne erneute Geräteauswahl */
+  async attach(){const cs=(S.bleS||'').toLowerCase();
+    status('Verbinde mit '+(this.dev.name||'Gerät')+' …');log('INFO','GATT verbinden: '+(this.dev.name||'?'));
+    const srv=await this.dev.gatt.connect();log('INFO','GATT verbunden');
     let services=await srv.getPrimaryServices();
     if(cs)services.sort((a,b)=>(b.uuid===cs)-(a.uuid===cs));
     let found=null;
@@ -397,11 +400,14 @@ class BleT{
     if(!found)throw new Error('Kein Daten-Service gefunden. UUID mit nRF Connect ermitteln und unter Einstellungen → Bluetooth eintragen.');
     this.w=found.w;this.n=found.n;
     await this.n.startNotifications();
-    this.n.addEventListener('characteristicvaluechanged',e=>{const v=e.target.value;this.onData(Uint8Array.from(new Uint8Array(v.buffer,v.byteOffset,v.byteLength)));});
+    this._h=this._h||(e=>{const v=e.target.value;this.onData(Uint8Array.from(new Uint8Array(v.buffer,v.byteOffset,v.byteLength)));});
+    if(this._hn!==this.n){this.n.addEventListener('characteristicvaluechanged',this._h);this._hn=this.n;}
     log('INFO',`Verwende Service ${found.s.uuid}, TX ${found.w.uuid}, RX ${found.n.uuid}`);
   }
-  async write(u8){for(let i=0;i<u8.length;i+=20){const c=u8.slice(i,i+20);
-    if(this.w.properties.writeWithoutResponse)await this.w.writeValueWithoutResponse(c);else await this.w.writeValueWithResponse(c);}}
+  async write(u8){if(this.dev?.gatt&&this.dev.gatt.connected===false)throw new Error('Bluetooth-Verbindung unterbrochen');
+    for(let i=0;i<u8.length;i+=20){const c=u8.slice(i,i+20),w=this.w;
+    if(w.properties.writeWithoutResponse&&w.writeValueWithoutResponse)await w.writeValueWithoutResponse(c);
+    else if(w.writeValueWithResponse)await w.writeValueWithResponse(c);else await w.writeValue(c);}}
   async setBaud(b){const z=Object.keys(BAUD).find(k=>BAUD[k]===b);if(z==null){log('WARN','Baudrate '+b+' vom Kopf nicht unterstützt');return;}await this.cmd(z);}
   async close(){try{this.dev?.gatt.disconnect()}catch{}}
   async info(link){const ask=async c=>{link.clear();await this.cmd(c);try{return (await link.wait(b=>{const i=b.indexOf(10);if(i<0)return null;const r=dec(b.slice(0,i)).trim();b.splice(0,i+1);return r;},800)).replace(/[^\x20-\x7e]/g,'');}catch{return '';}};
@@ -800,21 +806,26 @@ function prog(v){const p=$('#prog');p.style.visibility=v==null?'hidden':'visible
 async function connect(){
   const kind=S.transport;
   try{
-    T=kind==='ble'?new BleT():kind==='serial'?(window._serialT||(window._serialT=new SerialT())):new DemoT();
-    LINK=new Link(T);
-    if(kind==='serial')await T.open({baudRate:300,dataBits:7,parity:'even',stopBits:1});else await T.open();
+    if(kind==='ble'&&window._lastBle?.dev){T=window._lastBle;try{LINK=new Link(T);await T.attach();}catch(e){log('WARN','Wiederverbinden fehlgeschlagen: '+e.message);T=null;}}
+    if(!T)T=kind==='ble'?new BleT():kind==='serial'?(window._serialT||(window._serialT=new SerialT())):new DemoT();
+    if(!T.dev||kind!=='ble'){LINK=new Link(T);
+    if(kind==='serial')await T.open({baudRate:300,dataBits:7,parity:'even',stopBits:1});else await T.open();}
+    if(kind==='ble')window._lastBle=T;
     NOSUP=new Set();IECP=new IEC(LINK);IECP.onIdent=id=>status('Zähler antwortet: '+id);setConn(true);
     if(T instanceof BleT){const inf=await T.info(LINK);HEAD=inf;if(inf.fw||inf.mv){log('INFO',`Kopf ${inf.sn} · FW ${inf.fw} · Akku ${inf.mv} mV`);setConn(true);
       if(inf.mv&&inf.mv<3450)status(`⚠ Akku des Lesekopfs schwach (${fmtN(inf.mv/1000,2)} V) – bald laden.`,'warn');}}
     return true;
   }catch(e){log('ERR',e.message);status(e.name==='NotFoundError'?'Kein Gerät ausgewählt.':e.message,'err');try{await T?.close()}catch{}setConn(false);return false;}}
-$('#btnDisconnect').onclick=async()=>{try{await T?.close()}catch{}setConn(false);status('Getrennt.');};
+$('#btnDisconnect').onclick=async()=>{try{await T?.close()}catch{}window._lastBle=null;setConn(false);status('Getrennt – beim nächsten Mal wird der Kopf neu ausgewählt.');};
 
+const errMsg=e=>(!IECP||/null is not an object|Cannot read prop|undefined is not an object/.test(e?.message||''))?'Bluetooth-Verbindung unterbrochen – Kopf schütteln und erneut tippen (Details: Mehr → Protokoll)':e.message;
 async function run(label,fn){if(busy)return;
   if(!T&&!(await connect()))return;
+  if(!IECP){log('WARN','Verbindung direkt nach dem Aufbau verloren – zweiter Versuch');status('Verbindung abgebrochen – neuer Versuch …','warn');await sleep(800);
+    if(!(await connect()))return;if(!IECP){status('Bluetooth-Verbindung bricht sofort wieder ab. Kopf schütteln, näher ans Gerät und erneut tippen. Details unter Mehr → Protokoll.','err');return;}}
   setBusy(true);status(label+' – warte auf Zähler …');prog('ind');const t0=Date.now();
   try{const msg=await fn()||label+' fertig';const w=msg.startsWith('⚠');status(msg+` (${Math.round((Date.now()-t0)/1000)} s)`,w?'warn':'ok');}
-  catch(e){log('ERR',e.message);status(label+': '+e.message,'err');try{await IECP?.bye()}catch{}}
+  catch(e){log('ERR',e.message);status(label+': '+errMsg(e),'err');try{await IECP?.bye()}catch{}}
   finally{ST.live=false;renderVals();setBusy(false);prog(null);if(LINK)LINK.strip=true;}}
 async function withLogin(fn){await IECP.login($('#pw').value);try{return await fn();}finally{await IECP.bye();}}
 const tsArg=(d)=>{if(!d)return '';const x=new Date(d);const s=`${pad(x.getFullYear()%100)}${pad(x.getMonth()+1)}${pad(x.getDate())}${pad(x.getHours())}${pad(x.getMinutes())}`;return S.profFmt==='season'?'0'+s:s;};
@@ -923,7 +934,7 @@ const OPS={
     const r=await IECP.readout(p=>{const v=parseReadout(cutLines(p));setVals(v,true);status(`${pre(1)}Datenauslesung … ${v.length} Werte`);});
     ST.ident=r.ident;ST.rawReadout=r.text;setVals(parseReadout(r.text),true);
     const notes=[];if(!r.ok)notes.push('Prüfsumme der Datenauslesung falsch');
-    if(ex.length){try{await readExtras(ex,pre(2),notes);}catch(e){log('ERR',e.message);notes.push(e.message);try{await IECP.bye()}catch{}}}
+    if(ex.length){try{await readExtras(ex,pre(2),notes);}catch(e){log('ERR',e.message);notes.push(errMsg(e));try{await IECP.bye()}catch{}}}
     autoSave();
     const parts=[`${ST.vals.size} Werte`];if(S.oProf&&ST.profile)parts.push(`${ST.profile.rows.length} Lastgangwerte`);if(S.oLog)parts.push(`${ST.logbook.length} Logbucheinträge`);
     return (notes.length?'⚠ '+notes.join(' · ')+' — ':'')+'Fertig: '+parts.join(', ');},
