@@ -382,8 +382,9 @@ class BleT{
     if(!navigator.bluetooth)throw new Error('Web Bluetooth nicht verfügbar – Chrome auf Android oder PC nötig (iPhone nicht möglich).');
     const cs=(S.bleS||'').toLowerCase();
     const opt=[...KNOWN_UART,'device_information','battery_service'];if(cs)opt.unshift(cs);
+    log('INFO','Geräteauswahl geöffnet');status('Kopf in der Liste auswählen …');
     this.dev=await navigator.bluetooth.requestDevice(S.bleAll||IOS?{acceptAllDevices:true,optionalServices:opt}:{filters:[{namePrefix:'Device_DvB'},{namePrefix:'DvB'},{namePrefix:'Device_'}],optionalServices:opt});
-    this.watch();
+    log('INFO','Gewählt: '+(this.dev?.name||this.dev?.id||'?'));this.watch();
     await this.attach();}
   watch(){if(this._w)return;this._w=1;this.dev.addEventListener('gattserverdisconnected',()=>{log('WARN','Bluetooth-Verbindung vom Kopf/System getrennt');if(T===this)setConn(false);});}
   /* zuletzt benutzten Kopf ohne Auswahlfenster wiederfinden (wo der Browser getDevices() kann) */
@@ -811,8 +812,12 @@ function setBusy(b){busy=b;$('#btnGo').disabled=b;$$('.op,.op2').forEach(x=>x.di
   [['#btnPow','pow','⚡ Leistung'],['#btnQuick','ph','◷ Zeiger']].forEach(([id,m,t])=>{const q=$(id),me=b&&quickRun===m;q.disabled=b&&!me;q.classList.toggle('stop',me);q.textContent=me?'■ Stopp':t;});}
 function prog(v){const p=$('#prog');p.style.visibility=v==null?'hidden':'visible';p.classList.toggle('ind',v==='ind');
   $('#progBar').style.width=typeof v==='number'?Math.max(2,Math.min(100,v))+'%':(v==='ind'?'':'0');}
+let connecting=false;
 async function connect(){
   const kind=S.transport;
+  if(connecting){status('Verbindung wird gerade aufgebaut – bitte warten …');return false;}
+  connecting=true;
+  if(T&&!IECP){T=null;LINK=null;}   // halb aufgebaute Verbindung verwerfen
   try{
     if(kind==='ble'&&window._lastBle?.dev){T=window._lastBle;try{LINK=new Link(T);await T.attach();}catch(e){log('WARN','Wiederverbinden fehlgeschlagen: '+e.message);T=null;window._lastBle=null;throw new Error('Gespeicherter Kopf nicht erreichbar – Kopf schütteln und nochmal tippen (dann kommt die Geräteauswahl).');}}
     if(!T)T=kind==='ble'?new BleT():kind==='serial'?(window._serialT||(window._serialT=new SerialT())):new DemoT();
@@ -822,15 +827,19 @@ async function connect(){
     NOSUP=new Set();IECP=new IEC(LINK);IECP.onIdent=id=>status('Zähler antwortet: '+id);setConn(true);
     if(T instanceof BleT){const inf=await T.info(LINK);HEAD=inf;if(inf.fw||inf.mv){log('INFO',`Kopf ${inf.sn} · FW ${inf.fw} · Akku ${inf.mv} mV`);setConn(true);
       if(inf.mv&&inf.mv<3450)status(`⚠ Akku des Lesekopfs schwach (${fmtN(inf.mv/1000,2)} V) – bald laden.`,'warn');}}
-    return true;
-  }catch(e){log('ERR',e.message);status(e.name==='NotFoundError'?'Kein Gerät ausgewählt.':e.message,'err');try{await T?.close()}catch{}setConn(false);return false;}}
+    if(IECP)log('INFO','Verbindung bereit');
+    return !!IECP;
+  }catch(e){log('ERR',e.name+': '+e.message);status(e.name==='NotFoundError'?'Kein Gerät ausgewählt.':e.message,'err');try{await T?.close()}catch{}setConn(false);return false;}
+  finally{connecting=false;}}
 $('#btnDisconnect').onclick=async()=>{try{await T?.close()}catch{}window._lastBle=null;setConn(false);status('Getrennt – beim nächsten Mal wird der Kopf neu ausgewählt.');};
 
 const errMsg=e=>(!IECP||/null is not an object|Cannot read prop|undefined is not an object/.test(e?.message||''))?'Bluetooth-Verbindung unterbrochen – Kopf schütteln und erneut tippen (Details: Mehr → Protokoll)':e.message;
 async function run(label,fn){if(busy)return;
-  if(!T&&!(await connect()))return;
-  if(!IECP){log('WARN','Verbindung direkt nach dem Aufbau verloren – zweiter Versuch');status('Verbindung abgebrochen – neuer Versuch …','warn');await sleep(800);
-    if(!(await connect()))return;if(!IECP){status('Bluetooth-Verbindung bricht sofort wieder ab. Kopf schütteln, näher ans Gerät und erneut tippen. Details unter Mehr → Protokoll.','err');return;}}
+  if(!IECP){const ok=await connect();
+    if(!ok){if(connecting)return;
+      if(window._lastBle&&S.transport==='ble'){log('WARN','Verbindung direkt nach dem Aufbau verloren – zweiter Versuch');status('Verbindung abgebrochen – neuer Versuch …','warn');await sleep(800);
+        if(!(await connect())){status('Bluetooth-Verbindung bricht sofort wieder ab. Kopf schütteln und erneut tippen. Details unter Mehr → Protokoll.','err');return;}}
+      else{if(!/Kein Gerät|nicht erreichbar/.test($('#status').textContent))status('Keine Verbindung – bitte erneut tippen.','err');return;}}}
   setBusy(true);status(label+' – warte auf Zähler …');prog('ind');const t0=Date.now();
   try{const msg=await fn()||label+' fertig';const w=msg.startsWith('⚠');status(msg+` (${Math.round((Date.now()-t0)/1000)} s)`,w?'warn':'ok');}
   catch(e){log('ERR',e.message);status(label+': '+errMsg(e),'err');try{await IECP?.bye()}catch{}}
