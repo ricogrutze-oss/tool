@@ -91,6 +91,7 @@ tr.new td{color:var(--acc)}
 </header>
 <main>
 
+<div id="frameNote" class="note" hidden style="margin:0 0 12px">Das Tool läuft eingebettet in der Toolbox. Bluetooth funktioniert so in manchen Browsern (z. B. Bluefy am iPad) nicht. <a id="frameLink" href="#" target="_top" style="color:var(--acc);font-weight:600">→ Tool direkt öffnen</a></div>
 <section class="card ctl">
   <div class="ctlTop">
     <div class="seg" id="kindSeg"><button data-kind="elec" class="act">Strom</button><button data-kind="heat">Wärme</button><button data-kind="sml">SML</button></div>
@@ -324,6 +325,7 @@ const BAUD={'0':300,'1':600,'2':1200,'3':2400,'4':4800,'5':9600,'6':19200,'7':38
 const enc=s=>Array.from(s,c=>c.charCodeAt(0)&0xff);
 function dec(a){let s='';for(let i=0;i<a.length;i+=4096)s+=String.fromCharCode.apply(null,Array.from(a.slice(i,i+4096)));return s;}
 const IOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const FRAMED=(()=>{try{return window.top!==window}catch{return true}})();
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const bcc=a=>{let x=0;for(const b of a)x^=b;return x;};
 function frame(cmd,data){const body=[...enc(cmd),STX,...enc(data),ETX];return [SOH,...body,bcc(body)];}
@@ -382,8 +384,9 @@ class BleT{
     if(!navigator.bluetooth)throw new Error('Web Bluetooth nicht verfügbar – Chrome auf Android oder PC nötig (iPhone nicht möglich).');
     const cs=(S.bleS||'').toLowerCase();
     const opt=[...KNOWN_UART,'device_information','battery_service'];if(cs)opt.unshift(cs);
-    log('INFO','Geräteauswahl geöffnet');status('Kopf in der Liste auswählen …');
-    this.dev=await navigator.bluetooth.requestDevice(S.bleAll||IOS?{acceptAllDevices:true,optionalServices:opt}:{filters:[{namePrefix:'Device_DvB'},{namePrefix:'DvB'},{namePrefix:'Device_'}],optionalServices:opt});
+    log('INFO','Geräteauswahl geöffnet'+(FRAMED?' (eingebettet in Toolbox)':''));status('Kopf in der Liste auswählen …');
+    const hang=setTimeout(()=>{log('WARN','Geräteauswahl kommt nicht zurück');status(FRAMED?'Auswahl kommt nicht zurück – bitte das Tool direkt öffnen (Link oben).':'Auswahl kommt nicht zurück – Seite neu laden und nochmal versuchen.','err');connecting=false;},15000);
+    try{this.dev=await navigator.bluetooth.requestDevice(S.bleAll||IOS?{acceptAllDevices:true,optionalServices:opt}:{filters:[{namePrefix:'Device_DvB'},{namePrefix:'DvB'},{namePrefix:'Device_'}],optionalServices:opt});}finally{clearTimeout(hang);}
     log('INFO','Gewählt: '+(this.dev?.name||this.dev?.id||'?'));this.watch();
     await this.attach();}
   watch(){if(this._w)return;this._w=1;this.dev.addEventListener('gattserverdisconnected',()=>{log('WARN','Bluetooth-Verbindung vom Kopf/System getrennt');if(T===this)setConn(false);});}
@@ -1066,6 +1069,7 @@ $$('#tabs button').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
   $('#lgFrom').value=dl(new Date(today-864e5));$('#lgTo').value=dl(today);
   try{const p=localStorage.getItem(PWKEY);if(p!=null){$('#pw').value=p;$('#pwKeep').checked=true;}}catch{}
   renderVals();fillPhInputs();renderProfile();renderLogbook();renderHist();renderHeat();updCtl();wfChanged();nosupInfo();
+  if(FRAMED){$('#frameLink').href=location.href;$('#frameNote').hidden=!(S.transport==='ble');}
   if(S.transport==='ble'&&S.bleId&&!IOS)Promise.race([BleT.remembered(),sleep(2500).then(()=>null)]).then(r=>{if(r&&!window._lastBle){window._lastBle=r;log('INFO','Gespeicherter Kopf gefunden: '+(r.dev.name||r.dev.id));}});$('#bleInfo').textContent=S.bleName?'gespeichert: '+S.bleName:'';
   if(!navigator.bluetooth&&!('serial' in navigator))status('Dieser Browser kann weder Bluetooth noch COM-Port – Chrome (Android/PC) oder Edge verwenden. Demo und Import gehen trotzdem.','warn');})();
 </script>
