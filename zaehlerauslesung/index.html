@@ -298,6 +298,8 @@ tr.new td{color:var(--acc)}
       <label>Write-UUID<input id="sBleW" placeholder="automatisch"></label>
       <label>Notify-UUID<input id="sBleN" placeholder="automatisch"></label>
     </div>
+    <label class="chk" style="margin-top:10px"><input type="checkbox" id="sBleAll"> Bei der Auswahl alle Bluetooth-Geräte anzeigen (nicht nur DvBTIR)</label>
+    <div class="row" style="margin-top:8px"><button id="btnBleForget">Gespeicherten Kopf vergessen</button><span id="bleInfo" class="mut"></span></div>
 
   </div>
   <div class="card">
@@ -332,7 +334,7 @@ const fmtDT=d=>d?`${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()} 
 /* ---------- Einstellungen ---------- */
 const SKEY='zaehlerauslesung.settings';
 const S=Object.assign({transport:'ble',kind:'elec',oInst:false,oProf:false,oLog:false,addr:'',prof:'P.01',auto:true,oLoop:false,ctP:'',ctS:'5',vtP:'',baud:'auto',rcmd:'R5',profFmt:'season',hs:5000,cw:false,bleS:'',bleW:'',bleN:'',swPar:true},(()=>{try{return JSON.parse(localStorage.getItem(SKEY))||{}}catch{return{}}})());
-const bindS=[['transport','#transport'],['baud','#sBaud'],['rcmd','#sRcmd'],['profFmt','#sProfFmt'],['hs','#sHs'],['cw','#sCw'],['bleS','#sBleS'],['bleW','#sBleW'],['bleN','#sBleN'],['oInst','#oInst'],['oProf','#oProf'],['oLog','#oLog'],['addr','#addr'],['prof','#lgProf'],['auto','#sAuto'],['oLoop','#oLoop'],['ctP','#ctP'],['ctS','#ctS'],['vtP','#vtP']];
+const bindS=[['transport','#transport'],['baud','#sBaud'],['rcmd','#sRcmd'],['profFmt','#sProfFmt'],['hs','#sHs'],['cw','#sCw'],['bleS','#sBleS'],['bleW','#sBleW'],['bleN','#sBleN'],['oInst','#oInst'],['oProf','#oProf'],['oLog','#oLog'],['addr','#addr'],['prof','#lgProf'],['auto','#sAuto'],['oLoop','#oLoop'],['bleAll','#sBleAll'],['ctP','#ctP'],['ctS','#ctS'],['vtP','#vtP']];
 if(S.transport==='demoheat')S.transport='demo';
 const saveS=()=>{try{localStorage.setItem(SKEY,JSON.stringify(S))}catch{}};
 for(const [k,sel] of bindS){const el=$(sel);if(el.type==='checkbox')el.checked=!!S[k];else el.value=S[k];
@@ -379,9 +381,13 @@ class BleT{
     if(!navigator.bluetooth)throw new Error('Web Bluetooth nicht verfügbar – Chrome auf Android oder PC nötig (iPhone nicht möglich).');
     const cs=(S.bleS||'').toLowerCase();
     const opt=[...KNOWN_UART,'device_information','battery_service'];if(cs)opt.unshift(cs);
-    this.dev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:opt});
-    this.dev.addEventListener('gattserverdisconnected',()=>{log('WARN','Bluetooth-Verbindung vom Kopf/System getrennt');if(T===this)setConn(false);});
+    this.dev=await navigator.bluetooth.requestDevice(S.bleAll?{acceptAllDevices:true,optionalServices:opt}:{filters:[{namePrefix:'Device_DvB'},{namePrefix:'DvB'},{namePrefix:'Device_'}],optionalServices:opt});
+    this.watch();
     await this.attach();}
+  watch(){if(this._w)return;this._w=1;this.dev.addEventListener('gattserverdisconnected',()=>{log('WARN','Bluetooth-Verbindung vom Kopf/System getrennt');if(T===this)setConn(false);});}
+  /* zuletzt benutzten Kopf ohne Auswahlfenster wiederfinden (wo der Browser getDevices() kann) */
+  static async remembered(){try{if(!navigator.bluetooth?.getDevices)return null;const ds=await navigator.bluetooth.getDevices();
+    const d=ds.find(x=>S.bleId&&x.id===S.bleId)||ds.find(x=>/DvB/i.test(x.name||''));if(!d)return null;const t=new BleT();t.dev=d;t.watch();return t;}catch(e){log('WARN','getDevices: '+e.message);return null;}}
   /* (Wieder-)Verbinden mit dem bereits gewählten Kopf – ohne erneute Geräteauswahl */
   async attach(){const cs=(S.bleS||'').toLowerCase();
     status('Verbinde mit '+(this.dev.name||'Gerät')+' …');log('INFO','GATT verbinden: '+(this.dev.name||'?'));
@@ -402,6 +408,7 @@ class BleT{
     await this.n.startNotifications();
     this._h=this._h||(e=>{const v=e.target.value;this.onData(Uint8Array.from(new Uint8Array(v.buffer,v.byteOffset,v.byteLength)));});
     if(this._hn!==this.n){this.n.addEventListener('characteristicvaluechanged',this._h);this._hn=this.n;}
+    S.bleId=this.dev.id;S.bleName=this.dev.name||'';saveS();
     log('INFO',`Verwende Service ${found.s.uuid}, TX ${found.w.uuid}, RX ${found.n.uuid}`);
   }
   async write(u8){if(this.dev?.gatt&&this.dev.gatt.connected===false)throw new Error('Bluetooth-Verbindung unterbrochen');
@@ -410,7 +417,7 @@ class BleT{
     else if(w.writeValueWithResponse)await w.writeValueWithResponse(c);else await w.writeValue(c);}}
   async setBaud(b){const z=Object.keys(BAUD).find(k=>BAUD[k]===b);if(z==null){log('WARN','Baudrate '+b+' vom Kopf nicht unterstützt');return;}await this.cmd(z);}
   async close(){try{this.dev?.gatt.disconnect()}catch{}}
-  async info(link){const ask=async c=>{link.clear();await this.cmd(c);try{return (await link.wait(b=>{const i=b.indexOf(10);if(i<0)return null;const r=dec(b.slice(0,i)).trim();b.splice(0,i+1);return r;},800)).replace(/[^\x20-\x7e]/g,'');}catch{return '';}};
+  async info(link){const ask=async c=>{link.clear();try{await this.cmd(c);return (await link.wait(b=>{const i=b.indexOf(10);if(i<0)return null;const r=dec(b.slice(0,i)).trim();b.splice(0,i+1);return r;},800)).replace(/[^\x20-\x7e]/g,'');}catch{return '';}};
     const fw=await ask('HV'),sn=await ask('HS'),acc=await ask('V');link.clear();const mv=parseInt((acc.match(/(\d+)\s*mV/)||[])[1]);return{fw,sn,mv};}
 }
 
@@ -806,6 +813,7 @@ function prog(v){const p=$('#prog');p.style.visibility=v==null?'hidden':'visible
 async function connect(){
   const kind=S.transport;
   try{
+    if(kind==='ble'&&!window._lastBle){const r=await BleT.remembered();if(r){log('INFO','Gespeicherter Kopf: '+(r.dev.name||r.dev.id));window._lastBle=r;}}
     if(kind==='ble'&&window._lastBle?.dev){T=window._lastBle;try{LINK=new Link(T);await T.attach();}catch(e){log('WARN','Wiederverbinden fehlgeschlagen: '+e.message);T=null;}}
     if(!T)T=kind==='ble'?new BleT():kind==='serial'?(window._serialT||(window._serialT=new SerialT())):new DemoT();
     if(!T.dev||kind!=='ble'){LINK=new Link(T);
@@ -962,6 +970,7 @@ const OPS={
 $$('.op').forEach(b=>b.onclick=()=>run(b.textContent,OPS[b.dataset.op]));
 $('#btnQuick').onclick=()=>{if(quickRun){stopReq=true;$('#btnQuick').textContent='stoppt …';return;}run('Zeiger',OPS.quick);};
 $('#btnPow').onclick=()=>{if(quickRun){stopReq=true;$('#btnPow').textContent='stoppt …';return;}run('Leistung',OPS.power);};
+$('#btnBleForget').onclick=async()=>{try{await T?.close()}catch{}window._lastBle=null;S.bleId='';S.bleName='';saveS();setConn(false);$('#bleInfo').textContent='';status('Kopf vergessen – beim nächsten Auslesen neu auswählen.');};
 $('#btnNosupReset').onclick=()=>{try{localStorage.removeItem(NKEY)}catch{}NOSUP=new Set();nosupInfo();status('Register-Erkennung zurückgesetzt.');};
 $('#btnGo').onclick=()=>run(goLabel(),S.kind==='heat'?OPS.heat:S.kind==='sml'?OPS.sml:OPS.all);
 $$('#kindSeg button').forEach(b=>b.onclick=()=>{if(busy)return;S.kind=b.dataset.kind;saveS();updCtl();});
@@ -1047,7 +1056,7 @@ $$('#tabs button').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
   const today=new Date();today.setHours(0,0,0,0);
   $('#lgFrom').value=dl(new Date(today-864e5));$('#lgTo').value=dl(today);
   try{const p=localStorage.getItem(PWKEY);if(p!=null){$('#pw').value=p;$('#pwKeep').checked=true;}}catch{}
-  renderVals();fillPhInputs();renderProfile();renderLogbook();renderHist();renderHeat();updCtl();wfChanged();nosupInfo();
+  renderVals();fillPhInputs();renderProfile();renderLogbook();renderHist();renderHeat();updCtl();wfChanged();nosupInfo();$('#bleInfo').textContent=S.bleName?'gespeichert: '+S.bleName:'';
   if(!navigator.bluetooth&&!('serial' in navigator))status('Dieser Browser kann weder Bluetooth noch COM-Port – Chrome (Android/PC) oder Edge verwenden. Demo und Import gehen trotzdem.','warn');})();
 </script>
 </body>
