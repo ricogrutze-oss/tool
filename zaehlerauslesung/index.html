@@ -323,6 +323,7 @@ const SOH=1,STX=2,ETX=3,EOT=4,ACK=6,NAK=0x15;
 const BAUD={'0':300,'1':600,'2':1200,'3':2400,'4':4800,'5':9600,'6':19200,'7':38400,'8':57600,'9':115200};
 const enc=s=>Array.from(s,c=>c.charCodeAt(0)&0xff);
 function dec(a){let s='';for(let i=0;i<a.length;i+=4096)s+=String.fromCharCode.apply(null,Array.from(a.slice(i,i+4096)));return s;}
+const IOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const bcc=a=>{let x=0;for(const b of a)x^=b;return x;};
 function frame(cmd,data){const body=[...enc(cmd),STX,...enc(data),ETX];return [SOH,...body,bcc(body)];}
@@ -381,7 +382,7 @@ class BleT{
     if(!navigator.bluetooth)throw new Error('Web Bluetooth nicht verfügbar – Chrome auf Android oder PC nötig (iPhone nicht möglich).');
     const cs=(S.bleS||'').toLowerCase();
     const opt=[...KNOWN_UART,'device_information','battery_service'];if(cs)opt.unshift(cs);
-    this.dev=await navigator.bluetooth.requestDevice(S.bleAll?{acceptAllDevices:true,optionalServices:opt}:{filters:[{namePrefix:'Device_DvB'},{namePrefix:'DvB'},{namePrefix:'Device_'}],optionalServices:opt});
+    this.dev=await navigator.bluetooth.requestDevice(S.bleAll||IOS?{acceptAllDevices:true,optionalServices:opt}:{filters:[{namePrefix:'Device_DvB'},{namePrefix:'DvB'},{namePrefix:'Device_'}],optionalServices:opt});
     this.watch();
     await this.attach();}
   watch(){if(this._w)return;this._w=1;this.dev.addEventListener('gattserverdisconnected',()=>{log('WARN','Bluetooth-Verbindung vom Kopf/System getrennt');if(T===this)setConn(false);});}
@@ -813,8 +814,7 @@ function prog(v){const p=$('#prog');p.style.visibility=v==null?'hidden':'visible
 async function connect(){
   const kind=S.transport;
   try{
-    if(kind==='ble'&&!window._lastBle){const r=await BleT.remembered();if(r){log('INFO','Gespeicherter Kopf: '+(r.dev.name||r.dev.id));window._lastBle=r;}}
-    if(kind==='ble'&&window._lastBle?.dev){T=window._lastBle;try{LINK=new Link(T);await T.attach();}catch(e){log('WARN','Wiederverbinden fehlgeschlagen: '+e.message);T=null;}}
+    if(kind==='ble'&&window._lastBle?.dev){T=window._lastBle;try{LINK=new Link(T);await T.attach();}catch(e){log('WARN','Wiederverbinden fehlgeschlagen: '+e.message);T=null;window._lastBle=null;throw new Error('Gespeicherter Kopf nicht erreichbar – Kopf schütteln und nochmal tippen (dann kommt die Geräteauswahl).');}}
     if(!T)T=kind==='ble'?new BleT():kind==='serial'?(window._serialT||(window._serialT=new SerialT())):new DemoT();
     if(!T.dev||kind!=='ble'){LINK=new Link(T);
     if(kind==='serial')await T.open({baudRate:300,dataBits:7,parity:'even',stopBits:1});else await T.open();}
@@ -1056,7 +1056,8 @@ $$('#tabs button').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
   const today=new Date();today.setHours(0,0,0,0);
   $('#lgFrom').value=dl(new Date(today-864e5));$('#lgTo').value=dl(today);
   try{const p=localStorage.getItem(PWKEY);if(p!=null){$('#pw').value=p;$('#pwKeep').checked=true;}}catch{}
-  renderVals();fillPhInputs();renderProfile();renderLogbook();renderHist();renderHeat();updCtl();wfChanged();nosupInfo();$('#bleInfo').textContent=S.bleName?'gespeichert: '+S.bleName:'';
+  renderVals();fillPhInputs();renderProfile();renderLogbook();renderHist();renderHeat();updCtl();wfChanged();nosupInfo();
+  if(S.transport==='ble'&&S.bleId&&!IOS)Promise.race([BleT.remembered(),sleep(2500).then(()=>null)]).then(r=>{if(r&&!window._lastBle){window._lastBle=r;log('INFO','Gespeicherter Kopf gefunden: '+(r.dev.name||r.dev.id));}});$('#bleInfo').textContent=S.bleName?'gespeichert: '+S.bleName:'';
   if(!navigator.bluetooth&&!('serial' in navigator))status('Dieser Browser kann weder Bluetooth noch COM-Port – Chrome (Android/PC) oder Edge verwenden. Demo und Import gehen trotzdem.','warn');})();
 </script>
 </body>
