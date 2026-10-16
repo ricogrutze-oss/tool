@@ -1,0 +1,1043 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b0f14">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<title>Zählerauslesung</title>
+<style>
+:root{--bg:#0b0f14;--card:#121821;--fg:#e6e8eb;--mut:#8b96a3;--line:#243040;--acc:#ffb020;--acc2:#2a2110;--ok:#3fb950;--warn:#ffb020;--err:#ff6b6b;--l1:#d2884a;--l2:#e6e8eb;--l3:#7d8590;--grid:#1d2733;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;align-items:center;gap:10px}
+header h1{font-size:17px;margin:0;flex:1}
+.pill{font-size:12px;padding:3px 9px;border-radius:99px;background:var(--line);color:var(--mut);white-space:nowrap}
+.pill.on{background:var(--ok);color:#06210d}
+main{max-width:980px;margin:0 auto;padding:12px 16px 80px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.card h2{font-size:15px;margin:0 0 10px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+label{font-size:12px;color:var(--mut);display:flex;flex-direction:column;gap:3px}
+input,select,textarea{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px;min-width:0;width:100%}
+textarea{font-family:ui-monospace,Consolas,monospace;font-size:12px}
+button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:8px;padding:9px 13px;cursor:pointer}
+button.pri{background:var(--acc);color:#1a1205;border-color:var(--acc);font-weight:600}
+button:disabled{opacity:.45;cursor:default}
+.tabs{display:flex;gap:4px;overflow-x:auto;margin:4px 0 12px;scrollbar-width:none}
+.tabs button{border-radius:99px;padding:7px 13px;white-space:nowrap;font-size:14px}
+.tabs button.act{background:var(--acc2);border-color:var(--acc);color:var(--acc);font-weight:600}
+.tab{display:none}.tab.act{display:block}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:6px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--mut);font-weight:600;font-size:12px}
+td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mono{font-family:ui-monospace,Consolas,monospace;font-size:12px}
+.mut{color:var(--mut);font-size:12px}
+.status{font-size:13px;margin-top:8px;min-height:18px}
+.ok{color:var(--ok)}.warn{color:var(--warn)}.err{color:var(--err)}
+canvas{width:100%;display:block;touch-action:manipulation}
+.chk{display:flex;flex-direction:row;align-items:center;gap:6px;font-size:13px;color:var(--fg)}
+.chk input{width:auto}
+#logbox{height:340px;overflow:auto;white-space:pre-wrap;word-break:break-all;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px}
+.checks li{margin:3px 0}
+.scroll{overflow-x:auto}
+.ph input{padding:6px;text-align:right}
+details summary{cursor:pointer;color:var(--acc);margin:6px 0}
+.note{background:var(--acc2);border-radius:8px;padding:9px 11px;font-size:13px;margin:8px 0}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:8px 0}
+.kpi div{background:var(--bg);border-radius:8px;padding:8px}
+.kpi b{display:block;font-size:16px}
+[hidden]{display:none!important}
+.pill{cursor:pointer}
+.ctl{padding:12px}
+.ctlTop{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.seg{display:flex;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px;flex:1}
+.seg button{flex:1;border:0;background:transparent;padding:6px 8px;font-size:14px;color:var(--mut);border-radius:7px}
+.seg button.act{background:var(--card);color:var(--acc);font-weight:600;box-shadow:0 0 0 1px var(--line)}
+.icon{background:transparent;width:38px;height:36px;padding:0;font-size:17px;color:var(--mut)}
+.cfg{margin:0 0 10px;padding:10px;background:var(--bg);border:1px solid var(--line);border-radius:10px;display:grid;gap:8px}
+.goRow{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+button.big{padding:12px 20px;font-size:16px;min-width:150px}
+.opts{display:flex;gap:4px 14px;flex-wrap:wrap}
+.extra{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);display:grid;gap:8px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}.chips button{padding:4px 11px;font-size:12px;border-radius:99px}
+.prog{height:3px;background:var(--line);border-radius:2px;overflow:hidden;margin-top:12px;visibility:hidden}
+#progBar{height:100%;width:0;background:var(--acc);transition:width .3s}
+.prog.ind #progBar{width:30%;animation:ind 1.1s linear infinite}
+@keyframes ind{from{margin-left:-30%}to{margin-left:100%}}
+.status{margin-top:6px}
+tr.new td{color:var(--acc)}
+.quick{display:flex;align-items:center;gap:8px}
+.wfb{font-size:12px;padding:0 10px;height:36px;color:var(--mut);white-space:nowrap}
+.wfb.on{color:var(--acc);border-color:var(--acc)}
+.wfrow{display:flex;align-items:center;gap:6px}.wfrow input{width:auto;flex:1;min-width:60px}.wfrow select{width:auto}
+.sek{display:block;font-size:11px;color:var(--mut);font-weight:400}
+#btnQuick,#btnPow{padding:11px 13px}
+.quick button.stop{border-color:var(--err);color:var(--err)}
+.pow{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.pow div{background:var(--bg);border-radius:10px;padding:10px}
+.pow .big{grid-column:1/-1}
+.pow .big b{font-size:30px;line-height:1.15}
+.pow b{display:block;font-size:18px}
+.dir{font-size:13px;font-weight:600}
+</style>
+</head>
+<body>
+<header>
+  <h1>Zählerauslesung</h1>
+  <span id="connPill" class="pill">getrennt</span>
+</header>
+<main>
+
+<section class="card ctl">
+  <div class="ctlTop">
+    <div class="seg" id="kindSeg"><button data-kind="elec" class="act">Strom</button><button data-kind="heat">Wärme</button><button data-kind="sml">SML</button></div>
+    <button id="btnWf" class="wfb" title="Wandlerfaktor">WF 1</button>
+    <button id="btnCfg" class="icon" title="Verbindung einstellen">⚙</button>
+  </div>
+  <div id="cfgBox" class="cfg" hidden>
+    <div class="grid2">
+      <label>Verbindungsart
+        <select id="transport">
+          <option value="ble">Bluetooth direkt (DvBTIR)</option>
+          <option value="serial">COM-Port (PC)</option>
+          <option value="demo">Demo-Zähler (ohne Hardware)</option>
+        </select>
+      </label>
+      <label>Geräteadresse (optional)<input id="addr" placeholder="leer = alle"></label>
+      <label>Passwort P1 (mehrere mit Komma – werden durchprobiert)<input id="pw" type="password" autocomplete="off"></label>
+      <label class="chk" style="align-self:end;padding-bottom:9px"><input type="checkbox" id="pwKeep"> Passwort auf diesem Gerät merken</label>
+    </div>
+    <div class="grid2">
+      <label>Stromwandler<span class="wfrow"><input id="ctP" type="number" inputmode="decimal" placeholder="z. B. 200"><span>/</span><select id="ctS"><option value="5">5 A</option><option value="1">1 A</option></select></span></label>
+      <label>Spannungswandler (nur MS/HS)<span class="wfrow"><input id="vtP" type="number" inputmode="decimal" placeholder="leer = keiner"><span>/ 100 V</span></span></label>
+    </div>
+    <div id="wfInfo" class="mut"></div>
+    <div class="row"><button id="btnDisconnect" disabled>Trennen</button><span class="mut">Weitere Einstellungen unter „Mehr“.</span></div>
+  </div>
+  <div class="goRow">
+    <button id="btnGo" class="pri big">Auslesen</button>
+    <div class="quick" id="quickBox"><button id="btnPow" title="Nur Wirk- und Blindleistung – am schnellsten">⚡ Leistung</button><button id="btnQuick" title="U, I und P/Q je Phase für das Zeigerdiagramm">◷ Zeiger</button><label class="chk"><input type="checkbox" id="oLoop"> laufend</label></div>
+  </div>
+  <div class="goRow" style="margin-top:8px">
+    <div class="opts" id="elecOpts">
+      <label class="chk"><input type="checkbox" id="oInst"> Momentanwerte</label>
+      <label class="chk"><input type="checkbox" id="oProf"> Lastgang</label>
+      <label class="chk"><input type="checkbox" id="oLog"> Logbuch</label>
+    </div>
+  </div>
+  <div id="extraBox" class="extra" hidden>
+    <div id="rangeRow" class="grid2">
+      <label>Lastgang von<input type="datetime-local" id="lgFrom"></label>
+      <label>bis<input type="datetime-local" id="lgTo"></label>
+    </div>
+    <div id="rangeChips" class="row" style="justify-content:space-between">
+      <div class="chips"><button data-r="0">Heute</button><button data-r="1">Gestern</button><button data-r="7">7 Tage</button><button data-r="30">30 Tage</button></div>
+      <span id="estim" class="mut"></span>
+    </div>
+  </div>
+  <div id="prog" class="prog"><div id="progBar"></div></div>
+  <div id="status" class="status mut"></div>
+</section>
+
+<nav class="tabs" id="tabs">
+  <button data-tab="werte" class="act">Werte</button>
+  <button data-tab="zeiger" data-m="elec">Zeiger</button>
+  <button data-tab="waerme" data-m="heat" hidden>Wärme</button>
+  <button data-tab="lastgang" data-m="elec">Lastgang</button>
+  <button data-tab="logbuch" data-m="elec">Logbuch</button>
+  <button data-tab="verlauf">Verlauf</button>
+  <button data-tab="mehr">Mehr</button>
+</nav>
+
+<!-- WERTE -->
+<section class="tab act" id="tab-werte">
+  <div class="card" id="powCard" hidden>
+    <div class="row" style="justify-content:space-between;margin-bottom:8px"><h2 style="margin:0">Leistung</h2><span id="powTime" class="mut"></span></div>
+    <div class="pow" id="powBox"></div>
+  </div>
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <h2 id="meterTitle" style="margin:0">Keine Daten</h2>
+      <div class="row"><button id="btnSave" disabled>Im Verlauf speichern</button><button id="btnCsvVals" disabled>CSV</button></div>
+    </div>
+    <div id="identLine" class="mut" style="margin:4px 0 8px"></div>
+    <div class="scroll"><table id="valTable"><thead><tr><th>Kennzahl</th><th>Bedeutung</th><th class="num">Wert</th><th class="num wfcol">Primär</th><th>Zusatz</th></tr></thead><tbody></tbody></table></div>
+  </div>
+</section>
+
+<!-- ZEIGER -->
+<section class="tab" id="tab-zeiger">
+  <div class="card">
+    <h2>Zeigerdiagramm</h2>
+    <canvas id="phCanvas" height="360"></canvas>
+    <div class="mut" style="margin-top:6px">Spannungen dick, Ströme dünn mit Pfeil. Ströme eigener Maßstab. Winkel gegen den Uhrzeigersinn, U L1 = 0°.</div>
+  </div>
+  <div class="card">
+    <h2>Prüfung</h2>
+    <ul id="phChecks" class="checks" style="padding-left:18px;margin:0"></ul>
+    <div class="kpi" id="phKpi"></div>
+    <div class="scroll"><table id="phTable"><thead><tr><th></th><th class="num">U</th><th class="num">I</th><th class="num">φ</th><th class="num">cos φ</th><th class="num">P</th><th class="num">Q</th><th>Quadrant</th></tr></thead><tbody></tbody></table></div>
+  </div>
+  <div class="card">
+    <h2>Werte (aus Auslesung, änderbar)</h2>
+    <div class="scroll"><table class="ph"><thead><tr><th></th><th>U [V]</th><th>I [A]</th><th>∠U zu U L1 [°]</th><th>∠I zu eigener U [°]</th></tr></thead>
+      <tbody id="phInputs"></tbody></table></div>
+    <div class="row" style="margin-top:8px"><button id="btnPhFromData">Aus Auslesung übernehmen</button><button id="btnPhDemo">Beispiel: L2 Strom verdreht</button></div>
+    <div id="phSource" class="mut" style="margin-top:6px"></div>
+  </div>
+</section>
+
+<!-- WAERME -->
+<section class="tab" id="tab-waerme">
+  <div class="card">
+    <h2 id="heatTitle">Wärmemengenzähler</h2>
+    <div class="kpi" id="heatKpi"></div>
+    <ul id="heatChecks" class="checks" style="padding-left:18px;margin:8px 0 0"></ul>
+  </div>
+  <div class="card scroll"><h2>Stichtag / Vorjahr</h2><table id="heatPrev"></table></div>
+  <div class="card"><div class="mut">Landis+Gyr UH50/T550: Jede optische Auslesung kostet Batterielaufzeit (grob ½ Stunde). Momentanwerte (Temperaturen, Durchfluss, Leistung) liefern nicht alle Firmwarestände.</div></div>
+</section>
+
+<!-- LASTGANG -->
+<section class="tab" id="tab-lastgang">
+  <div class="card">
+    <div class="row" style="justify-content:space-between"><h2 style="margin:0">Lastgang</h2><div class="row"><button id="btnPngProf" disabled>Grafik</button><button id="btnCsvProf" disabled>CSV</button></div></div>
+    <div class="mut" style="margin-top:4px">Wird mitgelesen, wenn oben „Lastgang“ angehakt ist. Bei 300 Baud dauert ein Tag mit 15-min-Werten ca. 2–3 Minuten.</div>
+  </div>
+  <div class="card">
+    <div id="lgChans" class="row"></div>
+    <canvas id="lgCanvas" height="300" style="margin-top:8px"></canvas>
+    <div id="lgTip" class="mut mono" style="min-height:18px;margin-top:4px"></div>
+    <div class="scroll"><table id="lgStats"></table></div>
+    <details><summary>Tabelle anzeigen</summary><div class="scroll"><table id="lgTable"></table></div></details>
+  </div>
+</section>
+
+<!-- LOGBUCH -->
+<section class="tab" id="tab-logbuch">
+  <div class="card">
+    <h2>Logbuch</h2>
+    <div class="mut">Wird mitgelesen, wenn oben „Logbuch“ angehakt ist (letzte 90 Tage). Die Bedeutung der Statusbits ist herstellerabhängig – sie werden als Hex und als gesetzte Bitnummern angezeigt.</div>
+  </div>
+  <div class="card scroll"><table id="lbTable"></table></div>
+</section>
+
+<!-- VERLAUF -->
+<section class="tab" id="tab-verlauf">
+  <div class="card">
+    <h2>Gespeicherte Auslesungen</h2>
+    <div class="mut">Lokal im Browser dieses Geräts gespeichert.</div>
+    <div class="row" style="margin:8px 0"><button id="btnExportAll">Alle als JSON exportieren</button><label class="chk" style="display:none"></label></div>
+    <div class="scroll"><table id="histTable"></table></div>
+  </div>
+</section>
+
+<!-- MEHR -->
+<section class="tab" id="tab-mehr">
+<!-- REGISTER -->
+  <div class="card">
+    <h2>Einzelne Register lesen</h2>
+    <label>Kennzahlen (durch Komma oder Zeilen getrennt)<textarea id="regList" rows="3">1.8.0, 2.8.0, 0.9.1, 0.9.2, C.1.0</textarea></label>
+    <div class="row" style="margin-top:10px"><button data-op="registers" class="op pri">Lesen</button></div>
+    <div class="mut" style="margin-top:6px">Passwort unter ⚙ oben. Gesendet wird nur der Lesebefehl (R5/R1), Schreibbefehle sind nicht eingebaut.</div>
+  </div>
+  <div class="card scroll"><table id="regTable"><thead><tr><th>Anfrage</th><th>Antwort</th></tr></thead><tbody></tbody></table></div>
+
+<!-- UHRZEIT -->
+  <div class="card">
+    <h2>Uhrzeit stellen (Landis+Gyr)</h2>
+    <div class="mut">Liest Datum/Uhrzeit (C003) und stellt sie auf die Handyzeit – genauso wie Q4. Bisher nur für Landis+Gyr ZMD/ZFD (Kennung /LGZ…) geprüft. Passwort unter ⚙.</div>
+    <div class="kpi" id="clkBox"></div>
+    <div class="row"><button id="btnClkRead" class="op2">Zeit prüfen</button><button id="btnClkSet" class="op2 pri">Zeit stellen …</button></div>
+  </div>
+<!-- PC-SKRIPT -->
+  <div class="card">
+    <h2>PC-Skript (Python)</h2>
+    <div class="mut">Für die Auslesung am Windows-PC per COM-Port (Device BLE-zu-COM-Treiber oder USB-Kopf). Voraussetzung: Python + <span class="mono">pip install pyserial</span>.<br>
+    Aufruf: <span class="mono">python zaehler_auslesen.py --list</span> · <span class="mono">python zaehler_auslesen.py COM5</span> · <span class="mono">python zaehler_auslesen.py COM5 --ultraheat</span></div>
+    <div class="row" style="margin-top:8px"><a href="zaehler_auslesen.py" download="zaehler_auslesen.py"><button>zaehler_auslesen.py herunterladen</button></a></div>
+  </div>
+<!-- IMPORT -->
+  <div class="card">
+    <h2>Rohdaten importieren</h2>
+    <div class="mut">Auslesung als Text (z. B. aus dem Python-Skript, Q4-Export oder kopiert) – Werte, P.01 und P.98 werden erkannt.</div>
+    <input type="file" id="impFile" accept=".txt,.log,.csv,.dat,.json,.bin" style="margin:8px 0">
+    <textarea id="impText" rows="8" placeholder="/EMH5...&#10;1.8.0(012345.678*kWh)&#10;..."></textarea>
+    <div class="row" style="margin-top:8px"><button id="btnImport" class="pri">Auswerten</button></div>
+  </div>
+
+<!-- EINSTELLUNGEN -->
+  <div class="card">
+    <h2>Protokoll IEC 62056-21</h2>
+    <div class="grid2">
+      <label>Baudrate<select id="sBaud">
+        <option value="auto">Automatisch (vom Zähler angeboten)</option>
+        <option value="hold">300 Baud halten</option>
+        <option value="9600">max. 9600</option>
+        <option value="19200">max. 19200</option></select></label>
+      <label>Lesebefehl<select id="sRcmd"><option>R5</option><option>R1</option><option>R6</option><option>R2</option></select></label>
+      <label>Datumsformat Lastgang<select id="sProfFmt">
+        <option value="season">0JJMMTThhmm (mit Saisonkennung)</option>
+        <option value="plain">JJMMTThhmm</option>
+        <option value="all">kein Zeitraum (alles)</option></select></label>
+      <label>Antwort-Timeout Handshake [ms]<input id="sHs" type="number" value="5000"></label>
+      <label>Lastgang-Profil<select id="lgProf"><option>P.01</option><option>P.02</option></select></label>
+    </div>
+    <label class="chk" style="margin-top:10px"><input type="checkbox" id="sAuto" checked> Jede Auslesung automatisch im Verlauf speichern</label>
+    <label class="chk" style="margin-top:10px"><input type="checkbox" id="sCw"> Zähler zählt Winkel im Uhrzeigersinn</label>
+    <div class="row" style="margin-top:10px"><button id="btnNosupReset">Register-Erkennung zurücksetzen</button><span id="nosupInfo" class="mut"></span></div>
+  </div>
+  <div class="card">
+    <h2>Bluetooth</h2>
+    <div class="note">Der DvBTIR wird jetzt wie von der Q4-App auf die Baudrate des Zählers umgeschaltet (z. B. 9600). Bei Problemen oben „300 Baud halten“ wählen. Falls der Kopf nicht automatisch gefunden wird: in <b>nRF Connect</b> scannen und die UUIDs hier eintragen.</div>
+    <div class="grid2">
+      <label>Service-UUID<input id="sBleS" placeholder="automatisch"></label>
+      <label>Write-UUID<input id="sBleW" placeholder="automatisch"></label>
+      <label>Notify-UUID<input id="sBleN" placeholder="automatisch"></label>
+    </div>
+
+  </div>
+  <div class="card">
+    <h2>Hinweise</h2>
+    <div class="mut">Mehrfach falsche Passwörter können den Programmierzugang des Zählers sperren. Das Tool sendet ausschließlich Lese- und Login-Befehle (/?!, ACK, P1, R5/R1, B0).</div>
+  </div>
+
+<!-- PROTOKOLL -->
+  <div class="card">
+    <div class="row" style="justify-content:space-between"><h2 style="margin:0">Kommunikation</h2>
+      <div class="row"><button id="btnLogCopy">Kopieren</button><button id="btnLogClear">Leeren</button></div></div>
+    <div id="logbox" class="mono" style="margin-top:8px"></div>
+  </div>
+</section>
+
+</main>
+<script>
+'use strict';
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const SOH=1,STX=2,ETX=3,EOT=4,ACK=6,NAK=0x15;
+const BAUD={'0':300,'1':600,'2':1200,'3':2400,'4':4800,'5':9600,'6':19200,'7':38400,'8':57600,'9':115200};
+const enc=s=>Array.from(s,c=>c.charCodeAt(0)&0xff);
+function dec(a){let s='';for(let i=0;i<a.length;i+=4096)s+=String.fromCharCode.apply(null,Array.from(a.slice(i,i+4096)));return s;}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const bcc=a=>{let x=0;for(const b of a)x^=b;return x;};
+function frame(cmd,data){const body=[...enc(cmd),STX,...enc(data),ETX];return [SOH,...body,bcc(body)];}
+const pad=(n,l=2)=>String(n).padStart(l,'0');
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmtN=(n,d=2)=>isFinite(n)?n.toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d}):'–';
+const fmtDT=d=>d?`${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`:'';
+
+/* ---------- Einstellungen ---------- */
+const SKEY='zaehlerauslesung.settings';
+const S=Object.assign({transport:'ble',kind:'elec',oInst:false,oProf:false,oLog:false,addr:'',prof:'P.01',auto:true,oLoop:false,ctP:'',ctS:'5',vtP:'',baud:'auto',rcmd:'R5',profFmt:'season',hs:5000,cw:false,bleS:'',bleW:'',bleN:'',swPar:true},(()=>{try{return JSON.parse(localStorage.getItem(SKEY))||{}}catch{return{}}})());
+const bindS=[['transport','#transport'],['baud','#sBaud'],['rcmd','#sRcmd'],['profFmt','#sProfFmt'],['hs','#sHs'],['cw','#sCw'],['bleS','#sBleS'],['bleW','#sBleW'],['bleN','#sBleN'],['oInst','#oInst'],['oProf','#oProf'],['oLog','#oLog'],['addr','#addr'],['prof','#lgProf'],['auto','#sAuto'],['oLoop','#oLoop'],['ctP','#ctP'],['ctS','#ctS'],['vtP','#vtP']];
+if(S.transport==='demoheat')S.transport='demo';
+const saveS=()=>{try{localStorage.setItem(SKEY,JSON.stringify(S))}catch{}};
+for(const [k,sel] of bindS){const el=$(sel);if(el.type==='checkbox')el.checked=!!S[k];else el.value=S[k];
+  el.addEventListener('change',()=>{S[k]=el.type==='checkbox'?el.checked:(el.type==='number'?+el.value:el.value.trim());saveS();if(k==='cw')updatePhasor();if(/^(ctP|ctS|vtP)$/.test(k))wfChanged();updCtl();if(k==='transport'&&T){try{T.close()}catch{}setConn(false);}});}
+
+/* ---------- Protokoll-Log ---------- */
+const LOG=[];let logT=null;
+const CTRL={1:'<SOH>',2:'<STX>',3:'<ETX>',4:'<EOT>',6:'<ACK>',21:'<NAK>',13:'',10:'⏎\n'};
+function vis(a,hex){if(hex)return Array.from(a,b=>pad(b.toString(16),2)).join(' ');let s='';for(const b of a)s+=CTRL[b]!==undefined?CTRL[b]:(b<32||b>126?`<${pad(b.toString(16))}>`:String.fromCharCode(b));return s;}
+function log(dir,data,hex){const t=new Date().toLocaleTimeString('de-DE');LOG.push(`${t} ${dir} ${typeof data==='string'?data:vis(data,hex)}`);if(LOG.length>4000)LOG.splice(0,500);
+  clearTimeout(logT);logT=setTimeout(()=>{const b=$('#logbox');const atEnd=b.scrollTop+b.clientHeight>=b.scrollHeight-20;b.textContent=LOG.join('\n');if(atEnd)b.scrollTop=b.scrollHeight;},150);}
+$('#btnLogClear').onclick=()=>{LOG.length=0;$('#logbox').textContent='';};
+$('#btnLogCopy').onclick=()=>navigator.clipboard?.writeText(LOG.join('\n'));
+function status(msg,cls='mut'){const s=$('#status');s.className='status '+cls;s.textContent=msg;}
+
+/* ---------- Transporte ---------- */
+class SerialT{
+  constructor(){this.port=null;this.onData=()=>{};this.fixedBaud=false;}
+  async open(cfg){
+    if(!('serial' in navigator))throw new Error('Web Serial nicht verfügbar – am PC Chrome oder Edge verwenden.');
+    if(!this.port)this.port=await navigator.serial.requestPort();
+    this.cfg=cfg;await this.port.open(cfg);this.loop();
+  }
+  loop(){const r=this.port.readable.getReader();this.reader=r;
+    this.reading=(async()=>{try{for(;;){const {value,done}=await r.read();if(done)break;if(value&&value.length)this.onData(value);}}catch(e){log('ERR',e.message)}finally{try{r.releaseLock()}catch{}}})();}
+  async write(u8){const w=this.port.writable.getWriter();try{await w.write(u8)}finally{w.releaseLock()}}
+  async shut(){try{await this.reader?.cancel()}catch{}try{await this.reading}catch{}try{await this.port.close()}catch{}}
+  async setBaud(b,extra={}){await this.shut();this.cfg={...this.cfg,...extra,baudRate:b};await this.port.open(this.cfg);this.loop();}
+  async close(){await this.shut();}
+}
+const KNOWN_UART=[
+  '6e400001-b5a3-f393-e0a9-e50e24dcca9e','0000ffe0-0000-1000-8000-00805f9b34fb','49535343-fe7d-4ae5-8fa9-9fafd205e455',
+  '2456e1b9-26e2-8f83-e744-f34f01e9d701','0000fff0-0000-1000-8000-00805f9b34fb','0000ffb0-0000-1000-8000-00805f9b34fb',
+  '0003cdd0-0000-1000-8000-00805f9b0131','6e400001-b5a3-f393-e0a9-e50e24dc4179'];
+const props=c=>Object.entries({R:c.properties.read,W:c.properties.write,w:c.properties.writeWithoutResponse,N:c.properties.notify,I:c.properties.indicate}).filter(e=>e[1]).map(e=>e[0]).join('');
+/* DvBTIR: Steuerbefehle an den Kopf = 0x80 + ASCII-Zeichen (aus Bluetooth-Mitschnitt der Q4-App).
+   '0'…'9' = Baudrate wie IEC-Kennbuchstabe, 'C','E','A' = Grundeinstellung vor jeder Verbindung,
+   'HV' = Firmware, 'HS' = Seriennummer, 'V' = Akkuspannung. Daten gehen als 7-Bit-ASCII, Parität macht der Kopf. */
+class BleT{
+  constructor(){this.onData=()=>{};this.fixedBaud=false;}
+  async cmd(c){await this.write(new Uint8Array([0x80,...enc(c)]));log('KOPF',c);}
+  async prep(){for(const c of ['0','C','E','A'])await this.cmd(c);}
+  async open(){
+    if(!navigator.bluetooth)throw new Error('Web Bluetooth nicht verfügbar – Chrome auf Android oder PC nötig (iPhone nicht möglich).');
+    const cs=(S.bleS||'').toLowerCase();
+    const opt=[...KNOWN_UART,'device_information','battery_service'];if(cs)opt.unshift(cs);
+    this.dev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:opt});
+    this.dev.addEventListener('gattserverdisconnected',()=>{log('INFO','Bluetooth-Verbindung beendet');setConn(false);});
+    status('Verbinde mit '+(this.dev.name||'Gerät')+' …');
+    const srv=await this.dev.gatt.connect();
+    let services=await srv.getPrimaryServices();
+    if(cs)services.sort((a,b)=>(b.uuid===cs)-(a.uuid===cs));
+    let found=null;
+    for(const s of services){
+      const chars=await s.getCharacteristics().catch(()=>[]);
+      log('INFO',`Service ${s.uuid}: `+chars.map(c=>`${c.uuid} [${props(c)}]`).join(', '));
+      if(/^0000180[af]/.test(s.uuid))continue;
+      const w=S.bleW?chars.find(c=>c.uuid===S.bleW.toLowerCase()):chars.find(c=>c.properties.write||c.properties.writeWithoutResponse);
+      const n=S.bleN?chars.find(c=>c.uuid===S.bleN.toLowerCase()):chars.find(c=>c.properties.notify||c.properties.indicate);
+      if(w&&n&&!found)found={s,w,n};
+    }
+    if(!found)throw new Error('Kein Daten-Service gefunden. UUID mit nRF Connect ermitteln und unter Einstellungen → Bluetooth eintragen.');
+    this.w=found.w;this.n=found.n;
+    await this.n.startNotifications();
+    this.n.addEventListener('characteristicvaluechanged',e=>{const v=e.target.value;this.onData(Uint8Array.from(new Uint8Array(v.buffer,v.byteOffset,v.byteLength)));});
+    log('INFO',`Verwende Service ${found.s.uuid}, TX ${found.w.uuid}, RX ${found.n.uuid}`);
+  }
+  async write(u8){for(let i=0;i<u8.length;i+=20){const c=u8.slice(i,i+20);
+    if(this.w.properties.writeWithoutResponse)await this.w.writeValueWithoutResponse(c);else await this.w.writeValueWithResponse(c);}}
+  async setBaud(b){const z=Object.keys(BAUD).find(k=>BAUD[k]===b);if(z==null){log('WARN','Baudrate '+b+' vom Kopf nicht unterstützt');return;}await this.cmd(z);}
+  async close(){try{this.dev?.gatt.disconnect()}catch{}}
+  async info(link){const ask=async c=>{link.clear();await this.cmd(c);try{return (await link.wait(b=>{const i=b.indexOf(10);if(i<0)return null;const r=dec(b.slice(0,i)).trim();b.splice(0,i+1);return r;},800)).replace(/[^\x20-\x7e]/g,'');}catch{return '';}};
+    const fw=await ask('HV'),sn=await ask('HS'),acc=await ask('V');link.clear();const mv=parseInt((acc.match(/(\d+)\s*mV/)||[])[1]);return{fw,sn,mv};}
+}
+
+/* ---------- Demo-Zähler ---------- */
+class DemoT{
+  constructor(heat){this.onData=()=>{};this.fixedBaud=false;this.in=[];this.heat=!!heat;}
+  async open(){log('INFO','Demo-Zähler bereit');}
+  async setBaud(){} async close(){}
+  async write(u8){for(const b of u8)this.in.push(b&0x7f);this.process();}
+  emit(arr,delay=150){setTimeout(()=>{const u=new Uint8Array(arr);for(let i=0,k=0;i<u.length;i+=200,k++){const c=u.slice(i,i+200);setTimeout(()=>this.onData(c),k*8);}},delay);}
+  blk(text){const body=[...enc(text),ETX];return [STX,...body,bcc(body)];}
+  process(){
+    const b=this.in;if(!b.length)return;
+    if(b[0]===0x2f){const s=dec(b);const e=s.indexOf('!\r\n');if(e<0)return;b.splice(0,e+3);
+      if(this.heat||S.kind==='heat'){this.emit(enc('/LUGCUH50\r\n'));this.emit(this.blk(this.heatData()),500);return this.process();}
+      this.emit(enc(this.ident||'/DMO5LZQJ-Demo\r\n'));return this.process();}
+    if(b[0]===ACK){if(b.length===1)return; if(b[1]!==0x30){b.shift();return this.process();} if(b.length<6)return;
+      const opt=dec(b.slice(1,4));b.splice(0,6);
+      if(opt[2]==='0')this.emit(this.blk(this.readout()+'!\r\n'),300);
+      else{const body=[...enc('P0'),STX,...enc('(4D9F2A1C)'),ETX];this.emit([SOH,...body,bcc(body)],300);}
+      return this.process();}
+    if(b[0]===SOH){const e=b.indexOf(ETX);if(e<0||b.length<e+2)return;const m=b.splice(0,e+2);const st=m.indexOf(STX);
+      const cmd=dec(m.slice(1,st<0?e:st)),data=st<0?'':dec(m.slice(st+1,e));
+      if(cmd==='P1'){if(data==='(00000000)'){const bd=[...enc('B0'),ETX];this.emit([SOH,...bd,bcc(bd)]);}else this.emit([data.length>2?ACK:NAK]);}
+      else if(cmd==='R2'&&data.startsWith('C003'))this.emit(this.blk(`C003(${lgTime(new Date(Date.now()+(this.clkOff??17000)))})`),100);
+      else if(cmd==='W2'&&data.startsWith('C003')){const t=parseLg(data.slice(5));this.clkOff=t?t-Date.now():0;this.emit([ACK]);}
+      else if(cmd[0]==='R')this.emit(this.blk(this.reply(data)),200);
+      return this.process();}
+    b.shift();this.process();
+  }
+  heatData(){const j=(v,d)=>(v+(Math.random()-.5)*d);const Q=j(.512,.02),TV=j(75.2,.4),TR=j(54.4,.4),P=1.163*Q*(TV-TR);
+    return ['6.8(0399.772*MWh)6.26(17184.35*m3)9.21(00000000)','6.26*01(15790.20*m3)6.8*01(0368.441*MWh)','F(0)9.20(92741939)6.35(60*m)',
+      `6.6(0045.2*kW)6.6*01(0048.9*kW)6.33(001.951*m3ph)9.4(098.2*C&071.4*C)`,'6.31(0024310*h)6.32(0000000*h)9.22(R)9.6(000&92741939&0&000&92741939&0)',
+      '9.7(20000)6.32*01(0000000*h)6.36(01-01&00:00)6.33*01(001.889*m3ph)','9.4*01(097.5*C&069.9*C)','6.36*02(01&00:00)9.36(2026-10-13&20:08:00)9.24(3.5*m3ph)',
+      `6.4(${P.toFixed(1)}*kW)6.27(${Q.toFixed(3)}*m3ph)6.29(${TV.toFixed(1)}*C)6.28(${TR.toFixed(1)}*C)6.30(${(TV-TR).toFixed(1)}*K)`,
+      '9.1(0&1&0&0010&CECV&CECV&1&5.16&5.16&F&081008&040404&08&0)9.31(0018230*h)','!',''].join('\r\n');}
+  inst(){
+    const j=(v,d)=>v+(Math.random()-.5)*d;
+    const U=[j(231.2,1),j(229.8,1),j(230.6,1)],I=[j(12.4,.4),j(9.8,.4),j(14.1,.4)],A=[342,335,348];
+    const r={'32.7.0':[U[0],'V'],'52.7.0':[U[1],'V'],'72.7.0':[U[2],'V'],'31.7.0':[I[0],'A'],'51.7.0':[I[1],'A'],'71.7.0':[I[2],'A'],
+      '81.7.1':[240,'deg'],'81.7.2':[120,'deg'],'81.7.4':[A[0],'deg'],'81.7.15':[A[1],'deg'],'81.7.26':[A[2],'deg'],'14.7.0':[j(50,.04),'Hz']};
+    let P=0,Q=0;['21','41','61'].forEach((c,i)=>{const th=A[i]*Math.PI/180,p=U[i]*I[i]*Math.cos(th)/1000,q=-U[i]*I[i]*Math.sin(th)/1000;P+=p;Q+=q;r[c+'.7.0']=[p,'kW'];r[(+c+2)+'.7.0']=[q,'kvar'];});
+    r['1.7.0']=[P,'kW'];r['3.7.0']=[Q,'kvar'];return r;
+  }
+  fmtR(k,v){const d=v[1]==='V'||v[1]==='deg'?1:(v[1]==='Hz'?2:3);return `${k}(${v[0].toFixed(d)}*${v[1]})`;}
+  readout(){
+    const n=new Date();const t=`${pad(n.getHours())}${pad(n.getMinutes())}${pad(n.getSeconds())}`,d=`${pad(n.getFullYear()%100)}${pad(n.getMonth()+1)}${pad(n.getDate())}`;
+    const L=['0.0.0(12345678)','C.1.0(1EMH0012345678)','0.9.1('+t+')','0.9.2('+d+')','1.8.0(012345.678*kWh)','1.8.1(008000.123*kWh)','1.8.2(004345.555*kWh)',
+      '2.8.0(000123.456*kWh)','3.8.0(002345.111*kvarh)','4.8.0(000045.222*kvarh)','1.6.0(15.234*kW)(2610081215)','1.8.0*09(011987.001*kWh)','F.F(00000000)'];
+    for(const [k,v] of Object.entries(this.inst()))L.push(this.fmtR(k,v));
+    return L.join('\r\n')+'\r\n';
+  }
+  reply(data){
+    const key=data.replace(/\(.*$/,'');
+    if(/^P\.0[12]/.test(key))return this.profile(data,key);
+    if(key==='P.98')return this.logbook();
+    const iv=this.inst();if(iv[key])return this.fmtR(key,iv[key]);
+    const m=this.readout().split('\r\n').find(l=>l.startsWith(key+'('));
+    return m||'(ERROR)';
+  }
+  profile(data,key){
+    const nums=(data.match(/\((.*)\)/)||[,''])[1].split(';').map(s=>s.replace(/\D/g,''));
+    const pt=s=>{if(!s||s.length<10)return null;s=s.slice(-10);return new Date(2000+ +s.slice(0,2),+s.slice(2,4)-1,+s.slice(4,6),+s.slice(6,8),+s.slice(8,10));};
+    let to=pt(nums[1])||new Date(),from=pt(nums[0])||new Date(to-864e5);
+    to=new Date(Math.min(to,Date.now()));if(to-from>7*864e5)from=new Date(to-7*864e5);
+    from=new Date(Math.ceil(from/9e5)*9e5);
+    const ts=d=>`0${pad(d.getFullYear()%100)}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}`;
+    const hdr=(d,st)=>`${key}(${ts(d)})(${st})(15)(4)(1.5)(kW)(2.5)(kW)(5.5)(kvar)(8.5)(kvar)`;
+    const L=[hdr(from,'00')];let n=0;
+    for(let d=new Date(from);d<to;d=new Date(+d+9e5),n++){
+      if(n===40)L.push(hdr(d,'08'));
+      const h=d.getHours()+d.getMinutes()/60;const base=6+9*Math.exp(-((h-12)**2)/18)+3*Math.exp(-((h-19)**2)/4)+Math.random()*1.5;
+      const pv=Math.max(0,5*Math.sin((h-6)/12*Math.PI))*(.6+Math.random()*.4);const net=base-pv;
+      L.push(`(${Math.max(net,0).toFixed(3)})(${Math.max(-net,0).toFixed(3)})(${(base*.25).toFixed(3)})(${(Math.random()*.1).toFixed(3)})`);
+    }
+    return L.join('\r\n')+'\r\n';
+  }
+  logbook(){const n=Date.now();const ts=d=>{d=new Date(d);return `0${pad(d.getFullYear()%100)}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;};
+    return [[n-5*864e5,'00002000'],[n-3*864e5,'00000080'],[n-3*864e5+6e5,'00000040'],[n-36e5,'00000008']].map(e=>`P.98(${ts(e[0])})(${e[1]})()(0)`).join('\r\n')+'\r\n';}
+}
+
+/* ---------- Verbindungsschicht ---------- */
+class Link{
+  constructor(t){this.t=t;this.buf=[];this.strip=true;this.lastRx=0;
+    t.onData=d=>{const a=this.strip?Array.from(d,b=>b&0x7f):Array.from(d);for(const b of a)this.buf.push(b);this.lastRx=Date.now();log('RX',a,!this.strip);};}
+  async send(arr){log('TX',arr);let out=arr;
+    if(S.swPar&&this.t instanceof BleT&&false)out=arr.map(b=>{b&=0x7f;let p=0;for(let i=0;i<7;i++)p^=(b>>i)&1;return p?b|0x80:b;});
+    await this.t.write(new Uint8Array(out));}
+  clear(){this.buf.length=0;}
+  async wait(fn,timeout=5000,idle=0,onTick){const start=Date.now();let lt=0;
+    for(;;){const r=fn(this.buf);if(r!=null)return r;const now=Date.now();
+      if(onTick&&now-lt>300){lt=now;try{onTick(this.buf)}catch(e){console.warn(e)}}
+      if(idle?now-Math.max(start,this.lastRx)>idle:now-start>timeout)throw new Error('Zeitüberschreitung – keine vollständige Antwort vom Zähler');
+      await sleep(15);}}
+}
+
+/* ---------- IEC 62056-21 ---------- */
+function findIdent(b){for(let i=0;i<b.length;i++){if(b[i]===0x2f&&b[i+1]!==0x3f&&b[i+1]!==undefined){
+  for(let j=i;j<b.length-1;j++)if(b[j]===13&&b[j+1]===10){const r=dec(b.slice(i,j));b.splice(0,j+2);return r;}return null;}}return null;}
+class IEC{
+  constructor(link){this.l=link;this.baud=300;}
+  async reset300(){const ble=this.l.t instanceof BleT;if(ble)await this.l.t.prep();else if(this.baud!==300&&!this.l.t.fixedBaud){await this.l.t.setBaud(300);}this.baud=300;await sleep(this.l.t instanceof DemoT?0:ble?120:600);}
+  async handshake(){
+    await this.reset300();this.l.clear();
+    await this.l.send(enc(`/?${$('#addr').value.trim()}!\r\n`));
+    const id=await this.l.wait(findIdent,+S.hs||5000);
+    this.ident=id.trim();log('INFO','Kennung: '+this.ident);this.onIdent?.(this.ident);return this.ident;
+  }
+  pickBaud(){let z=BAUD[this.ident[4]]?this.ident[4]:'0';
+    if(this.l.t.fixedBaud||S.baud==='hold')return '0';
+    if(S.baud!=='auto'){const max=+S.baud;while(BAUD[z]>max)z=String(+z-1);}return z;}
+  async option(mode){const z=this.pickBaud();await this.l.send([ACK,...enc(`0${z}${mode}\r\n`)]);
+    await sleep(this.l.t instanceof DemoT?20:this.l.t instanceof BleT?230:350);
+    if(z!=='0'){await this.l.t.setBaud(BAUD[z]);}this.baud=BAUD[z];log('INFO',`Baudrate ${this.baud}`);}
+  readFrame(idle=6000,onPart){
+    const tick=onPart?b=>{const s=b.indexOf(STX);if(s>=0)onPart(dec(b.slice(s+1)));}:undefined;
+    return this.l.wait(b=>{
+      const s=b.findIndex(x=>x===SOH||x===STX||x===ACK||x===NAK);if(s<0)return null;
+      if(b[s]===ACK||b[s]===NAK){const t=b[s];b.splice(0,s+1);return{type:t===ACK?'ACK':'NAK'};}
+      for(let i=s+1;i<b.length-1;i++)if(b[i]===ETX||b[i]===EOT){
+        const all=b.slice(s,i+2);b.splice(0,i+2);
+        const ok=bcc(all.slice(1,-1))===all[all.length-1];const st=all.indexOf(STX);
+        const head=all[0]===SOH?dec(all.slice(1,st<0?all.length-2:st)):'';
+        const body=dec(all.slice(st<0?1:st+1,-2));
+        return{type:'FRAME',head,body,ok,eot:all[all.length-2]===EOT};}
+      return null;},0,idle,tick);
+  }
+  async readout(onPart){await this.handshake();await this.option('0');const f=await this.readFrame(8000,onPart);
+    if(f.type!=='FRAME')throw new Error('Unerwartete Antwort: '+f.type);if(!f.ok)log('WARN','Prüfsumme (BCC) der Datenauslesung falsch');return {ident:this.ident,text:f.body,ok:f.ok};}
+  /* pw: ein oder mehrere Passwörter (Komma/Leerzeichen getrennt) – werden der Reihe nach probiert wie bei Q4 */
+  async login(pw){const list=String(pw||'').split(/[\s,;]+/).filter(Boolean);
+    const pref=pwPref();if(pref&&list.includes(pref))list.sort((a,b)=>(b===pref)-(a===pref));
+    if(!list.length)list.push('');
+    for(let i=0;i<list.length;i++){
+      await this.handshake();await this.option('1');const f=await this.readFrame(5000);
+      if(f.type!=='FRAME'||!/^P0/.test(f.head))throw new Error('Kein Programmiermodus angeboten ('+(f.head||f.type)+')');
+      if(!list[i]){log('INFO','Ohne Passwort weiter');return;}
+      await this.l.send(frame('P1',`(${list[i]})`));const r=await this.readFrame(5000);
+      if(r.type==='ACK'){log('INFO',`Login OK${list.length>1?` (Passwort ${i+1} von ${list.length})`:''}`);pwPref(list[i]);return;}
+      log('WARN',`Passwort ${i+1} abgelehnt`);if(r.type!=='FRAME'||!/^B0/.test(r.head))await this.bye();
+      if(i===list.length-1)throw new Error(list.length>1?`Alle ${list.length} Passwörter abgelehnt`:'Passwort abgelehnt');}}
+  async cmdRW(cmd,data,idle=5000){await this.l.send(frame(cmd,data));const f=await this.readFrame(idle);return f;}
+  async read(data,idle=8000,onPart){await this.l.send(frame(S.rcmd||'R5',data));let out='';
+    for(;;){const f=await this.readFrame(idle,onPart?p=>onPart(out+p):undefined);if(f.type==='NAK')throw new Error('NAK auf '+data);if(f.type==='ACK')continue;
+      out+=f.body;if(!f.ok)log('WARN','BCC-Fehler in Antwort');if(f.eot){await this.l.send([ACK]);continue;}break;}
+    return out;}
+  async bye(){try{await this.l.send([SOH,...enc('B0'),ETX,bcc([...enc('B0'),ETX])]);await sleep(200);}catch{}}
+}
+
+/* ---------- Parser ---------- */
+const norm=k=>k.trim().replace(/^\d+-\d+:/,'').replace(/\*255$/,'').replace(/&(\d+)$/,'*$1');
+function splitVU(s){const i=(s||'').indexOf('*');return i<0?[s||'',''] :[s.slice(0,i),s.slice(i+1)];}
+function parseReadout(text){const out=[];
+  for(let line of text.split(/\r?\n/)){line=line.trim();if(!line||line==='!'||line[0]==='/'||/^P\.\d\d/.test(line))continue;
+    for(const m of line.matchAll(/([^()\s]+)((?:\([^)]*\))+)/g)){
+      const g=[...m[2].matchAll(/\(([^)]*)\)/g)].map(x=>x[1]);const [v,u]=splitVU(g[0]);
+      out.push({obis:m[1].trim(),key:norm(m[1]),value:v,unit:u,raw:g[0],extra:g.slice(1).join(' | ')});}}
+  return out;}
+function parseTs(s){s=String(s||'').replace(/\D/g,'');let sec=0;
+  if(s.length===13||s.length===12&&false)s=s.slice(1);
+  if(s.length===11)s=s.slice(1);
+  if(s.length===12){sec=+s.slice(10,12);s=s.slice(0,10);}
+  if(s.length!==10)return null;return new Date(2000+ +s.slice(0,2),+s.slice(2,4)-1,+s.slice(4,6),+s.slice(6,8),+s.slice(8,10),sec);}
+function parseProfile(text){
+  const prof={channels:[],rows:[],period:15};let cur=null,n=0;
+  for(let line of text.split(/\r?\n/)){line=line.trim();if(!line)continue;
+    const g=[...line.matchAll(/\(([^)]*)\)/g)].map(x=>x[1]);
+    if(/^P\.0\d/.test(line)){cur=parseTs(g[0]);const st=g[1];prof.period=+g[2]||prof.period;n=+g[3]||0;
+      const ch=[];for(let i=0;i<n;i++)ch.push({key:norm(g[4+2*i]||('K'+(i+1))),unit:g[5+2*i]||''});
+      if(!prof.channels.length)prof.channels=ch;prof.status=st;
+      if(g.length>4+2*n){const rest=g.slice(4+2*n);for(let i=0;i+n<=rest.length;i+=n){prof.rows.push({t:new Date(cur),v:rest.slice(i,i+n).map(parseFloat),st});cur=new Date(+cur+prof.period*6e4);}}
+      continue;}
+    if(!cur||!n||line[0]!=='(')continue;
+    for(let i=0;i+n<=g.length;i+=n){prof.rows.push({t:new Date(cur),v:g.slice(i,i+n).map(parseFloat),st:prof.status});cur=new Date(+cur+prof.period*6e4);}}
+  return prof;}
+function parseLogbook(text){const out=[];
+  for(let line of text.split(/\r?\n/)){line=line.trim();if(!/^P\.98|^\(/.test(line))continue;
+    const g=[...line.matchAll(/\(([^)]*)\)/g)].map(x=>x[1]);if(!g.length)continue;
+    const t=parseTs(g[0]);if(!t)continue;out.push({t,status:g[1]||'',rest:g.slice(2).filter(x=>x!=='').join(' | ')});}
+  return out;}
+
+/* ---------- OBIS-Bezeichnungen ---------- */
+const OBIS={'0.0':'Geräteadresse','C.1':'Seriennummer','C.7':'Spannungsausfälle','C.8':'Betriebszeit','F.F':'Fehlerregister','0.2':'Firmware / Parametrierung','96.1':'Gerätekennung','0.1':'Rücksetzzähler / Abrechnungsperiode',
+  '1.8':'Wirkenergie Bezug (+A)','2.8':'Wirkenergie Lieferung (−A)','3.8':'Blindenergie +R','4.8':'Blindenergie −R','5.8':'Blindenergie QI','6.8':'Blindenergie QII','7.8':'Blindenergie QIII','8.8':'Blindenergie QIV','9.8':'Scheinenergie',
+  '1.6':'Maximum Wirkleistung Bezug','2.6':'Maximum Wirkleistung Lieferung','3.6':'Maximum Blindleistung +R','4.6':'Maximum Blindleistung −R',
+  '1.4':'Laufende Periode Bezug','2.4':'Laufende Periode Lieferung','1.5':'Mittelwert Wirkleistung Bezug','2.5':'Mittelwert Wirkleistung Lieferung','3.5':'Mittelwert +R','4.5':'Mittelwert −R','5.5':'Mittelwert QI','6.5':'Mittelwert QII','7.5':'Mittelwert QIII','8.5':'Mittelwert QIV',
+  '1.29':'Wirkenergie Bezug je Periode','2.29':'Wirkenergie Lieferung je Periode',
+  '1.7':'Wirkleistung Bezug','2.7':'Wirkleistung Lieferung','3.7':'Blindleistung +R','4.7':'Blindleistung −R','9.7':'Scheinleistung','13.7':'Leistungsfaktor gesamt','14.7':'Frequenz','15.7':'Wirkleistung |Summe|','16.7':'Wirkleistung Summe',
+  '21.7':'Wirkleistung L1','41.7':'Wirkleistung L2','61.7':'Wirkleistung L3','23.7':'Blindleistung L1','43.7':'Blindleistung L2','63.7':'Blindleistung L3','29.7':'Scheinleistung L1','49.7':'Scheinleistung L2','69.7':'Scheinleistung L3',
+  '31.7':'Strom L1','51.7':'Strom L2','71.7':'Strom L3','91.7':'Strom N','32.7':'Spannung L1','52.7':'Spannung L2','72.7':'Spannung L3','33.7':'Leistungsfaktor L1','53.7':'Leistungsfaktor L2','73.7':'Leistungsfaktor L3'};
+const ANG={'1':'Winkel U L2 zu U L1','2':'Winkel U L3 zu U L1','10':'Winkel U L2 zu U L1','20':'Winkel U L3 zu U L1','4':'Winkel I L1 zu U L1','15':'Winkel I L2 zu U L2','26':'Winkel I L3 zu U L3','40':'Winkel I L1 zu U L1','51':'Winkel I L2 zu U L2','62':'Winkel I L3 zu U L3'};
+const HEAT={'6.8':'Wärmeenergie','6.26':'Volumen','6.4':'Leistung (aktuell)','6.27':'Durchfluss (aktuell)','6.29':'Vorlauftemperatur','6.28':'Rücklauftemperatur','6.30':'Temperaturdifferenz',
+  '9.21':'Eigentumsnummer','9.20':'Gerätenummer','F':'Fehlercode','6.35':'Messperiode Maxima','6.6':'Maximalleistung','6.33':'Maximaler Durchfluss','9.4':'Max. Vorlauf- / Rücklauftemperatur',
+  '6.31':'Betriebsstunden','6.32':'Fehlerstunden','6.36':'Stichtag','9.36':'Datum / Uhrzeit','9.24':'Nenndurchfluss qp','9.1':'Einstellungen / Firmware','9.31':'Durchflussstunden','9.22':'Parameter','0.0':'Adresse'};
+function describe(key){
+  if(ST.mode==='heat'){const [b,f]=key.split('*');const s=HEAT[b]||HEAT[b.split('.').slice(0,2).join('.')]||'';return s+(f?(f==='01'?' (Vorjahr / Stichtag)':` (Vorwert ${+f})`):'');}const m=key.match(/^([0-9A-Z]+)\.([0-9A-Z]+)(?:\.([0-9A-Z]+))?(?:\*(\d+))?/);if(!m)return '';
+  const [,C,D,E,F]=m;let s;
+  if(C==='81'&&D==='7')s=ANG[E]||'Phasenwinkel';
+  else if(C==='0'&&D==='9')s=E==='1'?'Uhrzeit':E==='2'?'Datum':'Zeit/Datum';
+  else{s=OBIS[C+'.'+D]||'';if(s&&E&&E!=='0'&&/^\d$/.test(E)&&/^\d+\.[468]$/.test(C+'.'+D))s+=` Tarif ${E}`;}
+  if(F)s+=` (Vorwert ${+F})`;return s;}
+
+/* ---------- Zustand ---------- */
+const ST={mode:'elec',ident:'',vals:new Map(),rawReadout:'',profile:null,profileRaw:'',logbook:[],logRaw:''};
+function setVals(list,replace){if(replace)ST.vals.clear();for(const e of list)ST.vals.set(e.key,e);renderVals();fillPhInputs();}
+function num(...codes){for(const c of codes)for(const k of [c,c+'.0',c.replace(/\.0$/,'')]){const e=ST.vals.get(k);if(e&&e.value!==''&&isFinite(parseFloat(e.value)))return parseFloat(e.value);}return NaN;}
+function meterNo(){for(const k of ['C.1.0','0.0.0','96.1.0','C.1','0.0']){const e=ST.vals.get(k);if(e&&e.value)return e.value;}return '';}
+
+/* ---------- Wandlerfaktor ---------- */
+function WF(){const ci=+S.ctP>0?+S.ctP/(+S.ctS||5):1,cu=+S.vtP>0?+S.vtP/100:1;return{kI:ci,kU:cu,kP:ci*cu};}
+function kFor(unit){if(ST.mode==='heat')return 1;const u=String(unit||'').trim().toLowerCase(),w=WF();
+  if(u==='v')return w.kU;if(u==='a')return w.kI;if(/^[km]?(w|var|va)h?$/.test(u))return w.kP;return 1;}
+const fmtP=(v,u)=>{const a=Math.abs(v);return fmtN(v,a>=1e4?0:a>=100?1:a>=1?2:3)+' '+u;};
+function wfChanged(){const w=WF(),on=w.kP!==1;const b=$('#btnWf');b.textContent=on?'WF '+fmtN(w.kP,w.kP%1?2:0):'WF 1';b.classList.toggle('on',on);
+  $('#wfInfo').textContent=on?`Wandlerfaktor ${fmtN(w.kP,w.kP%1?2:0)} (Strom ×${fmtN(w.kI,w.kI%1?2:0)}${w.kU!==1?`, Spannung ×${fmtN(w.kU,w.kU%1?2:0)}`:''}) – Primärwerte werden zusätzlich angezeigt.`:'Kein Wandler eingetragen – Werte werden wie gelesen angezeigt.';
+  _pp=null;renderVals();fillPhInputs();renderProfile();}
+let _pp=null;
+function profP(){const p=ST.profile;if(!p)return p;const w=WF();if(w.kP===1)return p;
+  if(_pp&&_pp.src===p&&_pp.n===p.rows.length&&_pp.k===w.kP)return _pp.p;
+  const ks=p.channels.map(c=>kFor(c.unit));
+  const q={...p,rows:p.rows.map(r=>({...r,v:r.v.map((x,i)=>x*ks[i])}))};_pp={src:p,n:p.rows.length,k:w.kP,p:q};return q;}
+function renderPower(){const {P,Q}=totPQ();const card=$('#powCard');
+  if(ST.mode==='heat'||!isFinite(P)){card.hidden=true;return;}card.hidden=false;
+  const w=WF(),k=w.kP,Sv=isFinite(Q)?Math.hypot(P,Q):NaN,pf=Sv?Math.abs(P)/Sv:NaN;
+  const sek=(v,u)=>k!==1?`<span class="sek">sek. ${fmtN(v,3)} ${u}</span>`:'';
+  const dir=P>=0?'<span class="dir ok">▲ Bezug</span>':'<span class="dir warn">▼ Lieferung</span>';
+  const ind=isFinite(Q)?(Q*P>=0?'induktiv':'kapazitiv'):'';
+  $('#powBox').innerHTML=`<div class="big"><span class="mut">Wirkleistung P${k!==1?' primär':''}</span> ${dir}<b>${fmtP(Math.abs(P)*k,'kW')}</b>${sek(P,'kW')}</div>`+
+    (isFinite(Q)?`<div><span class="mut">Blindleistung Q</span><b>${fmtP(Q*k,'kvar')}</b>${sek(Q,'kvar')}</div><div><span class="mut">Scheinleistung S</span><b>${fmtP(Sv*k,'kVA')}</b>${sek(Sv,'kVA')}</div><div><span class="mut">cos φ</span><b>${isFinite(pf)?fmtN(pf,3):'–'}</b><span class="sek">${ind}</span></div>`:'')+
+    (k!==1?`<div><span class="mut">Wandlerfaktor</span><b>${fmtN(k,k%1?2:0)}</b></div>`:'');
+  $('#powTime').textContent=new Date().toLocaleTimeString('de-DE');}
+function renderVals(){
+  const tb=$('#valTable tbody');const list=[...ST.vals.values()];
+  tb.innerHTML=list.map((e,i)=>`<tr${ST.live&&i===list.length-1?' class="new"':''}><td class="mono">${esc(e.obis)}</td><td>${esc(describe(e.key))}</td><td class="num mono">${esc(e.value)}${e.unit?` <span class="mut">${esc(e.unit)}</span>`:''}</td><td class="num wfcol" style="color:var(--acc)">${(()=>{const k=kFor(e.unit),v=parseFloat(e.value);return k!==1&&isFinite(v)&&/^[-+]?\d/.test(e.value)?esc(fmtP(v*k,e.unit)):'';})()}</td><td class="mut mono">${esc(e.extra)}</td></tr>`).join('')||'<tr><td colspan="5" class="mut">Noch keine Werte.</td></tr>';
+  $$('.wfcol').forEach(x=>x.hidden=WF().kP===1);
+  const mn=meterNo();$('#meterTitle').textContent=list.length?('Zähler '+(mn||'')).trim():'Keine Daten';
+  $('#identLine').textContent=ST.ident?`Kennung ${ST.ident} · ${list.length} Werte`:(list.length?`${list.length} Werte`:'');
+  $('#btnSave').disabled=$('#btnCsvVals').disabled=!list.length;visTabs();renderPower();}
+
+/* ---------- Zeigerdiagramm ---------- */
+const PH=['L1','L2','L3'];
+function fillPhInputs(){
+  const U=[num('32.7'),num('52.7'),num('72.7')],I=[num('31.7'),num('51.7'),num('71.7')];
+  const src=[];let au=[0,num('81.7.10','81.7.1'),num('81.7.20','81.7.2')];
+  if(!isFinite(au[1])||!isFinite(au[2])){au=[0,240,120];src.push('Spannungswinkel angenommen (Rechtsdrehfeld)');}
+  const ai=[num('81.7.40','81.7.4'),num('81.7.51','81.7.15'),num('81.7.62','81.7.26')];
+  const pm=[0,1,2].map(phPQ);
+  ai.forEach((a,i)=>{if(isFinite(a))return;const {P,Q}=pm[i];
+    if(isFinite(P)&&isFinite(Q)){ai[i]=Math.atan2(-Q,P)*180/Math.PI;src.push(`∠I ${PH[i]} aus P/Q`);}
+    else{const pf=num(['33.7','53.7','73.7'][i]);if(isFinite(pf)){ai[i]=-Math.acos(Math.max(-1,Math.min(1,pf)))*180/Math.PI;src.push(`∠I ${PH[i]} aus cos φ (induktiv angenommen)`);}}});
+  if(!U.some(isFinite)&&!I.some(isFinite)){if(!$('#phInputs').children.length)setPhInputs([230,230,230],[10,10,10],[0,240,120],[340,340,340]);$('#phSource').textContent='Keine Momentanwerte in der Auslesung – Beispielwerte. „Momentanwerte (P1)“ lesen oder Werte eintragen.';updatePhasor();return;}
+  setPhInputs(U,I,au,ai);PHM=pm.some(x=>isFinite(x.P))?pm.map(x=>({P:x.P*1000,Q:(isFinite(x.Q)?x.Q:0)*1000})):null;
+  if(PHM)src.push('P/Q vom Zähler');
+  $('#phSource').textContent=src.join(' · ')||'Alle Werte direkt aus dem Zähler.';updatePhasor();}
+/* Leistungswerte in kW (Einheit W/kW/MW berücksichtigt) */
+function kw(...codes){for(const c of codes)for(const k of [c,c+'.0']){const e=ST.vals.get(k);if(e&&e.value!==''&&isFinite(parseFloat(e.value))){
+  const v=parseFloat(e.value),u=(e.unit||'').toLowerCase();return /^(w|var|va)$/.test(u)?v/1000:/^m(w|var|va)$/.test(u)?v*1000:v;}}return NaN;}
+const dif=(a,b)=>isFinite(a)?a-(isFinite(b)?b:0):(isFinite(b)?-b:NaN);
+function phPQ(i){const c=[2,4,6][i];return{P:dif(kw(c+'1.7'),kw(c+'2.7')),Q:dif(kw(c+'3.7'),kw(c+'4.7'))};}
+function totPQ(){let P=dif(kw('1.7'),kw('2.7'));if(!isFinite(P))P=kw('16.7');
+  const ph=[0,1,2].map(phPQ);const sum=f=>ph.some(x=>isFinite(x[f]))?ph.reduce((a,x)=>a+(isFinite(x[f])?x[f]:0),0):NaN;
+  if(!isFinite(P))P=sum('P');let Q=dif(kw('3.7'),kw('4.7'));if(!isFinite(Q))Q=sum('Q');return{P,Q};}
+let PHM=null;
+function setPhInputs(U,I,au,ai){PHM=null;
+  $('#phInputs').innerHTML=PH.map((p,i)=>`<tr><th>${p}</th>`+[U[i],I[i],au[i],ai[i]].map((v,k)=>`<td><input type="number" step="any" data-k="${k}" data-i="${i}" value="${isFinite(v)?+(+v).toFixed(k===1?2:1):''}"></td>`).join('')+'</tr>').join('');
+  $$('#phInputs input').forEach(el=>el.oninput=()=>{PHM=null;updatePhasor();});}
+function getPh(){const g=(k,i)=>parseFloat($(`#phInputs input[data-k="${k}"][data-i="${i}"]`)?.value);
+  const cw=S.cw?-1:1;return PH.map((p,i)=>({p,U:g(0,i),I:g(1,i),au:cw*g(2,i),ai:cw*g(3,i),Pm:PHM?.[i]?.P,Qm:PHM?.[i]?.Q}));}
+const nAng=a=>{a=((a%360)+360)%360;return a>180?a-360:a;};
+function updatePhasor(){
+  const d=getPh();const cv=$('#phCanvas');const dpr=window.devicePixelRatio||1;const w=cv.clientWidth||340,h=Math.min(w,420);
+  cv.width=w*dpr;cv.height=h*dpr;cv.style.height=h+'px';const c=cv.getContext('2d');c.scale(dpr,dpr);
+  const css=getComputedStyle(document.documentElement);const col=v=>css.getPropertyValue(v).trim();
+  const cx=w/2,cy=h/2,R=Math.min(w,h)/2-38;
+  c.clearRect(0,0,w,h);c.strokeStyle=col('--grid');c.lineWidth=1;c.fillStyle=col('--mut');c.font='11px system-ui';c.textAlign='center';c.textBaseline='middle';
+  for(const f of [.33,.66,1]){c.beginPath();c.arc(cx,cy,R*f,0,7);c.stroke();}
+  for(let a=0;a<360;a+=30){const r=a*Math.PI/180;c.beginPath();c.moveTo(cx,cy);c.lineTo(cx+R*Math.cos(r),cy-R*Math.sin(r));c.stroke();c.fillText(a+'°',cx+(R+14)*Math.cos(r),cy-(R+14)*Math.sin(r));}
+  const Um=Math.max(...d.map(x=>x.U).filter(isFinite),1),Im=Math.max(...d.map(x=>x.I).filter(isFinite),1e-9);
+  const cols=[col('--l1'),col('--l2'),col('--l3')];
+  const arrow=(ang,len,color,lw,label,head)=>{const r=ang*Math.PI/180,x=cx+len*Math.cos(r),y=cy-len*Math.sin(r);c.strokeStyle=c.fillStyle=color;c.lineWidth=lw;c.beginPath();c.moveTo(cx,cy);c.lineTo(x,y);c.stroke();
+    if(head){const hs=9;c.beginPath();c.moveTo(x,y);c.lineTo(x-hs*Math.cos(r-.4),y+hs*Math.sin(r-.4));c.lineTo(x-hs*Math.cos(r+.4),y+hs*Math.sin(r+.4));c.fill();}
+    c.font='bold 12px system-ui';const lx=cx+len*.82*Math.cos(r)-11*Math.sin(r),ly=cy-len*.82*Math.sin(r)-11*Math.cos(r);c.fillText(label,lx,ly);};
+  d.forEach((x,i)=>{if(isFinite(x.U)&&isFinite(x.au))arrow(x.au,R*.95*x.U/Um,cols[i],4,'U'+(i+1),false);});
+  d.forEach((x,i)=>{if(isFinite(x.I)&&isFinite(x.au)&&isFinite(x.ai)&&x.I>0)arrow(x.au+x.ai,R*.62*Math.max(x.I/Im,.04),cols[i],2,'I'+(i+1),true);});
+  analyse(d);}
+function analyse(d){
+  const rows=[],checks=[];let Pt=0,Qt=0;
+  d.forEach(x=>{const th=x.ai*Math.PI/180;const P=isFinite(x.Pm)?x.Pm:x.U*x.I*Math.cos(th),Q=isFinite(x.Qm)?x.Qm:-x.U*x.I*Math.sin(th);const phi=nAng(-x.ai);
+    let q='–';if(isFinite(P)&&isFinite(Q)&&x.I>0)q=P>=0?(Q>=0?'QI Bezug induktiv':'QIV Bezug kapazitiv'):(Q>=0?'QII Lieferung kapazitiv':'QIII Lieferung induktiv');
+    if(isFinite(P))Pt+=P;if(isFinite(Q))Qt+=Q;x.P=P;x.Q=Q;x.phi=phi;
+    const w=WF(),pr=w.kP!==1,two=(sec,k,u,d)=>pr?`${fmtP(sec*k,u)}<span class="sek">sek. ${fmtN(sec,d)} ${u}</span>`:`${fmtN(sec,d)} ${u}`;
+    rows.push(`<tr><th>${x.p}</th><td class="num">${two(x.U,w.kU,'V',1)}</td><td class="num">${two(x.I,w.kI,'A',3)}</td><td class="num">${fmtN(phi,1)}°</td><td class="num">${fmtN(Math.cos(phi*Math.PI/180),3)}</td><td class="num">${two(P/1000,w.kP,'kW',3)}</td><td class="num">${two(Q/1000,w.kP,'kvar',3)}</td><td>${q}</td></tr>`);});
+  $('#phTable tbody').innerHTML=rows.join('');
+  const S_=Math.hypot(Pt,Qt);
+  const wk=WF().kP,kp=(v,u)=>wk!==1?`<b>${fmtP(v*wk,u)}</b><span class="sek">sek. ${fmtN(v,3)} ${u} · WF ${fmtN(wk,wk%1?2:0)}</span>`:`<b>${fmtN(v,3)} ${u}</b>`;
+  $('#phKpi').innerHTML=`<div><span class="mut">P gesamt${wk!==1?' primär':''}</span>${kp(Pt/1000,'kW')}</div><div><span class="mut">Q gesamt${wk!==1?' primär':''}</span>${kp(Qt/1000,'kvar')}</div><div><span class="mut">S gesamt${wk!==1?' primär':''}</span>${kp(S_/1000,'kVA')}</div><div><span class="mut">cos φ gesamt</span><b>${S_?fmtN(Pt/S_,3):'–'}</b></div>`;
+  const ok=t=>checks.push(`<li class="ok">✓ ${t}</li>`),wa=t=>checks.push(`<li class="warn">⚠ ${t}</li>`);
+  const a2=nAng(d[1].au),a3=nAng(d[2].au);
+  if(isFinite(a2)&&isFinite(a3)){if(Math.abs(a2+120)<25&&Math.abs(a3-120)<25)ok('Rechtsdrehfeld (L1→L2→L3)');else if(Math.abs(a2-120)<25&&Math.abs(a3+120)<25)wa('Linksdrehfeld – Außenleiter vertauscht?');else wa(`Spannungswinkel ungewöhnlich (U2 ${fmtN(a2,0)}°, U3 ${fmtN(a3,0)}°)`);}
+  const Us=d.map(x=>x.U).filter(isFinite);
+  if(Us.length){const mx=Math.max(...Us);const nom=[57.7,63.5,100,110,230,400].reduce((a,b)=>Math.abs(b-mx)<Math.abs(a-mx)?b:a);
+    d.forEach(x=>{if(!isFinite(x.U))return;if(x.U<.5*nom)wa(`Spannung ${x.p} fehlt oder zu niedrig (${fmtN(x.U,1)} V)`);else if(Math.abs(x.U/nom-1)>.1)wa(`Spannung ${x.p} weicht >10 % von ${nom} V ab`);});
+    if(d.every(x=>isFinite(x.U)&&Math.abs(x.U/nom-1)<=.1))ok(`Spannungen plausibel (Nennwert ${nom} V)`);}
+  const Is=d.map(x=>x.I).filter(isFinite);const Imax=Math.max(...Is,0);
+  if(Imax>0){d.forEach(x=>{if(isFinite(x.I)&&x.I<.01*Imax)wa(`Kein Strom auf ${x.p}`);});
+    const act=d.filter(x=>x.I>=.05*Imax&&isFinite(x.P));const pos=act.filter(x=>x.P>0),neg=act.filter(x=>x.P<0);
+    if(pos.length&&neg.length){const odd=pos.length<neg.length?pos:neg;wa(`Energierichtung ${odd.map(x=>x.p).join(', ')} entgegengesetzt – Stromwandler K/L vertauscht?`);}
+    else if(act.length)ok(`Energierichtung einheitlich (${pos.length?'Bezug':'Lieferung'})`);
+    if(act.length===3){const ph=act.map(x=>x.phi);ph.forEach((p,i)=>{const others=ph.filter((_,k)=>k!==i);const m=(others[0]+others[1])/2;
+      const dv=Math.abs(nAng(p-m));if(dv>60&&dv<150&&Math.abs(others[0]-others[1])<30)wa(`φ ${act[i].p} weicht ${fmtN(Math.abs(nAng(p-m)),0)}° von den anderen ab – Strom falscher Spannung zugeordnet?`);});}
+    const actI=Is.filter(i=>i>0);if(actI.length===3&&Math.max(...actI)/Math.min(...actI)>2)checks.push('<li class="mut">ℹ Ströme stark unsymmetrisch</li>');}
+  $('#phChecks').innerHTML=checks.join('')||'<li class="mut">Keine Werte</li>';}
+function renderHeat(){
+  const e=k=>ST.vals.get(k),g=k=>{const x=e(k);return x?parseFloat(x.value):NaN;};
+  if(ST.mode!=='heat'){$('#heatKpi').innerHTML='<div class="mut" style="grid-column:1/-1">Noch kein Wärmezähler ausgelesen.</div>';$('#heatChecks').innerHTML='';$('#heatPrev').innerHTML='';return;}
+  const toMWh=(v,u)=>/GJ/i.test(u)?v/3.6:/kWh/i.test(u)?v/1000:v;
+  const E=g('6.8'),Eu=e('6.8')?.unit||'',V=g('6.26'),P=g('6.4'),Q=g('6.27'),TV=g('6.29'),TR=g('6.28');let DT=g('6.30');if(!isFinite(DT)&&isFinite(TV)&&isFinite(TR))DT=TV-TR;
+  const mx=(e('9.4')?.raw||'').split('&').map(parseFloat);
+  const k=[['Wärmeenergie',E,Eu,3],['Volumen',V,'m³',2],['Leistung',P,'kW',1],['Durchfluss',Q,'m³/h',3],['Vorlauf',TV,'°C',1],['Rücklauf',TR,'°C',1],['Spreizung',DT,'K',1],
+    ['Max. Leistung',g('6.6'),'kW',1],['Max. Durchfluss',g('6.33'),'m³/h',3],['Max. Vorlauf',mx[0],'°C',1],['Max. Rücklauf',mx[1],'°C',1],['Betriebsstunden',g('6.31'),'h',0],['Fehlerstunden',g('6.32'),'h',0]];
+  $('#heatKpi').innerHTML=k.filter(x=>isFinite(x[1])).map(x=>`<div><span class="mut">${x[0]}</span><b>${fmtN(x[1],x[3])} ${esc(x[2])}</b></div>`).join('');
+  const dn=e('9.20')?.value||'';$('#heatTitle').textContent='Wärmemengenzähler '+dn+(ST.ident?` · ${ST.ident}`:'');
+  const c=[],ok=t=>c.push(`<li class="ok">✓ ${t}</li>`),wa=t=>c.push(`<li class="warn">⚠ ${t}</li>`),inf=t=>c.push(`<li class="mut">ℹ ${t}</li>`);
+  const F=e('F')?.value;if(F!==undefined)(+F===0||F==='')?ok('Kein Fehlercode'):wa(`Fehlercode F = ${esc(F)}`);
+  const fh=g('6.32');if(isFinite(fh))fh>0?wa(`${fmtN(fh,0)} Fehlerstunden`):ok('Keine Fehlerstunden');
+  if(isFinite(TV)&&isFinite(TR)){if(TR>TV)wa('Rücklauf wärmer als Vorlauf – Fühler vertauscht oder Einbauort falsch?');else if(DT<3&&isFinite(Q)&&Q>0)inf(`Geringe Spreizung (${fmtN(DT,1)} K)`);}
+  if(isFinite(P)&&isFinite(Q)&&isFinite(DT)&&Q>0){const pc=1.163*Q*DT;const d=Math.abs(pc-P)/Math.max(P,.1);d>.1?wa(`Leistung passt nicht zu Durchfluss × Spreizung (${fmtN(pc,1)} kW berechnet)`):ok(`Leistung plausibel zu Durchfluss × Spreizung (${fmtN(pc,1)} kW)`);}
+  if(isFinite(E)&&isFinite(V)&&V>0){const kwhm3=toMWh(E,Eu)*1000/V;inf(`Seit Inbetriebnahme ${fmtN(kwhm3,1)} kWh/m³ → mittlere Spreizung ca. ${fmtN(kwhm3/1.163,1)} K`);}
+  const qp=g('9.24'),qm=g('6.33');if(isFinite(qp)&&isFinite(qm)&&qm>qp*1.2)wa(`Max. Durchfluss ${fmtN(qm,2)} m³/h über Nenndurchfluss qp ${fmtN(qp,1)} m³/h`);
+  $('#heatChecks').innerHTML=c.join('');
+  const pr=[...ST.vals.values()].filter(x=>/\*0\d$/.test(x.key));
+  $('#heatPrev').innerHTML=pr.length?'<tr><th>Kennzahl</th><th>Bedeutung</th><th class="num">Wert</th><th>Einheit</th></tr>'+pr.map(x=>`<tr><td class="mono">${esc(x.obis)}</td><td>${esc(describe(x.key))}</td><td class="num mono">${esc(x.raw&&x.raw.includes('&')?x.raw:x.value)}</td><td>${esc(x.raw&&x.raw.includes('&')?'':x.unit)}</td></tr>`).join(''):'<tr><td class="mut">Keine Stichtagswerte.</td></tr>';}
+$('#btnPhFromData').onclick=fillPhInputs;
+$('#btnPhDemo').onclick=()=>{setPhInputs([230.5,231,229.8],[10.2,9.9,10.4],[0,240,120],[340,160,338]);$('#phSource').textContent='Beispiel: Stromwandler L2 mit vertauschtem K/L.';updatePhasor();};
+window.addEventListener('resize',()=>{updatePhasor();drawProfile();});
+
+/* ---------- Lastgang ---------- */
+let lgSel=new Set([0]);let lgHover=-1;
+function renderProfile(){
+  const p=profP();$('#btnCsvProf').disabled=$('#btnPngProf').disabled=!(p&&p.rows.length);
+  if(!p||!p.rows.length){$('#lgChans').innerHTML='<span class="mut">Kein Lastgang geladen.</span>';$('#lgStats').innerHTML='';$('#lgTable').innerHTML='';drawProfile();return;}
+  lgSel=new Set([...lgSel].filter(i=>i<p.channels.length));if(!lgSel.size)lgSel.add(0);
+  $('#lgChans').innerHTML=(WF().kP!==1?`<div class="mut" style="width:100%">Primärwerte (WF ${fmtN(WF().kP,WF().kP%1?2:0)})</div>`:'')+p.channels.map((c,i)=>`<label class="chk"><input type="checkbox" data-ch="${i}" ${lgSel.has(i)?'checked':''}>${esc(c.key)} [${esc(c.unit)}] <span class="mut">${esc(describe(c.key))}</span></label>`).join('');
+  $$('#lgChans input').forEach(el=>el.onchange=()=>{el.checked?lgSel.add(+el.dataset.ch):lgSel.delete(+el.dataset.ch);drawProfile();});
+  const h=p.period/60;
+  $('#lgStats').innerHTML='<tr><th>Kanal</th><th class="num">Max</th><th>Zeitpunkt</th><th class="num">Min</th><th class="num">Mittel</th><th class="num">Energie</th></tr>'+p.channels.map((c,i)=>{
+    const v=p.rows.map(r=>r.v[i]).filter(isFinite);if(!v.length)return '';const mx=Math.max(...v),mn=Math.min(...v),avg=v.reduce((a,b)=>a+b,0)/v.length;
+    const ri=p.rows.find(r=>r.v[i]===mx);const isP=/^k?(W|var|VA)$/i.test(c.unit);const e=isP?v.reduce((a,b)=>a+b,0)*h:NaN;
+    return `<tr><td class="mono">${esc(c.key)} [${esc(c.unit)}]</td><td class="num">${fmtN(mx,3)}</td><td>${fmtDT(ri?.t)}</td><td class="num">${fmtN(mn,3)}</td><td class="num">${fmtN(avg,3)}</td><td class="num">${isP?fmtN(e,3)+' '+c.unit+'h':'–'}</td></tr>`;}).join('')+
+    `<tr><td colspan="6" class="mut">${p.rows.length} Werte · ${fmtDT(p.rows[0].t)} – ${fmtDT(p.rows[p.rows.length-1].t)} · Periode ${p.period} min</td></tr>`;
+  const lim=p.rows.slice(0,3000);
+  $('#lgTable').innerHTML='<tr><th>Zeit</th>'+p.channels.map(c=>`<th class="num">${esc(c.key)}</th>`).join('')+'<th>Status</th></tr>'+lim.map(r=>`<tr><td>${fmtDT(r.t)}</td>${r.v.map(x=>`<td class="num">${fmtN(x,3)}</td>`).join('')}<td class="mono">${esc(r.st)}</td></tr>`).join('');
+  drawProfile();}
+function drawProfile(){
+  const cv=$('#lgCanvas');const dpr=window.devicePixelRatio||1;const w=cv.clientWidth||340,h=300;cv.width=w*dpr;cv.height=h*dpr;cv.style.height=h+'px';
+  const c=cv.getContext('2d');c.scale(dpr,dpr);c.clearRect(0,0,w,h);const p=profP();if(!p||!p.rows.length)return;
+  const css=getComputedStyle(document.documentElement),col=v=>css.getPropertyValue(v).trim();
+  const palette=[col('--acc'),'#4c9aff','#3fb950','#c77dff','#ff6b8a','#22c3d6'];
+  const sel=[...lgSel];let mn=Infinity,mx=-Infinity;for(const r of p.rows)for(const i of sel){const v=r.v[i];if(isFinite(v)){mn=Math.min(mn,v);mx=Math.max(mx,v);}}
+  if(!isFinite(mn)){return;}if(mn>0)mn=0;if(mx===mn)mx=mn+1;
+  const L=48,Rr=10,T=10,B=28,W=w-L-Rr,H=h-T-B;const t0=+p.rows[0].t,t1=+p.rows[p.rows.length-1].t||t0+1;
+  const X=t=>L+(t-t0)/Math.max(t1-t0,1)*W,Y=v=>T+H-(v-mn)/(mx-mn)*H;
+  c.strokeStyle=col('--grid');c.fillStyle=col('--mut');c.font='11px system-ui';c.lineWidth=1;c.textAlign='right';c.textBaseline='middle';
+  for(let k=0;k<=4;k++){const v=mn+(mx-mn)*k/4,y=Y(v);c.beginPath();c.moveTo(L,y);c.lineTo(w-Rr,y);c.stroke();c.fillText(fmtN(v,v>=100?0:1),L-4,y);}
+  c.textAlign='center';c.textBaseline='top';const span=t1-t0;const steps=6;
+  for(let k=0;k<=steps;k++){const t=t0+span*k/steps,d=new Date(t);const x=X(t);c.fillText(span>2*864e5?`${pad(d.getDate())}.${pad(d.getMonth()+1)}.`:`${pad(d.getHours())}:${pad(d.getMinutes())}`,Math.min(Math.max(x,L+14),w-Rr-14),h-B+6);}
+  sel.forEach((i,si)=>{c.strokeStyle=palette[i%palette.length];c.lineWidth=1.6;c.beginPath();let first=true;
+    for(const r of p.rows){const v=r.v[i];if(!isFinite(v)){first=true;continue;}const x=X(+r.t),y=Y(v);first?c.moveTo(x,y):c.lineTo(x,y);first=false;}c.stroke();});
+  if(lgHover>=0&&p.rows[lgHover]){const r=p.rows[lgHover];const x=X(+r.t);c.strokeStyle=col('--mut');c.setLineDash([3,3]);c.beginPath();c.moveTo(x,T);c.lineTo(x,T+H);c.stroke();c.setLineDash([]);
+    $('#lgTip').textContent=fmtDT(r.t)+'  '+sel.map(i=>`${p.channels[i].key}: ${fmtN(r.v[i],3)} ${p.channels[i].unit}`).join('  ')+(r.st&&r.st!=='00'?`  Status ${r.st}`:'');}
+  cv._map={X,t0,t1,L,W};}
+function lgPick(e){const p=ST.profile,m=$('#lgCanvas')._map;if(!p||!m)return;const rect=e.target.getBoundingClientRect();const x=(e.touches?e.touches[0].clientX:e.clientX)-rect.left;
+  const t=m.t0+(x-m.L)/m.W*(m.t1-m.t0);let best=0,bd=Infinity;p.rows.forEach((r,i)=>{const d=Math.abs(+r.t-t);if(d<bd){bd=d;best=i;}});lgHover=best;drawProfile();}
+$('#lgCanvas').addEventListener('mousemove',lgPick);$('#lgCanvas').addEventListener('touchstart',lgPick,{passive:true});$('#lgCanvas').addEventListener('touchmove',lgPick,{passive:true});
+
+/* ---------- Logbuch ---------- */
+function renderLogbook(){const L=ST.logbook;
+  $('#lbTable').innerHTML=L.length?'<tr><th>Zeit</th><th>Status</th><th>gesetzte Bits</th><th>Weitere</th></tr>'+L.map(e=>{const v=parseInt(e.status,16);const bits=[];if(isFinite(v))for(let i=0;i<32;i++)if(v&(2**i))bits.push(i);
+    return `<tr><td>${fmtDT(e.t)}:${pad(e.t.getSeconds())}</td><td class="mono">${esc(e.status)}</td><td class="mono">${bits.join(', ')}</td><td class="mono mut">${esc(e.rest)}</td></tr>`;}).join(''):'<tr><td class="mut">Kein Logbuch geladen.</td></tr>';}
+
+/* ---------- Verbindung & Abläufe ---------- */
+let T=null,LINK=null,IECP=null,busy=false;
+const TNAME={ble:'Bluetooth',serial:'COM-Port',demo:'Demo'};
+const cutLines=t=>t.slice(0,t.lastIndexOf('\n')+1);
+const goLabel=()=>S.kind==='heat'?'Wärmezähler auslesen':S.kind==='sml'?'SML mitschneiden':'Auslesen';
+let HEAD=null;
+function setConn(on){$('#connPill').textContent=on?'verbunden · '+(TNAME[S.transport]||'')+(on&&HEAD?.mv&&S.transport==='ble'?` · 🔋${fmtN(HEAD.mv/1000,2)} V`:''):'getrennt';if(!on)HEAD=null;$('#connPill').classList.toggle('on',on);
+  $('#btnDisconnect').disabled=!on;if(!on){T=null;LINK=null;IECP=null;}}
+function setBusy(b){busy=b;$('#btnGo').disabled=b;$$('.op,.op2').forEach(x=>x.disabled=b);$('#btnGo').textContent=b?'Liest …':goLabel();$('#extraBox').hidden=b||!(S.kind==='elec'&&(S.oInst||S.oProf||S.oLog));$('#elecOpts').style.pointerEvents=b?'none':'';
+  [['#btnPow','pow','⚡ Leistung'],['#btnQuick','ph','◷ Zeiger']].forEach(([id,m,t])=>{const q=$(id),me=b&&quickRun===m;q.disabled=b&&!me;q.classList.toggle('stop',me);q.textContent=me?'■ Stopp':t;});}
+function prog(v){const p=$('#prog');p.style.visibility=v==null?'hidden':'visible';p.classList.toggle('ind',v==='ind');
+  $('#progBar').style.width=typeof v==='number'?Math.max(2,Math.min(100,v))+'%':(v==='ind'?'':'0');}
+async function connect(){
+  const kind=S.transport;
+  try{
+    T=kind==='ble'?new BleT():kind==='serial'?(window._serialT||(window._serialT=new SerialT())):new DemoT();
+    LINK=new Link(T);
+    if(kind==='serial')await T.open({baudRate:300,dataBits:7,parity:'even',stopBits:1});else await T.open();
+    NOSUP=new Set();IECP=new IEC(LINK);IECP.onIdent=id=>status('Zähler antwortet: '+id);setConn(true);
+    if(T instanceof BleT){const inf=await T.info(LINK);HEAD=inf;if(inf.fw||inf.mv){log('INFO',`Kopf ${inf.sn} · FW ${inf.fw} · Akku ${inf.mv} mV`);setConn(true);
+      if(inf.mv&&inf.mv<3450)status(`⚠ Akku des Lesekopfs schwach (${fmtN(inf.mv/1000,2)} V) – bald laden.`,'warn');}}
+    return true;
+  }catch(e){log('ERR',e.message);status(e.name==='NotFoundError'?'Kein Gerät ausgewählt.':e.message,'err');try{await T?.close()}catch{}setConn(false);return false;}}
+$('#btnDisconnect').onclick=async()=>{try{await T?.close()}catch{}setConn(false);status('Getrennt.');};
+
+async function run(label,fn){if(busy)return;
+  if(!T&&!(await connect()))return;
+  setBusy(true);status(label+' – warte auf Zähler …');prog('ind');const t0=Date.now();
+  try{const msg=await fn()||label+' fertig';const w=msg.startsWith('⚠');status(msg+` (${Math.round((Date.now()-t0)/1000)} s)`,w?'warn':'ok');}
+  catch(e){log('ERR',e.message);status(label+': '+e.message,'err');try{await IECP?.bye()}catch{}}
+  finally{ST.live=false;renderVals();setBusy(false);prog(null);if(LINK)LINK.strip=true;}}
+async function withLogin(fn){await IECP.login($('#pw').value);try{return await fn();}finally{await IECP.bye();}}
+const tsArg=(d)=>{if(!d)return '';const x=new Date(d);const s=`${pad(x.getFullYear()%100)}${pad(x.getMonth()+1)}${pad(x.getDate())}${pad(x.getHours())}${pad(x.getMinutes())}`;return S.profFmt==='season'?'0'+s:s;};
+const rangeArg=(a,b)=>S.profFmt==='all'?'(;)':`(${tsArg(a)};${tsArg(b)})`;
+function autoSave(){if(!S.auto||!ST.vals.size)return;const h=hist();h.unshift(snapshot());while(h.length>60)h.pop();saveHist(h);}
+const Q_UI=['32.7.0','52.7.0','72.7.0','31.7.0','51.7.0','71.7.0'],Q_ANG=[['81.7.10','81.7.1'],['81.7.20','81.7.2'],['81.7.40','81.7.4'],['81.7.51','81.7.15'],['81.7.62','81.7.26']],Q_PQ=[['21.7.0','23.7.0'],['41.7.0','43.7.0'],['61.7.0','63.7.0']];
+let NOSUP=new Set(),stopReq=false,quickRun=false;
+const PPKEY='zaehlerauslesung.pwpref';
+function hpw(p){let h=2166136261;for(const c of p){h^=c.charCodeAt(0);h=Math.imul(h,16777619)>>>0;}return h.toString(16);}
+/* merkt sich je Zählertyp, welches Passwort der Liste passte (als Prüfsumme, nicht im Klartext) */
+function pwPref(set){const t=(IECP?.ident||'').replace(/\.[0-9A-Z]{5,}$/i,'');let all={};try{all=JSON.parse(localStorage.getItem(PPKEY))||{}}catch{}
+  if(set!==undefined){all[t]=hpw(set);try{localStorage.setItem(PPKEY,JSON.stringify(all))}catch{}return;}
+  const h=all[t];if(!h)return null;return String($('#pw').value||'').split(/[\s,;]+/).find(p=>hpw(p)===h)||null;}
+const NKEY='zaehlerauslesung.nosup';
+const meterType=()=>(IECP?.ident||'').replace(/\.[0-9A-Z]{5,}$/i,'');
+function nosupAll(){try{return JSON.parse(localStorage.getItem(NKEY))||{}}catch{return{}}}
+function loadNosup(){const t=meterType();const a=nosupAll()[t];if(a)a.forEach(k=>NOSUP.add(k));if(a?.length)log('INFO',`${a.length} nicht unterstützte Register für ${t} bekannt`);}
+function saveNosup(){const t=meterType();if(!t)return;const all=nosupAll();all[t]=[...NOSUP];try{localStorage.setItem(NKEY,JSON.stringify(all))}catch{}nosupInfo();}
+function nosupInfo(){const n=Object.keys(nosupAll()).length;$('#nosupInfo').textContent=n?`gemerkt für ${n} Zählertyp${n>1?'en':''}`:'';}
+async function rdReg(k){if(NOSUP.has(k))return false;
+  try{const a=await IECP.read(k+'()',4000);if(/ERROR/i.test(a)||!a.includes('(')){NOSUP.add(k);return false;}
+    const v=parseReadout(a);if(!v.length){NOSUP.add(k);return false;}ST.live=true;setVals(v,false);return true;}
+  catch(e){log('WARN',k+': '+e.message);return false;}}
+/* Zeiger: U, I und P/Q je Phase (funktioniert bei praktisch allen Zählern).
+   Export-Register (22/24…) nur, wenn P/Q nicht zu U·I passen; Winkelregister nur, wenn es kein P je Phase gibt. */
+async function readInstant(pre,round){
+  let got=0,n=0;const plan=Q_UI.length+6;
+  const rd=async k=>{if(stopReq||NOSUP.has(k))return false;n++;status(`${pre}Zeiger ${n}/${Math.max(n,plan)}${round?` · Runde ${round}`:''}`);prog(n/Math.max(n,plan)*100);const r=await rdReg(k);if(r)got++;return r;};
+  for(const k of Q_UI)await rd(k);
+  let pPh=0;
+  for(let i=0;i<3;i++){const c=[2,4,6][i];
+    const okP=await rd(c+'1.7.0');await rd(c+'3.7.0');if(okP)pPh++;
+    const U=num([32,52,72][i]+'.7'),I=num([31,51,71][i]+'.7'),{P,Q}=phPQ(i);
+    if(isFinite(U*I)&&U*I>5&&!(Math.hypot(P||0,Q||0)*1000>0.6*U*I)){await rd(c+'2.7.0');await rd(c+'4.7.0');}}
+  for(let gi=0;gi<2;gi++)for(const k of Q_ANG[gi]){if(await rd(k))break;}
+  if(!pPh){for(let gi=2;gi<Q_ANG.length;gi++)for(const k of Q_ANG[gi]){if(await rd(k))break;}}
+  fillPhInputs();return got;}
+
+/* Nur Leistung: 1.7/2.7 und 3.7/4.7; Ersatz 16.7 bzw. Summe der Phasen */
+async function readPower(pre,round){
+  let n=0;const rd=async k=>{if(stopReq||NOSUP.has(k))return false;n++;status(`${pre}Leistung … Register ${n}${round?` · Runde ${round}`:''}`);prog('ind');return rdReg(k);};
+  let okP=await rd('1.7.0');if(okP)await rd('2.7.0');
+  if(!okP)okP=await rd('16.7.0');
+  if(!okP){for(const c of [2,4,6]){if(await rd(c+'1.7.0'))okP=true;await rd(c+'2.7.0');}}
+  let okQ=await rd('3.7.0');if(okQ)await rd('4.7.0');
+  if(!okQ&&okP){for(const c of [2,4,6]){await rd(c+'3.7.0');await rd(c+'4.7.0');}}
+  renderPower();return okP;}
+
+async function readExtras(ex,pre,notes){
+  status(pre+'Programmiermodus'+($('#pw').value?' mit Passwort':'')+' …');prog('ind');
+  await IECP.login($('#pw').value);loadNosup();
+  try{
+    if(ex.includes('inst')){if(!(await readInstant(pre)))notes.push('keine Momentanwerte');else saveNosup();}
+    if(ex.includes('prof')){showTab('lastgang');
+      const a=$('#lgFrom').value,b=$('#lgTo').value;const exp=Math.max(1,Math.round((new Date(b)-new Date(a))/9e5));
+      status(pre+'Lastgang wird angefordert …');prog(0);
+      try{const txt=await IECP.read(S.prof+rangeArg(a,b),15000,p=>{const pr=parseProfile(cutLines(p));ST.profile=pr;renderProfile();const n=pr.rows.length;
+          prog(n/exp*100);status(`${pre}Lastgang … ${n} von ca. ${exp} Werten (${Math.min(100,Math.round(n/exp*100))} %)`);});
+        if(/^\(?ERROR/i.test(txt.trim()))notes.push('Lastgang: Zähler meldet ERROR (Passwort nötig oder Datumsformat unter „Mehr“ ändern)');
+        else{ST.profileRaw=txt;ST.profile=parseProfile(txt);renderProfile();if(!ST.profile.rows.length)notes.push('Lastgang ohne Werte');}}
+      catch(e){notes.push('Lastgang: '+e.message);}}
+    if(ex.includes('log')){showTab('logbuch');status(pre+'Logbuch wird angefordert …');prog('ind');
+      const to=new Date(),from=new Date(to-90*864e5);const dl=d=>new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,16);
+      try{const txt=await IECP.read('P.98'+rangeArg(dl(from),dl(to)),15000,p=>{ST.logbook=parseLogbook(cutLines(p));renderLogbook();status(`${pre}Logbuch … ${ST.logbook.length} Einträge`);});
+        if(/^\(?ERROR/i.test(txt.trim()))notes.push('Logbuch: Zähler meldet ERROR');else{ST.logRaw=txt;ST.logbook=parseLogbook(txt);renderLogbook();}}
+      catch(e){notes.push('Logbuch: '+e.message);}}
+  }finally{await IECP.bye();}}
+
+async function quickLoop(mode){
+  ST.mode='elec';ST.vals.clear();ST.profile=null;ST.logbook=[];renderProfile();renderLogbook();showTab(mode==='pow'?'werte':'zeiger');
+  stopReq=false;quickRun=mode;setBusy(true);
+  status('Programmiermodus'+($('#pw').value?' mit Passwort':'')+' …');
+  await IECP.login($('#pw').value);loadNosup();let round=0,got=0;
+  try{do{round++;got=mode==='pow'?await readPower('',S.oLoop?round:0):await readInstant('',S.oLoop?round:0);if(!got)break;saveNosup();}while(S.oLoop&&!stopReq);}
+  finally{quickRun=false;await IECP.bye();}
+  if(!got)return mode==='pow'?'⚠ Keine Leistung erhalten – Passwort nötig? (unter ⚙ eintragen)':'⚠ Keine Momentanwerte – Passwort nötig? (unter ⚙ eintragen)';
+  autoSave();return `${mode==='pow'?'Leistung':'Zeigerwerte'} gelesen${round>1?` (${round} Runden)`:''}`;}
+/* L+G C003: JJMMTThhmmss + Hundertstel + Wochentag(1=Mo…7=So) + Sommerzeit(1/0) */
+function lgTime(d){const wd=d.getDay()||7,jan=new Date(d.getFullYear(),0,1).getTimezoneOffset(),dst=d.getTimezoneOffset()<jan?1:0;
+  return `${pad(d.getFullYear()%100)}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}${pad(Math.floor(d.getMilliseconds()/10))}${wd}${dst}`;}
+function parseLg(v){const m=String(v).match(/^(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})?/);return m?new Date(2000+ +m[1],m[2]-1,+m[3],+m[4],+m[5],+m[6],(+m[7]||0)*10):null;}
+async function readClock(){const f=await IECP.cmdRW('R2','C003()');if(f.type!=='FRAME'||/ERROR/i.test(f.body))throw new Error('Zähler kennt C003 nicht');
+  const v=(f.body.match(/\(([^)]*)\)/)||[])[1];const mt=parseLg(v);const now=new Date();if(!mt)throw new Error('Zeitformat unbekannt: '+v);
+  const df=Math.round((mt-now)/1000)||0;$('#clkBox').innerHTML=`<div><span class="mut">Zähler</span><b>${mt.toLocaleString('de-DE')}</b></div><div><span class="mut">Handy</span><b>${now.toLocaleString('de-DE')}</b></div><div><span class="mut">Abweichung</span><b class="${Math.abs(df)>30?'warn':'ok'}">${df>=0?'+':''}${fmtN(df,0)} s</b></div>`;return df;}
+async function clockOp(write){
+  if(busy)return;if(!T&&!(await connect()))return;setBusy(true);prog('ind');showTab('mehr');
+  try{status('Programmiermodus …');await IECP.login($('#pw').value);
+    try{if(!/^\/LGZ/.test(IECP.ident))throw new Error('Zeitstellen bisher nur für Landis+Gyr (Kennung /LGZ…) – andere Zähler bitte mitschneiden');
+      const df=await readClock();
+      if(write){if(!confirm(`Zählerzeit weicht ${fmtN(df,0)} s ab.\nJetzt auf Handyzeit ${new Date().toLocaleTimeString('de-DE')} stellen?`)){status('Zeitstellen abgebrochen.');return;}
+        const v=lgTime(new Date());const r=await IECP.cmdRW('W2',`C003(${v})`);
+        if(r.type!=='ACK')throw new Error('Zähler hat das Stellen abgelehnt ('+(r.type==='NAK'?'NAK':(r.head||r.body||r.type))+')');
+        log('INFO','Zeit gestellt: '+v);const d2=await readClock();status(`Uhrzeit gestellt – Abweichung jetzt ${fmtN(d2,0)} s.`,'ok');}
+      else status(`Zählerzeit gelesen – Abweichung ${fmtN(df,0)} s.`,Math.abs(df)>30?'warn':'ok');}
+    finally{await IECP.bye();}}
+  catch(e){log('ERR',e.message);status(e.message,'err');}
+  finally{setBusy(false);prog(null);}}
+$('#btnClkRead').onclick=()=>clockOp(false);$('#btnClkSet').onclick=()=>clockOp(true);
+const OPS={
+  async quick(){return quickLoop('ph');},
+  async power(){return quickLoop('pow');},
+  async all(){
+    const ex=[S.oInst&&'inst',S.oProf&&'prof',S.oLog&&'log'].filter(Boolean);const n=ex.length?2:1;const pre=i=>n>1?`${i}/${n} · `:'';
+    ST.mode='elec';ST.profile=null;ST.profileRaw='';ST.logbook=[];ST.logRaw='';ST.vals.clear();renderProfile();renderLogbook();
+    ST.live=true;showTab('werte');
+    const r=await IECP.readout(p=>{const v=parseReadout(cutLines(p));setVals(v,true);status(`${pre(1)}Datenauslesung … ${v.length} Werte`);});
+    ST.ident=r.ident;ST.rawReadout=r.text;setVals(parseReadout(r.text),true);
+    const notes=[];if(!r.ok)notes.push('Prüfsumme der Datenauslesung falsch');
+    if(ex.length){try{await readExtras(ex,pre(2),notes);}catch(e){log('ERR',e.message);notes.push(e.message);try{await IECP.bye()}catch{}}}
+    autoSave();
+    const parts=[`${ST.vals.size} Werte`];if(S.oProf&&ST.profile)parts.push(`${ST.profile.rows.length} Lastgangwerte`);if(S.oLog)parts.push(`${ST.logbook.length} Logbucheinträge`);
+    return (notes.length?'⚠ '+notes.join(' · ')+' — ':'')+'Fertig: '+parts.join(', ');},
+  async registers(){const keys=$('#regList').value.split(/[,;\n]/).map(s=>s.trim()).filter(Boolean);const out=[];
+    await withLogin(async()=>{for(const k of keys){status(`Lese ${k} …`);let a;try{a=await IECP.read(k.includes('(')?k:k+'()',5000);}catch(e){a='⚠ '+e.message;}out.push([k,a]);
+      $('#regTable tbody').innerHTML=out.map(r=>`<tr><td class="mono">${esc(r[0])}</td><td class="mono">${esc(r[1])}</td></tr>`).join('');}});
+    const vals=out.flatMap(r=>parseReadout(r[1]));if(vals.length)setVals(vals,false);return `${out.length} Register gelesen`;},
+  async heat(){const t=LINK.t,ser=t instanceof SerialT;ST.mode='heat';ST.live=true;ST.vals.clear();showTab('waerme');
+    if(ser)await t.setBaud(300,{dataBits:7,parity:'even',stopBits:2});IECP.baud=300;
+    if(t instanceof BleT)await t.prep();await sleep(t instanceof DemoT?0:600);LINK.clear();
+    await LINK.send([...new Array(40).fill(0),...enc('/?!\r\n')]);
+    const id=await LINK.wait(findIdent,6000);log('INFO','Kennung: '+id);
+    if(ser)await t.setBaud(2400,{dataBits:7,parity:'even',stopBits:2});
+    else if(t instanceof BleT)await t.setBaud(2400);
+    status('Zähler antwortet: '+id+' – Daten kommen …');
+    let f;try{f=await IECP.readFrame(10000,p=>{setVals(parseReadout(cutLines(p)),true);renderHeat();status(`Wärmezähler … ${ST.vals.size} Werte`);});}finally{if(ser)await t.setBaud(300,{dataBits:7,parity:'even',stopBits:1});else if(t instanceof BleT)await t.setBaud(300);}
+    if(f.type!=='FRAME')throw new Error('Keine Daten nach der Kennung');if(!f.ok)log('WARN','Prüfsumme falsch');
+    ST.mode='heat';ST.ident=id;ST.rawReadout=f.body;setVals(parseReadout(f.body),true);renderHeat();autoSave();return `Fertig: ${ST.vals.size} Werte`;},
+  async sml(){if(!(T instanceof SerialT))log('WARN','SML-Mitschnitt ist für den COM-Port gedacht; über Bluetooth nur, wenn der Kopf 9600 8N1 liefert.');
+    if(T instanceof SerialT)await T.setBaud(9600,{dataBits:8,parity:'none'});LINK.strip=false;LINK.clear();
+    status('Schneide 8 s SML mit …');await sleep(8000);const data=LINK.buf.splice(0);
+    if(T instanceof SerialT)await T.setBaud(300,{dataBits:7,parity:'even'});
+    const vals=parseSML(data);if(!vals.length)throw new Error(`Keine SML-Werte erkannt (${data.length} Bytes empfangen)`);ST.mode='elec';ST.ident='SML';setVals(vals,true);showTab('werte');autoSave();return `Fertig: ${vals.length} SML-Werte`;}
+};
+$$('.op').forEach(b=>b.onclick=()=>run(b.textContent,OPS[b.dataset.op]));
+$('#btnQuick').onclick=()=>{if(quickRun){stopReq=true;$('#btnQuick').textContent='stoppt …';return;}run('Zeiger',OPS.quick);};
+$('#btnPow').onclick=()=>{if(quickRun){stopReq=true;$('#btnPow').textContent='stoppt …';return;}run('Leistung',OPS.power);};
+$('#btnNosupReset').onclick=()=>{try{localStorage.removeItem(NKEY)}catch{}NOSUP=new Set();nosupInfo();status('Register-Erkennung zurückgesetzt.');};
+$('#btnGo').onclick=()=>run(goLabel(),S.kind==='heat'?OPS.heat:S.kind==='sml'?OPS.sml:OPS.all);
+$$('#kindSeg button').forEach(b=>b.onclick=()=>{if(busy)return;S.kind=b.dataset.kind;saveS();updCtl();});
+$('#btnWf').onclick=$('#btnCfg').onclick=$('#connPill').onclick=()=>{$('#cfgBox').hidden=!$('#cfgBox').hidden;};
+const PWKEY='zaehlerauslesung.pw';
+function pwStore(){try{$('#pwKeep').checked?localStorage.setItem(PWKEY,$('#pw').value):localStorage.removeItem(PWKEY);}catch{}}
+$('#pw').oninput=pwStore;$('#pwKeep').onchange=pwStore;
+const dlv=d=>new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,16);
+$$('#rangeChips button[data-r]').forEach(b=>b.onclick=()=>{const t=new Date();t.setHours(0,0,0,0);const n=+b.dataset.r;
+  if(n===0){$('#lgFrom').value=dlv(t);$('#lgTo').value=dlv(new Date());}else{$('#lgFrom').value=dlv(new Date(+t-n*864e5));$('#lgTo').value=dlv(t);}estimate();});
+['#lgFrom','#lgTo'].forEach(id=>$(id).addEventListener('change',estimate));
+function estimate(){const a=new Date($('#lgFrom').value),b=new Date($('#lgTo').value);const n=Math.round((b-a)/9e5);
+  if(!(n>0)){$('#estim').textContent='Zeitraum prüfen';return;}const m=Math.max(1,Math.round(n*1.4/60));
+  $('#estim').textContent=`ca. ${n} Werte · ${S.transport==='ble'?'ca. '+m+' min':'bis '+m+' min'}`;}
+function visTabs(){const m=ST.vals.size?ST.mode:(S.kind==='heat'?'heat':'elec');let act=null;
+  $$('#tabs button[data-m]').forEach(b=>{b.hidden=b.dataset.m!==m;if(b.hidden&&b.classList.contains('act'))act=b;});if(act)showTab('werte');}
+function updCtl(){const el=S.kind==='elec';
+  $$('#kindSeg button').forEach(b=>b.classList.toggle('act',b.dataset.kind===S.kind));
+  $('#elecOpts').hidden=$('#quickBox').hidden=!el;$('#extraBox').hidden=!(el&&(S.oInst||S.oProf||S.oLog));
+  $('#rangeRow').hidden=$('#rangeChips').hidden=!S.oProf;
+  if(!busy)$('#btnGo').textContent=goLabel();estimate();visTabs();
+  if(!busy&&!T)status(S.transport==='demo'?'Demo-Modus – „'+goLabel()+'“ tippen.':'Kopf aufsetzen und „'+goLabel()+'“ tippen – verbindet automatisch.');}
+
+/* ---------- SML (vereinfachter Parser) ---------- */
+const SMLU={27:'W',28:'VA',29:'var',30:'Wh',31:'VAh',32:'varh',33:'A',35:'V',44:'Hz',8:'°'};
+function parseSML(bytes){const b=bytes;const out=new Map();
+  function el(i){if(i>=b.length)return null;let t=b[i];if(t===0x00)return{v:null,n:i+1};let type=(t>>4)&7,len=t&0x0f,hl=1;
+    while(t&0x80){i++;if(i>=b.length)return null;t=b[i];len=(len<<4)|(t&0x0f);hl++;}
+    const start=i+1-hl;if(type===7){let p=i+1;const items=[];for(let k=0;k<len;k++){const e=el(p);if(!e)return null;items.push(e.v);p=e.n;}return{v:items,n:p};}
+    const dl=len-hl;if(dl<0||start+len>b.length)return null;const data=b.slice(i+1,i+1+dl);let v=data;
+    if(type===5||type===6){let x=0n;for(const d of data)x=(x<<8n)|BigInt(d);if(type===5&&data.length&&data[0]&0x80)x-=1n<<BigInt(8*data.length);v=Number(x);}
+    else if(type===4)v=!!data[0];return{v,n:start+len};}
+  for(let i=0;i<b.length-8;i++){if(b[i]!==0x77||b[i+1]!==0x07)continue;
+    try{let p=i+1;const items=[];for(let k=0;k<7;k++){const e=el(p);if(!e)throw 0;items.push(e.v);p=e.n;}
+      const o=items[0];if(!o||o.length!==6)continue;const key=`${o[2]}.${o[3]}.${o[4]}`;const unit=SMLU[items[3]]||'';const sc=typeof items[4]==='number'?items[4]:0;let val=items[5];
+      if(typeof val==='number')val=+(val*10**sc).toFixed(Math.max(0,-sc));else if(Array.isArray(val)||val instanceof Array)val=dec(val);else if(val&&val.length!==undefined)val=Array.from(val).map(x=>pad(x.toString(16))).join('');
+      if(typeof val==='number'&&unit==='Wh'){val=+(val/1000).toFixed(4);out.set(key,{obis:`${o[0]}-${o[1]}:${key}*${o[5]}`,key,value:String(val),unit:'kWh',extra:''});}
+      else out.set(key,{obis:`${o[0]}-${o[1]}:${key}*${o[5]}`,key,value:String(val),unit,extra:''});}catch{}}
+  return [...out.values()];}
+
+/* ---------- Verlauf ---------- */
+const HKEY='zaehlerauslesung.verlauf';
+const hist=()=>{try{return JSON.parse(localStorage.getItem(HKEY))||[]}catch{return[]}};
+function saveHist(h){try{localStorage.setItem(HKEY,JSON.stringify(h));return true;}catch(e){alert('Speicher voll – ältere Einträge löschen oder exportieren.');return false;}}
+function snapshot(){return{t:Date.now(),mode:ST.mode,wf:{ctP:S.ctP,ctS:S.ctS,vtP:S.vtP},ident:ST.ident,meter:meterNo(),vals:[...ST.vals.values()],raw:ST.rawReadout,profileRaw:ST.profileRaw,logRaw:ST.logRaw};}
+function renderHist(){const h=hist();$('#histTable').innerHTML=h.length?'<tr><th>Zeit</th><th>Zähler</th><th>Inhalt</th><th></th></tr>'+h.map((e,i)=>`<tr><td>${fmtDT(new Date(e.t))}</td><td class="mono">${esc(e.meter||e.ident)}</td><td class="mut">${e.wf&&+e.wf.ctP?`${e.wf.ctP}/${e.wf.ctS} A${+e.wf.vtP?' · '+e.wf.vtP+'/100 V':''} · `:''}${e.vals.length} Werte${e.profileRaw?' · Lastgang':''}${e.logRaw?' · Logbuch':''}</td><td class="row"><button data-load="${i}">Laden</button><button data-del="${i}">✕</button></td></tr>`).join(''):'<tr><td class="mut">Noch nichts gespeichert.</td></tr>';
+  $$('[data-load]').forEach(b=>b.onclick=()=>loadSnap(hist()[+b.dataset.load]));
+  $$('[data-del]').forEach(b=>b.onclick=()=>{if(!confirm('Eintrag löschen?'))return;const h=hist();h.splice(+b.dataset.del,1);saveHist(h);renderHist();});}
+function loadSnap(e){ST.mode=e.mode||'elec';if(e.wf){Object.assign(S,e.wf);$('#ctP').value=S.ctP;$('#ctS').value=S.ctS;$('#vtP').value=S.vtP;saveS();_pp=null;setTimeout(wfChanged);}ST.ident=e.ident;ST.rawReadout=e.raw||'';ST.vals=new Map(e.vals.map(v=>[v.key,v]));ST.profileRaw=e.profileRaw||'';ST.profile=e.profileRaw?parseProfile(e.profileRaw):null;ST.logRaw=e.logRaw||'';ST.logbook=e.logRaw?parseLogbook(e.logRaw):[];
+  renderVals();fillPhInputs();renderProfile();renderLogbook();renderHeat();showTab(ST.mode==='heat'?'waerme':'werte');}
+$('#btnSave').onclick=()=>{const h=hist();h.unshift(snapshot());while(h.length>60)h.pop();if(saveHist(h)){renderHist();status('Im Verlauf gespeichert.','ok');}};
+function download(name,text,type='text/csv'){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);}
+const stamp=()=>{const d=new Date();return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;};
+const csvQ=s=>`"${String(s??'').replace(/"/g,'""')}"`;
+$('#btnCsvVals').onclick=()=>download(`werte_${meterNo()||'zaehler'}_${stamp()}.csv`,'Kennzahl;Bedeutung;Wert;Einheit;Primär (WF '+WF().kP+');Zusatz\n'+[...ST.vals.values()].map(e=>[e.obis,describe(e.key),e.value.replace('.',','),e.unit,(()=>{const k=kFor(e.unit),v=parseFloat(e.value);return k!==1&&isFinite(v)?String(+(v*k).toPrecision(10)).replace('.',','):'';})(),e.extra].map(csvQ).join(';')).join('\n'));
+$('#btnCsvProf').onclick=()=>{const p=profP();download(`lastgang_${meterNo()||'zaehler'}_${stamp()}.csv`,['Zeit',...p.channels.map(c=>`${c.key} [${c.unit}]`),'Status'].join(';')+'\n'+p.rows.map(r=>[fmtDT(r.t),...r.v.map(v=>isFinite(v)?String(v).replace('.',','):''),r.st].join(';')).join('\n'));};
+$('#btnPngProf').onclick=()=>{const cv=$('#lgCanvas'),p=profP();const o=document.createElement('canvas');const pad=40*(window.devicePixelRatio||1);
+  o.width=cv.width;o.height=cv.height+pad;const c=o.getContext('2d');c.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--card');c.fillRect(0,0,o.width,o.height);
+  c.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--fg');c.font=`${14*(window.devicePixelRatio||1)}px system-ui`;
+  const ch=[...lgSel].map(i=>`${p.channels[i].key} [${p.channels[i].unit}]`).join(', ');
+  const tt=`Zähler ${meterNo()} · ${fmtDT(p.rows[0].t)} – ${fmtDT(p.rows[p.rows.length-1].t)} · ${ch}${WF().kP!==1?' · primär WF '+WF().kP:''}`;let fs=14*(window.devicePixelRatio||1);while(fs>6&&(c.font=`${fs}px system-ui`,c.measureText(tt).width>o.width-20))fs-=0.5;c.fillText(tt,10,pad*0.6);c.drawImage(cv,0,pad);
+  const a=document.createElement('a');a.href=o.toDataURL('image/png');a.download=`lastgang_${meterNo()||'zaehler'}_${stamp()}.png`;a.click();};
+$('#btnExportAll').onclick=()=>download(`zaehlerauslesung_verlauf_${stamp()}.json`,JSON.stringify(hist(),null,1),'application/json');
+
+/* ---------- Import ---------- */
+$('#impFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;
+  if(/\.bin$/i.test(f.name)){const vals=parseSML(Array.from(new Uint8Array(await f.arrayBuffer())));ST.ident='SML-Datei';setVals(vals,true);showTab('werte');return;}
+  const t=await f.text();if(/\.json$/i.test(f.name)){try{const j=JSON.parse(t);const h=hist();(Array.isArray(j)?j:[j]).forEach(x=>x.vals&&h.push(x));saveHist(h);renderHist();showTab('verlauf');return;}catch{}}
+  $('#impText').value=t;};
+$('#btnImport').onclick=()=>{const t=$('#impText').value;if(!t.trim())return;
+  const id=(t.match(/^\/.+$/m)||[''])[0].trim();ST.ident=id;ST.rawReadout=t;ST.mode=/^\/LUG/.test(id)||/^6\.8\(.*\*(MWh|GJ)\)/m.test(t)?'heat':'elec';
+  const v=parseReadout(t);if(v.length)setVals(v,true);
+  if(/^P\.0\d/m.test(t)){ST.profileRaw=t;ST.profile=parseProfile(t);renderProfile();}
+  if(/^P\.98/m.test(t)){ST.logRaw=t;ST.logbook=parseLogbook(t);renderLogbook();}
+  status(`Import: ${v.length} Werte${ST.profile?.rows.length?`, ${ST.profile.rows.length} Lastgangwerte`:''}${ST.logbook.length?`, ${ST.logbook.length} Logbucheinträge`:''}.`,'ok');
+  renderHeat();showTab(ST.mode==='heat'?'waerme':v.length?'werte':ST.profile?'lastgang':'logbuch');};
+
+/* ---------- Tabs & Start ---------- */
+function showTab(n){$$('#tabs button').forEach(b=>b.classList.toggle('act',b.dataset.tab===n));$$('.tab').forEach(t=>t.classList.toggle('act',t.id==='tab-'+n));
+  if(n==='zeiger')updatePhasor();if(n==='waerme')renderHeat();if(n==='lastgang')drawProfile();if(n==='verlauf')renderHist();}
+$$('#tabs button').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+(function init(){const dl=d=>{const x=new Date(d-new Date().getTimezoneOffset()*6e4);return x.toISOString().slice(0,16);};
+  const today=new Date();today.setHours(0,0,0,0);
+  $('#lgFrom').value=dl(new Date(today-864e5));$('#lgTo').value=dl(today);
+  try{const p=localStorage.getItem(PWKEY);if(p!=null){$('#pw').value=p;$('#pwKeep').checked=true;}}catch{}
+  renderVals();fillPhInputs();renderProfile();renderLogbook();renderHist();renderHeat();updCtl();wfChanged();nosupInfo();
+  if(!navigator.bluetooth&&!('serial' in navigator))status('Dieser Browser kann weder Bluetooth noch COM-Port – Chrome (Android/PC) oder Edge verwenden. Demo und Import gehen trotzdem.','warn');})();
+</script>
+</body>
+</html>
