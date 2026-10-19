@@ -7,7 +7,7 @@
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <title>Zählerauslesung</title>
 <style>
-:root{--bg:#0b0f14;--card:#121821;--fg:#e6e8eb;--mut:#8b96a3;--line:#243040;--acc:#ffb020;--acc2:#2a2110;--ok:#3fb950;--warn:#ffb020;--err:#ff6b6b;--l1:#d2884a;--l2:#e6e8eb;--l3:#7d8590;--grid:#1d2733;color-scheme:dark}
+:root{--bg:#0b0f14;--card:#121821;--fg:#e6e8eb;--mut:#8b96a3;--line:#243040;--acc:#8cc63f;--acc2:#18240f;--ok:#3fb950;--warn:#ffb020;--err:#ff6b6b;--l1:#d2884a;--l2:#e6e8eb;--l3:#7d8590;--grid:#1d2733;color-scheme:dark}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
 header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;align-items:center;gap:10px}
@@ -23,7 +23,7 @@ label{font-size:12px;color:var(--mut);display:flex;flex-direction:column;gap:3px
 input,select,textarea{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px;min-width:0;width:100%}
 textarea{font-family:ui-monospace,Consolas,monospace;font-size:12px}
 button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:8px;padding:9px 13px;cursor:pointer}
-button.pri{background:var(--acc);color:#1a1205;border-color:var(--acc);font-weight:600}
+button.pri{background:var(--acc);color:#0d1a05;border-color:var(--acc);font-weight:600}
 button:disabled{opacity:.45;cursor:default}
 .tabs{display:flex;gap:4px;overflow-x:auto;margin:4px 0 12px;scrollbar-width:none}
 .tabs button{border-radius:99px;padding:7px 13px;white-space:nowrap;font-size:14px}
@@ -45,6 +45,10 @@ canvas{width:100%;display:block;touch-action:manipulation}
 .scroll{overflow-x:auto}
 .ph input{padding:6px;text-align:right}
 details summary{cursor:pointer;color:var(--acc);margin:6px 0}
+.actGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.actGrid button{width:100%;margin:0}.actGrid .wide{grid-column:1/-1}.actGrid .io{font-weight:700;border:1px solid var(--acc);color:var(--acc)}.actGrid .io2{font-weight:600}
+.menu{margin:10px 0 0;padding:12px;background:var(--bg);border:1px solid var(--acc);border-radius:12px}.menuSep{margin:14px 0 6px;font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}.menu .wandler{margin-left:0}
+header .icon{padding:4px 10px}
+#directLink{font-size:12px;color:var(--acc);text-decoration:none;border:1px solid var(--acc);border-radius:99px;padding:3px 9px;white-space:nowrap}
 .note{background:var(--acc2);border-radius:8px;padding:9px 11px;font-size:13px;margin:8px 0}
 .kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:8px 0}
 .kpi div{background:var(--bg);border-radius:8px;padding:8px}
@@ -90,16 +94,15 @@ tr.new td{color:var(--acc)}
 <body>
 <header>
   <h1>Zählerauslesung</h1>
+  <a id="directLink" href="#" target="_blank" rel="noopener" hidden title="Tool außerhalb der Toolbox öffnen (z. B. für Bluefy am iPhone/iPad)">↗ direkt</a>
   <span id="connPill" class="pill">getrennt</span>
+  <button id="btnCfg" class="icon" title="Verbindung einstellen">⚙</button>
 </header>
 <main>
 
-<div id="frameNote" class="note" hidden style="margin:0 0 12px">Das Tool läuft eingebettet in der Toolbox. Bluetooth funktioniert so in manchen Browsern (z. B. Bluefy am iPad) nicht. <a id="frameLink" href="#" target="_top" style="color:var(--acc);font-weight:600">→ Tool direkt öffnen</a></div>
+<div id="frameNote" class="note" hidden style="margin:0 0 12px">Das Tool läuft eingebettet in der Toolbox. Bluetooth funktioniert so in manchen Browsern (z. B. Bluefy am iPad) nicht. <a id="frameLink" href="#" target="_blank" rel="noopener" style="color:var(--acc);font-weight:600">→ Tool direkt öffnen</a></div>
+<div id="iosNote" class="note" hidden style="margin:0 0 12px">Am iPhone/iPad kann nur die App <b>Bluefy</b> Bluetooth. Link kopieren und in Bluefy öffnen: <button id="btnCopyLink" style="margin-top:6px">Link kopieren</button></div>
 <section class="card ctl">
-  <div class="ctlTop">
-    <div class="seg" id="kindSeg"><button data-kind="auto" class="act" title="Zählertyp automatisch erkennen">Auto</button><button data-kind="elec">Strom</button><button data-kind="heat">Wärme</button><button data-kind="sml">SML</button></div>
-    <button id="btnCfg" class="icon" title="Verbindung einstellen">⚙</button>
-  </div>
   <div id="cfgBox" class="cfg" hidden>
     <div class="grid2">
       <label>Verbindungsart
@@ -115,30 +118,38 @@ tr.new td{color:var(--acc)}
     </div>
     <div class="row"><button id="btnDisconnect" disabled>Trennen</button><span class="mut">Weitere Einstellungen unter „Mehr“.</span></div>
   </div>
-  <div class="goRow">
-    <button id="btnGo" class="pri big">Auslesen</button>
-    <div class="quick" id="quickBox"><button id="btnPow" title="Nur Wirk- und Blindleistung – am schnellsten">⚡ Leistung</button><button id="btnQuick" title="U, I und P/Q je Phase für das Zeigerdiagramm">◷ Zeiger</button><label class="chk"><input type="checkbox" id="oLoop"> laufend</label></div>
-    <div class="wandler" id="wfBox">
-      <label>Stromwandler<span class="wfrow"><input id="ctP" type="number" inputmode="decimal" placeholder="—"><span>/</span><select id="ctS"><option value="5">5 A</option><option value="1">1 A</option></select></span></label>
-      <label>Spannungswandler<span class="wfrow"><input id="vtP" type="number" inputmode="decimal" placeholder="—"><span>/ 100 V</span></span></label>
-      <span id="wfInfo" class="mut"></span>
-    </div>
+  <div class="actGrid">
+    <button id="btnEin" class="op2 big io" title="Zähler auslesen und Einbau-Datei (.RAW) speichern">Einbau</button>
+    <button id="btnAus" class="op2 big io" title="Zähler mit Lastgang und Logbuch auslesen und Ausbau-Dateien (.txt, .VL, .LP) speichern">Ausbau</button>
+    <button id="btnGo" class="pri big wide">Auslesen ▾</button>
+    <button id="btnClk" class="op2 big io2" title="Datum/Uhrzeit des Zählers prüfen und auf Handyzeit stellen">🕓 Uhrzeit stellen</button>
+    <button id="btnModem" class="op2 big io2" title="Empfangsstärke des Zählermodems auslesen">📶 Modem-Empfang</button>
   </div>
-  <div class="goRow" style="margin-top:8px">
+  <div id="readMenu" class="menu" hidden>
+    <div class="mut" style="margin-bottom:6px">Zählerstände werden immer gelesen. Zusätzlich:</div>
     <div class="opts" id="elecOpts">
       <label class="chk"><input type="checkbox" id="oInst"> Momentanwerte</label>
       <label class="chk"><input type="checkbox" id="oProf"> Lastgang</label>
       <label class="chk"><input type="checkbox" id="oLog"> Logbuch</label>
     </div>
-  </div>
-  <div id="extraBox" class="extra" hidden>
-    <div id="rangeRow" class="grid2">
-      <label>Lastgang von<input type="datetime-local" id="lgFrom"></label>
-      <label>bis<input type="datetime-local" id="lgTo"></label>
+    <div id="extraBox" class="extra" hidden>
+      <div id="rangeRow" class="grid2">
+        <label>Lastgang von<input type="datetime-local" id="lgFrom"></label>
+        <label>bis<input type="datetime-local" id="lgTo"></label>
+      </div>
+      <div id="rangeChips" class="row" style="justify-content:space-between">
+        <div class="chips"><button data-r="0">Heute</button><button data-r="1">Gestern</button><button data-r="7">7 Tage</button><button data-r="30">30 Tage</button></div>
+        <span id="estim" class="mut"></span>
+      </div>
     </div>
-    <div id="rangeChips" class="row" style="justify-content:space-between">
-      <div class="chips"><button data-r="0">Heute</button><button data-r="1">Gestern</button><button data-r="7">7 Tage</button><button data-r="30">30 Tage</button></div>
-      <span id="estim" class="mut"></span>
+    <button id="btnStart" class="op2 pri big" style="width:100%;margin-top:8px">Auslesen starten</button>
+    <div class="menuSep">Schnell – nur Momentanwerte</div>
+    <div class="quick" id="quickBox"><button id="btnPow" title="Nur Wirk- und Blindleistung – am schnellsten">⚡ Leistung</button><button id="btnQuick" title="U, I und P/Q je Phase für das Zeigerdiagramm">◷ Zeiger</button><label class="chk"><input type="checkbox" id="oLoop"> laufend</label></div>
+    <div class="menuSep">Wandler (für Primärwerte)</div>
+    <div class="wandler" id="wfBox">
+      <label>Stromwandler<span class="wfrow"><input id="ctP" type="number" inputmode="decimal" placeholder="—"><span>/</span><select id="ctS"><option value="5">5 A</option><option value="1">1 A</option></select></span></label>
+      <label>Spannungswandler<span class="wfrow"><input id="vtP" type="number" inputmode="decimal" placeholder="—"><span>/ 100 V</span></span></label>
+      <span id="wfInfo" class="mut"></span>
     </div>
   </div>
   <div id="prog" class="prog"><div id="progBar"></div></div>
@@ -148,7 +159,6 @@ tr.new td{color:var(--acc)}
 <nav class="tabs" id="tabs">
   <button data-tab="werte" class="act">Werte</button>
   <button data-tab="zeiger" data-m="elec">Zeiger</button>
-  <button data-tab="waerme" data-m="heat" hidden>Wärme</button>
   <button data-tab="lastgang" data-m="elec">Lastgang</button>
   <button data-tab="logbuch" data-m="elec">Logbuch</button>
   <button data-tab="verlauf">Verlauf</button>
@@ -194,20 +204,7 @@ tr.new td{color:var(--acc)}
 </section>
 
 <!-- WAERME -->
-<section class="tab" id="tab-waerme">
-  <div class="card">
-    <h2 id="heatTitle">Wärmemengenzähler</h2>
-    <div class="kpi" id="heatKpi"></div>
-    <ul id="heatChecks" class="checks" style="padding-left:18px;margin:8px 0 0"></ul>
-  </div>
-  <div class="card scroll"><h2>Stichtag / Vorjahr</h2><table id="heatPrev"></table></div>
-  <div class="card scroll">
-    <div class="row" style="justify-content:space-between"><h2 style="margin:0">Monatswerte</h2><div class="row"><label class="mut">Monate <input id="monN" type="number" min="1" max="60" value="24" style="width:4.5em"></label><button id="btnMon" class="op2">Lesen (Versuch)</button><button id="btnCsvMon" disabled>CSV</button></div></div>
-    <div class="mut" style="margin:6px 0">Versuch über M-Bus auf der optischen Schnittstelle (wie L+G-M-Bus-Modul). Klappt es nicht: Mehr → Protokoll schicken.</div>
-    <div id="monInfo" class="mut"></div><table id="monTable"></table>
-  </div>
-  <div class="card"><div class="mut">Landis+Gyr UH50/T550: Jede optische Auslesung kostet Batterielaufzeit (grob ½ Stunde). Momentanwerte (Temperaturen, Durchfluss, Leistung) liefern nicht alle Firmwarestände.</div></div>
-</section>
+
 
 <!-- LASTGANG -->
 <section class="tab" id="tab-lastgang">
@@ -272,7 +269,7 @@ tr.new td{color:var(--acc)}
   <div class="card">
     <h2>PC-Skript (Python)</h2>
     <div class="mut">Für die Auslesung am Windows-PC per COM-Port (Device BLE-zu-COM-Treiber oder USB-Kopf). Voraussetzung: Python + <span class="mono">pip install pyserial</span>.<br>
-    Aufruf: <span class="mono">python zaehler_auslesen.py --list</span> · <span class="mono">python zaehler_auslesen.py COM5</span> · <span class="mono">python zaehler_auslesen.py COM5 --ultraheat</span></div>
+    Aufruf: <span class="mono">python zaehler_auslesen.py --list</span> · <span class="mono">python zaehler_auslesen.py COM5</span></div>
     <div class="row" style="margin-top:8px"><a href="zaehler_auslesen.py" download="zaehler_auslesen.py"><button>zaehler_auslesen.py herunterladen</button></a></div>
   </div>
 <!-- IMPORT -->
@@ -352,7 +349,7 @@ const fmtDT=d=>d?`${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()} 
 const SKEY='zaehlerauslesung.settings';
 const S=Object.assign({transport:'ble',kind:'auto',oInst:false,oProf:false,oLog:false,addr:'',prof:'P.01',auto:true,oLoop:false,ctP:'',ctS:'5',vtP:'',baud:'auto',rcmd:'R5',profFmt:'season',hs:5000,cw:false,bleS:'',bleW:'',bleN:'',swPar:true,fD:'D014',fZ:'ZFA',fSw:'Q4Module-UWP 22.10.161.0'},(()=>{try{return JSON.parse(localStorage.getItem(SKEY))||{}}catch{return{}}})());
 const bindS=[['transport','#transport'],['baud','#sBaud'],['rcmd','#sRcmd'],['profFmt','#sProfFmt'],['hs','#sHs'],['cw','#sCw'],['bleS','#sBleS'],['bleW','#sBleW'],['bleN','#sBleN'],['oInst','#oInst'],['oProf','#oProf'],['oLog','#oLog'],['addr','#addr'],['prof','#lgProf'],['auto','#sAuto'],['oLoop','#oLoop'],['bleAll','#sBleAll'],['ctP','#ctP'],['ctS','#ctS'],['vtP','#vtP'],['fD','#sFD'],['fZ','#sFZ'],['fSw','#sFSw']];
-if(S.transport==='demoheat')S.transport='demo';
+if(S.transport==='demoheat')S.transport='demo';S.kind='auto';
 if(!S._v17){S.kind='auto';S._v17=1;}
 const saveS=()=>{try{localStorage.setItem(SKEY,JSON.stringify(S))}catch{}};
 for(const [k,sel] of bindS){const el=$(sel);if(el.type==='checkbox')el.checked=!!S[k];else el.value=S[k];
@@ -443,29 +440,15 @@ class BleT{
 
 /* ---------- Demo-Zähler ---------- */
 class DemoT{
-  constructor(heat){this.onData=()=>{};this.fixedBaud=false;this.in=[];this.heat=!!heat;}
+  constructor(){this.onData=()=>{};this.fixedBaud=false;this.in=[];}
   async open(){log('INFO','Demo-Zähler bereit');}
   async setBaud(){} async close(){}
-  async write(u8){if((this.heat||S.kind==="heat")&&this.mbus(u8))return;for(const b of u8)this.in.push(b&0x7f);this.process();}
-  mbus(u8){const a=Array.from(u8);if(a.every(x=>x===0x55))return true;const f=mbFrames(a.filter((x,i)=>!(x===0&&a.slice(0,i).every(y=>y===0))));
-    const sh=a.length===5&&a[0]===0x10&&a[4]===0x16;if(!sh&&!f.length)return false;
-    const L=(st,recs)=>{const d=[0x78,0x56,0x34,0x12,0xa7,0x32,0x04,0x04,0x01,0x00,0x00,0x00,...recs];return mbLong(0x08,0x00,0x72,d);};
-    const bcd=(n,b)=>{const s=String(Math.round(n)).padStart(b*2,'0');const o=[];for(let k=b-1;k>=0;k--)o.push(parseInt(s.substr(k*2,2),16));return o;};
-    const g=(dd,mm,yy)=>{const v=dd|(mm<<8)|((yy&7)<<5)|((yy>>3)<<12);return [v&0xff,v>>8];};
-    if(sh&&a[1]===0x40){this.emit([0xe5],60);return true;}
-    if(sh&&(a[1]===0x7b||a[1]===0x5b)){const m=this.mon;let recs;
-      if(!m)recs=[0x0c,0x06,...bcd(518943,4),0x0c,0x14,...bcd(1234567,4),0x0b,0x2d,...bcd(123,3),0x0a,0x5a,...bcd(712,2),0x0a,0x5e,...bcd(453,2)];
-      else{const dt=new Date(2026,9-m,1);const sn=m+1;const dif=(df)=>sn<2?[df]:[df|((sn&1)<<6)|0x80,(sn>>1)&0x0f];
-        recs=[...dif(0x02),0x6c,...g(1,dt.getMonth()+1,dt.getFullYear()-2000),...dif(0x0c),0x06,...bcd(518943-m*4200,4),...dif(0x0c),0x14,...bcd(1234567-m*9100,4),...dif(0x1b),0x2d,...bcd(140-m,3)];}
-      this.emit(L(0,recs),80);return true;}
-    if(f.length&&f[0].ci===0x51){if(f[0].d[1]===0xa8)this.mon=f[0].d[2];else this.mon=0;this.emit([0xe5],60);return true;}
-    return true;}
+  async write(u8){for(const b of u8)this.in.push(b&0x7f);this.process();}
   emit(arr,delay=150){setTimeout(()=>{const u=new Uint8Array(arr);for(let i=0,k=0;i<u.length;i+=200,k++){const c=u.slice(i,i+200);setTimeout(()=>this.onData(c),k*8);}},delay);}
   blk(text){const body=[...enc(text),ETX];return [STX,...body,bcc(body)];}
   process(){
     const b=this.in;if(!b.length)return;
     if(b[0]===0x2f){const s=dec(b);const e=s.indexOf('!\r\n');if(e<0)return;b.splice(0,e+3);
-      if(this.heat||S.kind==='heat'){this.emit(enc('/LUGCUH50\r\n'));this.emit(this.blk(this.heatData()),500);return this.process();}
       this.emit(enc(this.ident||'/DMO5LZQJ-Demo\r\n'));return this.process();}
     if(b[0]===ACK){if(b.length===1)return; if(b[1]!==0x30){b.shift();return this.process();} if(b.length<6)return;
       const opt=dec(b.slice(1,4));b.splice(0,6);
@@ -481,12 +464,6 @@ class DemoT{
       return this.process();}
     b.shift();this.process();
   }
-  heatData(){const j=(v,d)=>(v+(Math.random()-.5)*d);const Q=j(.512,.02),TV=j(75.2,.4),TR=j(54.4,.4),P=1.163*Q*(TV-TR);
-    return ['6.8(0399.772*MWh)6.26(17184.35*m3)9.21(00000000)','6.26*01(15790.20*m3)6.8*01(0368.441*MWh)','F(0)9.20(92741939)6.35(60*m)',
-      `6.6(0045.2*kW)6.6*01(0048.9*kW)6.33(001.951*m3ph)9.4(098.2*C&071.4*C)`,'6.31(0024310*h)6.32(0000000*h)9.22(R)9.6(000&92741939&0&000&92741939&0)',
-      '9.7(20000)6.32*01(0000000*h)6.36(01-01&00:00)6.33*01(001.889*m3ph)','9.4*01(097.5*C&069.9*C)','6.36*02(01&00:00)9.36(2026-10-13&20:08:00)9.24(3.5*m3ph)',
-      `6.4(${P.toFixed(1)}*kW)6.27(${Q.toFixed(3)}*m3ph)6.29(${TV.toFixed(1)}*C)6.28(${TR.toFixed(1)}*C)6.30(${(TV-TR).toFixed(1)}*K)`,
-      '9.1(0&1&0&0010&CECV&CECV&1&5.16&5.16&F&081008&040404&08&0)9.31(0018230*h)','!',''].join('\r\n');}
   inst(){
     const j=(v,d)=>v+(Math.random()-.5)*d;
     const U=[j(231.2,1),j(229.8,1),j(230.6,1)],I=[j(12.4,.4),j(9.8,.4),j(14.1,.4)],A=[342,335,348];
@@ -642,11 +619,8 @@ const OBIS={'0.0':'Geräteadresse','C.1':'Seriennummer','C.7':'Spannungsausfäll
   '21.7':'Wirkleistung L1','41.7':'Wirkleistung L2','61.7':'Wirkleistung L3','23.7':'Blindleistung L1','43.7':'Blindleistung L2','63.7':'Blindleistung L3','29.7':'Scheinleistung L1','49.7':'Scheinleistung L2','69.7':'Scheinleistung L3',
   '31.7':'Strom L1','51.7':'Strom L2','71.7':'Strom L3','91.7':'Strom N','32.7':'Spannung L1','52.7':'Spannung L2','72.7':'Spannung L3','33.7':'Leistungsfaktor L1','53.7':'Leistungsfaktor L2','73.7':'Leistungsfaktor L3'};
 const ANG={'1':'Winkel U L2 zu U L1','2':'Winkel U L3 zu U L1','10':'Winkel U L2 zu U L1','20':'Winkel U L3 zu U L1','4':'Winkel I L1 zu U L1','15':'Winkel I L2 zu U L2','26':'Winkel I L3 zu U L3','40':'Winkel I L1 zu U L1','51':'Winkel I L2 zu U L2','62':'Winkel I L3 zu U L3'};
-const HEAT={'6.8':'Wärmeenergie','6.26':'Volumen','6.4':'Leistung (aktuell)','6.27':'Durchfluss (aktuell)','6.29':'Vorlauftemperatur','6.28':'Rücklauftemperatur','6.30':'Temperaturdifferenz',
-  '9.21':'Eigentumsnummer','9.20':'Gerätenummer','F':'Fehlercode','6.35':'Messperiode Maxima','6.6':'Maximalleistung','6.33':'Maximaler Durchfluss','9.4':'Max. Vorlauf- / Rücklauftemperatur',
-  '6.31':'Betriebsstunden','6.32':'Fehlerstunden','6.36':'Stichtag','9.36':'Datum / Uhrzeit','9.24':'Nenndurchfluss qp','9.1':'Einstellungen / Firmware','9.31':'Durchflussstunden','9.22':'Parameter','0.0':'Adresse'};
 function describe(key){
-  if(ST.mode==='heat'){const [b,f]=key.split('*');const s=HEAT[b]||HEAT[b.split('.').slice(0,2).join('.')]||'';return s+(f?(f==='01'?' (Vorjahr / Stichtag)':` (Vorwert ${+f})`):'');}const m=key.match(/^([0-9A-Z]+)\.([0-9A-Z]+)(?:\.([0-9A-Z]+))?(?:\*(\d+))?/);if(!m)return '';
+  const m=key.match(/^([0-9A-Z]+)\.([0-9A-Z]+)(?:\.([0-9A-Z]+))?(?:\*(\d+))?/);if(!m)return '';
   const [,C,D,E,F]=m;let s;
   if(C==='81'&&D==='7')s=ANG[E]||'Phasenwinkel';
   else if(C==='0'&&D==='9')s=E==='1'?'Uhrzeit':E==='2'?'Datum':'Zeit/Datum';
@@ -661,7 +635,7 @@ function meterNo(){for(const k of ['C.1.0','0.0.0','96.1.0','C.1','0.0']){const 
 
 /* ---------- Wandlerfaktor ---------- */
 function WF(){const ci=+S.ctP>0?+S.ctP/(+S.ctS||5):1,cu=+S.vtP>0?+S.vtP/100:1;return{kI:ci,kU:cu,kP:ci*cu};}
-function kFor(unit){if(ST.mode==='heat')return 1;const u=String(unit||'').trim().toLowerCase(),w=WF();
+function kFor(unit){const u=String(unit||'').trim().toLowerCase(),w=WF();
   if(u==='v')return w.kU;if(u==='a')return w.kI;if(/^[km]?(w|var|va)h?$/.test(u))return w.kP;return 1;}
 const fmtP=(v,u)=>{const a=Math.abs(v);return fmtN(v,a>=1e4?0:a>=100?1:a>=1?2:3)+' '+u;};
 function wfChanged(){const w=WF(),on=w.kP!==1;
@@ -673,7 +647,7 @@ function profP(){const p=ST.profile;if(!p)return p;const w=WF();if(w.kP===1)retu
   const ks=p.channels.map(c=>kFor(c.unit));
   const q={...p,rows:p.rows.map(r=>({...r,v:r.v.map((x,i)=>x*ks[i])}))};_pp={src:p,n:p.rows.length,k:w.kP,p:q};return q;}
 function renderPower(){const {P,Q}=totPQ();const card=$('#powCard');
-  if(ST.mode==='heat'||!isFinite(P)){card.hidden=true;return;}card.hidden=false;
+  if(!isFinite(P)){card.hidden=true;return;}card.hidden=false;
   const w=WF(),k=w.kP,Sv=isFinite(Q)?Math.hypot(P,Q):NaN,pf=Sv?Math.abs(P)/Sv:NaN;
   const sek=(v,u)=>k!==1?`<span class="sek">sek. ${fmtN(v,3)} ${u}</span>`:'';
   const dir=P>=0?'<span class="dir ok">▲ Bezug</span>':'<span class="dir warn">▼ Lieferung</span>';
@@ -688,7 +662,7 @@ function renderVals(){
   $$('.wfcol').forEach(x=>x.hidden=WF().kP===1);
   const mn=meterNo();$('#meterTitle').textContent=list.length?('Zähler '+(mn||'')).trim():'Keine Daten';
   $('#identLine').textContent=ST.ident?`Kennung ${ST.ident} · ${list.length} Werte`:(list.length?`${list.length} Werte`:'');
-  $('#btnSave').disabled=$('#btnCsvVals').disabled=!list.length;$('#btnFEin').disabled=$('#btnFAus').disabled=!(ST.rawReadout&&ST.mode!=='heat'&&ST.ident!=='SML');visTabs();renderPower();}
+  $('#btnSave').disabled=$('#btnCsvVals').disabled=!list.length;$('#btnFEin').disabled=$('#btnFAus').disabled=!(ST.rawReadout&&ST.ident!=='SML');visTabs();renderPower();}
 
 /* ---------- Zeigerdiagramm ---------- */
 const PH=['L1','L2','L3'];
@@ -763,26 +737,6 @@ function analyse(d){
       const dv=Math.abs(nAng(p-m));if(dv>60&&dv<150&&Math.abs(others[0]-others[1])<30)wa(`φ ${act[i].p} weicht ${fmtN(Math.abs(nAng(p-m)),0)}° von den anderen ab – Strom falscher Spannung zugeordnet?`);});}
     const actI=Is.filter(i=>i>0);if(actI.length===3&&Math.max(...actI)/Math.min(...actI)>2)checks.push('<li class="mut">ℹ Ströme stark unsymmetrisch</li>');}
   $('#phChecks').innerHTML=checks.join('')||'<li class="mut">Keine Werte</li>';}
-function renderHeat(){
-  const e=k=>ST.vals.get(k),g=k=>{const x=e(k);return x?parseFloat(x.value):NaN;};
-  if(ST.mode!=='heat'){$('#heatKpi').innerHTML='<div class="mut" style="grid-column:1/-1">Noch kein Wärmezähler ausgelesen.</div>';$('#heatChecks').innerHTML='';$('#heatPrev').innerHTML='';return;}
-  const toMWh=(v,u)=>/GJ/i.test(u)?v/3.6:/kWh/i.test(u)?v/1000:v;
-  const E=g('6.8'),Eu=e('6.8')?.unit||'',V=g('6.26'),P=g('6.4'),Q=g('6.27'),TV=g('6.29'),TR=g('6.28');let DT=g('6.30');if(!isFinite(DT)&&isFinite(TV)&&isFinite(TR))DT=TV-TR;
-  const mx=(e('9.4')?.raw||'').split('&').map(parseFloat);
-  const k=[['Wärmeenergie',E,Eu,3],['Volumen',V,'m³',2],['Leistung',P,'kW',1],['Durchfluss',Q,'m³/h',3],['Vorlauf',TV,'°C',1],['Rücklauf',TR,'°C',1],['Spreizung',DT,'K',1],
-    ['Max. Leistung',g('6.6'),'kW',1],['Max. Durchfluss',g('6.33'),'m³/h',3],['Max. Vorlauf',mx[0],'°C',1],['Max. Rücklauf',mx[1],'°C',1],['Betriebsstunden',g('6.31'),'h',0],['Fehlerstunden',g('6.32'),'h',0]];
-  $('#heatKpi').innerHTML=k.filter(x=>isFinite(x[1])).map(x=>`<div><span class="mut">${x[0]}</span><b>${fmtN(x[1],x[3])} ${esc(x[2])}</b></div>`).join('');
-  const dn=e('9.20')?.value||'';$('#heatTitle').textContent='Wärmemengenzähler '+dn+(ST.ident?` · ${ST.ident}`:'');
-  const c=[],ok=t=>c.push(`<li class="ok">✓ ${t}</li>`),wa=t=>c.push(`<li class="warn">⚠ ${t}</li>`),inf=t=>c.push(`<li class="mut">ℹ ${t}</li>`);
-  const F=e('F')?.value;if(F!==undefined)(+F===0||F==='')?ok('Kein Fehlercode'):wa(`Fehlercode F = ${esc(F)}`);
-  const fh=g('6.32');if(isFinite(fh))fh>0?wa(`${fmtN(fh,0)} Fehlerstunden`):ok('Keine Fehlerstunden');
-  if(isFinite(TV)&&isFinite(TR)){if(TR>TV)wa('Rücklauf wärmer als Vorlauf – Fühler vertauscht oder Einbauort falsch?');else if(DT<3&&isFinite(Q)&&Q>0)inf(`Geringe Spreizung (${fmtN(DT,1)} K)`);}
-  if(isFinite(P)&&isFinite(Q)&&isFinite(DT)&&Q>0){const pc=1.163*Q*DT;const d=Math.abs(pc-P)/Math.max(P,.1);d>.1?wa(`Leistung passt nicht zu Durchfluss × Spreizung (${fmtN(pc,1)} kW berechnet)`):ok(`Leistung plausibel zu Durchfluss × Spreizung (${fmtN(pc,1)} kW)`);}
-  if(isFinite(E)&&isFinite(V)&&V>0){const kwhm3=toMWh(E,Eu)*1000/V;inf(`Seit Inbetriebnahme ${fmtN(kwhm3,1)} kWh/m³ → mittlere Spreizung ca. ${fmtN(kwhm3/1.163,1)} K`);}
-  const qp=g('9.24'),qm=g('6.33');if(isFinite(qp)&&isFinite(qm)&&qm>qp*1.2)wa(`Max. Durchfluss ${fmtN(qm,2)} m³/h über Nenndurchfluss qp ${fmtN(qp,1)} m³/h`);
-  $('#heatChecks').innerHTML=c.join('');
-  const pr=[...ST.vals.values()].filter(x=>/\*0\d$/.test(x.key));
-  $('#heatPrev').innerHTML=pr.length?'<tr><th>Kennzahl</th><th>Bedeutung</th><th class="num">Wert</th><th>Einheit</th></tr>'+pr.map(x=>`<tr><td class="mono">${esc(x.obis)}</td><td>${esc(describe(x.key))}</td><td class="num mono">${esc(x.raw&&x.raw.includes('&')?x.raw:x.value)}</td><td>${esc(x.raw&&x.raw.includes('&')?'':x.unit)}</td></tr>`).join(''):'<tr><td class="mut">Keine Stichtagswerte.</td></tr>';}
 $('#btnPhFromData').onclick=fillPhInputs;
 $('#btnPhDemo').onclick=()=>{setPhInputs([230.5,231,229.8],[10.2,9.9,10.4],[0,240,120],[340,160,338]);$('#phSource').textContent='Beispiel: Stromwandler L2 mit vertauschtem K/L.';updatePhasor();};
 window.addEventListener('resize',()=>{updatePhasor();drawProfile();});
@@ -835,11 +789,11 @@ function renderLogbook(){const L=ST.logbook;
 let T=null,LINK=null,IECP=null,busy=false;
 const TNAME={ble:'Bluetooth',serial:'COM-Port',demo:'Demo'};
 const cutLines=t=>t.slice(0,t.lastIndexOf('\n')+1);
-const goLabel=()=>S.kind==='heat'?'Wärmezähler auslesen':S.kind==='sml'?'SML mitschneiden':'Auslesen';
+const goLabel=()=>'Auslesen';
 let HEAD=null;
 function setConn(on){$('#connPill').textContent=on?'verbunden · '+(TNAME[S.transport]||'')+(on&&HEAD?.mv&&S.transport==='ble'?` · 🔋${fmtN(HEAD.mv/1000,2)} V`:''):'getrennt';if(!on)HEAD=null;$('#connPill').classList.toggle('on',on);
   $('#btnDisconnect').disabled=!on;if(!on){T=null;LINK=null;IECP=null;}}
-function setBusy(b){busy=b;$('#btnGo').disabled=b;$$('.op,.op2').forEach(x=>x.disabled=b);$('#btnGo').textContent=b?'Liest …':goLabel();$('#extraBox').hidden=b||!(S.kind==='elec'&&(S.oInst||S.oProf||S.oLog));$('#elecOpts').style.pointerEvents=b?'none':'';
+function setBusy(b){busy=b;$('#btnGo').disabled=b;$$('.op,.op2').forEach(x=>x.disabled=b);$('#btnGo').textContent=b?'Liest …':'Auslesen ▾';$('#extraBox').hidden=!S.oProf;$('#elecOpts').style.pointerEvents=b?'none':'';
   [['#btnPow','pow','⚡ Leistung'],['#btnQuick','ph','◷ Zeiger']].forEach(([id,m,t])=>{const q=$(id),me=b&&quickRun===m;q.disabled=b&&!me;q.classList.toggle('stop',me);q.textContent=me?'■ Stopp':t;});}
 function prog(v){const p=$('#prog');p.style.visibility=v==null?'hidden':'visible';p.classList.toggle('ind',v==='ind');
   $('#progBar').style.width=typeof v==='number'?Math.max(2,Math.min(100,v))+'%':(v==='ind'?'':'0');}
@@ -961,7 +915,7 @@ async function readClock(){const f=await IECP.cmdRW('R2','C003()');if(f.type!=='
 async function clockOp(write){
   if(busy)return;if(!T&&!(await connect()))return;setBusy(true);prog('ind');showTab('mehr');
   try{status('Programmiermodus …');await IECP.login($('#pw').value);
-    try{if(!/^\/LGZ/.test(IECP.ident))throw new Error('Zeitstellen bisher nur für Landis+Gyr (Kennung /LGZ…) – andere Zähler bitte mitschneiden');
+    try{if(!/^\/LGZ/.test(IECP.ident))throw new Error(`Uhrzeit stellen für ${IECP.ident.slice(1,4)||'diesen Zähler'} noch nicht hinterlegt – bisher nur Landis+Gyr. Mitschnitt von Q4 schicken, dann baue ich es ein.`);
       const df=await readClock();
       if(write){if(!confirm(`Zählerzeit weicht ${fmtN(df,0)} s ab.\nJetzt auf Handyzeit ${new Date().toLocaleTimeString('de-DE')} stellen?`)){status('Zeitstellen abgebrochen.');return;}
         const v=lgTime(new Date());const r=await IECP.cmdRW('W2',`C003(${v})`);
@@ -974,7 +928,6 @@ async function clockOp(write){
 $('#btnClkRead').onclick=()=>clockOp(false);$('#btnClkSet').onclick=()=>clockOp(true);
 /* Automatische Erkennung: Anfrage mit Weckfolge senden, an der Antwort den Typ erkennen,
    ohne Antwort auf SML lauschen. */
-const HEAT_ID=/^\/LUG|UH50|UH40|UH30|T550|T330/i;
 const OPS_AUTO=async()=>{
   const t=LINK.t,ble=t instanceof BleT,ser=t instanceof SerialT;
   status('Zähler wird erkannt …');prog('ind');ST.detected='';
@@ -983,164 +936,33 @@ const OPS_AUTO=async()=>{
   await LINK.send([...new Array(40).fill(0),...enc(`/?${$('#addr').value.trim()}!\r\n`)]);
   let id=null;
   try{id=await LINK.wait(b=>{const i=b.indexOf(0x2f);if(i<0)return null;const r=b.slice(i);
-      if(r.length>=9&&/^\/LUG/i.test(dec(r.slice(0,4)))){const cr=r.indexOf(13);return{heat:true,id:dec(r.slice(0,cr>0?cr:9))};}
-      const cr=r.indexOf(13);if(cr>0&&r[cr+1]===10){const id=dec(r.slice(0,cr));b.splice(0,i+cr+2);return{heat:HEAT_ID.test(id),id};}
+      const cr=r.indexOf(13);if(cr>0&&r[cr+1]===10){const id=dec(r.slice(0,cr));b.splice(0,i+cr+2);return{id};}
       return null;},ble?4500:5000);}catch(e){}
   const tag=(x,r)=>r&&r.startsWith('⚠')?r:`${x} · ${r}`;
-  if(id?.heat){ST.detected='Wärmezähler';log('INFO','Erkannt: Wärmezähler '+id.id);return tag('Wärmezähler '+id.id.slice(1,4),await OPS.heat(id.id));}
   if(id){ST.detected='Stromzähler (IEC)';log('INFO','Erkannt: Stromzähler '+id.id);return tag('Stromzähler '+id.id.slice(1,4),await OPS.all(id.id));}
   log('INFO','Keine Antwort auf /?! – prüfe auf SML');status('Keine Antwort auf Anfrage – prüfe SML …');
   try{const r=await OPS.sml();ST.detected='SML-Zähler';return tag('SML-Zähler',r);}
   catch(e){throw new Error('Kein Zähler erkannt – weder Antwort noch SML-Daten. Kopf richtig aufgesetzt? Zähler evtl. nur DLMS.');}};
-/* ---------- M-Bus über die optische Schnittstelle (Versuch für Monatswerte UH50/T550) ----------
-   Annahme: Der Zähler versteht auf der Optik auch M-Bus (EN 13757-3, 2400 Baud 8E1) wie das
-   L+G-M-Bus-Modul G4. Monatswerte dort: SND_UD 68 06 06 68 53/73 FE 51 0F A8 <Monat 1…60> CS 16,
-   danach REQ_UD2. Speichernummer 1 = Vorjahr/Stichtag, ≥2 = Vormonat (Nr − 1). */
-const MB_VIF=[[0x00,0x07,'Energie','kWh',n=>10**(n-6)],[0x08,0x0f,'Energie','GJ',n=>10**(n-9)],[0x10,0x17,'Volumen','m³',n=>10**(n-6)],
-  [0x18,0x1f,'Masse','t',n=>10**(n-6)],[0x20,0x23,'Einschaltdauer','',n=>1],[0x24,0x27,'Betriebsdauer','',n=>1],
-  [0x28,0x2f,'Leistung','kW',n=>10**(n-6)],[0x30,0x37,'Leistung','GJ/h',n=>10**(n-9)],[0x38,0x3f,'Durchfluss','m³/h',n=>10**(n-6)],
-  [0x40,0x47,'Durchfluss','m³/min',n=>10**(n-7)],[0x48,0x4f,'Durchfluss','m³/s',n=>10**(n-9)],[0x50,0x57,'Massestrom','kg/h',n=>10**(n-3)],
-  [0x58,0x5b,'Vorlauf','°C',n=>10**(n-3)],[0x5c,0x5f,'Rücklauf','°C',n=>10**(n-3)],[0x60,0x63,'Spreizung','K',n=>10**(n-3)],
-  [0x64,0x67,'Außentemp.','°C',n=>10**(n-3)],[0x6c,0x6c,'Datum','',n=>1],[0x6d,0x6d,'Zeitpunkt','',n=>1],[0x74,0x77,'Mittelungsdauer','',n=>1],
-  [0x78,0x78,'Fabriknummer','',n=>1],[0x79,0x79,'Erweiterte ID','',n=>1],[0x7a,0x7a,'Busadresse','',n=>1]];
-const MB_TU=['s','min','h','d'];
-const MB_LEN={0:0,1:1,2:2,3:3,4:4,5:4,6:6,7:8,9:1,10:2,11:3,12:4,14:6};
-function mbFrames(b){const out=[];for(let i=0;i<b.length;i++){
-  if(b[i]===0xe5){out.push({ack:true});continue;}
-  if(b[i]===0x68&&b[i+3]===0x68&&b[i+1]===b[i+2]){const L=b[i+1];if(b.length<i+L+6)break;const body=b.slice(i+4,i+4+L);
-    const cs=body.reduce((s,x)=>(s+x)&0xff,0);if(cs===b[i+4+L]&&b[i+5+L]===0x16){out.push({c:body[0],a:body[1],ci:body[2],d:body.slice(3)});i+=L+5;}}}
-  return out;}
-const mbDate=(v,typ)=>{if(typ==='G'){const d=v&0x1f,m=(v>>8)&0x0f,y=((v>>5)&7)|((v>>9)&0x78);return `${pad(d)}.${pad(m)}.${2000+y}`;}
-  const mi=v&0x3f,h=(v>>8)&0x1f,d=(v>>16)&0x1f,m=(v>>24)&0x0f,y=((v>>21)&7)|((v>>25)&0x78);return `${pad(d)}.${pad(m)}.${2000+y} ${pad(h)}:${pad(mi)}`;};
-function mbParse(d){const recs=[];if(d.length<12)return{recs,more:false};
-  const id=Array.from(d.slice(0,4)).reverse().map(x=>pad(x.toString(16),2)).join('');const man=d[4]|(d[5]<<8);
-  const manS=String.fromCharCode(((man>>10)&31)+64,((man>>5)&31)+64,(man&31)+64);let i=12,more=false;
-  while(i<d.length){const dif=d[i++];if(dif===0x2f)continue;if(dif===0x0f||dif===0x1f){more=dif===0x1f;break;}
-    let st=(dif>>6)&1,tar=0,sub=0,n=0,e=dif;while(e&0x80&&i<d.length){e=d[i++];st|=(e&0x0f)<<(1+4*n);tar|=((e>>4)&3)<<(2*n);sub|=((e>>6)&1)<<n;n++;}
-    let vif=d[i++];const vifes=[];let x=vif;while(x&0x80&&i<d.length){x=d[i++];vifes.push(x);}
-    if((vif&0x7f)===0x7c){const l=d[i++];i+=l;}
-    const df=dif&0x0f;let len=MB_LEN[df];if(df===13)len=d[i++];if(len==null)break;const raw=d.slice(i,i+len);i+=len;
-    let num=null;
-    if([9,10,11,12,14].includes(df)){let s='';for(let k=raw.length-1;k>=0;k--)s+=pad(raw[k].toString(16),2);const neg=/^f/i.test(s);num=parseInt(neg?s.slice(1):s,10)*(neg?-1:1);}
-    else if(df===5)num=new DataView(Uint8Array.from(raw).buffer).getFloat32(0,true);
-    else if(len&&len<=6){num=0;for(let k=raw.length-1;k>=0;k--)num=num*256+raw[k];if(raw[raw.length-1]&0x80&&len<=4)num-=2**(8*len);}
-    const fn=['','max ','min ','Fehler '][(dif>>4)&3];const v7=vif&0x7f;
-    let label='VIF '+pad(vif.toString(16),2)+(vifes.length?'/'+vifes.map(z=>pad(z.toString(16),2)).join('/'):''),unit='',val=num;
-    if(vif===0xfd||vif===0xfb||v7===0x7f){/* Erweiterungs-/Herstellercodes: roh */}
-    else{const t=MB_VIF.find(r=>v7>=r[0]&&v7<=r[1]);if(t){label=t[2];unit=t[3];
-      if(v7===0x6c)val=mbDate(num,'G');else if(v7===0x6d&&len===4)val=mbDate(num,'F');
-      else if(v7>=0x20&&v7<=0x27)unit=MB_TU[v7&3];
-      else if(num!=null&&v7<0x78)val=+(num*t[4](v7&7)).toPrecision(12);}}
-    recs.push({st,tar,sub,label:fn+label+(tar?` T${tar}`:''),unit,val});}
-  return{id,man:manS,recs,more};}
-const MON={rows:new Map(),cols:[],cur:[],info:''};
-function monAdd(recs){for(const r of recs){if(r.st<2)continue;const m=r.st-1;if(!MON.rows.has(m))MON.rows.set(m,new Map());
-  const k=r.label+(r.unit?` [${r.unit}]`:'');MON.rows.get(m).set(k,r.val);if(!MON.cols.includes(k))MON.cols.push(k);}}
-function renderMon(){const ms=[...MON.rows.keys()].sort((a,b)=>a-b);$('#btnCsvMon').disabled=!ms.length;$('#monInfo').textContent=MON.info;
-  if(!ms.length){$('#monTable').innerHTML='';return;}
-  const cols=MON.cols.slice().sort((a,b)=>(/^Datum/.test(b)-/^Datum/.test(a)));
-  $('#monTable').innerHTML='<tr><th>Monat</th>'+cols.map(c=>`<th>${esc(c)}</th>`).join('')+'</tr>'+ms.map(m=>`<tr><td>−${m}</td>`+cols.map(c=>{const v=MON.rows.get(m).get(c);return `<td class="num mono">${v==null?'':esc(typeof v==='number'?v.toLocaleString('de-DE',{maximumFractionDigits:6}):v)}</td>`;}).join('')+'</tr>').join('');}
-const mbShort=(c,a=0xfe)=>[0x10,c,a,(c+a)&0xff,0x16];
-const mbLong=(c,a,ci,data)=>{const body=[c,a,ci,...data];return [0x68,body.length,body.length,0x68,...body,body.reduce((s,x)=>(s+x)&0xff,0),0x16];};
-async function mbTxn(frame,timeout,wantLong){LINK.clear();log('TX',frame,true);await LINK.t.write(new Uint8Array(frame));
-  try{return await LINK.wait(b=>{const f=mbFrames(b);if(!f.length)return null;if(wantLong&&!f.some(x=>!x.ack))return null;return f;},timeout);}catch{return null;}}
-async function mbWake(baud,pre){const t=LINK.t,ble=t instanceof BleT,ser=t instanceof SerialT;
-  if(ble){for(const c of [Object.keys(BAUD).find(k=>BAUD[k]===baud),'D','E','A'])await t.cmd(c);}
-  else if(ser)await t.setBaud(baud,{dataBits:8,parity:'even',stopBits:1});
-  LINK.strip=false;await sleep(ble?150:300);LINK.clear();
-  const cnt=pre===0x55?Math.round(baud/11*2.2):240;log('TX',`Weckfolge ${cnt}× ${pad(pre.toString(16),2)}h (${baud} Baud 8E1)`);
-  const arr=new Array(cnt).fill(pre);
-  if(ble){const bps=baud/11;for(let i=0;i<arr.length;i+=20){await t.write(new Uint8Array(arr.slice(i,i+20)));await sleep(Math.max(5,20/bps*1000-15));}}
-  else await t.write(new Uint8Array(arr));}
-async function mbEnd(){const t=LINK.t;if(t instanceof BleT){for(const c of ['0','C','E','A'])await t.cmd(c);}else if(t instanceof SerialT)await t.setBaud(300,{dataBits:7,parity:'even',stopBits:1});LINK.strip=true;}
-async function opHeatMonths(){const N=Math.max(1,Math.min(60,+$('#monN').value||24));showTab('waerme');
-  MON.rows=new Map();MON.cols=[];MON.info='';renderMon();
-  const tries=[{baud:2400,pre:0x55,first:'nke'},{baud:2400,pre:0x00,first:'req'},{baud:300,pre:0x55,first:'nke'}];
-  let fcb=1,cur=null,ok=null;
-  const req=async()=>{const c=fcb?0x7b:0x5b;fcb^=1;const f=await mbTxn(mbShort(c),3000,true);return f?.find(x=>!x.ack)||null;};
-  try{
-    for(const [k,tr] of tries.entries()){status(`Monatswerte: M-Bus-Versuch ${k+1}/${tries.length} (${tr.baud} Baud) …`);prog((k+.5)/tries.length*30);
-      if(k)await mbEnd(),await sleep(T instanceof DemoT?0:3000);
-      await mbWake(tr.baud,tr.pre);fcb=1;
-      if(tr.first==='nke'){const a=await mbTxn(mbShort(0x40),1500,false);if(!a){log('WARN','Kein E5 auf SND_NKE');continue;}log('INFO','Zähler antwortet auf M-Bus (E5)');}
-      cur=await req();if(!cur){log('WARN','Keine Antwort auf REQ_UD2');if(tr.first==='nke'){ok=tr;break;}continue;}
-      ok=tr;break;}
-    if(!ok)throw new Error('Zähler antwortet nicht auf M-Bus über die Optik – Monatswerte so nicht lesbar. Bitte Protokoll schicken.');
-    log('INFO',`M-Bus ok (${ok.baud} Baud)`);
-    if(cur){let p=mbParse(cur.d);MON.cur=p.recs;monAdd(p.recs);log('INFO',`M-Bus ${p.man} ${p.id}: ${p.recs.length} Werte${p.more?' (weitere Telegramme)':''}`);
-      for(let n=0;p.more&&n<20;n++){const f=await req();if(!f)break;p=mbParse(f.d);monAdd(p.recs);}renderMon();}
-    let got=0,fail=0;
-    for(let m=1;m<=N;m++){if(stopReq)break;status(`Monatswerte: Monat −${m} von ${N} …`);prog(30+m/N*70);
-      const c=fcb?0x73:0x53;fcb^=1;const a=await mbTxn(mbLong(c,0xfe,0x51,[0x0f,0xa8,m]),1500,false);
-      if(!a){log('WARN',`Kein E5 auf Monatsanforderung ${m}`);if(++fail>=2)break;continue;}
-      const f=await req();if(!f){if(++fail>=2)break;continue;}
-      const p=mbParse(f.d);const before=MON.rows.size;monAdd(p.recs);if(MON.rows.size>before||p.recs.some(r=>r.st>=2))got++;fail=0;renderMon();}
-    try{await mbTxn(mbLong(fcb?0x73:0x53,0xfe,0x51,[0x0f,0xaf]),800,false);}catch{}
-    MON.info=`M-Bus über Optik (${ok.baud} Baud) · ${MON.rows.size} Monate`;renderMon();
-    if(!MON.rows.size)return '⚠ Zähler spricht M-Bus, liefert aber keine Monatswerte – Protokoll bitte schicken';
-    return `Fertig: ${MON.rows.size} Monatswerte`;}
-  finally{try{await mbEnd()}catch{}}}
 const OPS={
   auto:()=>OPS_AUTO(),
   async quick(){return quickLoop('ph');},
   async power(){return quickLoop('pow');},
   async all(idPre){
-    const ex=[S.oInst&&'inst',S.oProf&&'prof',S.oLog&&'log'].filter(Boolean);const n=ex.length?2:1;const pre=i=>n>1?`${i}/${n} · `:'';
+    const ex=FORCE?FORCE.ex:[S.oInst&&'inst',S.oProf&&'prof',S.oLog&&'log'].filter(Boolean);const n=ex.length?2:1;const pre=i=>n>1?`${i}/${n} · `:'';
     ST.mode='elec';ST.profile=null;ST.profileRaw='';ST.logbook=[];ST.logRaw='';ST.vals.clear();renderProfile();renderLogbook();
     ST.live=true;showTab('werte');
-    ST.tRead=Date.now();ST.range=S.oProf?[$('#lgFrom').value,$('#lgTo').value]:null;
+    ST.tRead=Date.now();ST.range=(FORCE?FORCE.ex.includes('prof'):S.oProf)?[$('#lgFrom').value,$('#lgTo').value]:null;
     const r=await IECP.readout(p=>{const v=parseReadout(cutLines(p));setVals(v,true);status(`${pre(1)}Datenauslesung … ${v.length} Werte`);},typeof idPre==='string'?idPre:undefined);
     ST.ident=r.ident;ST.rawReadout=r.text;ST.tDone=Date.now();ST.tInfo=ST.t0;setVals(parseReadout(r.text),true);
     const notes=[];if(!r.ok)notes.push('Prüfsumme der Datenauslesung falsch');
     if(ex.length){try{await readExtras(ex,pre(2),notes);}catch(e){log('ERR',e.message);notes.push(errMsg(e));try{await IECP.bye()}catch{}}}
     autoSave();
-    const parts=[`${ST.vals.size} Werte`];if(S.oProf&&ST.profile)parts.push(`${ST.profile.rows.length} Lastgangwerte`);if(S.oLog)parts.push(`${ST.logbook.length} Logbucheinträge`);
+    const parts=[`${ST.vals.size} Werte`];if(ex.includes('prof')&&ST.profile)parts.push(`${ST.profile.rows.length} Lastgangwerte`);if(ex.includes('log'))parts.push(`${ST.logbook.length} Logbucheinträge`);
     return (notes.length?'⚠ '+notes.join(' · ')+' — ':'')+'Fertig: '+parts.join(', ');},
   async registers(){const keys=$('#regList').value.split(/[,;\n]/).map(s=>s.trim()).filter(Boolean);const out=[];
     await withLogin(async()=>{for(const k of keys){status(`Lese ${k} …`);let a;try{a=await IECP.read(k.includes('(')?k:k+'()',5000);}catch(e){a='⚠ '+e.message;}out.push([k,a]);
       $('#regTable tbody').innerHTML=out.map(r=>`<tr><td class="mono">${esc(r[0])}</td><td class="mono">${esc(r[1])}</td></tr>`).join('');}});
     const vals=out.flatMap(r=>parseReadout(r[1]));if(vals.length)setVals(vals,false);return `${out.length} Register gelesen`;},
-  /* Wärmezähler (UH50/T550): Weckfolge + /?!, Zähler sendet nach der Kennung selbstständig schneller.
-     Welche Geschwindigkeit der Kopf dafür braucht, ist je Gerät unklar – daher Suchlauf über mehrere
-     Einstellungen; die passende wird gemerkt (S.heatCmd). */
-  async heat(idPre){const t=LINK.t,ser=t instanceof SerialT,ble=t instanceof BleT;ST.mode='heat';ST.live=true;ST.vals.clear();showTab('waerme');
-    const looksOk=txt=>(txt.match(/\d+(\.\d+)+(\*\d+)?\([^)]*\)/g)||[]).length>=3;
-    const wake=async()=>{if(ser)await t.setBaud(300,{dataBits:7,parity:'even',stopBits:2});IECP.baud=300;
-      if(ble)await t.prep();await sleep(t instanceof DemoT?0:600);LINK.clear();
-      await LINK.send([...new Array(40).fill(0),...enc('/?!\r\n')]);
-      return LINK.wait(b=>{const i=b.indexOf(0x2f);if(i<0)return null;const r=b.slice(i);
-        const cr=r.indexOf(13);if(cr>0)return dec(r.slice(0,cr));
-        if(r.length>=9&&/^\/[A-Za-z]{3}/.test(dec(r.slice(0,4))))return dec(r.slice(0,9));return null;},6000);};
-    /* Baudrate aus der Kennung: 5. Zeichen, IEC-Modus B (A..I) bzw. Modus C (0..9) – z. B. /LUGFUH50 → F = 19200 */
-    const MB={A:600,B:1200,C:2400,D:4800,E:9600,F:19200,G:38400,H:57600,I:115200};
-    const fromId=id=>{const z=(id||'')[4];const b=MB[z]||BAUD[z];if(!b)return null;return ser?b:Object.keys(BAUD).find(k=>BAUD[k]===b)||null;};
-    const tried=new Set();
-    const tryOnce=async(c0,idGiven)=>{
-      if(c0!=='id'&&tried.has(String(c0)))return 'skip';
-      const id=idGiven||await wake();
-      let c=c0==='id'?fromId(id):c0;if(!c||tried.has(String(c)))return 'skip';tried.add(String(c));
-      if(ser)await t.setBaud(c,{dataBits:7,parity:'even',stopBits:2});else if(ble)await t.cmd(c);
-      LINK.clear();log('INFO',`Kennung ${id} → Kopf ${ser?c:BAUD[c]} Baud`);
-      let f=null;
-      try{f=await LINK.wait(b=>{const s=b.indexOf(STX);if(s<0)return null;const e=b.indexOf(ETX,s);if(e<0||b.length<e+2)return null;
-          const all=b.slice(s,e+2);b.splice(0,e+2);return{body:dec(all.slice(1,-2)),ok:bcc(all.slice(1,-1))===all[all.length-1]};},0,2500,
-        b=>{const s=b.indexOf(STX);const txt=dec(s>=0?b.slice(s+1):b);if(looksOk(txt)){setVals(parseReadout(cutLines(txt)),true);renderHeat();status(`Wärmezähler … ${ST.vals.size} Werte`);}});}catch(e){}
-      const txt=f?f.body:dec(LINK.buf.splice(0));
-      if(ser)await t.setBaud(300,{dataBits:7,parity:'even',stopBits:1});else if(ble)await t.cmd('0');
-      if(!looksOk(txt))return null;
-      return{id,baud:ser?c:BAUD[c],body:f?f.body:txt.replace(/^[\s\S]*?(?=\d+\.\d+\()/,''),ok:!!f?.ok};};
-    const base=ser?[19200,2400,9600,1200,4800]:['6','3','5','2','4'];
-    const cands=['id',...base];
-    let r=null,used=null,n=0;
-    for(let i=0;i<cands.length&&!r;i++){const c=cands[i];
-      status(`Wärmezähler: Versuch ${n+1}${c==='id'?' (Baudrate laut Kennung)':` mit ${ser?c:BAUD[c]} Baud`} …`);prog(Math.min(95,(i+.5)/cands.length*100));
-      let res;try{res=await tryOnce(c,i===0&&typeof idPre==='string'?idPre:null);}catch(e){log('WARN','Versuch: '+e.message);res=null;}
-      if(res==='skip')continue;n++;
-      if(res){r=res;log('INFO',`Wärmezähler lesbar (${r.baud} Baud)`);}
-      else{log('WARN','keine lesbaren Daten bei diesem Versuch');ST.vals.clear();renderVals();if(i<cands.length-1)await sleep(t instanceof DemoT?0:3000);}}
-    if(!r)throw new Error('Keine lesbaren Daten bei allen getesteten Geschwindigkeiten. Bitte Protokoll schicken.');
-    if(!r.ok)log('WARN','Prüfsumme falsch oder Block unvollständig');
-    ST.mode='heat';ST.ident=r.id;ST.rawReadout=r.body;setVals(parseReadout(r.body),true);renderHeat();autoSave();return `Fertig: ${ST.vals.size} Werte`;},
   async sml(){const ble=T instanceof BleT,ser=T instanceof SerialT;
     /* SML (mME/eHZ): 9600 Baud 8N1, Zähler sendet selbstständig ca. jede Sekunde.
        DvBTIR: '5'=9600, 'D'=8 Datenbits, 'N'=keine Parität, 'A'=1 Stoppbit (wie Q4 beim Verbinden) */
@@ -1164,10 +986,10 @@ $('#btnQuick').onclick=()=>{if(quickRun){stopReq=true;$('#btnQuick').textContent
 $('#btnPow').onclick=()=>{if(quickRun){stopReq=true;$('#btnPow').textContent='stoppt …';return;}run('Leistung',OPS.power);};
 $('#btnBleForget').onclick=async()=>{try{await T?.close()}catch{}window._lastBle=null;S.bleId='';S.bleName='';saveS();setConn(false);$('#bleInfo').textContent='';status('Kopf vergessen – beim nächsten Auslesen neu auswählen.');};
 $('#btnNosupReset').onclick=()=>{try{localStorage.removeItem(NKEY)}catch{}NOSUP=new Set();nosupInfo();status('Register-Erkennung zurückgesetzt.');};
-$('#btnMon').onclick=()=>run('Monatswerte',opHeatMonths);
-$('#btnCsvMon').onclick=()=>{const ms=[...MON.rows.keys()].sort((a,b)=>a-b);download(`monatswerte_${meterNo()||'waermezaehler'}_${stamp()}.csv`,['Monat',...MON.cols].join(';')+'\n'+ms.map(m=>[-m,...MON.cols.map(c=>{const v=MON.rows.get(m).get(c);return v==null?'':typeof v==='number'?String(v).replace('.',','):v;})].join(';')).join('\n'));};
-$('#btnGo').onclick=()=>run(goLabel(),S.kind==='heat'?OPS.heat:S.kind==='sml'?OPS.sml:S.kind==='auto'?OPS.auto:OPS.all);
-$$('#kindSeg button').forEach(b=>b.onclick=()=>{if(busy)return;S.kind=b.dataset.kind;saveS();updCtl();});
+$('#btnGo').onclick=()=>{$('#readMenu').hidden=!$('#readMenu').hidden;};
+$('#btnStart').onclick=()=>{$('#readMenu').hidden=true;run('Auslesen',OPS.auto);};
+$('#btnClk').onclick=()=>clockOp(true);
+$('#btnModem').onclick=()=>status('Modem-Empfang kommt, sobald die Mitschnitte da sind.','warn');
 $('#btnCfg').onclick=$('#connPill').onclick=()=>{$('#cfgBox').hidden=!$('#cfgBox').hidden;};
 const PWKEY='zaehlerauslesung.pw';
 function pwStore(){try{$('#pwKeep').checked?localStorage.setItem(PWKEY,$('#pw').value):localStorage.removeItem(PWKEY);}catch{}}
@@ -1179,13 +1001,12 @@ $$('#rangeChips button[data-r]').forEach(b=>b.onclick=()=>{const t=new Date();t.
 function estimate(){const a=new Date($('#lgFrom').value),b=new Date($('#lgTo').value);const n=Math.round((b-a)/9e5);
   if(!(n>0)){$('#estim').textContent='Zeitraum prüfen';return;}const m=Math.max(1,Math.round(n*1.4/60));
   $('#estim').textContent=`ca. ${n} Werte · ${S.transport==='ble'?'ca. '+m+' min':'bis '+m+' min'}`;}
-function visTabs(){const m=ST.vals.size?ST.mode:(S.kind==='heat'?'heat':'elec');let act=null;
+function visTabs(){const m=ST.vals.size?ST.mode:'elec';let act=null;
   $$('#tabs button[data-m]').forEach(b=>{b.hidden=b.dataset.m!==m;if(b.hidden&&b.classList.contains('act'))act=b;});if(act)showTab('werte');}
-function updCtl(){const el=S.kind==='elec'||S.kind==='auto';
-  $$('#kindSeg button').forEach(b=>b.classList.toggle('act',b.dataset.kind===S.kind));
-  $('#elecOpts').hidden=$('#quickBox').hidden=$('#wfBox').hidden=!el;$('#extraBox').hidden=!(el&&(S.oInst||S.oProf||S.oLog));
+function updCtl(){
+  $('#extraBox').hidden=!S.oProf;
   $('#rangeRow').hidden=$('#rangeChips').hidden=!S.oProf;
-  if(!busy)$('#btnGo').textContent=goLabel();estimate();visTabs();
+  if(!busy)$('#btnGo').textContent='Auslesen ▾';estimate();visTabs();
   if(!busy&&!T)status(S.transport==='demo'?'Demo-Modus – „'+goLabel()+'“ tippen.':'Kopf aufsetzen und „'+goLabel()+'“ tippen – verbindet automatisch.');}
 
 /* ---------- SML (vereinfachter Parser) ---------- */
@@ -1214,7 +1035,7 @@ function renderHist(){const h=hist();$('#histTable').innerHTML=h.length?'<tr><th
   $$('[data-load]').forEach(b=>b.onclick=()=>loadSnap(hist()[+b.dataset.load]));
   $$('[data-del]').forEach(b=>b.onclick=()=>{if(!confirm('Eintrag löschen?'))return;const h=hist();h.splice(+b.dataset.del,1);saveHist(h);renderHist();});}
 function loadSnap(e){ST.mode=e.mode||'elec';if(e.wf){Object.assign(S,e.wf);$('#ctP').value=S.ctP;$('#ctS').value=S.ctS;$('#vtP').value=S.vtP;saveS();_pp=null;setTimeout(wfChanged);}ST.ident=e.ident;ST.rawReadout=e.raw||'';ST.vals=new Map(e.vals.map(v=>[v.key,v]));ST.profileRaw=e.profileRaw||'';ST.profile=e.profileRaw?parseProfile(e.profileRaw):null;ST.logRaw=e.logRaw||'';ST.tInfo=e.ft?.t0||e.t;ST.tRead=e.ft?.tr||e.t;ST.tDone=e.ft?.td||e.t;ST.range=e.ft?.range||null;ST.logbook=e.logRaw?parseLogbook(e.logRaw):[];
-  renderVals();fillPhInputs();renderProfile();renderLogbook();renderHeat();showTab(ST.mode==='heat'?'waerme':'werte');}
+  renderVals();fillPhInputs();renderProfile();renderLogbook();showTab('werte');}
 $('#btnSave').onclick=()=>{const h=hist();h.unshift(snapshot());while(h.length>60)h.pop();if(saveHist(h)){renderHist();status('Im Verlauf gespeichert.','ok');}};
 function download(name,text,type='text/csv'){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);}
 const stamp=()=>{const d=new Date();return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;};
@@ -1237,8 +1058,9 @@ function infoBlock(){const d=new Date(ST.tInfo||ST.tDone||Date.now());const L=['
   return L.join('\r\n')+'\r\n\r\n';}
 function saveBytes(name,bytes){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([Uint8Array.from(bytes)],{type:'application/octet-stream'}));a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);}
 async function saveFiles(list){for(const [n,b] of list){saveBytes(n,b);log('INFO','Datei gespeichert: '+n);await sleep(700);}status(`${list.length} Datei${list.length>1?'en':''} gespeichert: `+list.map(x=>x[0]).join(', '),'ok');}
-$('#btnFEin').onclick=()=>{const {nr,st}=fileBase();saveFiles([[`Billing_Data_-_${nr}_${st}_001_1.RAW`,[...billingBytes(),13,10,13,10]]]);};
-$('#btnFAus').onclick=()=>{const {nr,st}=fileBase();const info=infoBlock();const D=S.fD||'D014',Z=S.fZ||'ZFA';
+function einFiles(){const {nr,st}=fileBase();return [[`Billing_Data_-_${nr}_${st}_001_1.RAW`,[...billingBytes(),13,10,13,10]]];}
+$('#btnFEin').onclick=()=>saveFiles(einFiles());
+function ausFiles(){const {nr,st}=fileBase();const info=infoBlock();const D=S.fD||'D014',Z=S.fZ||'ZFA';
   const out=[[`Billing_Data_-_${nr}_${st}_001_1.txt`,billingBytes()],[`${D}_${nr}-${st}_${Z}_STD_.VL`,enc(info+'*MET_DATA*\r\n'+ST.ident+'\r\n'+crlf(ST.rawReadout))]];
   if(ST.profileRaw){let lp=info+'*READOUT_DATA*\r\n'+crlf(ST.profileRaw).replace(/(\r\n)*$/,'\r\n')+'\r\n*MESSAGE*\r\n';
     if(ST.logRaw){let lines=crlf(ST.logRaw).split('\r\n').filter(l=>/^P\.98/.test(l));
@@ -1246,7 +1068,21 @@ $('#btnFAus').onclick=()=>{const {nr,st}=fileBase();const info=infoBlock();const
       lp+=lines.map(l=>l+'\r\n').join('');}
     out.push([`${D}_${nr}-${st}_${Z}_LPR_.LP`,enc(lp)]);}
   else log('WARN','Kein Lastgang ausgelesen – LP-Datei fehlt');
-  saveFiles(out);if(!ST.profileRaw)setTimeout(()=>status('⚠ Ohne Lastgang nur 2 Dateien – für die LP-Datei mit „Lastgang“ (und „Logbuch“) auslesen.','warn'),out.length*700+50);};
+  return out;}
+$('#btnFAus').onclick=async()=>{const out=ausFiles();await saveFiles(out);if(!ST.profileRaw)status('⚠ Ohne Lastgang nur 2 Dateien – besser oben „Ausbau“ tippen.','warn');};
+/* Einbau / Ausbau: auslesen und gleich die Dateien im Q4-Format speichern */
+let FORCE=null;
+async function ioRun(kind){const aus=kind==='aus';
+  if(aus){const dl=d=>new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,16);const t=new Date();t.setHours(0,0,0,0);
+    $('#lgFrom').value=dl(new Date(t-7*864e5));$('#lgTo').value=dl(new Date(+t+864e5));}
+  FORCE={ex:aus?['prof','log']:[]};let r;
+  try{r=await OPS.auto();}finally{FORCE=null;}
+  if(!ST.rawReadout||ST.ident==='SML')throw new Error('Keine IEC-Auslesung – Dateien nur für Zähler mit Datenauslesung (nicht SML).');
+  const names=aus?ausFiles():einFiles();await saveFiles(names);showTab('werte');
+  return (r&&r.startsWith('⚠')?r+' · ':'')+`${aus?'Ausbau':'Einbau'}: ${names.length} Datei${names.length>1?'en':''} gespeichert`;}
+$('#btnEin').onclick=()=>run('Einbau',()=>ioRun('ein'));
+$('#btnAus').onclick=()=>run('Ausbau',()=>ioRun('aus'));
+
 $('#btnCsvVals').onclick=()=>download(`werte_${meterNo()||'zaehler'}_${stamp()}.csv`,'Kennzahl;Bedeutung;Wert;Einheit;Primär (WF '+WF().kP+');Zusatz\n'+[...ST.vals.values()].map(e=>[e.obis,describe(e.key),e.value.replace('.',','),e.unit,(()=>{const k=kFor(e.unit),v=parseFloat(e.value);return k!==1&&isFinite(v)?String(+(v*k).toPrecision(10)).replace('.',','):'';})(),e.extra].map(csvQ).join(';')).join('\n'));
 $('#btnCsvProf').onclick=()=>{const p=profP();download(`lastgang_${meterNo()||'zaehler'}_${stamp()}.csv`,['Zeit',...p.channels.map(c=>`${c.key} [${c.unit}]`),'Status'].join(';')+'\n'+p.rows.map(r=>[fmtDT(r.t),...r.v.map(v=>isFinite(v)?String(v).replace('.',','):''),r.st].join(';')).join('\n'));};
 $('#btnPngProf').onclick=()=>{const cv=$('#lgCanvas'),p=profP();const o=document.createElement('canvas');const pad=40*(window.devicePixelRatio||1);
@@ -1263,23 +1099,26 @@ $('#impFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;
   const t=await f.text();if(/\.json$/i.test(f.name)){try{const j=JSON.parse(t);const h=hist();(Array.isArray(j)?j:[j]).forEach(x=>x.vals&&h.push(x));saveHist(h);renderHist();showTab('verlauf');return;}catch{}}
   $('#impText').value=t;};
 $('#btnImport').onclick=()=>{const t=$('#impText').value;if(!t.trim())return;
-  const id=(t.match(/^\/.+$/m)||[''])[0].trim();ST.ident=id;ST.rawReadout=t;ST.mode=/^\/LUG/.test(id)||/^6\.8\(.*\*(MWh|GJ)\)/m.test(t)?'heat':'elec';
+  const id=(t.match(/^\/.+$/m)||[''])[0].trim();ST.ident=id;ST.rawReadout=t;ST.mode='elec';
   const v=parseReadout(t);if(v.length)setVals(v,true);
   if(/^P\.0\d/m.test(t)){ST.profileRaw=t;ST.profile=parseProfile(t);renderProfile();}
   if(/^P\.98/m.test(t)){ST.logRaw=t;ST.logbook=parseLogbook(t);renderLogbook();}
   status(`Import: ${v.length} Werte${ST.profile?.rows.length?`, ${ST.profile.rows.length} Lastgangwerte`:''}${ST.logbook.length?`, ${ST.logbook.length} Logbucheinträge`:''}.`,'ok');
-  renderHeat();showTab(ST.mode==='heat'?'waerme':v.length?'werte':ST.profile?'lastgang':'logbuch');};
+  showTab(v.length?'werte':ST.profile?'lastgang':'logbuch');};
 
 /* ---------- Tabs & Start ---------- */
 function showTab(n){$$('#tabs button').forEach(b=>b.classList.toggle('act',b.dataset.tab===n));$$('.tab').forEach(t=>t.classList.toggle('act',t.id==='tab-'+n));
-  if(n==='zeiger')updatePhasor();if(n==='waerme')renderHeat();if(n==='lastgang')drawProfile();if(n==='verlauf')renderHist();}
+  if(n==='zeiger')updatePhasor();if(n==='lastgang')drawProfile();if(n==='verlauf')renderHist();}
 $$('#tabs button').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
 (function init(){const dl=d=>{const x=new Date(d-new Date().getTimezoneOffset()*6e4);return x.toISOString().slice(0,16);};
   const today=new Date();today.setHours(0,0,0,0);
   $('#lgFrom').value=dl(new Date(today-864e5));$('#lgTo').value=dl(today);
   try{const p=localStorage.getItem(PWKEY);if(p!=null){$('#pw').value=p;$('#pwKeep').checked=true;}}catch{}
-  renderVals();fillPhInputs();renderProfile();renderLogbook();renderHist();renderHeat();updCtl();wfChanged();nosupInfo();
-  if(FRAMED){$('#frameLink').href=location.href;$('#frameNote').hidden=!(S.transport==='ble'&&IOS);}
+  renderVals();fillPhInputs();renderProfile();renderLogbook();renderHist();updCtl();wfChanged();nosupInfo();
+  const url=location.href.split('#')[0];$('#frameLink').href=$('#directLink').href=url;
+  if(FRAMED){$('#directLink').hidden=false;$('#frameNote').hidden=!(S.transport==='ble'&&IOS);}
+  if(IOS&&!navigator.bluetooth&&!FRAMED&&/^https?:/.test(url))$('#iosNote').hidden=false;
+  $('#btnCopyLink').onclick=async()=>{try{await navigator.clipboard.writeText(url);$('#btnCopyLink').textContent='Kopiert ✓';}catch{prompt('Link kopieren:',url);}};
   if(S.transport==='ble'&&S.bleId&&!IOS)Promise.race([BleT.remembered(),sleep(2500).then(()=>null)]).then(r=>{if(r&&!window._lastBle){window._lastBle=r;log('INFO','Gespeicherter Kopf gefunden: '+(r.dev.name||r.dev.id));}});$('#bleInfo').textContent=S.bleName?'gespeichert: '+S.bleName:'';
   if(!navigator.bluetooth&&!('serial' in navigator))status('Dieser Browser kann weder Bluetooth noch COM-Port – Chrome (Android/PC) oder Edge verwenden. Demo und Import gehen trotzdem.','warn');})();
 </script>
