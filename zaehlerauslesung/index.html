@@ -133,6 +133,7 @@ th,td{border-bottom:.5px solid var(--line)}
 .cfg{background:#121214;border:0;border-radius:14px}
 .prog{height:4px;background:var(--fill)}
 .note{background:var(--accT);border-radius:12px}
+.wfMain{margin:12px 0 0;padding:10px 12px;background:#121214;border-radius:14px}.wfMain .wandler{margin-left:0;gap:10px 14px}
 .saveBar{display:grid;gap:6px;margin-top:10px}.saveBar .pri{width:100%}.lnk{background:none;color:var(--acc);padding:4px;font-size:14px}
 .quick button.stop{background:rgba(255,69,58,.16);color:var(--err)}
 #logbox{background:#121214;border:0;border-radius:12px}
@@ -173,6 +174,11 @@ th,td{border-bottom:.5px solid var(--line)}
     <button id="btnClk" class="op2 big io2" title="Datum/Uhrzeit des Zählers prüfen und auf Handyzeit stellen">🕓 Uhrzeit stellen</button>
     <button id="btnModem" class="op2 big io2" title="Empfangsstärke des Zählermodems auslesen">📶 Modem-Empfang</button>
   </div>
+  <div class="wfMain"><div class="wandler" id="wfBox">
+      <label>Stromwandler<span class="wfrow"><input id="ctP" type="number" inputmode="decimal" placeholder="—"><span>/</span><select id="ctS"><option value="5">5 A</option><option value="1">1 A</option></select></span></label>
+      <label>Spannungswandler<span class="wfrow"><input id="vtP" type="number" inputmode="decimal" placeholder="—"><span>/ 100 V</span></span></label>
+      <span id="wfInfo" class="mut"></span>
+    </div></div>
   <div id="readMenu" class="menu" hidden>
     <div class="mut" style="margin-bottom:6px">Zählerstände werden immer gelesen. Zusätzlich:</div>
     <div class="opts" id="elecOpts">
@@ -193,12 +199,6 @@ th,td{border-bottom:.5px solid var(--line)}
     <button id="btnStart" class="op2 pri big" style="width:100%;margin-top:8px">Auslesen starten</button>
     <div class="menuSep">Schnell – nur Momentanwerte</div>
     <div class="quick" id="quickBox"><button id="btnPow" title="Nur Wirk- und Blindleistung – am schnellsten">⚡ Leistung</button><button id="btnQuick" title="U, I und P/Q je Phase für das Zeigerdiagramm">◷ Zeiger</button><label class="chk"><input type="checkbox" id="oLoop"> laufend</label></div>
-    <div class="menuSep">Wandler (für Primärwerte)</div>
-    <div class="wandler" id="wfBox">
-      <label>Stromwandler<span class="wfrow"><input id="ctP" type="number" inputmode="decimal" placeholder="—"><span>/</span><select id="ctS"><option value="5">5 A</option><option value="1">1 A</option></select></span></label>
-      <label>Spannungswandler<span class="wfrow"><input id="vtP" type="number" inputmode="decimal" placeholder="—"><span>/ 100 V</span></span></label>
-      <span id="wfInfo" class="mut"></span>
-    </div>
   </div>
   <div id="prog" class="prog"><div id="progBar"></div></div>
   <div id="status" class="status mut"></div>
@@ -235,6 +235,7 @@ th,td{border-bottom:.5px solid var(--line)}
   <div class="card">
     <h2>Zeigerdiagramm</h2>
     <canvas id="phCanvas" height="360"></canvas>
+    <div id="phSource" class="mut" style="margin-top:6px"></div>
     <div class="mut" style="margin-top:6px">Spannungen dick, Ströme dünn mit Pfeil. Ströme eigener Maßstab. Winkel gegen den Uhrzeigersinn, U L1 = 0°.</div>
   </div>
   <div class="card">
@@ -243,13 +244,11 @@ th,td{border-bottom:.5px solid var(--line)}
     <div class="kpi" id="phKpi"></div>
     <div class="scroll"><table id="phTable"><thead><tr><th></th><th class="num">U</th><th class="num">I</th><th class="num">φ</th><th class="num">cos φ</th><th class="num">P</th><th class="num">Q</th><th>Quadrant</th></tr></thead><tbody></tbody></table></div>
   </div>
-  <div class="card">
-    <h2>Werte (aus Auslesung, änderbar)</h2>
+  <div class="card" hidden>
+    <h2>Werte</h2>
     <div class="scroll"><table class="ph"><thead><tr><th></th><th>U [V]</th><th>I [A]</th><th>∠U zu U L1 [°]</th><th>∠I zu eigener U [°]</th></tr></thead>
       <tbody id="phInputs"></tbody></table></div>
-    <div class="row" style="margin-top:8px"><button id="btnPhFromData">Aus Auslesung übernehmen</button><button id="btnPhDemo">Beispiel: L2 Strom verdreht</button></div>
-    <div id="phSource" class="mut" style="margin-top:6px"></div>
-  </div>
+      </div>
 </section>
 
 <!-- WAERME -->
@@ -724,7 +723,7 @@ function fillPhInputs(){
   ai.forEach((a,i)=>{if(isFinite(a))return;const {P,Q}=pm[i];
     if(isFinite(P)&&isFinite(Q)){ai[i]=Math.atan2(-Q,P)*180/Math.PI;src.push(`∠I ${PH[i]} aus P/Q`);}
     else{const pf=num(['33.7','53.7','73.7'][i]);if(isFinite(pf)){ai[i]=-Math.acos(Math.max(-1,Math.min(1,pf)))*180/Math.PI;src.push(`∠I ${PH[i]} aus cos φ (induktiv angenommen)`);}}});
-  if(!U.some(isFinite)&&!I.some(isFinite)){if(!$('#phInputs').children.length)setPhInputs([230,230,230],[10,10,10],[0,240,120],[340,340,340]);$('#phSource').textContent='Keine Momentanwerte in der Auslesung – Beispielwerte. „Momentanwerte (P1)“ lesen oder Werte eintragen.';updatePhasor();return;}
+  if(!U.some(isFinite)&&!I.some(isFinite)){setPhInputs([NaN,NaN,NaN],[NaN,NaN,NaN],[NaN,NaN,NaN],[NaN,NaN,NaN]);$('#phSource').textContent='Noch keine Werte – oben „Auslesen ▾“ → „◷ Zeiger“ tippen.';updatePhasor();return;}
   setPhInputs(U,I,au,ai);PHM=pm.some(x=>isFinite(x.P))?pm.map(x=>({P:x.P*1000,Q:(isFinite(x.Q)?x.Q:0)*1000})):null;
   if(PHM)src.push('P/Q vom Zähler');
   $('#phSource').textContent=src.join(' · ')||'Alle Werte direkt aus dem Zähler.';updatePhasor();}
@@ -751,6 +750,7 @@ function updatePhasor(){
   c.clearRect(0,0,w,h);c.strokeStyle=col('--grid');c.lineWidth=1;c.fillStyle=col('--mut');c.font='11px system-ui';c.textAlign='center';c.textBaseline='middle';
   for(const f of [.33,.66,1]){c.beginPath();c.arc(cx,cy,R*f,0,7);c.stroke();}
   for(let a=0;a<360;a+=30){const r=a*Math.PI/180;c.beginPath();c.moveTo(cx,cy);c.lineTo(cx+R*Math.cos(r),cy-R*Math.sin(r));c.stroke();c.fillText(a+'°',cx+(R+14)*Math.cos(r),cy-(R+14)*Math.sin(r));}
+  if(!d.some(x=>isFinite(x.U)||isFinite(x.I))){c.fillStyle=col('--mut');c.font='15px -apple-system,system-ui';c.fillText('Noch keine Werte',cx,cy);}
   const Um=Math.max(...d.map(x=>x.U).filter(isFinite),1),Im=Math.max(...d.map(x=>x.I).filter(isFinite),1e-9);
   const cols=[col('--l1'),col('--l2'),col('--l3')];
   const arrow=(ang,len,color,lw,label,head)=>{const r=ang*Math.PI/180,x=cx+len*Math.cos(r),y=cy-len*Math.sin(r);c.strokeStyle=c.fillStyle=color;c.lineWidth=lw;c.beginPath();c.moveTo(cx,cy);c.lineTo(x,y);c.stroke();
@@ -786,8 +786,6 @@ function analyse(d){
       const dv=Math.abs(nAng(p-m));if(dv>60&&dv<150&&Math.abs(others[0]-others[1])<30)wa(`φ ${act[i].p} weicht ${fmtN(Math.abs(nAng(p-m)),0)}° von den anderen ab – Strom falscher Spannung zugeordnet?`);});}
     const actI=Is.filter(i=>i>0);if(actI.length===3&&Math.max(...actI)/Math.min(...actI)>2)checks.push('<li class="mut">ℹ Ströme stark unsymmetrisch</li>');}
   $('#phChecks').innerHTML=checks.join('')||'<li class="mut">Keine Werte</li>';}
-$('#btnPhFromData').onclick=fillPhInputs;
-$('#btnPhDemo').onclick=()=>{setPhInputs([230.5,231,229.8],[10.2,9.9,10.4],[0,240,120],[340,160,338]);$('#phSource').textContent='Beispiel: Stromwandler L2 mit vertauschtem K/L.';updatePhasor();};
 window.addEventListener('resize',()=>{updatePhasor();drawProfile();});
 
 /* ---------- Lastgang ---------- */
