@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#0b0f14">
+<meta name="theme-color" content="#000000">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <title>Zählerauslesung</title>
 <style>
@@ -89,6 +89,53 @@ tr.new td{color:var(--acc)}
 .pow .big b{font-size:30px;line-height:1.15}
 .pow b{display:block;font-size:18px}
 .dir{font-size:13px;font-weight:600}
+
+/* ---- Apple-Stil (iOS dunkel) mit Avacon-Grün ---- */
+:root{--bg:#000;--card:#1c1c1e;--fill:#2c2c2e;--fg:#fff;--mut:rgba(235,235,245,.6);--line:rgba(84,84,88,.55);--acc:#8cc63f;--accT:rgba(140,198,63,.16);--acc2:rgba(140,198,63,.16);--ok:#30d158;--warn:#ffd60a;--err:#ff453a;--grid:#2c2c2e}
+body{font:17px/1.35 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,sans-serif;-webkit-font-smoothing:antialiased;letter-spacing:-.01em}
+header{background:rgba(22,22,24,.78);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-bottom:.5px solid var(--line);padding:10px 16px calc(10px)}
+header h1{font-size:22px;font-weight:700;letter-spacing:-.02em}
+.pill{font-size:13px;padding:4px 10px;background:var(--fill);color:var(--mut)}
+.pill.on{background:rgba(48,209,88,.18);color:var(--ok)}
+.card{border:0;border-radius:14px;padding:16px}
+.card h2{font-size:17px;font-weight:600}
+label{font-size:13px}
+input,select,textarea{background:var(--fill);border:0;border-radius:10px;padding:10px 12px;font-size:16px}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--acc);outline-offset:0}
+button{border:0;background:var(--fill);border-radius:12px;padding:11px 16px;font-weight:500;transition:transform .08s,opacity .15s;-webkit-tap-highlight-color:transparent}
+button:active:not(:disabled){transform:scale(.97);opacity:.8}
+button.pri{background:var(--acc);color:#0b1a02;font-weight:600}
+button.big{padding:14px 18px;font-size:17px;border-radius:14px}
+.actGrid{gap:10px}
+.actGrid .io{background:var(--accT);color:var(--acc);border:0;font-weight:600}
+.actGrid .io2{background:var(--fill);color:var(--fg);font-weight:500}
+.icon{background:var(--fill);border-radius:99px;width:34px;height:34px;color:var(--acc)}
+header .icon{padding:0}
+#directLink{border:0;background:var(--accT);padding:5px 11px;font-size:13px;font-weight:600}
+.menu{background:var(--card);border:0;border-radius:14px;padding:12px 14px 14px;box-shadow:0 0 0 .5px var(--line) inset}
+.ctl .menu{background:#121214}
+.menuSep{font-size:13px;letter-spacing:0;text-transform:uppercase;margin:16px 0 8px}
+.opts{flex-direction:column;gap:0}
+.opts .chk{justify-content:space-between;flex-direction:row-reverse;padding:11px 0;border-bottom:.5px solid var(--line);font-size:17px}
+.opts .chk:last-child{border-bottom:0}
+.chk input[type=checkbox]{-webkit-appearance:none;appearance:none;width:51px;height:31px;border-radius:99px;background:#39393d;position:relative;flex:0 0 51px;margin:0;padding:0;cursor:pointer;transition:background .2s;outline:0}
+.chk input[type=checkbox]::after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 3px 8px rgba(0,0,0,.25);transition:left .2s}
+.chk input[type=checkbox]:checked{background:var(--acc)}
+.chk input[type=checkbox]:checked::after{left:22px}
+.chk{font-size:15px;gap:10px}
+.extra{border-top:0;margin-top:4px;padding-top:6px}
+.chips button{background:var(--fill);border-radius:99px;padding:6px 13px;font-size:13px}
+.tabs{gap:6px;margin:6px 0 14px;background:var(--card);border-radius:12px;padding:3px}
+.tabs button{background:transparent;border:0;border-radius:9px;padding:7px 12px;font-size:14px;color:var(--mut);flex:1 0 auto}
+.tabs button.act{background:#3a3a3c;color:var(--fg);border:0;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+th,td{border-bottom:.5px solid var(--line)}
+.kpi div,.pow div{background:var(--fill);border-radius:12px}
+.cfg{background:#121214;border:0;border-radius:14px}
+.prog{height:4px;background:var(--fill)}
+.note{background:var(--accT);border-radius:12px}
+.saveBar{display:grid;gap:6px;margin-top:10px}.saveBar .pri{width:100%}.lnk{background:none;color:var(--acc);padding:4px;font-size:14px}
+.quick button.stop{background:rgba(255,69,58,.16);color:var(--err)}
+#logbox{background:#121214;border:0;border-radius:12px}
 </style>
 </head>
 <body>
@@ -116,6 +163,7 @@ tr.new td{color:var(--acc)}
       <label>Passwort P1 (mehrere mit Komma – werden durchprobiert)<input id="pw" type="password" autocomplete="off"></label>
       <label class="chk" style="align-self:end;padding-bottom:9px"><input type="checkbox" id="pwKeep"> Passwort auf diesem Gerät merken</label>
     </div>
+    <div class="row" id="dirRow"><button id="btnDir">📁 Speicherort wählen</button><span id="dirInfo" class="mut"></span></div>
     <div class="row"><button id="btnDisconnect" disabled>Trennen</button><span class="mut">Weitere Einstellungen unter „Mehr“.</span></div>
   </div>
   <div class="actGrid">
@@ -154,6 +202,7 @@ tr.new td{color:var(--acc)}
   </div>
   <div id="prog" class="prog"><div id="progBar"></div></div>
   <div id="status" class="status mut"></div>
+  <div id="saveBar" class="saveBar" hidden><button id="btnSaveNow" class="pri big">📁 Dateien sichern</button><button id="btnSaveDl" class="lnk">stattdessen herunterladen</button></div>
 </section>
 
 <nav class="tabs" id="tabs">
@@ -825,7 +874,7 @@ async function run(label,fn){if(busy)return;
       if(window._lastBle&&S.transport==='ble'){log('WARN','Verbindung direkt nach dem Aufbau verloren – zweiter Versuch');status('Verbindung abgebrochen – neuer Versuch …','warn');await sleep(800);
         if(!(await connect())){status('Bluetooth-Verbindung bricht sofort wieder ab. Kopf schütteln und erneut tippen. Details unter Mehr → Protokoll.','err');return;}}
       else{if(!/Kein Gerät|nicht erreichbar/.test($('#status').textContent))status('Keine Verbindung – bitte erneut tippen.','err');return;}}}
-  setBusy(true);status(label+' – warte auf Zähler …');prog('ind');const t0=Date.now();ST.t0=t0;
+  setBusy(true);hideSaveBar();status(label+' – warte auf Zähler …');prog('ind');const t0=Date.now();ST.t0=t0;
   try{const msg=await fn()||label+' fertig';const w=msg.startsWith('⚠');status(msg+` (${Math.round((Date.now()-t0)/1000)} s)`,w?'warn':'ok');}
   catch(e){log('ERR',e.message);status(label+': '+errMsg(e),'err');try{await IECP?.bye()}catch{}}
   finally{ST.live=false;renderVals();setBusy(false);prog(null);if(LINK)LINK.strip=true;}}
@@ -1057,9 +1106,43 @@ function infoBlock(){const d=new Date(ST.tInfo||ST.tDone||Date.now());const L=['
   if(S.fSw)L.push(`C.60(${S.fSw})`);L.push(`C.92(${tsY(ST.tRead||ST.tInfo||Date.now())})`);
   return L.join('\r\n')+'\r\n\r\n';}
 function saveBytes(name,bytes){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([Uint8Array.from(bytes)],{type:'application/octet-stream'}));a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);}
-async function saveFiles(list){for(const [n,b] of list){saveBytes(n,b);log('INFO','Datei gespeichert: '+n);await sleep(700);}status(`${list.length} Datei${list.length>1?'en':''} gespeichert: `+list.map(x=>x[0]).join(', '),'ok');}
+/* Speichern: PC (Chrome/Edge) direkt in einen gewählten Ordner; iPhone/iPad/Android über „Teilen“ →
+   „In Dateien sichern“ (Ordner frei wählbar); sonst normaler Download. */
+const IDB={db:()=>new Promise((ok,no)=>{const r=indexedDB.open('zaehlerauslesung',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error);}),
+  async get(k){try{const d=await this.db();return await new Promise(ok=>{const q=d.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>ok(q.result);q.onerror=()=>ok(null);});}catch{return null;}},
+  async set(k,v){try{const d=await this.db();await new Promise(ok=>{const t=d.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=ok;t.onerror=ok;});}catch{}}};
+let DIR=null,PENDING=null;
+const canDir='showDirectoryPicker' in window;
+const fileObjs=list=>list.map(([n,b])=>new File([Uint8Array.from(b)],n,{type:'text/plain'}));
+const canShareFiles=list=>{try{return !!(navigator.canShare&&navigator.share&&navigator.canShare({files:fileObjs(list)}));}catch{return false;}};
+const fmtList=list=>`${list.length} Datei${list.length>1?'en':''}`;
+async function dirWrite(list){for(const [n,b] of list){const fh=await DIR.getFileHandle(n,{create:true});const w=await fh.createWritable();await w.write(Uint8Array.from(b));await w.close();log('INFO',`Gespeichert in ${DIR.name}: ${n}`);}
+  return `${fmtList(list)} gespeichert in „${DIR.name}“`;}
+async function dlAll(list){for(const [n,b] of list){saveBytes(n,b);log('INFO','Datei heruntergeladen: '+n);await sleep(700);}return `${fmtList(list)} heruntergeladen`;}
+function showSaveBar(list){PENDING=list;$('#btnSaveNow').textContent=DIR?`📁 In „${DIR.name}“ speichern (${list.length})`:`📁 ${fmtList(list)} sichern`;$('#saveBar').hidden=false;}
+function hideSaveBar(){PENDING=null;$('#saveBar').hidden=true;}
+/* gesture=true: direkt aus einem Fingertipp aufgerufen (Teilen/Erlaubnis sofort möglich) */
+async function saveFiles(list,gesture){hideSaveBar();
+  try{
+    if(DIR){let p=await DIR.queryPermission({mode:'readwrite'});if(p!=='granted'&&gesture)p=await DIR.requestPermission({mode:'readwrite'});
+      if(p==='granted'){const m=await dirWrite(list);status(m,'ok');return m;}
+      showSaveBar(list);return 'Fertig – jetzt „In Ordner speichern“ tippen';}
+    if(canShareFiles(list)){
+      if(gesture){await navigator.share({files:fileObjs(list)});const m=`${fmtList(list)} weitergegeben`;status(m,'ok');return m;}
+      showSaveBar(list);return 'Fertig – jetzt „Dateien sichern“ tippen und Ordner wählen';}
+  }catch(e){if(e.name==='AbortError'){showSaveBar(list);status('Speichern abgebrochen – nochmal „Dateien sichern“ tippen.','warn');return 'Speichern abgebrochen';}
+    log('WARN','Speichern: '+e.message);}
+  const m=await dlAll(list);status(m,'ok');return m;}
+$('#btnSaveNow').onclick=async()=>{if(!PENDING)return;const l=PENDING;await saveFiles(l,true);};
+$('#btnSaveDl').onclick=async()=>{if(!PENDING)return;const l=PENDING;hideSaveBar();status(await dlAll(l),'ok');};
+function dirInfo(){$('#dirInfo').textContent=DIR?`Ordner: ${DIR.name}`:canDir?'Downloads (Standard)':'';}
+$('#btnDir').onclick=async()=>{
+  if(!canDir){status(IOS?'Am iPhone/iPad: nach dem Auslesen „Dateien sichern“ tippen → „In Dateien sichern“ → Ordner wählen (iOS merkt sich den letzten Ordner).':'Dieser Browser kann keinen Ordner fest wählen – nach dem Auslesen „Dateien sichern“ bzw. Download nutzen.','warn');return;}
+  try{DIR=await window.showDirectoryPicker({id:'zaehlerdateien',mode:'readwrite'});await IDB.set('dir',DIR);dirInfo();status(`Speicherort: „${DIR.name}“ – Dateien werden dort direkt abgelegt.`,'ok');}
+  catch(e){if(e.name!=='AbortError')status('Ordner wählen: '+e.message,'err');}};
+if(canDir)IDB.get('dir').then(h=>{if(h){DIR=h;dirInfo();}});else dirInfo();
 function einFiles(){const {nr,st}=fileBase();return [[`Billing_Data_-_${nr}_${st}_001_1.RAW`,[...billingBytes(),13,10,13,10]]];}
-$('#btnFEin').onclick=()=>saveFiles(einFiles());
+$('#btnFEin').onclick=()=>saveFiles(einFiles(),true);
 function ausFiles(){const {nr,st}=fileBase();const info=infoBlock();const D=S.fD||'D014',Z=S.fZ||'ZFA';
   const out=[[`Billing_Data_-_${nr}_${st}_001_1.txt`,billingBytes()],[`${D}_${nr}-${st}_${Z}_STD_.VL`,enc(info+'*MET_DATA*\r\n'+ST.ident+'\r\n'+crlf(ST.rawReadout))]];
   if(ST.profileRaw){let lp=info+'*READOUT_DATA*\r\n'+crlf(ST.profileRaw).replace(/(\r\n)*$/,'\r\n')+'\r\n*MESSAGE*\r\n';
@@ -1069,7 +1152,7 @@ function ausFiles(){const {nr,st}=fileBase();const info=infoBlock();const D=S.fD
     out.push([`${D}_${nr}-${st}_${Z}_LPR_.LP`,enc(lp)]);}
   else log('WARN','Kein Lastgang ausgelesen – LP-Datei fehlt');
   return out;}
-$('#btnFAus').onclick=async()=>{const out=ausFiles();await saveFiles(out);if(!ST.profileRaw)status('⚠ Ohne Lastgang nur 2 Dateien – besser oben „Ausbau“ tippen.','warn');};
+$('#btnFAus').onclick=async()=>{const out=ausFiles();await saveFiles(out,true);if(!ST.profileRaw)status('⚠ Ohne Lastgang nur 2 Dateien – besser oben „Ausbau“ tippen.','warn');};
 /* Einbau / Ausbau: auslesen und gleich die Dateien im Q4-Format speichern */
 let FORCE=null;
 async function ioRun(kind){const aus=kind==='aus';
@@ -1078,8 +1161,8 @@ async function ioRun(kind){const aus=kind==='aus';
   FORCE={ex:aus?['prof','log']:[]};let r;
   try{r=await OPS.auto();}finally{FORCE=null;}
   if(!ST.rawReadout||ST.ident==='SML')throw new Error('Keine IEC-Auslesung – Dateien nur für Zähler mit Datenauslesung (nicht SML).');
-  const names=aus?ausFiles():einFiles();await saveFiles(names);showTab('werte');
-  return (r&&r.startsWith('⚠')?r+' · ':'')+`${aus?'Ausbau':'Einbau'}: ${names.length} Datei${names.length>1?'en':''} gespeichert`;}
+  const names=aus?ausFiles():einFiles();const m=await saveFiles(names);showTab('werte');
+  return (r&&r.startsWith('⚠')?r+' · ':'')+`${aus?'Ausbau':'Einbau'}: ${m}`;}
 $('#btnEin').onclick=()=>run('Einbau',()=>ioRun('ein'));
 $('#btnAus').onclick=()=>run('Ausbau',()=>ioRun('aus'));
 
