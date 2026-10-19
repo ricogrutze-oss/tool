@@ -134,6 +134,7 @@ th,td{border-bottom:.5px solid var(--line)}
 .prog{height:4px;background:var(--fill)}
 .note{background:var(--accT);border-radius:12px}
 .wfMain{margin:12px 0 0;padding:10px 12px;background:#121214;border-radius:14px}.wfMain .wandler{margin-left:0;gap:10px 14px}
+.mbar{display:grid;grid-template-columns:110px 1fr;gap:4px 10px;align-items:center;margin:6px 0}.mbar .trk{height:14px;background:var(--fill);border-radius:7px;overflow:hidden}.mbar .fil{height:100%;border-radius:7px}.mbar .v{grid-column:2;font-size:15px;font-weight:600}.mbar .lbl{font-size:13px;color:var(--mut);grid-row:span 2}
 .saveBar{display:grid;gap:6px;margin-top:10px}.saveBar .pri{width:100%}.lnk{background:none;color:var(--acc);padding:4px;font-size:14px}
 .quick button.stop{background:rgba(255,69,58,.16);color:var(--err)}
 #logbox{background:#121214;border:0;border-radius:12px}
@@ -216,6 +217,12 @@ th,td{border-bottom:.5px solid var(--line)}
 
 <!-- WERTE -->
 <section class="tab act" id="tab-werte">
+  <div class="card" id="mdmCard" hidden>
+    <div class="row" style="justify-content:space-between;margin-bottom:6px"><h2 style="margin:0">Modem-Empfang</h2><span id="mdmTime" class="mut"></span></div>
+    <div class="row" style="margin-bottom:6px"><button id="btnMdmPng" class="pri">📷 Als Bild speichern (PNG)</button></div>
+    <div id="mdmBars"></div>
+    <div class="scroll"><table id="mdmTable"></table></div>
+  </div>
   <div class="card" id="powCard" hidden>
     <div class="row" style="justify-content:space-between;margin-bottom:8px"><h2 style="margin:0">Leistung</h2><span id="powTime" class="mut"></span></div>
     <div class="pow" id="powBox"></div>
@@ -301,8 +308,8 @@ th,td{border-bottom:.5px solid var(--line)}
 
 <!-- UHRZEIT -->
   <div class="card">
-    <h2>Uhrzeit stellen (Landis+Gyr)</h2>
-    <div class="mut">Liest Datum/Uhrzeit (C003) und stellt sie auf die Handyzeit – genauso wie Q4. Bisher nur für Landis+Gyr ZMD/ZFD (Kennung /LGZ…) geprüft. Passwort unter ⚙.</div>
+    <h2>Uhrzeit</h2>
+    <div class="mut">Liest Datum/Uhrzeit und stellt sie auf die Handyzeit. Landis+Gyr über C003 (wie Q4), EMH und andere über 0.9.2/0.9.1 (wie EMH-Software). Passwort unter ⚙.</div>
     <div class="kpi" id="clkBox"></div>
     <div class="row"><button id="btnClkRead" class="op2">Zeit prüfen</button><button id="btnClkSet" class="op2 pri">Zeit stellen …</button></div>
   </div>
@@ -312,6 +319,8 @@ th,td{border-bottom:.5px solid var(--line)}
     <div class="mut">Dateien wie aus Q4: Einbau = <span class="mono">Billing_Data_-_&lt;Nr&gt;_&lt;Zeit&gt;_001_1.RAW</span>; Ausbau = <span class="mono">…_001_1.txt</span>, <span class="mono">D014_&lt;Nr&gt;-&lt;Zeit&gt;_ZFA_STD_.VL</span> und (mit Lastgang) <span class="mono">…_ZFA_LPR_.LP</span>. Für die Ausbau-Datei beim Auslesen „Lastgang“ und „Logbuch“ anhaken.</div>
     <div class="row" style="margin-top:8px"><label>Kennung vorn<input id="sFD" style="width:6em"></label><label>Kennung Mitte<input id="sFZ" style="width:6em"></label></div>
     <label>Software-Eintrag (C.60)<input id="sFSw"></label>
+    <label class="chk" style="margin-top:6px"><input type="checkbox" id="sEinMdm"> Beim Einbau Empfangstest (5 Messungen) ins Bild</label>
+    <label class="chk" style="margin-top:6px"><input type="checkbox" id="sEinGeo"> Beim Einbau Standort mit Karte und Navigationslink ins Bild (GPS)</label>
   </div>
 <!-- PC-SKRIPT -->
   <div class="card">
@@ -395,8 +404,8 @@ const fmtDT=d=>d?`${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()} 
 
 /* ---------- Einstellungen ---------- */
 const SKEY='zaehlerauslesung.settings';
-const S=Object.assign({transport:'ble',kind:'auto',oInst:false,oProf:false,oLog:false,addr:'',prof:'P.01',auto:true,oLoop:false,ctP:'',ctS:'5',vtP:'',baud:'auto',rcmd:'R5',profFmt:'season',hs:5000,cw:false,bleS:'',bleW:'',bleN:'',swPar:true,fD:'D014',fZ:'ZFA',fSw:'Q4Module-UWP 22.10.161.0'},(()=>{try{return JSON.parse(localStorage.getItem(SKEY))||{}}catch{return{}}})());
-const bindS=[['transport','#transport'],['baud','#sBaud'],['rcmd','#sRcmd'],['profFmt','#sProfFmt'],['hs','#sHs'],['cw','#sCw'],['bleS','#sBleS'],['bleW','#sBleW'],['bleN','#sBleN'],['oInst','#oInst'],['oProf','#oProf'],['oLog','#oLog'],['addr','#addr'],['prof','#lgProf'],['auto','#sAuto'],['oLoop','#oLoop'],['bleAll','#sBleAll'],['ctP','#ctP'],['ctS','#ctS'],['vtP','#vtP'],['fD','#sFD'],['fZ','#sFZ'],['fSw','#sFSw']];
+const S=Object.assign({transport:'ble',kind:'auto',oInst:false,oProf:false,oLog:false,addr:'',prof:'P.01',auto:true,oLoop:false,ctP:'',ctS:'5',vtP:'',baud:'auto',rcmd:'R5',profFmt:'season',hs:5000,cw:false,bleS:'',bleW:'',bleN:'',swPar:true,fD:'D014',einMdm:true,einGeo:true,fZ:'ZFA',fSw:'Q4Module-UWP 22.10.161.0'},(()=>{try{return JSON.parse(localStorage.getItem(SKEY))||{}}catch{return{}}})());
+const bindS=[['transport','#transport'],['baud','#sBaud'],['rcmd','#sRcmd'],['profFmt','#sProfFmt'],['hs','#sHs'],['cw','#sCw'],['bleS','#sBleS'],['bleW','#sBleW'],['bleN','#sBleN'],['oInst','#oInst'],['oProf','#oProf'],['oLog','#oLog'],['addr','#addr'],['prof','#lgProf'],['auto','#sAuto'],['oLoop','#oLoop'],['bleAll','#sBleAll'],['ctP','#ctP'],['ctS','#ctS'],['vtP','#vtP'],['fD','#sFD'],['einMdm','#sEinMdm'],['einGeo','#sEinGeo'],['fZ','#sFZ'],['fSw','#sFSw']];
 if(S.transport==='demoheat')S.transport='demo';S.kind='auto';
 if(!S._v17){S.kind='auto';S._v17=1;}
 const saveS=()=>{try{localStorage.setItem(SKEY,JSON.stringify(S))}catch{}};
@@ -491,7 +500,12 @@ class DemoT{
   constructor(){this.onData=()=>{};this.fixedBaud=false;this.in=[];}
   async open(){log('INFO','Demo-Zähler bereit');}
   async setBaud(){} async close(){}
-  async write(u8){for(const b of u8)this.in.push(b&0x7f);this.process();}
+  async write(u8){if(u8.length===7&&u8[0]===0x52&&u8[1]===3&&crcX([...u8.slice(0,5)])===((u8[5]<<8)|u8[6])){this.modem(u8);return;}for(const b of u8)this.in.push(b&0x7f);this.process();}
+  modem(q){const k=q[2]+'.'+q[4];let d;const z=n=>new Array(n).fill(0);
+    if(k==='23.1'){const r=95+Math.round(Math.random()*12);d=[7,r,1,5,1,0xc3,0xc1,0,0,8,0x27,0x3a,0,0x5a,0x66,0,0,3,...z(10),7+Math.round(Math.random()*2),0,0,0];}
+    else if(k==='7.1')d=[0,...enc('351080657669963'),0,10,74,25,241,2,0x63,0xaf,0xa0,0x68,0x32,0,0,0,0,0,0,0x89,0x88,0x23,0x90,0,0x11,0x44,0x60,0x58,0x97,0xff,0xff,0xff,0,0];
+    else if(k==='7.2')d=[...enc('WI9X07H_08.38.00 3453'),0,0,0,...enc('CN3136135610B1'),0,0,0x2d,0,0,0,0,0,0,0];else d=z(32);
+    const f=[6,d.length+3,q[2],q[3],q[4],...d];const c=crcX(f);this.emit([...f,c>>8,c&255],60);}
   emit(arr,delay=150){setTimeout(()=>{const u=new Uint8Array(arr);for(let i=0,k=0;i<u.length;i+=200,k++){const c=u.slice(i,i+200);setTimeout(()=>this.onData(c),k*8);}},delay);}
   blk(text){const body=[...enc(text),ETX];return [STX,...body,bcc(body)];}
   process(){
@@ -508,6 +522,8 @@ class DemoT{
       if(cmd==='P1'){if(data==='(00000000)'){const bd=[...enc('B0'),ETX];this.emit([SOH,...bd,bcc(bd)]);}else this.emit([data.length>2?ACK:NAK]);}
       else if(cmd==='R2'&&data.startsWith('C003'))this.emit(this.blk(`C003(${lgTime(new Date(Date.now()+(this.clkOff??17000)))})`),100);
       else if(cmd==='W2'&&data.startsWith('C003')){const t=parseLg(data.slice(5));this.clkOff=t?t-Date.now():0;this.emit([ACK]);}
+      else if(cmd[0]==='R'&&/^0\.9\.[12]/.test(data)){const d=new Date(Date.now()+(this.clkOff??-23000));this.emit(this.blk(data[4]==='1'?`0.9.1(${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())})`:`0.9.2(${pad(d.getFullYear()%100)}${pad(d.getMonth()+1)}${pad(d.getDate())})`),100);}
+      else if(cmd==='W5'&&/^0\.9\.[12]/.test(data)){if(data[4]==='1'){const v=data.slice(6,12);const n=new Date();const t=new Date(n);t.setHours(+v.slice(0,2),+v.slice(2,4),+v.slice(4,6));this.clkOff=t-n;}this.emit([ACK]);}
       else if(cmd[0]==='R')this.emit(this.blk(this.reply(data)),200);
       return this.process();}
     b.shift();this.process();
@@ -672,13 +688,14 @@ function describe(key){
   const [,C,D,E,F]=m;let s;
   if(C==='81'&&D==='7')s=ANG[E]||'Phasenwinkel';
   else if(C==='0'&&D==='9')s=E==='1'?'Uhrzeit':E==='2'?'Datum':'Zeit/Datum';
-  else{s=OBIS[C+'.'+D]||'';if(s&&E&&E!=='0'&&/^\d$/.test(E)&&/^\d+\.[468]$/.test(C+'.'+D))s+=` Tarif ${E}`;}
+  else{s=OBIS[C+'.'+(D==='25'?'7':D)]||'';if(s&&E&&E!=='0'&&/^\d$/.test(E)&&/^\d+\.[468]$/.test(C+'.'+D))s+=` Tarif ${E}`;}
   if(F)s+=` (Vorwert ${+F})`;return s;}
 
 /* ---------- Zustand ---------- */
 const ST={mode:'elec',ident:'',vals:new Map(),rawReadout:'',profile:null,profileRaw:'',logbook:[],logRaw:''};
 function setVals(list,replace){if(replace)ST.vals.clear();for(const e of list)ST.vals.set(e.key,e);renderVals();fillPhInputs();}
-function num(...codes){for(const c of codes)for(const k of [c,c+'.0',c.replace(/\.0$/,'')]){const e=ST.vals.get(k);if(e&&e.value!==''&&isFinite(parseFloat(e.value)))return parseFloat(e.value);}return NaN;}
+const alias25=c=>{const m=String(c).match(/^(\d+)\.7(?:\.0)?$/);return m?[m[1]+'.25']:[];};
+function num(...codes){for(const c of codes)for(const k of [c,c+'.0',c.replace(/\.0$/,''),...alias25(c)]){const e=ST.vals.get(k);if(e&&e.value!==''&&isFinite(parseFloat(e.value)))return parseFloat(e.value);}return NaN;}
 function meterNo(){for(const k of ['C.1.0','0.0.0','96.1.0','C.1','0.0']){const e=ST.vals.get(k);if(e&&e.value)return e.value;}return '';}
 
 /* ---------- Wandlerfaktor ---------- */
@@ -728,7 +745,7 @@ function fillPhInputs(){
   if(PHM)src.push('P/Q vom Zähler');
   $('#phSource').textContent=src.join(' · ')||'Alle Werte direkt aus dem Zähler.';updatePhasor();}
 /* Leistungswerte in kW (Einheit W/kW/MW berücksichtigt) */
-function kw(...codes){for(const c of codes)for(const k of [c,c+'.0']){const e=ST.vals.get(k);if(e&&e.value!==''&&isFinite(parseFloat(e.value))){
+function kw(...codes){for(const c of codes)for(const k of [c,c+'.0',...alias25(c)]){const e=ST.vals.get(k);if(e&&e.value!==''&&isFinite(parseFloat(e.value))){
   const v=parseFloat(e.value),u=(e.unit||'').toLowerCase();return /^(w|var|va)$/.test(u)?v/1000:/^m(w|var|va)$/.test(u)?v*1000:v;}}return NaN;}
 const dif=(a,b)=>isFinite(a)?a-(isFinite(b)?b:0):(isFinite(b)?-b:NaN);
 function phPQ(i){const c=[2,4,6][i];return{P:dif(kw(c+'1.7'),kw(c+'2.7')),Q:dif(kw(c+'3.7'),kw(c+'4.7'))};}
@@ -840,7 +857,7 @@ const goLabel=()=>'Auslesen';
 let HEAD=null;
 function setConn(on){$('#connPill').textContent=on?'verbunden · '+(TNAME[S.transport]||'')+(on&&HEAD?.mv&&S.transport==='ble'?` · 🔋${fmtN(HEAD.mv/1000,2)} V`:''):'getrennt';if(!on)HEAD=null;$('#connPill').classList.toggle('on',on);
   $('#btnDisconnect').disabled=!on;if(!on){T=null;LINK=null;IECP=null;}}
-function setBusy(b){busy=b;$('#btnGo').disabled=b;$$('.op,.op2').forEach(x=>x.disabled=b);$('#btnGo').textContent=b?'Liest …':'Auslesen ▾';$('#extraBox').hidden=!S.oProf;$('#elecOpts').style.pointerEvents=b?'none':'';
+function setBusy(b){busy=b;setTimeout(()=>{if(mdmRun)$('#btnModem').disabled=false;});$('#btnGo').disabled=b;$$('.op,.op2').forEach(x=>x.disabled=b);$('#btnGo').textContent=b?'Liest …':'Auslesen ▾';$('#extraBox').hidden=!S.oProf;$('#elecOpts').style.pointerEvents=b?'none':'';
   [['#btnPow','pow','⚡ Leistung'],['#btnQuick','ph','◷ Zeiger']].forEach(([id,m,t])=>{const q=$(id),me=b&&quickRun===m;q.disabled=b&&!me;q.classList.toggle('stop',me);q.textContent=me?'■ Stopp':t;});}
 function prog(v){const p=$('#prog');p.style.visibility=v==null?'hidden':'visible';p.classList.toggle('ind',v==='ind');
   $('#progBar').style.width=typeof v==='number'?Math.max(2,Math.min(100,v))+'%':(v==='ind'?'':'0');}
@@ -894,7 +911,8 @@ function nosupAll(){try{return JSON.parse(localStorage.getItem(NKEY))||{}}catch{
 function loadNosup(){const t=meterType();const a=nosupAll()[t];if(a)a.forEach(k=>NOSUP.add(k));if(a?.length)log('INFO',`${a.length} nicht unterstützte Register für ${t} bekannt`);}
 function saveNosup(){const t=meterType();if(!t)return;const all=nosupAll();all[t]=[...NOSUP];try{localStorage.setItem(NKEY,JSON.stringify(all))}catch{}nosupInfo();}
 function nosupInfo(){const n=Object.keys(nosupAll()).length;$('#nosupInfo').textContent=n?`gemerkt für ${n} Zählertyp${n>1?'en':''}`:'';}
-async function rdReg(k){if(NOSUP.has(k))return false;
+async function rdReg(k){const m=k.match(/^(\d+)\.7\.0$/);if(m&&NOSUP.has(k)&&!NOSUP.has(m[1]+'.25'))return rdReg1(m[1]+'.25');const r=await rdReg1(k);if(!r&&m&&!NOSUP.has(m[1]+'.25'))return rdReg1(m[1]+'.25');return r;}
+async function rdReg1(k){if(NOSUP.has(k))return false;
   try{const a=await IECP.read(k+'()',4000);if(/ERROR/i.test(a)||!a.includes('(')){NOSUP.add(k);return false;}
     const v=parseReadout(a);if(!v.length){NOSUP.add(k);return false;}ST.live=true;setVals(v,false);return true;}
   catch(e){log('WARN',k+': '+e.message);return false;}}
@@ -902,7 +920,7 @@ async function rdReg(k){if(NOSUP.has(k))return false;
    Export-Register (22/24…) nur, wenn P/Q nicht zu U·I passen; Winkelregister nur, wenn es kein P je Phase gibt. */
 async function readInstant(pre,round){
   let got=0,n=0;const plan=Q_UI.length+6;
-  const rd=async k=>{if(stopReq||NOSUP.has(k))return false;n++;status(`${pre}Zeiger ${n}/${Math.max(n,plan)}${round?` · Runde ${round}`:''}`);prog(n/Math.max(n,plan)*100);const r=await rdReg(k);if(r)got++;return r;};
+  const rd=async k=>{if(stopReq)return false;n++;status(`${pre}Zeiger ${n}/${Math.max(n,plan)}${round?` · Runde ${round}`:''}`);prog(n/Math.max(n,plan)*100);const r=await rdReg(k);if(r)got++;return r;};
   for(const k of Q_UI)await rd(k);
   let pPh=0;
   for(let i=0;i<3;i++){const c=[2,4,6][i];
@@ -915,7 +933,7 @@ async function readInstant(pre,round){
 
 /* Nur Leistung: 1.7/2.7 und 3.7/4.7; Ersatz 16.7 bzw. Summe der Phasen */
 async function readPower(pre,round){
-  let n=0;const rd=async k=>{if(stopReq||NOSUP.has(k))return false;n++;status(`${pre}Leistung … Register ${n}${round?` · Runde ${round}`:''}`);prog('ind');return rdReg(k);};
+  let n=0;const rd=async k=>{if(stopReq)return false;n++;status(`${pre}Leistung … Register ${n}${round?` · Runde ${round}`:''}`);prog('ind');return rdReg(k);};
   let okP=await rd('1.7.0');if(okP)await rd('2.7.0');
   if(!okP)okP=await rd('16.7.0');
   if(!okP){for(const c of [2,4,6]){if(await rd(c+'1.7.0'))okP=true;await rd(c+'2.7.0');}}
@@ -956,18 +974,29 @@ async function quickLoop(mode){
 function lgTime(d){const wd=d.getDay()||7,jan=new Date(d.getFullYear(),0,1).getTimezoneOffset(),dst=d.getTimezoneOffset()<jan?1:0;
   return `${pad(d.getFullYear()%100)}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}${pad(Math.floor(d.getMilliseconds()/10))}${wd}${dst}`;}
 function parseLg(v){const m=String(v).match(/^(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})?/);return m?new Date(2000+ +m[1],m[2]-1,+m[3],+m[4],+m[5],+m[6],(+m[7]||0)*10):null;}
-async function readClock(){const f=await IECP.cmdRW('R2','C003()');if(f.type!=='FRAME'||/ERROR/i.test(f.body))throw new Error('Zähler kennt C003 nicht');
-  const v=(f.body.match(/\(([^)]*)\)/)||[])[1];const mt=parseLg(v);const now=new Date();if(!mt)throw new Error('Zeitformat unbekannt: '+v);
+/* Uhrzeit: L+G über C003 (R2/W2); EMH und andere über 0.9.2 Datum (JJMMTT) und 0.9.1 Zeit (hhmmss), R5 lesen / W5 schreiben (wie EMH-Software) */
+const isLG=()=>/^\/LGZ/.test(IECP.ident);
+async function meterTime(){
+  if(isLG()){const f=await IECP.cmdRW('R2','C003()');if(f.type!=='FRAME'||/ERROR/i.test(f.body))throw new Error('Zähler kennt C003 nicht');
+    const v=(f.body.match(/\(([^)]*)\)/)||[])[1];const mt=parseLg(v);if(!mt)throw new Error('Zeitformat unbekannt: '+v);return mt;}
+  const g=async k=>{const a=await IECP.read(k+'()',5000);const m=a.match(/\((\d{6})/);if(!m)throw new Error(`Zähler liefert ${k} nicht (${a.trim()||'keine Antwort'})`);return m[1];};
+  const d=await g('0.9.2'),t=await g('0.9.1');return new Date(2000+ +d.slice(0,2),+d.slice(2,4)-1,+d.slice(4,6),+t.slice(0,2),+t.slice(2,4),+t.slice(4,6));}
+async function readClock(){const mt=await meterTime();const now=new Date();
   const df=Math.round((mt-now)/1000)||0;$('#clkBox').innerHTML=`<div><span class="mut">Zähler</span><b>${mt.toLocaleString('de-DE')}</b></div><div><span class="mut">Handy</span><b>${now.toLocaleString('de-DE')}</b></div><div><span class="mut">Abweichung</span><b class="${Math.abs(df)>30?'warn':'ok'}">${df>=0?'+':''}${fmtN(df,0)} s</b></div>`;return df;}
+async function writeClock(){const n=new Date();
+  if(isLG()){const v=lgTime(n);const r=await IECP.cmdRW('W2',`C003(${v})`);if(r.type!=='ACK')throw new Error('Zähler hat das Stellen abgelehnt ('+(r.type==='NAK'?'NAK':(r.head||r.body||r.type))+')');log('INFO','Zeit gestellt: '+v);return;}
+  const d=`${pad(n.getFullYear()%100)}${pad(n.getMonth()+1)}${pad(n.getDate())}`;
+  let used=null;for(const w of ['W5','W1']){const r=await IECP.cmdRW(w,`0.9.2(${d})`);if(r.type==='ACK'){used=w;break;}log('WARN',`${w} 0.9.2 → ${r.type==='NAK'?'NAK':(r.body||r.type)}`);}
+  if(!used)throw new Error('Zähler hat das Datum nicht angenommen (Passwort mit Schreibrecht nötig?)');
+  const t=new Date();const tv=`${pad(t.getHours())}${pad(t.getMinutes())}${pad(t.getSeconds())}`;const r=await IECP.cmdRW(used,`0.9.1(${tv})`);
+  if(r.type!=='ACK')throw new Error('Zähler hat die Uhrzeit nicht angenommen ('+(r.type==='NAK'?'NAK':(r.body||r.type))+')');log('INFO',`Zeit gestellt (${used}): ${d} ${tv}`);}
 async function clockOp(write){
   if(busy)return;if(!T&&!(await connect()))return;setBusy(true);prog('ind');showTab('mehr');
   try{status('Programmiermodus …');await IECP.login($('#pw').value);
-    try{if(!/^\/LGZ/.test(IECP.ident))throw new Error(`Uhrzeit stellen für ${IECP.ident.slice(1,4)||'diesen Zähler'} noch nicht hinterlegt – bisher nur Landis+Gyr. Mitschnitt von Q4 schicken, dann baue ich es ein.`);
-      const df=await readClock();
-      if(write){if(!confirm(`Zählerzeit weicht ${fmtN(df,0)} s ab.\nJetzt auf Handyzeit ${new Date().toLocaleTimeString('de-DE')} stellen?`)){status('Zeitstellen abgebrochen.');return;}
-        const v=lgTime(new Date());const r=await IECP.cmdRW('W2',`C003(${v})`);
-        if(r.type!=='ACK')throw new Error('Zähler hat das Stellen abgelehnt ('+(r.type==='NAK'?'NAK':(r.head||r.body||r.type))+')');
-        log('INFO','Zeit gestellt: '+v);const d2=await readClock();status(`Uhrzeit gestellt – Abweichung jetzt ${fmtN(d2,0)} s.`,'ok');}
+    try{const df=await readClock();
+      if(write){const who=isLG()?'':/^\/EMH/.test(IECP.ident)?'':`\n\nHinweis: Für ${IECP.ident.slice(1,4)} ist das Stellen noch nicht erprobt (Datum 0.9.2 / Zeit 0.9.1).`;
+        if(!confirm(`Zählerzeit weicht ${fmtN(df,0)} s ab.\nJetzt auf Handyzeit ${new Date().toLocaleTimeString('de-DE')} stellen?${who}`)){status('Zeitstellen abgebrochen.');return;}
+        await writeClock();const d2=await readClock();status(`Uhrzeit gestellt – Abweichung jetzt ${fmtN(d2,0)} s.`,Math.abs(d2)>5?'warn':'ok');}
       else status(`Zählerzeit gelesen – Abweichung ${fmtN(df,0)} s.`,Math.abs(df)>30?'warn':'ok');}
     finally{await IECP.bye();}}
   catch(e){log('ERR',e.message);status(e.message,'err');}
@@ -1036,7 +1065,125 @@ $('#btnNosupReset').onclick=()=>{try{localStorage.removeItem(NKEY)}catch{}NOSUP=
 $('#btnGo').onclick=()=>{$('#readMenu').hidden=!$('#readMenu').hidden;};
 $('#btnStart').onclick=()=>{$('#readMenu').hidden=true;run('Auslesen',OPS.auto);};
 $('#btnClk').onclick=()=>clockOp(true);
-$('#btnModem').onclick=()=>status('Modem-Empfang kommt, sobald die Mitschnitte da sind.','warn');
+/* ---------- Modem-Empfang (EMH-Modem, Protokoll aus Mitschnitt) ----------
+   Anfrage: 52 03 <a> <b> <c> CRC16-XMODEM (high, low); Antwort: 06 <Länge> <a b c> <Daten> CRC.
+   17 00 01 = Funkwerte, 07 00 01 = IMEI/IP/ICCID, 07 00 02 = Firmware/Seriennummer. */
+const crcX=d=>{let c=0;for(const b of d){c^=b<<8;for(let k=0;k<8;k++)c=c&0x8000?((c<<1)^0x1021)&0xffff:(c<<1)&0xffff;}return c;};
+const mdmReq=(a,b,c)=>{const f=[0x52,3,a,b,c];const x=crcX(f);return [...f,x>>8,x&255];};
+async function mdmTxn(a,b,c,timeout=1500){LINK.clear();const f=mdmReq(a,b,c);log('TX',f,true);await LINK.t.write(new Uint8Array(f));
+  try{return await LINK.wait(buf=>{for(let s=0;s<buf.length;s++){if(buf[s]!==6)continue;const L=buf[s+1];if(L==null||buf.length<s+4+L)return null;
+      const fr=buf.slice(s,s+2+L),cr=(buf[s+2+L]<<8)|buf[s+3+L];if(fr[2]===a&&fr[3]===b&&fr[4]===c&&crcX(fr)===cr){buf.splice(0,s+4+L);return fr.slice(5);}}return null;},timeout);}catch{return null;}}
+const MDM_CFG=[{b:9600,p:'N'},{b:19200,p:'N'},{b:9600,p:'E'},{b:38400,p:'N'},{b:2400,p:'N'},{b:4800,p:'N'}];
+async function mdmSet(cfg){const t=LINK.t;if(t instanceof BleT){for(const c of [Object.keys(BAUD).find(k=>BAUD[k]===cfg.b),'D',cfg.p,'A'])await t.cmd(c);}
+  else if(t instanceof SerialT)await t.setBaud(cfg.b,{dataBits:8,parity:cfg.p==='E'?'even':'none',stopBits:1});
+  LINK.strip=false;await sleep(t instanceof DemoT?0:200);}
+const MNO={'26201':'Telekom','26202':'Vodafone','26203':'O2 (Telefónica)','26207':'O2 (Telefónica)','26208':'O2 (Telefónica)','26209':'Vodafone','26210':'DB Netz','26277':'O2 (E-Plus)'};
+const ACT={0:'2G (GSM)',2:'3G (UMTS)',3:'2G (EDGE)',7:'LTE',8:'LTE-M',9:'NB-IoT'};
+const REG={0:'nicht registriert',1:'registriert (Heimnetz)',2:'sucht Netz',3:'abgelehnt',4:'unbekannt',5:'registriert (Roaming)'};
+const u16=(d,i)=>d[i]|(d[i+1]<<8),u32=(d,i)=>(d[i]|(d[i+1]<<8)|(d[i+2]<<16)|(d[i+3]<<24))>>>0;
+const asc=a=>String.fromCharCode(...a.filter(x=>x>=32&&x<127));
+const MDM={};
+function mdmDecode(radio,id,fw){
+  if(radio){const d=radio;Object.assign(MDM,{act:d[0],rsrp:-d[1],sim:d[2],reg:d[3],tac:u16(d,5),cell:u32(d,9),plmn:u16(d,13),band:d[17],rsrq:-d[28],t:new Date()});(MDM.hist=MDM.hist||[]).push([Date.now(),MDM.rsrp,MDM.rsrq]);}
+  if(id){const imei=asc(id.slice(1,16));const ip=id.slice(17,21).join('.');let icc='';for(const b of id.slice(33,43)){if(b===0xff)break;icc+=(b>>4).toString(16)+(b&15).toString(16);}
+    Object.assign(MDM,{imei,ip,iccid:icc.replace(/f/gi,'')});}
+  if(fw){const parts=asc(fw.map(x=>x||32)).trim().split(/\s{2,}/);Object.assign(MDM,{fw:parts[0]||'',msn:parts[1]||''});}}
+function rateRSRP(v){return v>=-80?['sehr gut','var(--ok)']:v>=-90?['gut','var(--ok)']:v>=-100?['mittel','var(--acc)']:v>=-110?['schwach','var(--warn)']:['sehr schwach','var(--err)'];}
+function renderMdm(){const m=MDM;if(m.rsrp==null&&!m.imei){$('#mdmCard').hidden=true;return;}$('#mdmCard').hidden=false;
+  const bar=(lbl,v,min,max,unit,col,txt)=>{const p=Math.max(2,Math.min(100,(v-min)/(max-min)*100));return `<div class="mbar"><span class="lbl">${lbl}</span><div class="trk"><div class="fil" style="width:${p}%;background:${col}"></div></div><span class="v">${v} ${unit}${txt?` <span class="mut">· ${txt}</span>`:''}</span></div>`;};
+  let h='';if(m.rsrp!=null){const [rt,rc]=rateRSRP(m.rsrp);h+=bar('Signalstärke<br><span class="mut">RSRP</span>',m.rsrp,-140,-50,'dBm',rc,rt);
+    if(isFinite(m.rsrq)&&m.rsrq<0)h+=bar('Signalqualität<br><span class="mut">RSRQ</span>',m.rsrq,-20,-3,'dB',m.rsrq>=-10?'var(--ok)':m.rsrq>=-15?'var(--warn)':'var(--err)');}
+  $('#mdmBars').innerHTML=h;
+  const rows=mdmRows();
+  $('#mdmTable').innerHTML=rows.map(r=>`<tr><td class="mut">${r[0]}</td><td class="mono">${esc(String(r[1]))}</td></tr>`).join('');
+  $('#mdmTime').textContent=m.t?m.t.toLocaleTimeString('de-DE'):'';}
+function mdmRows(){const m=MDM;const pl=m.plmn?String(m.plmn):'';const st=mdmStats();const rows=[['Netz',m.act!=null?(ACT[m.act]||'Typ '+m.act)+(m.band?` · Band ${m.band}`:''):''],['Status',m.reg!=null?(REG[m.reg]||m.reg):''],
+    ['Provider',pl?`${pl} ${MNO[pl]||''}`:''],['Localisation ID (TAC)',m.tac||''],['Cell ID',m.cell||''],['IMEI',m.imei],['ICCID',m.iccid],['IP',m.ip],['Firmware',m.fw],['Modul-Nr.',m.msn]];
+  if(st&&st.n>1)rows.splice(2,0,['RSRP min / Ø / max',`${st.min} / ${st.avg} / ${st.max} dBm (${st.n} Messungen)`]);
+  return rows.filter(r=>r[1]!==''&&r[1]!=null);}
+function mdmStats(){const h=(MDM.hist||[]).map(x=>x[1]).filter(isFinite);if(!h.length)return null;return{n:h.length,min:Math.min(...h),max:Math.max(...h),avg:Math.round(h.reduce((a,b)=>a+b,0)/h.length)};}
+const mdmName=ext=>`modem_${(meterNo()||MDM.imei||'zaehler').replace(/[^\w-]/g,'')}_${stamp()}.${ext}`;
+function mdmTxt(){const m=MDM;const L=['Modem-Empfang',`Zeit: ${(m.t||new Date()).toLocaleString('de-DE')}`];if(ST.ident&&ST.ident!=='SML')L.push(`Zähler: ${meterNo()||''} ${ST.ident}`.trim());
+  if(m.rsrp!=null)L.push(`Signalstärke RSRP: ${m.rsrp} dBm (${rateRSRP(m.rsrp)[0]})`);if(isFinite(m.rsrq)&&m.rsrq<0)L.push(`Signalqualität RSRQ: ${m.rsrq} dB`);
+  for(const [k,v] of mdmRows())L.push(`${k}: ${v}`);
+  if((m.hist||[]).length>1){L.push('','Verlauf (Zeit;RSRP dBm;RSRQ dB)');for(const [t,a,b] of m.hist)L.push(`${new Date(t).toLocaleTimeString('de-DE')};${a};${b}`);}
+  return L.join('\r\n')+'\r\n';}
+/* ---------- Standort (Einbau) ---------- */
+function geoStart(){return new Promise(ok=>{if(!navigator.geolocation)return ok(null);let done=false;const fin=v=>{if(!done){done=true;ok(v);}};setTimeout(()=>fin(null),25000);
+  navigator.geolocation.getCurrentPosition(p=>fin({lat:p.coords.latitude,lon:p.coords.longitude,acc:Math.round(p.coords.accuracy),t:Date.now()}),e=>{log('WARN','Standort: '+e.message);fin(null);},{enableHighAccuracy:true,timeout:20000,maximumAge:120000});});}
+const navUrl=g=>`https://www.google.com/maps/dir/?api=1&destination=${g.lat.toFixed(6)},${g.lon.toFixed(6)}`;
+const withTimeout=(pr,ms)=>Promise.race([pr,new Promise(r=>setTimeout(()=>r(null),ms))]);
+async function geoAddress(g){try{const r=await withTimeout(fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${g.lat}&lon=${g.lon}&zoom=18&accept-language=de`),6000);if(!r||!r.ok)return '';
+  const j=await r.json();const a=j.address||{};const str=[a.road||a.pedestrian||a.footway||'',a.house_number||''].join(' ').trim();const ort=[a.postcode||'',a.city||a.town||a.village||a.municipality||''].join(' ').trim();
+  return [str,ort].filter(Boolean).join(', ')||j.display_name||'';}catch{return '';}}
+async function geoMap(g,W,H,z=17){const n=2**z,xt=(g.lon+180)/360*n,yt=(1-Math.log(Math.tan(g.lat*Math.PI/180)+1/Math.cos(g.lat*Math.PI/180))/Math.PI)/2*n;
+  const cv=document.createElement('canvas');cv.width=W;cv.height=H;const c=cv.getContext('2d');c.fillStyle='#e5e7eb';c.fillRect(0,0,W,H);
+  const px=xt*256,py=yt*256,x0=px-W/2,y0=py-H/2;const jobs=[];let ok=0;
+  for(let tx=Math.floor(x0/256);tx<=Math.floor((x0+W)/256);tx++)for(let ty=Math.floor(y0/256);ty<=Math.floor((y0+H)/256);ty++){
+    jobs.push(new Promise(res=>{const im=new Image();im.crossOrigin='anonymous';im.onload=()=>{c.drawImage(im,tx*256-x0,ty*256-y0);ok++;res();};im.onerror=()=>res();im.src=`https://tile.openstreetmap.org/${z}/${((tx%n)+n)%n}/${ty}.png`;}));}
+  await withTimeout(Promise.all(jobs),9000);if(!ok)return null;
+  const mx=W/2,my=H/2;const rpx=g.acc/(156543.03*Math.cos(g.lat*Math.PI/180)/n*256/256);
+  if(g.acc&&rpx>8&&rpx<W){c.fillStyle='rgba(95,158,31,.18)';c.strokeStyle='rgba(95,158,31,.6)';c.beginPath();c.arc(mx,my,rpx,0,7);c.fill();c.stroke();}
+  const k=W/820;c.fillStyle='#d93025';c.strokeStyle='#fff';c.lineWidth=2*k;c.beginPath();c.arc(mx,my-26*k,15*k,Math.PI*0.85,Math.PI*0.15);c.lineTo(mx,my);c.closePath();c.fill();c.stroke();c.fillStyle='#fff';c.beginPath();c.arc(mx,my-26*k,6*k,0,7);c.fill();
+  c.fillStyle='rgba(255,255,255,.85)';c.fillRect(W-200*k,H-20*k,200*k,20*k);c.fillStyle='#333';c.font=`${12*k}px sans-serif`;c.fillText('© OpenStreetMap-Mitwirkende',W-192*k,H-6*k);
+  try{c.getImageData(0,0,1,1);}catch{return null;}return cv;}
+let _qrLib=null;
+const QR_SRC=['https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js','https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js'];
+function qrLoad(src){return new Promise(ok=>{const sc=document.createElement('script');sc.src=src;sc.onload=()=>ok(window.qrcode||null);sc.onerror=()=>ok(null);document.head.appendChild(sc);setTimeout(()=>ok(window.qrcode||null),5000);});}
+function qrLib(){return _qrLib||(_qrLib=(async()=>{if(window.qrcode)return window.qrcode;for(const u of QR_SRC){const q=await qrLoad(u);if(q)return q;}_qrLib=null;return null;})());}
+async function qrCanvas(text,size){const q=await qrLib();if(!q)return null;try{const qr=q(0,'M');qr.addData(text);qr.make();const k=qr.getModuleCount(),cell=Math.floor(size/(k+4)),dim=cell*(k+4);
+  const cv=document.createElement('canvas');cv.width=cv.height=dim;const c=cv.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,dim,dim);c.fillStyle='#000';
+  for(let r=0;r<k;r++)for(let col=0;col<k;col++)if(qr.isDark(r,col))c.fillRect((col+2)*cell,(r+2)*cell,cell,cell);return cv;}catch{return null;}}
+/* Bild: Modem-Empfang und – beim Einbau – Standort mit Karte, Navigationslink und QR-Code */
+const MAPH=520;
+const PNG_KEEP=/^(Netz|Status|RSRP min|Modul-Nr)/;
+async function mdmPng(geo){const m=MDM,hasM=m.rsrp!=null||!!m.imei,rows=hasM?mdmRows().filter(r=>PNG_KEEP.test(r[0])):[],W=900,dpr=2,hist=hasM?(m.hist||[]):[];
+  let map=null,qr=null,addr='';if(geo){[map,qr,addr]=await Promise.all([geoMap(geo,(W-80)*2,MAPH*2),qrCanvas(navUrl(geo),300),geoAddress(geo)]);}
+  const geoH=geo?(70+(map?MAPH+20:0)+ (addr?40:0)+ 40*2 + 40):0;
+  const H=130+(hasM?(m.rsrp!=null?120:0)+10+rows.length*40+(hist.length>1?230:0):0)+geoH+60;
+  const cv=document.createElement('canvas');cv.width=W*dpr;cv.height=H*dpr;const c=cv.getContext('2d');c.scale(dpr,dpr);
+  const F='-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif',G='#5f9e1f',GRAY='#6b7280';
+  c.fillStyle='#fff';c.fillRect(0,0,W,H);c.fillStyle=G;c.fillRect(0,0,W,8);
+  c.fillStyle='#111';c.font=`700 34px ${F}`;c.fillText(geo?'Einbau':'Modem-Empfang',40,62);
+  c.fillStyle=GRAY;c.font=`17px ${F}`;c.fillText(((m.t||new Date()).toLocaleString('de-DE'))+(meterNo()?`  ·  Zähler ${meterNo()}`:''),40,92);
+  let y=130;const bar=(lbl,v,min,max,unit,col,txt)=>{c.fillStyle='#111';c.font=`600 18px ${F}`;c.fillText(lbl,40,y+20);
+    const x0=250,w=420;c.fillStyle='#e5e7eb';c.beginPath();c.roundRect(x0,y+4,w,22,11);c.fill();
+    c.fillStyle=col;c.beginPath();c.roundRect(x0,y+4,Math.max(14,Math.min(1,(v-min)/(max-min))*w),22,11);c.fill();
+    c.fillStyle='#111';c.font=`700 20px ${F}`;c.fillText(`${v} ${unit}`,x0+w+18,y+22);if(txt){c.fillStyle=GRAY;c.font=`15px ${F}`;c.fillText(txt,x0+w+18,y+42);}
+    c.fillStyle=GRAY;c.font=`12px ${F}`;c.fillText(`${min} ${unit}`,x0,y+42);c.textAlign='right';c.fillText(`${max} ${unit}`,x0+w,y+42);c.textAlign='left';y+=60;};
+  const cssC=v=>v.replace('var(--ok)','#30a14e').replace('var(--acc)',G).replace('var(--warn)','#d4a000').replace('var(--err)','#d93025');
+  const rowsDraw=(rs,rw=W-60)=>{for(const [i,[k,v]] of rs.entries()){if(i%2===0){c.fillStyle='#f3f4f6';c.fillRect(30,y,rw,40);}c.fillStyle=GRAY;c.font=`16px ${F}`;c.fillText(k,44,y+26);c.fillStyle='#111';c.font=`600 17px ui-monospace,Consolas,monospace`;c.fillText(String(v),300,y+26);y+=40;}};
+  if(hasM){
+    if(m.rsrp!=null){const [rt,rc]=rateRSRP(m.rsrp);bar('Signalstärke (RSRP)',m.rsrp,-140,-50,'dBm',cssC(rc),rt);}
+    if(isFinite(m.rsrq)&&m.rsrq<0)bar('Signalqualität (RSRQ)',m.rsrq,-20,-3,'dB',m.rsrq>=-10?'#30a14e':m.rsrq>=-15?'#d4a000':'#d93025');else if(m.rsrp!=null)y+=60;
+    y+=10;rowsDraw(rows);
+    if(hist.length>1){y+=30;c.fillStyle='#111';c.font=`600 18px ${F}`;c.fillText('Verlauf RSRP',40,y);y+=14;const x0=80,w=W-120,h=170;const vs=hist.map(x=>x[1]);const lo=Math.min(...vs)-3,hi=Math.max(...vs)+3;
+      c.strokeStyle='#e5e7eb';c.lineWidth=1;c.fillStyle=GRAY;c.font=`12px ${F}`;for(let k=0;k<=4;k++){const yy=y+h-k*h/4;c.beginPath();c.moveTo(x0,yy);c.lineTo(x0+w,yy);c.stroke();c.fillText(Math.round(lo+(hi-lo)*k/4),40,yy+4);}
+      c.strokeStyle=G;c.lineWidth=2.5;c.beginPath();hist.forEach(([t,v],i)=>{const xx=x0+i/(hist.length-1)*w,yy=y+h-(v-lo)/(hi-lo)*h;i?c.lineTo(xx,yy):c.moveTo(xx,yy);});c.stroke();y+=h;}}
+  if(geo){y+=40;c.fillStyle='#111';c.font=`700 22px ${F}`;c.fillText('Einbauort',40,y);y+=20;
+    if(map){c.save();c.beginPath();c.roundRect(40,y,W-80,MAPH,14);c.clip();c.drawImage(map,40,y,W-80,MAPH);c.restore();y+=MAPH+20;}
+    const gr=[];if(addr)gr.push(['Adresse',addr]);gr.push(['Koordinaten',`${geo.lat.toFixed(6)}, ${geo.lon.toFixed(6)}`],['Genauigkeit',`± ${geo.acc} m`]);
+    const ytab=y;rowsDraw(gr,qr?W-60-210:W-60);y+=10;
+    if(qr){const s=Math.min(170,y-ytab+10);c.drawImage(qr,W-40-s,ytab-6,s,s);c.fillStyle=GRAY;c.font=`12px ${F}`;c.textAlign='center';c.fillText('QR scannen → Navigation',W-40-s/2,ytab+s+10);c.textAlign='left';}}
+  c.fillStyle=GRAY;c.font=`13px ${F}`;c.fillText('Zählerauslesung · '+(geo?'Einbau':'Modem-Empfang'),40,H-22);
+  const blob=await new Promise(r=>cv.toBlob(r,'image/png'));return [...new Uint8Array(await blob.arrayBuffer())];}
+$('#btnMdmPng').onclick=async()=>{if(MDM.rsrp==null&&!MDM.imei)return;await saveFiles([[mdmName('png'),await mdmPng()]],true);};
+let mdmRun=false;
+async function opModem(count){showTab('werte');for(const k in MDM)delete MDM[k];renderMdm();
+  const t=LINK.t;let cfg=null;const pref=S.mdmCfg?[S.mdmCfg,...MDM_CFG.filter(c=>c.b!==S.mdmCfg.b||c.p!==S.mdmCfg.p)]:MDM_CFG;
+  try{
+    for(const [i,c] of pref.entries()){status(`Modem wird gesucht … (${c.b} Baud 8${c.p}1)`);prog((i+.5)/pref.length*100);await mdmSet(c);
+      const r=await mdmTxn(0x17,0,1,1200);if(r){cfg=c;mdmDecode(r);renderMdm();break;}}
+    if(!cfg)throw new Error('Modem antwortet nicht. Kopf auf die Modem-Optik setzen? Protokoll (Mehr → Protokoll) bitte schicken.');
+    S.mdmCfg=cfg;saveS();log('INFO',`Modem antwortet (${cfg.b} Baud 8${cfg.p}1)`);
+    mdmDecode(null,await mdmTxn(7,0,1),await mdmTxn(7,0,2));renderMdm();
+    prog(null);let n=0;if(!count){mdmRun=true;$('#btnModem').textContent='■ Stopp';$('#btnModem').disabled=false;}
+    while(count?n<count&&!stopReq:(mdmRun&&!stopReq)){const r=await mdmTxn(0x17,0,1);if(r){mdmDecode(r);renderMdm();n++;status(count?`Empfangstest: ${MDM.rsrp} dBm · Messung ${n}/${count}`:`Modem-Empfang: ${MDM.rsrp} dBm · Messung ${n} – „Stopp“ zum Beenden`,'ok');}else status('Modem antwortet gerade nicht …','warn');
+      await sleep(t instanceof DemoT?300:900);}
+    return `Modem-Empfang: ${MDM.rsrp} dBm (${rateRSRP(MDM.rsrp)[0]}), ${n} Messungen`;}
+  finally{mdmRun=false;stopReq=false;$('#btnModem').textContent='📶 Modem-Empfang';
+    try{if(t instanceof BleT){for(const c of ['0','C','E','A'])await t.cmd(c);}else if(t instanceof SerialT)await t.setBaud(300,{dataBits:7,parity:'even',stopBits:1});}catch{}LINK.strip=true;}}
+$('#btnModem').onclick=()=>{if(mdmRun){mdmRun=false;stopReq=true;$('#btnModem').textContent='stoppt …';return;}run('Modem-Empfang',opModem);};
 $('#btnCfg').onclick=$('#connPill').onclick=()=>{$('#cfgBox').hidden=!$('#cfgBox').hidden;};
 const PWKEY='zaehlerauslesung.pw';
 function pwStore(){try{$('#pwKeep').checked?localStorage.setItem(PWKEY,$('#pw').value):localStorage.removeItem(PWKEY);}catch{}}
@@ -1111,7 +1258,7 @@ const IDB={db:()=>new Promise((ok,no)=>{const r=indexedDB.open('zaehlerauslesung
   async set(k,v){try{const d=await this.db();await new Promise(ok=>{const t=d.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=ok;t.onerror=ok;});}catch{}}};
 let DIR=null,PENDING=null;
 const canDir='showDirectoryPicker' in window;
-const fileObjs=list=>list.map(([n,b])=>new File([Uint8Array.from(b)],n,{type:'text/plain'}));
+const fileObjs=list=>list.map(([n,b])=>new File([Uint8Array.from(b)],n,{type:/\.png$/i.test(n)?'image/png':'text/plain'}));
 const canShareFiles=list=>{try{return !!(navigator.canShare&&navigator.share&&navigator.canShare({files:fileObjs(list)}));}catch{return false;}};
 const fmtList=list=>`${list.length} Datei${list.length>1?'en':''}`;
 async function dirWrite(list){for(const [n,b] of list){const fh=await DIR.getFileHandle(n,{create:true});const w=await fh.createWritable();await w.write(Uint8Array.from(b));await w.close();log('INFO',`Gespeichert in ${DIR.name}: ${n}`);}
@@ -1153,15 +1300,21 @@ function ausFiles(){const {nr,st}=fileBase();const info=infoBlock();const D=S.fD
 $('#btnFAus').onclick=async()=>{const out=ausFiles();await saveFiles(out,true);if(!ST.profileRaw)status('⚠ Ohne Lastgang nur 2 Dateien – besser oben „Ausbau“ tippen.','warn');};
 /* Einbau / Ausbau: auslesen und gleich die Dateien im Q4-Format speichern */
 let FORCE=null;
-async function ioRun(kind){const aus=kind==='aus';
+async function ioRun(kind,geoP){const aus=kind==='aus';
   if(aus){const dl=d=>new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,16);const t=new Date();t.setHours(0,0,0,0);
     $('#lgFrom').value=dl(new Date(t-7*864e5));$('#lgTo').value=dl(new Date(+t+864e5));}
   FORCE={ex:aus?['prof','log']:[]};let r;
   try{r=await OPS.auto();}finally{FORCE=null;}
   if(!ST.rawReadout||ST.ident==='SML')throw new Error('Keine IEC-Auslesung – Dateien nur für Zähler mit Datenauslesung (nicht SML).');
-  const names=aus?ausFiles():einFiles();const m=await saveFiles(names);showTab('werte');
-  return (r&&r.startsWith('⚠')?r+' · ':'')+`${aus?'Ausbau':'Einbau'}: ${m}`;}
-$('#btnEin').onclick=()=>run('Einbau',()=>ioRun('ein'));
+  const names=aus?ausFiles():einFiles();let warn=r&&r.startsWith('⚠')?r+' · ':'',extra='';
+  if(!aus){let mOk=false;if(S.einMdm!==false){await sleep(LINK.t instanceof DemoT?0:500);
+      try{await opModem(5);mOk=true;extra=` · Empfang ${MDM.rsrp} dBm (${rateRSRP(MDM.rsrp)[0]})`;}
+      catch(e){log('WARN','Empfangstest: '+e.message);warn='⚠ '+warn+'Empfangstest: Modem antwortet nicht · ';for(const k in MDM)delete MDM[k];}}
+    let geo=null;if(geoP){status('Standort wird ermittelt …');geo=await geoP;if(!geo)warn=(warn.startsWith('⚠')?warn:'⚠ '+warn)+'kein Standort (GPS erlaubt?) · ';else extra+=` · Standort ± ${geo.acc} m`;}
+    if(mOk||geo){status('Bild wird erstellt …');names.push([`einbau_${(meterNo()||'zaehler').replace(/[^\w-]/g,'')}_${stamp()}.png`,await mdmPng(geo)]);}}
+  const m=await saveFiles(names);showTab('werte');
+  return warn+`${aus?'Ausbau':'Einbau'}: ${m}${extra}`;}
+$('#btnEin').onclick=()=>{const g=S.einGeo!==false?geoStart():null;run('Einbau',()=>ioRun('ein',g));};
 $('#btnAus').onclick=()=>run('Ausbau',()=>ioRun('aus'));
 
 $('#btnCsvVals').onclick=()=>download(`werte_${meterNo()||'zaehler'}_${stamp()}.csv`,'Kennzahl;Bedeutung;Wert;Einheit;Primär (WF '+WF().kP+');Zusatz\n'+[...ST.vals.values()].map(e=>[e.obis,describe(e.key),e.value.replace('.',','),e.unit,(()=>{const k=kFor(e.unit),v=parseFloat(e.value);return k!==1&&isFinite(v)?String(+(v*k).toPrecision(10)).replace('.',','):'';})(),e.extra].map(csvQ).join(';')).join('\n'));
