@@ -72,6 +72,9 @@ tr.new td{color:var(--acc)}
 .quick{display:flex;align-items:center;gap:8px}
 .wfb{font-size:12px;padding:0 10px;height:36px;color:var(--mut);white-space:nowrap}
 .wfb.on{color:var(--acc);border-color:var(--acc)}
+.wandler{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-left:auto}
+.wandler label{width:auto}.wandler .wfrow input{flex:0 0 72px;width:72px}.wandler select{padding:8px 4px}
+#wfInfo{padding-bottom:9px;color:var(--acc)}
 .wfrow{display:flex;align-items:center;gap:6px}.wfrow input{width:auto;flex:1;min-width:60px}.wfrow select{width:auto}
 .sek{display:block;font-size:11px;color:var(--mut);font-weight:400}
 #btnQuick,#btnPow{padding:11px 13px}
@@ -94,8 +97,7 @@ tr.new td{color:var(--acc)}
 <div id="frameNote" class="note" hidden style="margin:0 0 12px">Das Tool läuft eingebettet in der Toolbox. Bluetooth funktioniert so in manchen Browsern (z. B. Bluefy am iPad) nicht. <a id="frameLink" href="#" target="_top" style="color:var(--acc);font-weight:600">→ Tool direkt öffnen</a></div>
 <section class="card ctl">
   <div class="ctlTop">
-    <div class="seg" id="kindSeg"><button data-kind="elec" class="act">Strom</button><button data-kind="heat">Wärme</button><button data-kind="sml">SML</button></div>
-    <button id="btnWf" class="wfb" title="Wandlerfaktor">WF 1</button>
+    <div class="seg" id="kindSeg"><button data-kind="auto" class="act" title="Zählertyp automatisch erkennen">Auto</button><button data-kind="elec">Strom</button><button data-kind="heat">Wärme</button><button data-kind="sml">SML</button></div>
     <button id="btnCfg" class="icon" title="Verbindung einstellen">⚙</button>
   </div>
   <div id="cfgBox" class="cfg" hidden>
@@ -111,16 +113,16 @@ tr.new td{color:var(--acc)}
       <label>Passwort P1 (mehrere mit Komma – werden durchprobiert)<input id="pw" type="password" autocomplete="off"></label>
       <label class="chk" style="align-self:end;padding-bottom:9px"><input type="checkbox" id="pwKeep"> Passwort auf diesem Gerät merken</label>
     </div>
-    <div class="grid2">
-      <label>Stromwandler<span class="wfrow"><input id="ctP" type="number" inputmode="decimal" placeholder="z. B. 200"><span>/</span><select id="ctS"><option value="5">5 A</option><option value="1">1 A</option></select></span></label>
-      <label>Spannungswandler (nur MS/HS)<span class="wfrow"><input id="vtP" type="number" inputmode="decimal" placeholder="leer = keiner"><span>/ 100 V</span></span></label>
-    </div>
-    <div id="wfInfo" class="mut"></div>
     <div class="row"><button id="btnDisconnect" disabled>Trennen</button><span class="mut">Weitere Einstellungen unter „Mehr“.</span></div>
   </div>
   <div class="goRow">
     <button id="btnGo" class="pri big">Auslesen</button>
     <div class="quick" id="quickBox"><button id="btnPow" title="Nur Wirk- und Blindleistung – am schnellsten">⚡ Leistung</button><button id="btnQuick" title="U, I und P/Q je Phase für das Zeigerdiagramm">◷ Zeiger</button><label class="chk"><input type="checkbox" id="oLoop"> laufend</label></div>
+    <div class="wandler" id="wfBox">
+      <label>Stromwandler<span class="wfrow"><input id="ctP" type="number" inputmode="decimal" placeholder="—"><span>/</span><select id="ctS"><option value="5">5 A</option><option value="1">1 A</option></select></span></label>
+      <label>Spannungswandler<span class="wfrow"><input id="vtP" type="number" inputmode="decimal" placeholder="—"><span>/ 100 V</span></span></label>
+      <span id="wfInfo" class="mut"></span>
+    </div>
   </div>
   <div class="goRow" style="margin-top:8px">
     <div class="opts" id="elecOpts">
@@ -162,7 +164,7 @@ tr.new td{color:var(--acc)}
   <div class="card">
     <div class="row" style="justify-content:space-between">
       <h2 id="meterTitle" style="margin:0">Keine Daten</h2>
-      <div class="row"><button id="btnSave" disabled>Im Verlauf speichern</button><button id="btnCsvVals" disabled>CSV</button></div>
+      <div class="row"><button id="btnSave" disabled>Im Verlauf speichern</button><button id="btnCsvVals" disabled>CSV</button><button id="btnFEin" disabled>Einbau-Datei</button><button id="btnFAus" disabled>Ausbau-Dateien</button></div>
     </div>
     <div id="identLine" class="mut" style="margin:4px 0 8px"></div>
     <div class="scroll"><table id="valTable"><thead><tr><th>Kennzahl</th><th>Bedeutung</th><th class="num">Wert</th><th class="num wfcol">Primär</th><th>Zusatz</th></tr></thead><tbody></tbody></table></div>
@@ -199,6 +201,11 @@ tr.new td{color:var(--acc)}
     <ul id="heatChecks" class="checks" style="padding-left:18px;margin:8px 0 0"></ul>
   </div>
   <div class="card scroll"><h2>Stichtag / Vorjahr</h2><table id="heatPrev"></table></div>
+  <div class="card scroll">
+    <div class="row" style="justify-content:space-between"><h2 style="margin:0">Monatswerte</h2><div class="row"><label class="mut">Monate <input id="monN" type="number" min="1" max="60" value="24" style="width:4.5em"></label><button id="btnMon" class="op2">Lesen (Versuch)</button><button id="btnCsvMon" disabled>CSV</button></div></div>
+    <div class="mut" style="margin:6px 0">Versuch über M-Bus auf der optischen Schnittstelle (wie L+G-M-Bus-Modul). Klappt es nicht: Mehr → Protokoll schicken.</div>
+    <div id="monInfo" class="mut"></div><table id="monTable"></table>
+  </div>
   <div class="card"><div class="mut">Landis+Gyr UH50/T550: Jede optische Auslesung kostet Batterielaufzeit (grob ½ Stunde). Momentanwerte (Temperaturen, Durchfluss, Leistung) liefern nicht alle Firmwarestände.</div></div>
 </section>
 
@@ -254,6 +261,13 @@ tr.new td{color:var(--acc)}
     <div class="kpi" id="clkBox"></div>
     <div class="row"><button id="btnClkRead" class="op2">Zeit prüfen</button><button id="btnClkSet" class="op2 pri">Zeit stellen …</button></div>
   </div>
+<!-- DATEIEXPORT -->
+  <div class="card">
+    <h2>Ein-/Ausbau-Dateien</h2>
+    <div class="mut">Dateien wie aus Q4: Einbau = <span class="mono">Billing_Data_-_&lt;Nr&gt;_&lt;Zeit&gt;_001_1.RAW</span>; Ausbau = <span class="mono">…_001_1.txt</span>, <span class="mono">D014_&lt;Nr&gt;-&lt;Zeit&gt;_ZFA_STD_.VL</span> und (mit Lastgang) <span class="mono">…_ZFA_LPR_.LP</span>. Für die Ausbau-Datei beim Auslesen „Lastgang“ und „Logbuch“ anhaken.</div>
+    <div class="row" style="margin-top:8px"><label>Kennung vorn<input id="sFD" style="width:6em"></label><label>Kennung Mitte<input id="sFZ" style="width:6em"></label></div>
+    <label>Software-Eintrag (C.60)<input id="sFSw"></label>
+  </div>
 <!-- PC-SKRIPT -->
   <div class="card">
     <h2>PC-Skript (Python)</h2>
@@ -265,7 +279,7 @@ tr.new td{color:var(--acc)}
   <div class="card">
     <h2>Rohdaten importieren</h2>
     <div class="mut">Auslesung als Text (z. B. aus dem Python-Skript, Q4-Export oder kopiert) – Werte, P.01 und P.98 werden erkannt.</div>
-    <input type="file" id="impFile" accept=".txt,.log,.csv,.dat,.json,.bin" style="margin:8px 0">
+    <input type="file" id="impFile" accept=".txt,.log,.csv,.dat,.json,.bin,.raw,.RAW,.vl,.VL,.lp,.LP" style="margin:8px 0">
     <textarea id="impText" rows="8" placeholder="/EMH5...&#10;1.8.0(012345.678*kWh)&#10;..."></textarea>
     <div class="row" style="margin-top:8px"><button id="btnImport" class="pri">Auswerten</button></div>
   </div>
@@ -336,9 +350,10 @@ const fmtDT=d=>d?`${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()} 
 
 /* ---------- Einstellungen ---------- */
 const SKEY='zaehlerauslesung.settings';
-const S=Object.assign({transport:'ble',kind:'elec',oInst:false,oProf:false,oLog:false,addr:'',prof:'P.01',auto:true,oLoop:false,ctP:'',ctS:'5',vtP:'',baud:'auto',rcmd:'R5',profFmt:'season',hs:5000,cw:false,bleS:'',bleW:'',bleN:'',swPar:true},(()=>{try{return JSON.parse(localStorage.getItem(SKEY))||{}}catch{return{}}})());
-const bindS=[['transport','#transport'],['baud','#sBaud'],['rcmd','#sRcmd'],['profFmt','#sProfFmt'],['hs','#sHs'],['cw','#sCw'],['bleS','#sBleS'],['bleW','#sBleW'],['bleN','#sBleN'],['oInst','#oInst'],['oProf','#oProf'],['oLog','#oLog'],['addr','#addr'],['prof','#lgProf'],['auto','#sAuto'],['oLoop','#oLoop'],['bleAll','#sBleAll'],['ctP','#ctP'],['ctS','#ctS'],['vtP','#vtP']];
+const S=Object.assign({transport:'ble',kind:'auto',oInst:false,oProf:false,oLog:false,addr:'',prof:'P.01',auto:true,oLoop:false,ctP:'',ctS:'5',vtP:'',baud:'auto',rcmd:'R5',profFmt:'season',hs:5000,cw:false,bleS:'',bleW:'',bleN:'',swPar:true,fD:'D014',fZ:'ZFA',fSw:'Q4Module-UWP 22.10.161.0'},(()=>{try{return JSON.parse(localStorage.getItem(SKEY))||{}}catch{return{}}})());
+const bindS=[['transport','#transport'],['baud','#sBaud'],['rcmd','#sRcmd'],['profFmt','#sProfFmt'],['hs','#sHs'],['cw','#sCw'],['bleS','#sBleS'],['bleW','#sBleW'],['bleN','#sBleN'],['oInst','#oInst'],['oProf','#oProf'],['oLog','#oLog'],['addr','#addr'],['prof','#lgProf'],['auto','#sAuto'],['oLoop','#oLoop'],['bleAll','#sBleAll'],['ctP','#ctP'],['ctS','#ctS'],['vtP','#vtP'],['fD','#sFD'],['fZ','#sFZ'],['fSw','#sFSw']];
 if(S.transport==='demoheat')S.transport='demo';
+if(!S._v17){S.kind='auto';S._v17=1;}
 const saveS=()=>{try{localStorage.setItem(SKEY,JSON.stringify(S))}catch{}};
 for(const [k,sel] of bindS){const el=$(sel);if(el.type==='checkbox')el.checked=!!S[k];else el.value=S[k];
   el.addEventListener('change',()=>{S[k]=el.type==='checkbox'?el.checked:(el.type==='number'?+el.value:el.value.trim());saveS();if(k==='cw')updatePhasor();if(/^(ctP|ctS|vtP)$/.test(k))wfChanged();updCtl();if(k==='transport'&&T){try{T.close()}catch{}setConn(false);}});}
@@ -384,9 +399,9 @@ class BleT{
     if(!navigator.bluetooth)throw new Error('Web Bluetooth nicht verfügbar – Chrome auf Android oder PC nötig (iPhone nicht möglich).');
     const cs=(S.bleS||'').toLowerCase();
     const opt=[...KNOWN_UART,'device_information','battery_service'];if(cs)opt.unshift(cs);
-    log('INFO','Geräteauswahl geöffnet'+(FRAMED?' (eingebettet in Toolbox)':''));status('Kopf in der Liste auswählen …');
+    log('INFO','Geräteauswahl geöffnet'+(FRAMED?' (eingebettet in Toolbox)':'')+(IOS?' (iOS-Modus)':''));status('Kopf in der Liste auswählen …');
     const hang=setTimeout(()=>{log('WARN','Geräteauswahl kommt nicht zurück');status(FRAMED?'Auswahl kommt nicht zurück – bitte das Tool direkt öffnen (Link oben).':'Auswahl kommt nicht zurück – Seite neu laden und nochmal versuchen.','err');connecting=false;},15000);
-    try{this.dev=await navigator.bluetooth.requestDevice(S.bleAll||IOS?{acceptAllDevices:true,optionalServices:opt}:{filters:[{namePrefix:'Device_DvB'},{namePrefix:'DvB'},{namePrefix:'Device_'}],optionalServices:opt});}finally{clearTimeout(hang);}
+    try{this.dev=await navigator.bluetooth.requestDevice(IOS?{filters:[{namePrefix:'Device'},{namePrefix:'DvB'}],optionalServices:KNOWN_UART.slice()}:S.bleAll?{acceptAllDevices:true,optionalServices:opt}:{filters:[{namePrefix:'Device_DvB'},{namePrefix:'DvB'},{namePrefix:'Device_'}],optionalServices:opt});}finally{clearTimeout(hang);}
     log('INFO','Gewählt: '+(this.dev?.name||this.dev?.id||'?'));this.watch();
     await this.attach();}
   watch(){if(this._w)return;this._w=1;this.dev.addEventListener('gattserverdisconnected',()=>{log('WARN','Bluetooth-Verbindung vom Kopf/System getrennt');if(T===this)setConn(false);});}
@@ -431,7 +446,20 @@ class DemoT{
   constructor(heat){this.onData=()=>{};this.fixedBaud=false;this.in=[];this.heat=!!heat;}
   async open(){log('INFO','Demo-Zähler bereit');}
   async setBaud(){} async close(){}
-  async write(u8){for(const b of u8)this.in.push(b&0x7f);this.process();}
+  async write(u8){if((this.heat||S.kind==="heat")&&this.mbus(u8))return;for(const b of u8)this.in.push(b&0x7f);this.process();}
+  mbus(u8){const a=Array.from(u8);if(a.every(x=>x===0x55))return true;const f=mbFrames(a.filter((x,i)=>!(x===0&&a.slice(0,i).every(y=>y===0))));
+    const sh=a.length===5&&a[0]===0x10&&a[4]===0x16;if(!sh&&!f.length)return false;
+    const L=(st,recs)=>{const d=[0x78,0x56,0x34,0x12,0xa7,0x32,0x04,0x04,0x01,0x00,0x00,0x00,...recs];return mbLong(0x08,0x00,0x72,d);};
+    const bcd=(n,b)=>{const s=String(Math.round(n)).padStart(b*2,'0');const o=[];for(let k=b-1;k>=0;k--)o.push(parseInt(s.substr(k*2,2),16));return o;};
+    const g=(dd,mm,yy)=>{const v=dd|(mm<<8)|((yy&7)<<5)|((yy>>3)<<12);return [v&0xff,v>>8];};
+    if(sh&&a[1]===0x40){this.emit([0xe5],60);return true;}
+    if(sh&&(a[1]===0x7b||a[1]===0x5b)){const m=this.mon;let recs;
+      if(!m)recs=[0x0c,0x06,...bcd(518943,4),0x0c,0x14,...bcd(1234567,4),0x0b,0x2d,...bcd(123,3),0x0a,0x5a,...bcd(712,2),0x0a,0x5e,...bcd(453,2)];
+      else{const dt=new Date(2026,9-m,1);const sn=m+1;const dif=(df)=>sn<2?[df]:[df|((sn&1)<<6)|0x80,(sn>>1)&0x0f];
+        recs=[...dif(0x02),0x6c,...g(1,dt.getMonth()+1,dt.getFullYear()-2000),...dif(0x0c),0x06,...bcd(518943-m*4200,4),...dif(0x0c),0x14,...bcd(1234567-m*9100,4),...dif(0x1b),0x2d,...bcd(140-m,3)];}
+      this.emit(L(0,recs),80);return true;}
+    if(f.length&&f[0].ci===0x51){if(f[0].d[1]===0xa8)this.mon=f[0].d[2];else this.mon=0;this.emit([0xe5],60);return true;}
+    return true;}
   emit(arr,delay=150){setTimeout(()=>{const u=new Uint8Array(arr);for(let i=0,k=0;i<u.length;i+=200,k++){const c=u.slice(i,i+200);setTimeout(()=>this.onData(c),k*8);}},delay);}
   blk(text){const body=[...enc(text),ETX];return [STX,...body,bcc(body)];}
   process(){
@@ -550,7 +578,7 @@ class IEC{
         return{type:'FRAME',head,body,ok,eot:all[all.length-2]===EOT};}
       return null;},0,idle,tick);
   }
-  async readout(onPart){await this.handshake();await this.option('0');const f=await this.readFrame(8000,onPart);
+  async readout(onPart,pre){if(pre){this.ident=pre;this.onIdent?.(pre);}else await this.handshake();await this.option('0');const f=await this.readFrame(8000,onPart);
     if(f.type!=='FRAME')throw new Error('Unerwartete Antwort: '+f.type);if(!f.ok)log('WARN','Prüfsumme (BCC) der Datenauslesung falsch');return {ident:this.ident,text:f.body,ok:f.ok};}
   /* pw: ein oder mehrere Passwörter (Komma/Leerzeichen getrennt) – werden der Reihe nach probiert wie bei Q4 */
   async login(pw){const list=String(pw||'').split(/[\s,;]+/).filter(Boolean);
@@ -578,7 +606,7 @@ function splitVU(s){const i=(s||'').indexOf('*');return i<0?[s||'',''] :[s.slice
 function parseReadout(text){const out=[];
   for(let line of text.split(/\r?\n/)){line=line.trim();if(!line||line==='!'||line[0]==='/'||/^P\.\d\d/.test(line))continue;
     for(const m of line.matchAll(/([^()\s]+)((?:\([^)]*\))+)/g)){
-      const g=[...m[2].matchAll(/\(([^)]*)\)/g)].map(x=>x[1]);const [v,u]=splitVU(g[0]);
+      const g=[...m[2].matchAll(/\(([^)]*)\)/g)].map(x=>x[1]);const [v,u]=g[0].includes('&')?[g[0],'']:splitVU(g[0]);
       out.push({obis:m[1].trim(),key:norm(m[1]),value:v,unit:u,raw:g[0],extra:g.slice(1).join(' | ')});}}
   return out;}
 function parseTs(s){s=String(s||'').replace(/\D/g,'');let sec=0;
@@ -636,8 +664,8 @@ function WF(){const ci=+S.ctP>0?+S.ctP/(+S.ctS||5):1,cu=+S.vtP>0?+S.vtP/100:1;re
 function kFor(unit){if(ST.mode==='heat')return 1;const u=String(unit||'').trim().toLowerCase(),w=WF();
   if(u==='v')return w.kU;if(u==='a')return w.kI;if(/^[km]?(w|var|va)h?$/.test(u))return w.kP;return 1;}
 const fmtP=(v,u)=>{const a=Math.abs(v);return fmtN(v,a>=1e4?0:a>=100?1:a>=1?2:3)+' '+u;};
-function wfChanged(){const w=WF(),on=w.kP!==1;const b=$('#btnWf');b.textContent=on?'WF '+fmtN(w.kP,w.kP%1?2:0):'WF 1';b.classList.toggle('on',on);
-  $('#wfInfo').textContent=on?`Wandlerfaktor ${fmtN(w.kP,w.kP%1?2:0)} (Strom ×${fmtN(w.kI,w.kI%1?2:0)}${w.kU!==1?`, Spannung ×${fmtN(w.kU,w.kU%1?2:0)}`:''}) – Primärwerte werden zusätzlich angezeigt.`:'Kein Wandler eingetragen – Werte werden wie gelesen angezeigt.';
+function wfChanged(){const w=WF(),on=w.kP!==1;
+  $('#wfInfo').textContent=on?`Faktor ${fmtN(w.kP,w.kP%1?2:0)}`:'';
   _pp=null;renderVals();fillPhInputs();renderProfile();}
 let _pp=null;
 function profP(){const p=ST.profile;if(!p)return p;const w=WF();if(w.kP===1)return p;
@@ -660,7 +688,7 @@ function renderVals(){
   $$('.wfcol').forEach(x=>x.hidden=WF().kP===1);
   const mn=meterNo();$('#meterTitle').textContent=list.length?('Zähler '+(mn||'')).trim():'Keine Daten';
   $('#identLine').textContent=ST.ident?`Kennung ${ST.ident} · ${list.length} Werte`:(list.length?`${list.length} Werte`:'');
-  $('#btnSave').disabled=$('#btnCsvVals').disabled=!list.length;visTabs();renderPower();}
+  $('#btnSave').disabled=$('#btnCsvVals').disabled=!list.length;$('#btnFEin').disabled=$('#btnFAus').disabled=!(ST.rawReadout&&ST.mode!=='heat'&&ST.ident!=='SML');visTabs();renderPower();}
 
 /* ---------- Zeigerdiagramm ---------- */
 const PH=['L1','L2','L3'];
@@ -843,7 +871,7 @@ async function run(label,fn){if(busy)return;
       if(window._lastBle&&S.transport==='ble'){log('WARN','Verbindung direkt nach dem Aufbau verloren – zweiter Versuch');status('Verbindung abgebrochen – neuer Versuch …','warn');await sleep(800);
         if(!(await connect())){status('Bluetooth-Verbindung bricht sofort wieder ab. Kopf schütteln und erneut tippen. Details unter Mehr → Protokoll.','err');return;}}
       else{if(!/Kein Gerät|nicht erreichbar/.test($('#status').textContent))status('Keine Verbindung – bitte erneut tippen.','err');return;}}}
-  setBusy(true);status(label+' – warte auf Zähler …');prog('ind');const t0=Date.now();
+  setBusy(true);status(label+' – warte auf Zähler …');prog('ind');const t0=Date.now();ST.t0=t0;
   try{const msg=await fn()||label+' fertig';const w=msg.startsWith('⚠');status(msg+` (${Math.round((Date.now()-t0)/1000)} s)`,w?'warn':'ok');}
   catch(e){log('ERR',e.message);status(label+': '+errMsg(e),'err');try{await IECP?.bye()}catch{}}
   finally{ST.live=false;renderVals();setBusy(false);prog(null);if(LINK)LINK.strip=true;}}
@@ -944,15 +972,125 @@ async function clockOp(write){
   catch(e){log('ERR',e.message);status(e.message,'err');}
   finally{setBusy(false);prog(null);}}
 $('#btnClkRead').onclick=()=>clockOp(false);$('#btnClkSet').onclick=()=>clockOp(true);
+/* Automatische Erkennung: Anfrage mit Weckfolge senden, an der Antwort den Typ erkennen,
+   ohne Antwort auf SML lauschen. */
+const HEAT_ID=/^\/LUG|UH50|UH40|UH30|T550|T330/i;
+const OPS_AUTO=async()=>{
+  const t=LINK.t,ble=t instanceof BleT,ser=t instanceof SerialT;
+  status('Zähler wird erkannt …');prog('ind');ST.detected='';
+  if(ble)await t.prep();else if(ser)await t.setBaud(300,{dataBits:7,parity:'even',stopBits:1});IECP.baud=300;
+  await sleep(t instanceof DemoT?0:ble?150:600);LINK.clear();
+  await LINK.send([...new Array(40).fill(0),...enc(`/?${$('#addr').value.trim()}!\r\n`)]);
+  let id=null;
+  try{id=await LINK.wait(b=>{const i=b.indexOf(0x2f);if(i<0)return null;const r=b.slice(i);
+      if(r.length>=9&&/^\/LUG/i.test(dec(r.slice(0,4)))){const cr=r.indexOf(13);return{heat:true,id:dec(r.slice(0,cr>0?cr:9))};}
+      const cr=r.indexOf(13);if(cr>0&&r[cr+1]===10){const id=dec(r.slice(0,cr));b.splice(0,i+cr+2);return{heat:HEAT_ID.test(id),id};}
+      return null;},ble?4500:5000);}catch(e){}
+  const tag=(x,r)=>r&&r.startsWith('⚠')?r:`${x} · ${r}`;
+  if(id?.heat){ST.detected='Wärmezähler';log('INFO','Erkannt: Wärmezähler '+id.id);return tag('Wärmezähler '+id.id.slice(1,4),await OPS.heat(id.id));}
+  if(id){ST.detected='Stromzähler (IEC)';log('INFO','Erkannt: Stromzähler '+id.id);return tag('Stromzähler '+id.id.slice(1,4),await OPS.all(id.id));}
+  log('INFO','Keine Antwort auf /?! – prüfe auf SML');status('Keine Antwort auf Anfrage – prüfe SML …');
+  try{const r=await OPS.sml();ST.detected='SML-Zähler';return tag('SML-Zähler',r);}
+  catch(e){throw new Error('Kein Zähler erkannt – weder Antwort noch SML-Daten. Kopf richtig aufgesetzt? Zähler evtl. nur DLMS.');}};
+/* ---------- M-Bus über die optische Schnittstelle (Versuch für Monatswerte UH50/T550) ----------
+   Annahme: Der Zähler versteht auf der Optik auch M-Bus (EN 13757-3, 2400 Baud 8E1) wie das
+   L+G-M-Bus-Modul G4. Monatswerte dort: SND_UD 68 06 06 68 53/73 FE 51 0F A8 <Monat 1…60> CS 16,
+   danach REQ_UD2. Speichernummer 1 = Vorjahr/Stichtag, ≥2 = Vormonat (Nr − 1). */
+const MB_VIF=[[0x00,0x07,'Energie','kWh',n=>10**(n-6)],[0x08,0x0f,'Energie','GJ',n=>10**(n-9)],[0x10,0x17,'Volumen','m³',n=>10**(n-6)],
+  [0x18,0x1f,'Masse','t',n=>10**(n-6)],[0x20,0x23,'Einschaltdauer','',n=>1],[0x24,0x27,'Betriebsdauer','',n=>1],
+  [0x28,0x2f,'Leistung','kW',n=>10**(n-6)],[0x30,0x37,'Leistung','GJ/h',n=>10**(n-9)],[0x38,0x3f,'Durchfluss','m³/h',n=>10**(n-6)],
+  [0x40,0x47,'Durchfluss','m³/min',n=>10**(n-7)],[0x48,0x4f,'Durchfluss','m³/s',n=>10**(n-9)],[0x50,0x57,'Massestrom','kg/h',n=>10**(n-3)],
+  [0x58,0x5b,'Vorlauf','°C',n=>10**(n-3)],[0x5c,0x5f,'Rücklauf','°C',n=>10**(n-3)],[0x60,0x63,'Spreizung','K',n=>10**(n-3)],
+  [0x64,0x67,'Außentemp.','°C',n=>10**(n-3)],[0x6c,0x6c,'Datum','',n=>1],[0x6d,0x6d,'Zeitpunkt','',n=>1],[0x74,0x77,'Mittelungsdauer','',n=>1],
+  [0x78,0x78,'Fabriknummer','',n=>1],[0x79,0x79,'Erweiterte ID','',n=>1],[0x7a,0x7a,'Busadresse','',n=>1]];
+const MB_TU=['s','min','h','d'];
+const MB_LEN={0:0,1:1,2:2,3:3,4:4,5:4,6:6,7:8,9:1,10:2,11:3,12:4,14:6};
+function mbFrames(b){const out=[];for(let i=0;i<b.length;i++){
+  if(b[i]===0xe5){out.push({ack:true});continue;}
+  if(b[i]===0x68&&b[i+3]===0x68&&b[i+1]===b[i+2]){const L=b[i+1];if(b.length<i+L+6)break;const body=b.slice(i+4,i+4+L);
+    const cs=body.reduce((s,x)=>(s+x)&0xff,0);if(cs===b[i+4+L]&&b[i+5+L]===0x16){out.push({c:body[0],a:body[1],ci:body[2],d:body.slice(3)});i+=L+5;}}}
+  return out;}
+const mbDate=(v,typ)=>{if(typ==='G'){const d=v&0x1f,m=(v>>8)&0x0f,y=((v>>5)&7)|((v>>9)&0x78);return `${pad(d)}.${pad(m)}.${2000+y}`;}
+  const mi=v&0x3f,h=(v>>8)&0x1f,d=(v>>16)&0x1f,m=(v>>24)&0x0f,y=((v>>21)&7)|((v>>25)&0x78);return `${pad(d)}.${pad(m)}.${2000+y} ${pad(h)}:${pad(mi)}`;};
+function mbParse(d){const recs=[];if(d.length<12)return{recs,more:false};
+  const id=Array.from(d.slice(0,4)).reverse().map(x=>pad(x.toString(16),2)).join('');const man=d[4]|(d[5]<<8);
+  const manS=String.fromCharCode(((man>>10)&31)+64,((man>>5)&31)+64,(man&31)+64);let i=12,more=false;
+  while(i<d.length){const dif=d[i++];if(dif===0x2f)continue;if(dif===0x0f||dif===0x1f){more=dif===0x1f;break;}
+    let st=(dif>>6)&1,tar=0,sub=0,n=0,e=dif;while(e&0x80&&i<d.length){e=d[i++];st|=(e&0x0f)<<(1+4*n);tar|=((e>>4)&3)<<(2*n);sub|=((e>>6)&1)<<n;n++;}
+    let vif=d[i++];const vifes=[];let x=vif;while(x&0x80&&i<d.length){x=d[i++];vifes.push(x);}
+    if((vif&0x7f)===0x7c){const l=d[i++];i+=l;}
+    const df=dif&0x0f;let len=MB_LEN[df];if(df===13)len=d[i++];if(len==null)break;const raw=d.slice(i,i+len);i+=len;
+    let num=null;
+    if([9,10,11,12,14].includes(df)){let s='';for(let k=raw.length-1;k>=0;k--)s+=pad(raw[k].toString(16),2);const neg=/^f/i.test(s);num=parseInt(neg?s.slice(1):s,10)*(neg?-1:1);}
+    else if(df===5)num=new DataView(Uint8Array.from(raw).buffer).getFloat32(0,true);
+    else if(len&&len<=6){num=0;for(let k=raw.length-1;k>=0;k--)num=num*256+raw[k];if(raw[raw.length-1]&0x80&&len<=4)num-=2**(8*len);}
+    const fn=['','max ','min ','Fehler '][(dif>>4)&3];const v7=vif&0x7f;
+    let label='VIF '+pad(vif.toString(16),2)+(vifes.length?'/'+vifes.map(z=>pad(z.toString(16),2)).join('/'):''),unit='',val=num;
+    if(vif===0xfd||vif===0xfb||v7===0x7f){/* Erweiterungs-/Herstellercodes: roh */}
+    else{const t=MB_VIF.find(r=>v7>=r[0]&&v7<=r[1]);if(t){label=t[2];unit=t[3];
+      if(v7===0x6c)val=mbDate(num,'G');else if(v7===0x6d&&len===4)val=mbDate(num,'F');
+      else if(v7>=0x20&&v7<=0x27)unit=MB_TU[v7&3];
+      else if(num!=null&&v7<0x78)val=+(num*t[4](v7&7)).toPrecision(12);}}
+    recs.push({st,tar,sub,label:fn+label+(tar?` T${tar}`:''),unit,val});}
+  return{id,man:manS,recs,more};}
+const MON={rows:new Map(),cols:[],cur:[],info:''};
+function monAdd(recs){for(const r of recs){if(r.st<2)continue;const m=r.st-1;if(!MON.rows.has(m))MON.rows.set(m,new Map());
+  const k=r.label+(r.unit?` [${r.unit}]`:'');MON.rows.get(m).set(k,r.val);if(!MON.cols.includes(k))MON.cols.push(k);}}
+function renderMon(){const ms=[...MON.rows.keys()].sort((a,b)=>a-b);$('#btnCsvMon').disabled=!ms.length;$('#monInfo').textContent=MON.info;
+  if(!ms.length){$('#monTable').innerHTML='';return;}
+  const cols=MON.cols.slice().sort((a,b)=>(/^Datum/.test(b)-/^Datum/.test(a)));
+  $('#monTable').innerHTML='<tr><th>Monat</th>'+cols.map(c=>`<th>${esc(c)}</th>`).join('')+'</tr>'+ms.map(m=>`<tr><td>−${m}</td>`+cols.map(c=>{const v=MON.rows.get(m).get(c);return `<td class="num mono">${v==null?'':esc(typeof v==='number'?v.toLocaleString('de-DE',{maximumFractionDigits:6}):v)}</td>`;}).join('')+'</tr>').join('');}
+const mbShort=(c,a=0xfe)=>[0x10,c,a,(c+a)&0xff,0x16];
+const mbLong=(c,a,ci,data)=>{const body=[c,a,ci,...data];return [0x68,body.length,body.length,0x68,...body,body.reduce((s,x)=>(s+x)&0xff,0),0x16];};
+async function mbTxn(frame,timeout,wantLong){LINK.clear();log('TX',frame,true);await LINK.t.write(new Uint8Array(frame));
+  try{return await LINK.wait(b=>{const f=mbFrames(b);if(!f.length)return null;if(wantLong&&!f.some(x=>!x.ack))return null;return f;},timeout);}catch{return null;}}
+async function mbWake(baud,pre){const t=LINK.t,ble=t instanceof BleT,ser=t instanceof SerialT;
+  if(ble){for(const c of [Object.keys(BAUD).find(k=>BAUD[k]===baud),'D','E','A'])await t.cmd(c);}
+  else if(ser)await t.setBaud(baud,{dataBits:8,parity:'even',stopBits:1});
+  LINK.strip=false;await sleep(ble?150:300);LINK.clear();
+  const cnt=pre===0x55?Math.round(baud/11*2.2):240;log('TX',`Weckfolge ${cnt}× ${pad(pre.toString(16),2)}h (${baud} Baud 8E1)`);
+  const arr=new Array(cnt).fill(pre);
+  if(ble){const bps=baud/11;for(let i=0;i<arr.length;i+=20){await t.write(new Uint8Array(arr.slice(i,i+20)));await sleep(Math.max(5,20/bps*1000-15));}}
+  else await t.write(new Uint8Array(arr));}
+async function mbEnd(){const t=LINK.t;if(t instanceof BleT){for(const c of ['0','C','E','A'])await t.cmd(c);}else if(t instanceof SerialT)await t.setBaud(300,{dataBits:7,parity:'even',stopBits:1});LINK.strip=true;}
+async function opHeatMonths(){const N=Math.max(1,Math.min(60,+$('#monN').value||24));showTab('waerme');
+  MON.rows=new Map();MON.cols=[];MON.info='';renderMon();
+  const tries=[{baud:2400,pre:0x55,first:'nke'},{baud:2400,pre:0x00,first:'req'},{baud:300,pre:0x55,first:'nke'}];
+  let fcb=1,cur=null,ok=null;
+  const req=async()=>{const c=fcb?0x7b:0x5b;fcb^=1;const f=await mbTxn(mbShort(c),3000,true);return f?.find(x=>!x.ack)||null;};
+  try{
+    for(const [k,tr] of tries.entries()){status(`Monatswerte: M-Bus-Versuch ${k+1}/${tries.length} (${tr.baud} Baud) …`);prog((k+.5)/tries.length*30);
+      if(k)await mbEnd(),await sleep(T instanceof DemoT?0:3000);
+      await mbWake(tr.baud,tr.pre);fcb=1;
+      if(tr.first==='nke'){const a=await mbTxn(mbShort(0x40),1500,false);if(!a){log('WARN','Kein E5 auf SND_NKE');continue;}log('INFO','Zähler antwortet auf M-Bus (E5)');}
+      cur=await req();if(!cur){log('WARN','Keine Antwort auf REQ_UD2');if(tr.first==='nke'){ok=tr;break;}continue;}
+      ok=tr;break;}
+    if(!ok)throw new Error('Zähler antwortet nicht auf M-Bus über die Optik – Monatswerte so nicht lesbar. Bitte Protokoll schicken.');
+    log('INFO',`M-Bus ok (${ok.baud} Baud)`);
+    if(cur){let p=mbParse(cur.d);MON.cur=p.recs;monAdd(p.recs);log('INFO',`M-Bus ${p.man} ${p.id}: ${p.recs.length} Werte${p.more?' (weitere Telegramme)':''}`);
+      for(let n=0;p.more&&n<20;n++){const f=await req();if(!f)break;p=mbParse(f.d);monAdd(p.recs);}renderMon();}
+    let got=0,fail=0;
+    for(let m=1;m<=N;m++){if(stopReq)break;status(`Monatswerte: Monat −${m} von ${N} …`);prog(30+m/N*70);
+      const c=fcb?0x73:0x53;fcb^=1;const a=await mbTxn(mbLong(c,0xfe,0x51,[0x0f,0xa8,m]),1500,false);
+      if(!a){log('WARN',`Kein E5 auf Monatsanforderung ${m}`);if(++fail>=2)break;continue;}
+      const f=await req();if(!f){if(++fail>=2)break;continue;}
+      const p=mbParse(f.d);const before=MON.rows.size;monAdd(p.recs);if(MON.rows.size>before||p.recs.some(r=>r.st>=2))got++;fail=0;renderMon();}
+    try{await mbTxn(mbLong(fcb?0x73:0x53,0xfe,0x51,[0x0f,0xaf]),800,false);}catch{}
+    MON.info=`M-Bus über Optik (${ok.baud} Baud) · ${MON.rows.size} Monate`;renderMon();
+    if(!MON.rows.size)return '⚠ Zähler spricht M-Bus, liefert aber keine Monatswerte – Protokoll bitte schicken';
+    return `Fertig: ${MON.rows.size} Monatswerte`;}
+  finally{try{await mbEnd()}catch{}}}
 const OPS={
+  auto:()=>OPS_AUTO(),
   async quick(){return quickLoop('ph');},
   async power(){return quickLoop('pow');},
-  async all(){
+  async all(idPre){
     const ex=[S.oInst&&'inst',S.oProf&&'prof',S.oLog&&'log'].filter(Boolean);const n=ex.length?2:1;const pre=i=>n>1?`${i}/${n} · `:'';
     ST.mode='elec';ST.profile=null;ST.profileRaw='';ST.logbook=[];ST.logRaw='';ST.vals.clear();renderProfile();renderLogbook();
     ST.live=true;showTab('werte');
-    const r=await IECP.readout(p=>{const v=parseReadout(cutLines(p));setVals(v,true);status(`${pre(1)}Datenauslesung … ${v.length} Werte`);});
-    ST.ident=r.ident;ST.rawReadout=r.text;setVals(parseReadout(r.text),true);
+    ST.tRead=Date.now();ST.range=S.oProf?[$('#lgFrom').value,$('#lgTo').value]:null;
+    const r=await IECP.readout(p=>{const v=parseReadout(cutLines(p));setVals(v,true);status(`${pre(1)}Datenauslesung … ${v.length} Werte`);},typeof idPre==='string'?idPre:undefined);
+    ST.ident=r.ident;ST.rawReadout=r.text;ST.tDone=Date.now();ST.tInfo=ST.t0;setVals(parseReadout(r.text),true);
     const notes=[];if(!r.ok)notes.push('Prüfsumme der Datenauslesung falsch');
     if(ex.length){try{await readExtras(ex,pre(2),notes);}catch(e){log('ERR',e.message);notes.push(errMsg(e));try{await IECP.bye()}catch{}}}
     autoSave();
@@ -962,31 +1100,75 @@ const OPS={
     await withLogin(async()=>{for(const k of keys){status(`Lese ${k} …`);let a;try{a=await IECP.read(k.includes('(')?k:k+'()',5000);}catch(e){a='⚠ '+e.message;}out.push([k,a]);
       $('#regTable tbody').innerHTML=out.map(r=>`<tr><td class="mono">${esc(r[0])}</td><td class="mono">${esc(r[1])}</td></tr>`).join('');}});
     const vals=out.flatMap(r=>parseReadout(r[1]));if(vals.length)setVals(vals,false);return `${out.length} Register gelesen`;},
-  async heat(){const t=LINK.t,ser=t instanceof SerialT;ST.mode='heat';ST.live=true;ST.vals.clear();showTab('waerme');
-    if(ser)await t.setBaud(300,{dataBits:7,parity:'even',stopBits:2});IECP.baud=300;
-    if(t instanceof BleT)await t.prep();await sleep(t instanceof DemoT?0:600);LINK.clear();
-    await LINK.send([...new Array(40).fill(0),...enc('/?!\r\n')]);
-    const id=await LINK.wait(findIdent,6000);log('INFO','Kennung: '+id);
-    if(ser)await t.setBaud(2400,{dataBits:7,parity:'even',stopBits:2});
-    else if(t instanceof BleT)await t.setBaud(2400);
-    status('Zähler antwortet: '+id+' – Daten kommen …');
-    let f;try{f=await IECP.readFrame(10000,p=>{setVals(parseReadout(cutLines(p)),true);renderHeat();status(`Wärmezähler … ${ST.vals.size} Werte`);});}finally{if(ser)await t.setBaud(300,{dataBits:7,parity:'even',stopBits:1});else if(t instanceof BleT)await t.setBaud(300);}
-    if(f.type!=='FRAME')throw new Error('Keine Daten nach der Kennung');if(!f.ok)log('WARN','Prüfsumme falsch');
-    ST.mode='heat';ST.ident=id;ST.rawReadout=f.body;setVals(parseReadout(f.body),true);renderHeat();autoSave();return `Fertig: ${ST.vals.size} Werte`;},
-  async sml(){if(!(T instanceof SerialT))log('WARN','SML-Mitschnitt ist für den COM-Port gedacht; über Bluetooth nur, wenn der Kopf 9600 8N1 liefert.');
-    if(T instanceof SerialT)await T.setBaud(9600,{dataBits:8,parity:'none'});LINK.strip=false;LINK.clear();
-    status('Schneide 8 s SML mit …');await sleep(8000);const data=LINK.buf.splice(0);
-    if(T instanceof SerialT)await T.setBaud(300,{dataBits:7,parity:'even'});
-    const vals=parseSML(data);if(!vals.length)throw new Error(`Keine SML-Werte erkannt (${data.length} Bytes empfangen)`);ST.mode='elec';ST.ident='SML';setVals(vals,true);showTab('werte');autoSave();return `Fertig: ${vals.length} SML-Werte`;}
+  /* Wärmezähler (UH50/T550): Weckfolge + /?!, Zähler sendet nach der Kennung selbstständig schneller.
+     Welche Geschwindigkeit der Kopf dafür braucht, ist je Gerät unklar – daher Suchlauf über mehrere
+     Einstellungen; die passende wird gemerkt (S.heatCmd). */
+  async heat(idPre){const t=LINK.t,ser=t instanceof SerialT,ble=t instanceof BleT;ST.mode='heat';ST.live=true;ST.vals.clear();showTab('waerme');
+    const looksOk=txt=>(txt.match(/\d+(\.\d+)+(\*\d+)?\([^)]*\)/g)||[]).length>=3;
+    const wake=async()=>{if(ser)await t.setBaud(300,{dataBits:7,parity:'even',stopBits:2});IECP.baud=300;
+      if(ble)await t.prep();await sleep(t instanceof DemoT?0:600);LINK.clear();
+      await LINK.send([...new Array(40).fill(0),...enc('/?!\r\n')]);
+      return LINK.wait(b=>{const i=b.indexOf(0x2f);if(i<0)return null;const r=b.slice(i);
+        const cr=r.indexOf(13);if(cr>0)return dec(r.slice(0,cr));
+        if(r.length>=9&&/^\/[A-Za-z]{3}/.test(dec(r.slice(0,4))))return dec(r.slice(0,9));return null;},6000);};
+    /* Baudrate aus der Kennung: 5. Zeichen, IEC-Modus B (A..I) bzw. Modus C (0..9) – z. B. /LUGFUH50 → F = 19200 */
+    const MB={A:600,B:1200,C:2400,D:4800,E:9600,F:19200,G:38400,H:57600,I:115200};
+    const fromId=id=>{const z=(id||'')[4];const b=MB[z]||BAUD[z];if(!b)return null;return ser?b:Object.keys(BAUD).find(k=>BAUD[k]===b)||null;};
+    const tried=new Set();
+    const tryOnce=async(c0,idGiven)=>{
+      if(c0!=='id'&&tried.has(String(c0)))return 'skip';
+      const id=idGiven||await wake();
+      let c=c0==='id'?fromId(id):c0;if(!c||tried.has(String(c)))return 'skip';tried.add(String(c));
+      if(ser)await t.setBaud(c,{dataBits:7,parity:'even',stopBits:2});else if(ble)await t.cmd(c);
+      LINK.clear();log('INFO',`Kennung ${id} → Kopf ${ser?c:BAUD[c]} Baud`);
+      let f=null;
+      try{f=await LINK.wait(b=>{const s=b.indexOf(STX);if(s<0)return null;const e=b.indexOf(ETX,s);if(e<0||b.length<e+2)return null;
+          const all=b.slice(s,e+2);b.splice(0,e+2);return{body:dec(all.slice(1,-2)),ok:bcc(all.slice(1,-1))===all[all.length-1]};},0,2500,
+        b=>{const s=b.indexOf(STX);const txt=dec(s>=0?b.slice(s+1):b);if(looksOk(txt)){setVals(parseReadout(cutLines(txt)),true);renderHeat();status(`Wärmezähler … ${ST.vals.size} Werte`);}});}catch(e){}
+      const txt=f?f.body:dec(LINK.buf.splice(0));
+      if(ser)await t.setBaud(300,{dataBits:7,parity:'even',stopBits:1});else if(ble)await t.cmd('0');
+      if(!looksOk(txt))return null;
+      return{id,baud:ser?c:BAUD[c],body:f?f.body:txt.replace(/^[\s\S]*?(?=\d+\.\d+\()/,''),ok:!!f?.ok};};
+    const base=ser?[19200,2400,9600,1200,4800]:['6','3','5','2','4'];
+    const cands=['id',...base];
+    let r=null,used=null,n=0;
+    for(let i=0;i<cands.length&&!r;i++){const c=cands[i];
+      status(`Wärmezähler: Versuch ${n+1}${c==='id'?' (Baudrate laut Kennung)':` mit ${ser?c:BAUD[c]} Baud`} …`);prog(Math.min(95,(i+.5)/cands.length*100));
+      let res;try{res=await tryOnce(c,i===0&&typeof idPre==='string'?idPre:null);}catch(e){log('WARN','Versuch: '+e.message);res=null;}
+      if(res==='skip')continue;n++;
+      if(res){r=res;log('INFO',`Wärmezähler lesbar (${r.baud} Baud)`);}
+      else{log('WARN','keine lesbaren Daten bei diesem Versuch');ST.vals.clear();renderVals();if(i<cands.length-1)await sleep(t instanceof DemoT?0:3000);}}
+    if(!r)throw new Error('Keine lesbaren Daten bei allen getesteten Geschwindigkeiten. Bitte Protokoll schicken.');
+    if(!r.ok)log('WARN','Prüfsumme falsch oder Block unvollständig');
+    ST.mode='heat';ST.ident=r.id;ST.rawReadout=r.body;setVals(parseReadout(r.body),true);renderHeat();autoSave();return `Fertig: ${ST.vals.size} Werte`;},
+  async sml(){const ble=T instanceof BleT,ser=T instanceof SerialT;
+    /* SML (mME/eHZ): 9600 Baud 8N1, Zähler sendet selbstständig ca. jede Sekunde.
+       DvBTIR: '5'=9600, 'D'=8 Datenbits, 'N'=keine Parität, 'A'=1 Stoppbit (wie Q4 beim Verbinden) */
+    if(ble){for(const c of ['5','D','N','A'])await T.cmd(c);}
+    else if(ser)await T.setBaud(9600,{dataBits:8,parity:'none'});
+    LINK.strip=false;await sleep(150);LINK.clear();
+    status('Warte auf SML-Telegramm …');prog('ind');
+    const START=[0x1b,0x1b,0x1b,0x1b,1,1,1,1];
+    const find=(b,pat,from=0)=>{outer:for(let i=from;i<=b.length-pat.length;i++){for(let k=0;k<pat.length;k++)if(b[i+k]!==pat[k])continue outer;return i;}return -1;};
+    let msg=null;
+    try{msg=await LINK.wait(b=>{const s0=find(b,START);if(s0<0)return null;const e=find(b,[0x1b,0x1b,0x1b,0x1b,0x1a],s0+8);if(e<0||b.length<e+8)return null;return b.slice(s0,e+8);},8000);}
+    catch(e){/* kein vollständiges Telegramm – mit dem auswerten, was da ist */}
+    const data=msg||LINK.buf.splice(0);
+    if(ble){for(const c of ['0','C','E','A'])await T.cmd(c);}else if(ser)await T.setBaud(300,{dataBits:7,parity:'even'});
+    log('INFO',`SML: ${data.length} Bytes${msg?' (vollständiges Telegramm)':''}`);
+    const vals=parseSML(data);if(!vals.length)throw new Error(`Keine SML-Werte erkannt (${data.length} Bytes). Sendet der Zähler SML? Info-Schnittstelle ggf. mit PIN freischalten.`);
+    ST.mode='elec';ST.ident='SML';setVals(vals,true);showTab('werte');autoSave();return `Fertig: ${vals.length} SML-Werte`;}
 };
 $$('.op').forEach(b=>b.onclick=()=>run(b.textContent,OPS[b.dataset.op]));
 $('#btnQuick').onclick=()=>{if(quickRun){stopReq=true;$('#btnQuick').textContent='stoppt …';return;}run('Zeiger',OPS.quick);};
 $('#btnPow').onclick=()=>{if(quickRun){stopReq=true;$('#btnPow').textContent='stoppt …';return;}run('Leistung',OPS.power);};
 $('#btnBleForget').onclick=async()=>{try{await T?.close()}catch{}window._lastBle=null;S.bleId='';S.bleName='';saveS();setConn(false);$('#bleInfo').textContent='';status('Kopf vergessen – beim nächsten Auslesen neu auswählen.');};
 $('#btnNosupReset').onclick=()=>{try{localStorage.removeItem(NKEY)}catch{}NOSUP=new Set();nosupInfo();status('Register-Erkennung zurückgesetzt.');};
-$('#btnGo').onclick=()=>run(goLabel(),S.kind==='heat'?OPS.heat:S.kind==='sml'?OPS.sml:OPS.all);
+$('#btnMon').onclick=()=>run('Monatswerte',opHeatMonths);
+$('#btnCsvMon').onclick=()=>{const ms=[...MON.rows.keys()].sort((a,b)=>a-b);download(`monatswerte_${meterNo()||'waermezaehler'}_${stamp()}.csv`,['Monat',...MON.cols].join(';')+'\n'+ms.map(m=>[-m,...MON.cols.map(c=>{const v=MON.rows.get(m).get(c);return v==null?'':typeof v==='number'?String(v).replace('.',','):v;})].join(';')).join('\n'));};
+$('#btnGo').onclick=()=>run(goLabel(),S.kind==='heat'?OPS.heat:S.kind==='sml'?OPS.sml:S.kind==='auto'?OPS.auto:OPS.all);
 $$('#kindSeg button').forEach(b=>b.onclick=()=>{if(busy)return;S.kind=b.dataset.kind;saveS();updCtl();});
-$('#btnWf').onclick=$('#btnCfg').onclick=$('#connPill').onclick=()=>{$('#cfgBox').hidden=!$('#cfgBox').hidden;};
+$('#btnCfg').onclick=$('#connPill').onclick=()=>{$('#cfgBox').hidden=!$('#cfgBox').hidden;};
 const PWKEY='zaehlerauslesung.pw';
 function pwStore(){try{$('#pwKeep').checked?localStorage.setItem(PWKEY,$('#pw').value):localStorage.removeItem(PWKEY);}catch{}}
 $('#pw').oninput=pwStore;$('#pwKeep').onchange=pwStore;
@@ -999,9 +1181,9 @@ function estimate(){const a=new Date($('#lgFrom').value),b=new Date($('#lgTo').v
   $('#estim').textContent=`ca. ${n} Werte · ${S.transport==='ble'?'ca. '+m+' min':'bis '+m+' min'}`;}
 function visTabs(){const m=ST.vals.size?ST.mode:(S.kind==='heat'?'heat':'elec');let act=null;
   $$('#tabs button[data-m]').forEach(b=>{b.hidden=b.dataset.m!==m;if(b.hidden&&b.classList.contains('act'))act=b;});if(act)showTab('werte');}
-function updCtl(){const el=S.kind==='elec';
+function updCtl(){const el=S.kind==='elec'||S.kind==='auto';
   $$('#kindSeg button').forEach(b=>b.classList.toggle('act',b.dataset.kind===S.kind));
-  $('#elecOpts').hidden=$('#quickBox').hidden=!el;$('#extraBox').hidden=!(el&&(S.oInst||S.oProf||S.oLog));
+  $('#elecOpts').hidden=$('#quickBox').hidden=$('#wfBox').hidden=!el;$('#extraBox').hidden=!(el&&(S.oInst||S.oProf||S.oLog));
   $('#rangeRow').hidden=$('#rangeChips').hidden=!S.oProf;
   if(!busy)$('#btnGo').textContent=goLabel();estimate();visTabs();
   if(!busy&&!T)status(S.transport==='demo'?'Demo-Modus – „'+goLabel()+'“ tippen.':'Kopf aufsetzen und „'+goLabel()+'“ tippen – verbindet automatisch.');}
@@ -1027,16 +1209,44 @@ function parseSML(bytes){const b=bytes;const out=new Map();
 const HKEY='zaehlerauslesung.verlauf';
 const hist=()=>{try{return JSON.parse(localStorage.getItem(HKEY))||[]}catch{return[]}};
 function saveHist(h){try{localStorage.setItem(HKEY,JSON.stringify(h));return true;}catch(e){alert('Speicher voll – ältere Einträge löschen oder exportieren.');return false;}}
-function snapshot(){return{t:Date.now(),mode:ST.mode,wf:{ctP:S.ctP,ctS:S.ctS,vtP:S.vtP},ident:ST.ident,meter:meterNo(),vals:[...ST.vals.values()],raw:ST.rawReadout,profileRaw:ST.profileRaw,logRaw:ST.logRaw};}
+function snapshot(){return{t:Date.now(),mode:ST.mode,wf:{ctP:S.ctP,ctS:S.ctS,vtP:S.vtP},ident:ST.ident,meter:meterNo(),vals:[...ST.vals.values()],raw:ST.rawReadout,profileRaw:ST.profileRaw,logRaw:ST.logRaw,ft:{t0:ST.tInfo,tr:ST.tRead,td:ST.tDone,range:ST.range}};}
 function renderHist(){const h=hist();$('#histTable').innerHTML=h.length?'<tr><th>Zeit</th><th>Zähler</th><th>Inhalt</th><th></th></tr>'+h.map((e,i)=>`<tr><td>${fmtDT(new Date(e.t))}</td><td class="mono">${esc(e.meter||e.ident)}</td><td class="mut">${e.wf&&+e.wf.ctP?`${e.wf.ctP}/${e.wf.ctS} A${+e.wf.vtP?' · '+e.wf.vtP+'/100 V':''} · `:''}${e.vals.length} Werte${e.profileRaw?' · Lastgang':''}${e.logRaw?' · Logbuch':''}</td><td class="row"><button data-load="${i}">Laden</button><button data-del="${i}">✕</button></td></tr>`).join(''):'<tr><td class="mut">Noch nichts gespeichert.</td></tr>';
   $$('[data-load]').forEach(b=>b.onclick=()=>loadSnap(hist()[+b.dataset.load]));
   $$('[data-del]').forEach(b=>b.onclick=()=>{if(!confirm('Eintrag löschen?'))return;const h=hist();h.splice(+b.dataset.del,1);saveHist(h);renderHist();});}
-function loadSnap(e){ST.mode=e.mode||'elec';if(e.wf){Object.assign(S,e.wf);$('#ctP').value=S.ctP;$('#ctS').value=S.ctS;$('#vtP').value=S.vtP;saveS();_pp=null;setTimeout(wfChanged);}ST.ident=e.ident;ST.rawReadout=e.raw||'';ST.vals=new Map(e.vals.map(v=>[v.key,v]));ST.profileRaw=e.profileRaw||'';ST.profile=e.profileRaw?parseProfile(e.profileRaw):null;ST.logRaw=e.logRaw||'';ST.logbook=e.logRaw?parseLogbook(e.logRaw):[];
+function loadSnap(e){ST.mode=e.mode||'elec';if(e.wf){Object.assign(S,e.wf);$('#ctP').value=S.ctP;$('#ctS').value=S.ctS;$('#vtP').value=S.vtP;saveS();_pp=null;setTimeout(wfChanged);}ST.ident=e.ident;ST.rawReadout=e.raw||'';ST.vals=new Map(e.vals.map(v=>[v.key,v]));ST.profileRaw=e.profileRaw||'';ST.profile=e.profileRaw?parseProfile(e.profileRaw):null;ST.logRaw=e.logRaw||'';ST.tInfo=e.ft?.t0||e.t;ST.tRead=e.ft?.tr||e.t;ST.tDone=e.ft?.td||e.t;ST.range=e.ft?.range||null;ST.logbook=e.logRaw?parseLogbook(e.logRaw):[];
   renderVals();fillPhInputs();renderProfile();renderLogbook();renderHeat();showTab(ST.mode==='heat'?'waerme':'werte');}
 $('#btnSave').onclick=()=>{const h=hist();h.unshift(snapshot());while(h.length>60)h.pop();if(saveHist(h)){renderHist();status('Im Verlauf gespeichert.','ok');}};
 function download(name,text,type='text/csv'){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);}
 const stamp=()=>{const d=new Date();return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;};
 const csvQ=s=>`"${String(s??'').replace(/"/g,'""')}"`;
+
+/* ---------- Ein-/Ausbau-Dateien im Q4-Format ---------- */
+const DRV={ABB:'ABBALPHA'};
+const q2=n=>pad(n,2);
+const tsY=(t,long)=>{const d=new Date(t);return (long?d.getFullYear():q2(d.getFullYear()%100))+q2(d.getMonth()+1)+q2(d.getDate())+q2(d.getHours())+q2(d.getMinutes())+q2(d.getSeconds());};
+const rawGet=(k)=>{const m=ST.rawReadout.match(new RegExp('^(?:\\d+-\\d+:)?'+k.replace(/\./g,'\\.')+'\\(([^)\\r\\n]*)\\)','m'));return m?m[1]:null;};
+function fileBase(){const nr=(rawGet('0.0.0')||meterNo()||'zaehler').trim();return{nr,st:tsY(ST.tDone||Date.now(),true)};}
+const crlf=t=>t.replace(/\r?\n/g,'\r\n');
+function billingBytes(){const body=crlf(ST.rawReadout);const b=[...enc(body),ETX];return [...enc(ST.ident+'\r\n'),STX,...b,bcc(b)];}
+function infoBlock(){const d=new Date(ST.tInfo||ST.tDone||Date.now());const L=['*INFO*','VDEW-'+(DRV[ST.ident.slice(1,4)]||ST.ident.slice(1,4)),ST.ident];
+  for(const k of ['0.0.0','0.0.1','0.0.2']){const v=rawGet(k);if(v!=null)L.push(`${k}(${v})`);}
+  L.push(`0.9.1(${q2(d.getHours())}:${q2(d.getMinutes())}:${q2(d.getSeconds())})`,`0.9.2(${q2(d.getFullYear()%100)}-${q2(d.getMonth()+1)}-${q2(d.getDate())})`);
+  for(const k of ['F.F','C.5']){const v=rawGet(k);if(v!=null)L.push(`${k}(${v})`);}
+  if(ST.range&&ST.range[0])L.push(`C.52(${tsY(ST.range[0],true)}-${tsY(ST.range[1],true)})`);
+  if(S.fSw)L.push(`C.60(${S.fSw})`);L.push(`C.92(${tsY(ST.tRead||ST.tInfo||Date.now())})`);
+  return L.join('\r\n')+'\r\n\r\n';}
+function saveBytes(name,bytes){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([Uint8Array.from(bytes)],{type:'application/octet-stream'}));a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);}
+async function saveFiles(list){for(const [n,b] of list){saveBytes(n,b);log('INFO','Datei gespeichert: '+n);await sleep(700);}status(`${list.length} Datei${list.length>1?'en':''} gespeichert: `+list.map(x=>x[0]).join(', '),'ok');}
+$('#btnFEin').onclick=()=>{const {nr,st}=fileBase();saveFiles([[`Billing_Data_-_${nr}_${st}_001_1.RAW`,[...billingBytes(),13,10,13,10]]]);};
+$('#btnFAus').onclick=()=>{const {nr,st}=fileBase();const info=infoBlock();const D=S.fD||'D014',Z=S.fZ||'ZFA';
+  const out=[[`Billing_Data_-_${nr}_${st}_001_1.txt`,billingBytes()],[`${D}_${nr}-${st}_${Z}_STD_.VL`,enc(info+'*MET_DATA*\r\n'+ST.ident+'\r\n'+crlf(ST.rawReadout))]];
+  if(ST.profileRaw){let lp=info+'*READOUT_DATA*\r\n'+crlf(ST.profileRaw).replace(/(\r\n)*$/,'\r\n')+'\r\n*MESSAGE*\r\n';
+    if(ST.logRaw){let lines=crlf(ST.logRaw).split('\r\n').filter(l=>/^P\.98/.test(l));
+      if(ST.range&&ST.range[0]){const a=tsY(ST.range[0]),b=tsY(ST.range[1]);lines=lines.filter(l=>{const m=l.match(/^P\.98\(\d?(\d{12})\)/);return !m||(m[1]>=a&&m[1]<=b);});}
+      lp+=lines.map(l=>l+'\r\n').join('');}
+    out.push([`${D}_${nr}-${st}_${Z}_LPR_.LP`,enc(lp)]);}
+  else log('WARN','Kein Lastgang ausgelesen – LP-Datei fehlt');
+  saveFiles(out);if(!ST.profileRaw)setTimeout(()=>status('⚠ Ohne Lastgang nur 2 Dateien – für die LP-Datei mit „Lastgang“ (und „Logbuch“) auslesen.','warn'),out.length*700+50);};
 $('#btnCsvVals').onclick=()=>download(`werte_${meterNo()||'zaehler'}_${stamp()}.csv`,'Kennzahl;Bedeutung;Wert;Einheit;Primär (WF '+WF().kP+');Zusatz\n'+[...ST.vals.values()].map(e=>[e.obis,describe(e.key),e.value.replace('.',','),e.unit,(()=>{const k=kFor(e.unit),v=parseFloat(e.value);return k!==1&&isFinite(v)?String(+(v*k).toPrecision(10)).replace('.',','):'';})(),e.extra].map(csvQ).join(';')).join('\n'));
 $('#btnCsvProf').onclick=()=>{const p=profP();download(`lastgang_${meterNo()||'zaehler'}_${stamp()}.csv`,['Zeit',...p.channels.map(c=>`${c.key} [${c.unit}]`),'Status'].join(';')+'\n'+p.rows.map(r=>[fmtDT(r.t),...r.v.map(v=>isFinite(v)?String(v).replace('.',','):''),r.st].join(';')).join('\n'));};
 $('#btnPngProf').onclick=()=>{const cv=$('#lgCanvas'),p=profP();const o=document.createElement('canvas');const pad=40*(window.devicePixelRatio||1);
@@ -1069,7 +1279,7 @@ $$('#tabs button').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
   $('#lgFrom').value=dl(new Date(today-864e5));$('#lgTo').value=dl(today);
   try{const p=localStorage.getItem(PWKEY);if(p!=null){$('#pw').value=p;$('#pwKeep').checked=true;}}catch{}
   renderVals();fillPhInputs();renderProfile();renderLogbook();renderHist();renderHeat();updCtl();wfChanged();nosupInfo();
-  if(FRAMED){$('#frameLink').href=location.href;$('#frameNote').hidden=!(S.transport==='ble');}
+  if(FRAMED){$('#frameLink').href=location.href;$('#frameNote').hidden=!(S.transport==='ble'&&IOS);}
   if(S.transport==='ble'&&S.bleId&&!IOS)Promise.race([BleT.remembered(),sleep(2500).then(()=>null)]).then(r=>{if(r&&!window._lastBle){window._lastBle=r;log('INFO','Gespeicherter Kopf gefunden: '+(r.dev.name||r.dev.id));}});$('#bleInfo').textContent=S.bleName?'gespeichert: '+S.bleName:'';
   if(!navigator.bluetooth&&!('serial' in navigator))status('Dieser Browser kann weder Bluetooth noch COM-Port – Chrome (Android/PC) oder Edge verwenden. Demo und Import gehen trotzdem.','warn');})();
 </script>
