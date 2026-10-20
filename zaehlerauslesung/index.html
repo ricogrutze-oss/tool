@@ -173,7 +173,7 @@ th,td{border-bottom:.5px solid var(--line)}
     <button id="btnAus" class="op2 big io" title="Zähler mit Lastgang und Logbuch auslesen und Ausbau-Dateien (.txt, .VL, .LP) speichern">Ausbau</button>
     <button id="btnGo" class="pri big wide">Auslesen ▾</button>
     <button id="btnClk" class="op2 big io2" title="Datum/Uhrzeit des Zählers prüfen und auf Handyzeit stellen">🕓 Uhrzeit stellen</button>
-    <button id="btnModem" class="op2 big io2" title="Empfangsstärke des Zählermodems auslesen">📶 Modem-Empfang</button>
+    <button id="btnModem" class="op2 big io2" title="Empfang des Modems messen – danach Bericht als Bild mit Standort">📶 Modem-Empfang</button>
   </div>
   <div class="wfMain"><div class="wandler" id="wfBox">
       <label>Stromwandler<span class="wfrow"><input id="ctP" type="number" inputmode="decimal" placeholder="—"><span>/</span><select id="ctS"><option value="5">5 A</option><option value="1">1 A</option></select></span></label>
@@ -485,7 +485,11 @@ class BleT{
     S.bleId=this.dev.id;S.bleName=this.dev.name||'';saveS();
     log('INFO',`Verwende Service ${found.s.uuid}, TX ${found.w.uuid}, RX ${found.n.uuid}`);
   }
-  async write(u8){if(this.dev?.gatt&&this.dev.gatt.connected===false)throw new Error('Bluetooth-Verbindung unterbrochen');
+  /* whole=true (HDLC): Rahmen möglichst in einem Stück senden wie Q4 – sonst können Pausen zwischen
+     20-Byte-Stücken die Zeichenpausen-Überwachung des Zählers auslösen. Klappt das nicht (kleine MTU), 20er-Stücke. */
+  async write(u8,whole){if(this.dev?.gatt&&this.dev.gatt.connected===false)throw new Error('Bluetooth-Verbindung unterbrochen');
+    if(whole&&this.big!==false&&u8.length>20){const w=this.w;try{if(w.properties.writeWithoutResponse&&w.writeValueWithoutResponse)await w.writeValueWithoutResponse(u8);else await w.writeValueWithResponse(u8);this.big=true;return;}
+      catch(e){this.big=false;log('INFO','Kopf nimmt nur 20 Byte je Paket – sende in Stücken');}}
     for(let i=0;i<u8.length;i+=20){const c=u8.slice(i,i+20),w=this.w;
     if(w.properties.writeWithoutResponse&&w.writeValueWithoutResponse)await w.writeValueWithoutResponse(c);
     else if(w.writeValueWithResponse)await w.writeValueWithResponse(c);else await w.writeValue(c);}}
@@ -594,10 +598,10 @@ function findIdent(b){for(let i=0;i<b.length;i++){if(b[i]===0x2f&&b[i+1]!==0x3f&
 class IEC{
   constructor(link){this.l=link;this.baud=300;}
   async reset300(){const ble=this.l.t instanceof BleT;if(ble)await this.l.t.prep();else if(this.baud!==300&&!this.l.t.fixedBaud){await this.l.t.setBaud(300);}this.baud=300;await sleep(this.l.t instanceof DemoT?0:ble?120:600);}
-  async handshake(){
+  async handshake(to){
     await this.reset300();this.l.clear();
     await this.l.send(enc(`/?${$('#addr').value.trim()}!\r\n`));
-    const id=await this.l.wait(findIdent,+S.hs||5000);
+    const id=await this.l.wait(findIdent,to||+S.hs||5000);
     this.ident=id.trim();log('INFO','Kennung: '+this.ident);this.onIdent?.(this.ident);return this.ident;
   }
   pickBaud(){let z=BAUD[this.ident[4]]?this.ident[4]:'0';
@@ -622,11 +626,12 @@ class IEC{
   async readout(onPart,pre){if(pre){this.ident=pre;this.onIdent?.(pre);}else await this.handshake();await this.option('0');const f=await this.readFrame(8000,onPart);
     if(f.type!=='FRAME')throw new Error('Unerwartete Antwort: '+f.type);if(!f.ok)log('WARN','Prüfsumme (BCC) der Datenauslesung falsch');return {ident:this.ident,text:f.body,ok:f.ok};}
   /* pw: ein oder mehrere Passwörter (Komma/Leerzeichen getrennt) – werden der Reihe nach probiert wie bei Q4 */
-  async login(pw){const list=String(pw||'').split(/[\s,;]+/).filter(Boolean);
+  /* pre=true: die Kennung wurde gerade schon abgefragt (z. B. um L+G Mode E zu erkennen) – erster Versuch ohne neue Anfrage */
+  async login(pw,pre){const list=String(pw||'').split(/[\s,;]+/).filter(Boolean);
     const pref=pwPref();if(pref&&list.includes(pref))list.sort((a,b)=>(b===pref)-(a===pref));
     if(!list.length)list.push('');
     for(let i=0;i<list.length;i++){
-      await this.handshake();await this.option('1');const f=await this.readFrame(5000);
+      if(!(pre&&i===0))await this.handshake();await this.option('1');const f=await this.readFrame(5000);
       if(f.type!=='FRAME'||!/^P0/.test(f.head))throw new Error('Kein Programmiermodus angeboten ('+(f.head||f.type)+')');
       if(!list[i]){log('INFO','Ohne Passwort weiter');return;}
       await this.l.send(frame('P1',`(${list[i]})`));const r=await this.readFrame(5000);
@@ -639,6 +644,111 @@ class IEC{
       out+=f.body;if(!f.ok)log('WARN','BCC-Fehler in Antwort');if(f.eot){await this.l.send([ACK]);continue;}break;}
     return out;}
   async bye(){try{await this.l.send([SOH,...enc('B0'),ETX,bcc([...enc('B0'),ETX])]);await sleep(200);}catch{}}
+  /* Mode E (wie Q4 bei L+G): ACK 2 z 2, danach Baudrate z mit 8N1 für HDLC. Der Zähler bestätigt mit ACK 2 z 2 bei neuer Baudrate. */
+  async modeE(){const z=this.pickBaud(),t=this.l.t,demo=t instanceof DemoT;await sleep(demo?0:200);
+    await this.l.send([ACK,...enc(`2${z}2\r\n`)]);await sleep(demo?20:t instanceof BleT?260:300);
+    const b=BAUD[z];if(t instanceof BleT){for(const c of [z,'D','N','A'])await t.cmd(c);}else if(t instanceof SerialT)await t.setBaud(b,{dataBits:8,parity:'none',stopBits:1});
+    this.baud=b;this.l.strip=false;log('INFO',`Mode E: HDLC mit ${b} Baud 8N1`);
+    try{await this.l.wait(buf=>{const i=buf.findIndex(x=>(x&0x7f)===ACK);if(i<0||buf.length<i+4)return null;buf.splice(0,i+4);return 1;},1500);log('INFO','Zähler bestätigt Mode E');}
+    catch{log('WARN','Keine Mode-E-Bestätigung vom Zähler – versuche trotzdem HDLC');}
+    await sleep(demo?0:200);}
+  async endE(){const t=this.l.t;try{if(t instanceof BleT)await t.prep();else if(t instanceof SerialT)await t.setBaud(300,{dataBits:7,parity:'even',stopBits:1});}catch{}this.baud=300;this.l.strip=true;}
+}
+
+/* ---------- DLMS/COSEM über HDLC (Mode E) – L+G mit „\2“ in der Kennung (ZMD/ZFD …) ----------
+   Abläufe aus Q4-Mitschnitten (Okt. 2026) nachgebaut und Byte für Byte gegengeprüft:
+   • Uhrzeit stellen: Client 32 + LLS-Passwort, Server 1 → Write auf 0x2BC8 (Uhr, Attribut 2)
+   • Vektordiagramm: Kurznamen 0x9AF0 … (U, I, f, Winkel) samt Skalierung (Attribut 3)
+   • Modem-Empfang: Client 16 (öffentlich, ohne Passwort), Server 17 → 0x3C38 … 0x3C50
+   HDLC ohne Byte-Stuffing, Prüfsumme CRC-16/X.25, Kurznamen-Referenzierung (SN). */
+const crcH=d=>{let c=0xffff;for(const b of d){c^=b;for(let k=0;k<8;k++)c=c&1?(c>>>1)^0x8408:c>>>1;}return (~c)&0xffff;};
+const isLGE=id=>/^\/LGZ.\\2/.test(id||'');
+function axLen(b,i){let n=b[i++];if(n&0x80){const k=n&0x7f;n=0;for(let j=0;j<k;j++)n=n*256+b[i++];}return [n,i];}
+const axLenEnc=n=>n<0x80?[n]:n<0x100?[0x81,n]:[0x82,n>>8,n&255];
+/* A-XDR-Daten: Zahlen → number, Texte → string, Oktettfolgen → {os:[…]}, Array/Struktur → JS-Array */
+function axData(b,i){const t=b[i++];let n;const u32=k=>((b[k]<<24)|(b[k+1]<<16)|(b[k+2]<<8)|b[k+3]);
+  switch(t){
+    case 0:return{v:null,i};
+    case 1:case 2:{[n,i]=axLen(b,i);const a=[];for(let k=0;k<n;k++){const r=axData(b,i);a.push(r.v);i=r.i;}return{v:a,i};}
+    case 3:return{v:!!b[i],i:i+1};
+    case 4:{[n,i]=axLen(b,i);const nb=Math.ceil(n/8);return{v:{os:b.slice(i,i+nb)},i:i+nb};}
+    case 5:return{v:u32(i),i:i+4};
+    case 6:return{v:u32(i)>>>0,i:i+4};
+    case 9:case 0x0d:{[n,i]=axLen(b,i);return{v:{os:b.slice(i,i+n)},i:i+n};}
+    case 0x0a:case 0x0c:{[n,i]=axLen(b,i);return{v:dec(b.slice(i,i+n)),i:i+n};}
+    case 0x0f:return{v:(b[i]<<24)>>24,i:i+1};
+    case 0x10:return{v:((b[i]<<8|b[i+1])<<16)>>16,i:i+2};
+    case 0x11:case 0x16:return{v:b[i],i:i+1};
+    case 0x12:return{v:b[i]<<8|b[i+1],i:i+2};
+    case 0x14:case 0x15:{let v=0n;for(let k=0;k<8;k++)v=v*256n+BigInt(b[i+k]);if(t===0x14&&v>=1n<<63n)v-=1n<<64n;return{v:Number(v),i:i+8};}
+    case 0x17:return{v:new DataView(Uint8Array.from(b.slice(i,i+4)).buffer).getFloat32(0),i:i+4};
+    case 0x18:return{v:new DataView(Uint8Array.from(b.slice(i,i+8)).buffer).getFloat64(0),i:i+8};
+    case 0x19:return{v:{os:b.slice(i,i+12)},i:i+12};
+    case 0x1a:return{v:{os:b.slice(i,i+5)},i:i+5};
+    case 0x1b:return{v:{os:b.slice(i,i+4)},i:i+4};
+    default:throw new Error('DLMS-Datentyp 0x'+t.toString(16)+' unbekannt');}}
+const obisStr=v=>{const b=v?.os||[];return b.length===6?`${b[0]}-${b[1]}:${b[2]}.${b[3]}.${b[4]}*${b[5]}`:'';};
+const dlStr=v=>typeof v==='string'?v.replace(/\0+$/,'').trim():v?.os?String.fromCharCode(...v.os.filter(x=>x>=32&&x<127)).trim():'';
+class DLMS{
+  constructor(link){this.l=link;this.maxTx=128;this.vaa=0xfa00;this.onBlock=null;}
+  async tx(ctrl,info=[],seg=false){const len=7+(info.length?2+info.length:0);
+    const f=[0xa0|(seg?8:0)|((len>>8)&7),len&255,this.da,this.ca,ctrl];
+    if(info.length){const h=crcH(f);f.push(h&255,h>>8,...info);}
+    const c=crcH(f);f.push(c&255,c>>8);const out=[0x7e,...f,0x7e];log('TX',out,true);await this.l.t.write(new Uint8Array(out),true);}
+  /* nächsten gültigen HDLC-Rahmen aus dem Puffer holen (Länge aus dem Kopf, kein Stuffing) */
+  rx(timeout=4000){return this.l.wait(b=>{
+    for(;;){const s=b.indexOf(0x7e);if(s<0){b.length=0;return null;}if(s>0)b.splice(0,s);
+      if(b.length<3)return null;if(b[1]===0x7e||(b[1]&0xf0)!==0xa0){b.shift();continue;}
+      const L=((b[1]&7)<<8)|b[2];if(b.length<L+2)return null;if(b[L+1]!==0x7e){b.shift();continue;}
+      const fr=b.slice(1,L+1);b.splice(0,L+1);
+      if(crcH(fr.slice(0,-2))!==(fr[L-2]|(fr[L-1]<<8))){log('WARN','HDLC: Prüfsumme falsch – Rahmen verworfen');continue;}
+      let i=2;while(i<L-2&&!(fr[i]&1))i++;i++;while(i<L-2&&!(fr[i]&1))i++;i++;
+      const ctrl=fr[i++];const info=L-2>i?fr.slice(i+2,L-2):[];
+      return{ctrl,seg:!!(fr[0]&8),info,I:!(ctrl&1),ns:(ctrl>>1)&7};}},timeout);}
+  async connect(server,client,timeout=1500){this.da=(server<<1)|1;this.ca=(client<<1)|1;this.l.clear();
+    await this.tx(0x93,[0x81,0x80,0x12,0x05,0x01,0xf8,0x06,0x01,0xf8,0x07,0x04,0,0,0,1,0x08,0x04,0,0,0,1]);
+    let f;try{f=await this.rx(timeout);}catch{log('INFO',`HDLC: keine Antwort von Server-Adresse ${server}`);return false;}
+    if(f.ctrl!==0x73)throw new Error(f.ctrl===0x1f?'Zähler lehnt HDLC-Verbindung ab (DM)':'HDLC: unerwartete Antwort auf SNRM (0x'+f.ctrl.toString(16)+')');
+    this.maxTx=128;const p=f.info;for(let i=3;i+1<p.length;){const id=p[i],n=p[i+1];let v=0;for(let k=0;k<n;k++)v=v*256+p[i+2+k];if(id===6)this.maxTx=v;i+=2+n;}
+    this.ns=this.nr=0;this.server=server;this.client=client;log('INFO',`HDLC verbunden: Server ${server}, Client ${client}, max. ${this.maxTx} Byte je Rahmen`);return true;}
+  /* AARQ: pw=null → ohne Anmeldung (öffentlicher Client), sonst LLS mit Passwort */
+  async assoc(pw){const ini=[0xbe,0x0f,4,0x0d,1,0,0,0,6,0x5f,4,0,0x1c,pw==null?0x1b:0x13,0x20,0,0];
+    const b=[0x80,2,7,0x80,0xa1,9,6,7,0x60,0x85,0x74,5,8,1,2];
+    if(pw!=null){const p=enc(pw);b.push(0x8a,2,7,0x80,0x8b,7,0x60,0x85,0x74,5,8,2,1,0xac,p.length+2,0x80,p.length,...p);}
+    b.push(...ini);const r=await this.xfer([0x60,b.length,...b]);
+    if(r[0]!==0x61)throw new Error('DLMS: keine Antwort auf Anmeldung (AARE)');
+    const at=pat=>{for(let i=0;i+pat.length<r.length;i++)if(pat.every((x,k)=>r[i+k]===x))return i+pat.length;return -1;};
+    const ri=at([0xa2,3,2,1]),res=ri>0?r[ri]:-1,di=at([0xa3,5]),diag=di>0?r[di+4]:0,ci=at([0x5f,4]);
+    if(ci>0&&r.length>ci+7)this.vaa=(r[ci+6]<<8)|r[ci+7];
+    if(res===0&&diag===0)return true;
+    log('WARN',`DLMS-Anmeldung abgelehnt (Ergebnis ${res}, Diagnose ${diag}${diag===13?' = Passwort falsch':diag===14?' = höhere Sicherheitsstufe nötig':''})`);return false;}
+  /* APDU senden (bei Bedarf in Segmente zerlegt) und Antwort einsammeln (Segmente mit RR quittieren) */
+  async xfer(apdu){const pdu=[0xe6,0xe6,0,...apdu],mx=Math.max(16,this.maxTx||128);
+    for(let i=0;i<pdu.length;i+=mx){const last=i+mx>=pdu.length;await this.tx((this.nr<<5)|0x10|(this.ns<<1),pdu.slice(i,i+mx),!last);this.ns=(this.ns+1)&7;
+      if(!last){const f=await this.rx(5000);if((f.ctrl&0x0f)!==1)throw new Error('HDLC: Segment nicht bestätigt');}}
+    const out=[];
+    for(;;){const f=await this.rx(8000);
+      if(f.I){this.nr=(f.ns+1)&7;for(const x of f.info)out.push(x);if(f.seg){await this.tx((this.nr<<5)|0x11);continue;}break;}
+      if((f.ctrl&0x0f)===1)continue;
+      throw new Error(f.ctrl===0x1f||f.ctrl===0x0f?'Zähler hat die Verbindung beendet (DM)':'HDLC: unerwarteter Rahmen 0x'+f.ctrl.toString(16));}
+    if(out[0]!==0xe6||out[1]!==0xe7)throw new Error('DLMS: Antwort ohne LLC-Kopf');return out.slice(3);}
+  /* Lesen per Kurzname; Ergebnis je Adresse {ok,v} bzw. {ok:false,err} – mit Blockübertragung für große Daten */
+  async read(sns){const out=[];for(let s=0;s<sns.length;s+=30){const part=sns.slice(s,s+30);const req=[5,...axLenEnc(part.length)];for(const a of part)req.push(2,(a>>8)&255,a&255);
+      const r=await this.xfer(req);if(r[0]!==0x0c)throw new Error(r[0]===0x0e?'Zähler meldet Dienstfehler (Leserecht?)':'DLMS: unerwartete Antwort 0x'+r[0].toString(16));
+      let [cnt,i]=axLen(r,1);
+      for(let k=0;k<cnt;k++){const ch=r[i++];
+        if(ch===0){const d=axData(r,i);out.push({ok:true,v:d.v});i=d.i;}
+        else if(ch===1)out.push({ok:false,err:r[i++]});
+        else if(ch===2){let last=r[i],bn=(r[i+1]<<8)|r[i+2];const [len,j]=axLen(r,i+3);let raw=r.slice(j,j+len);i=j+len;
+          while(!last){this.onBlock?.(bn);const q=await this.xfer([5,1,5,bn>>8,bn&255]);
+            if(q[0]!==0x0c||q[2]!==2)throw new Error('DLMS: Blockübertragung abgebrochen');
+            last=q[3];bn=(q[4]<<8)|q[5];const [l2,j2]=axLen(q,6);raw=raw.concat(q.slice(j2,j2+l2));}
+          out.push({ok:true,v:axData(raw,0).v});}
+        else throw new Error('DLMS: Antworttyp '+ch+' unbekannt');}}
+    return out;}
+  async write(sn,data){const r=await this.xfer([6,1,2,(sn>>8)&255,sn&255,1,...data]);
+    if(r[0]!==0x0d)throw new Error('DLMS: keine Schreibbestätigung');return r[2]===0?0:(r[3]??-1);}
+  async close(){try{await this.tx(0x53);await this.rx(1500);}catch{}}
 }
 
 /* ---------- Parser ---------- */
@@ -707,7 +817,8 @@ function wfChanged(){const w=WF(),on=w.kP!==1;
   $('#wfInfo').textContent=on?`Faktor ${fmtN(w.kP,w.kP%1?2:0)}`:'';
   _pp=null;renderVals();fillPhInputs();renderProfile();}
 let _pp=null;
-function profP(){const p=ST.profile;if(!p)return p;const w=WF();if(w.kP===1)return p;
+let NOWF=false;
+function profP(){const p=ST.profile;if(!p)return p;const w=WF();if(w.kP===1||NOWF)return p;
   if(_pp&&_pp.src===p&&_pp.n===p.rows.length&&_pp.k===w.kP)return _pp.p;
   const ks=p.channels.map(c=>kFor(c.unit));
   const q={...p,rows:p.rows.map(r=>({...r,v:r.v.map((x,i)=>x*ks[i])}))};_pp={src:p,n:p.rows.length,k:w.kP,p:q};return q;}
@@ -894,8 +1005,19 @@ async function run(label,fn){if(busy)return;
   catch(e){log('ERR',e.message);status(label+': '+errMsg(e),'err');try{await IECP?.bye()}catch{}}
   finally{ST.live=false;renderVals();setBusy(false);prog(null);if(LINK)LINK.strip=true;}}
 async function withLogin(fn){await IECP.login($('#pw').value);try{return await fn();}finally{await IECP.bye();}}
-const tsArg=(d)=>{if(!d)return '';const x=new Date(d);const s=`${pad(x.getFullYear()%100)}${pad(x.getMonth()+1)}${pad(x.getDate())}${pad(x.getHours())}${pad(x.getMinutes())}`;return S.profFmt==='season'?'0'+s:s;};
-const rangeArg=(a,b)=>S.profFmt==='all'?'(;)':`(${tsArg(a)};${tsArg(b)})`;
+const tsArg=(d,f=S.profFmt)=>{if(!d)return '';const x=new Date(d);const s=`${pad(x.getFullYear()%100)}${pad(x.getMonth()+1)}${pad(x.getDate())}${pad(x.getHours())}${pad(x.getMinutes())}`;return f==='season'?'0'+s:s;};
+const rangeArg=(a,b,f=S.profFmt)=>f==='all'?'(;)':`(${tsArg(a,f)};${tsArg(b,f)})`;
+/* je Zählertyp gemerkt: welches Profil (P.01/P.02) und Datumsformat der Zähler annimmt */
+const PFKEY='zaehlerauslesung.lgfmt';
+function lgPref(set){let all={};try{all=JSON.parse(localStorage.getItem(PFKEY))||{}}catch{}const t=meterType();if(set){all[t]={...(all[t]||{}),...set};try{localStorage.setItem(PFKEY,JSON.stringify(all))}catch{};return;}return all[t]||{};}
+const isErr=t=>/^\(?ERROR/i.test(String(t).trim())||/^\(\)$/.test(String(t).trim());
+/* probiert der Reihe nach, bis der Zähler Daten liefert; Treffer wird je Zählertyp gemerkt */
+async function readTry(kind,cands,mk,onPart,okFn){const seen=new Set(),list=cands.filter(c=>{const k=JSON.stringify(c);if(seen.has(k))return false;seen.add(k);return true;});
+  let empty=null,last='';for(const [i,c] of list.entries()){if(stopReq)break;if(i)log('INFO',`${kind}: nächster Versuch ${c.p||''} ${c.f}`);
+    let txt;try{txt=await IECP.read(mk(c),15000,onPart);}catch(e){last=e.message;log('WARN',`${kind} ${c.p||''} ${c.f}: ${e.message}`);continue;}
+    if(isErr(txt)){last='ERROR';log('WARN',`${kind} ${c.p||''} ${c.f}: ERROR`);continue;}
+    if(okFn(txt)){lgPref(kind==='Lastgang'?{p:c.p,f:c.f}:{lf:c.f});return{txt,c};}if(!empty)empty={txt,c};}
+  if(empty)return{txt:empty.txt,c:empty.c,empty:true};return{err:last||'ERROR'};}
 function autoSave(){if(!S.auto||!ST.vals.size)return;const h=hist();h.unshift(snapshot());while(h.length>60)h.pop();saveHist(h);}
 const Q_UI=['32.7.0','52.7.0','72.7.0','31.7.0','51.7.0','71.7.0'],Q_ANG=[['81.7.10','81.7.1'],['81.7.20','81.7.2'],['81.7.40','81.7.4'],['81.7.51','81.7.15'],['81.7.62','81.7.26']],Q_PQ=[['21.7.0','23.7.0'],['41.7.0','43.7.0'],['61.7.0','63.7.0']];
 let NOSUP=new Set(),stopReq=false,quickRun=false;
@@ -942,6 +1064,10 @@ async function readPower(pre,round){
   renderPower();return okP;}
 
 async function readExtras(ex,pre,notes){
+  if(isLGE(IECP.ident)&&ex.includes('inst')){status(pre+'Momentanwerte per DLMS …');ex=ex.filter(x=>x!=='inst');
+    try{await dlmsRun({client:pwList().length?32:16,servers:[1,17]},async d=>{const v=await dlmsValues(d,await dlmsInstList(d));if(!v.length)notes.push('keine Momentanwerte');else{setVals(v,false);fillPhInputs();}});}
+    catch(e){log('ERR',e.message);notes.push('Momentanwerte (DLMS): '+e.message);}
+    if(!ex.length)return;}
   status(pre+'Programmiermodus'+($('#pw').value?' mit Passwort':'')+' …');prog('ind');
   await IECP.login($('#pw').value);loadNosup();
   try{
@@ -949,25 +1075,29 @@ async function readExtras(ex,pre,notes){
     if(ex.includes('prof')){showTab('lastgang');
       const a=$('#lgFrom').value,b=$('#lgTo').value;const exp=Math.max(1,Math.round((new Date(b)-new Date(a))/9e5));
       status(pre+'Lastgang wird angefordert …');prog(0);
-      try{const txt=await IECP.read(S.prof+rangeArg(a,b),15000,p=>{const pr=parseProfile(cutLines(p));ST.profile=pr;renderProfile();const n=pr.rows.length;
-          prog(n/exp*100);status(`${pre}Lastgang … ${n} von ca. ${exp} Werten (${Math.min(100,Math.round(n/exp*100))} %)`);});
-        if(/^\(?ERROR/i.test(txt.trim()))notes.push('Lastgang: Zähler meldet ERROR (Passwort nötig oder Datumsformat unter „Mehr“ ändern)');
-        else{ST.profileRaw=txt;ST.profile=parseProfile(txt);renderProfile();if(!ST.profile.rows.length)notes.push('Lastgang ohne Werte');}}
-      catch(e){notes.push('Lastgang: '+e.message);}}
+      const pr0=lgPref();const cands=[];if(pr0.p)cands.push({p:pr0.p,f:pr0.f});cands.push({p:S.prof,f:S.profFmt});
+      for(const p of ['P.01','P.02'])for(const f of ['season','plain'])cands.push({p,f});cands.push({p:'P.01',f:'all'});
+      const r=await readTry('Lastgang',cands,c=>c.p+rangeArg(a,b,c.f),p=>{const pr=parseProfile(cutLines(p));ST.profile=pr;renderProfile();const n=pr.rows.length;
+          prog(n/exp*100);status(`${pre}Lastgang … ${n} von ca. ${exp} Werten (${Math.min(100,Math.round(n/exp*100))} %)`);},t=>parseProfile(t).rows.length>0);
+      if(r.err)notes.push(`Lastgang: Zähler lehnt alle Varianten ab (${r.err}) – Passwort mit Leserecht nötig?`);
+      else{ST.profileRaw=r.txt;ST.profile=parseProfile(r.txt);ST.lgUsed=r.c;renderProfile();if(r.empty)notes.push('Lastgang ohne Werte');log('INFO',`Lastgang gelesen mit ${r.c.p} ${r.c.f}`);}}
     if(ex.includes('log')){showTab('logbuch');status(pre+'Logbuch wird angefordert …');prog('ind');
       const to=new Date(),from=new Date(to-90*864e5);const dl=d=>new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,16);
-      try{const txt=await IECP.read('P.98'+rangeArg(dl(from),dl(to)),15000,p=>{ST.logbook=parseLogbook(cutLines(p));renderLogbook();status(`${pre}Logbuch … ${ST.logbook.length} Einträge`);});
-        if(/^\(?ERROR/i.test(txt.trim()))notes.push('Logbuch: Zähler meldet ERROR');else{ST.logRaw=txt;ST.logbook=parseLogbook(txt);renderLogbook();}}
-      catch(e){notes.push('Logbuch: '+e.message);}}
+      const pr0=lgPref();const fs=[pr0.lf,ST.lgUsed?.f,S.profFmt,'season','plain','all'].filter(Boolean).map(f=>({f}));
+      const r=await readTry('Logbuch',fs,c=>'P.98'+rangeArg(dl(from),dl(to),c.f),p=>{ST.logbook=parseLogbook(cutLines(p));renderLogbook();status(`${pre}Logbuch … ${ST.logbook.length} Einträge`);},t=>parseLogbook(t).length>0);
+      if(r.err)notes.push(`Logbuch: Zähler lehnt alle Varianten ab (${r.err})`);else{ST.logRaw=r.txt;ST.logbook=parseLogbook(r.txt);renderLogbook();}}
   }finally{await IECP.bye();}}
 
 async function quickLoop(mode){
   ST.mode='elec';ST.vals.clear();ST.profile=null;ST.logbook=[];renderProfile();renderLogbook();showTab(mode==='pow'?'werte':'zeiger');
-  stopReq=false;quickRun=mode;setBusy(true);
-  status('Programmiermodus'+($('#pw').value?' mit Passwort':'')+' …');
-  await IECP.login($('#pw').value);loadNosup();let round=0,got=0;
-  try{do{round++;got=mode==='pow'?await readPower('',S.oLoop?round:0):await readInstant('',S.oLoop?round:0);if(!got)break;saveNosup();}while(S.oLoop&&!stopReq);}
-  finally{quickRun=false;await IECP.bye();}
+  stopReq=false;quickRun=mode;setBusy(true);let round=0,got=0;
+  try{status('Zähler wird angesprochen …');const id=await IECP.handshake();
+    if(isLGE(id))return await dlmsQuick(mode,true);   /* L+G mit Mode E: DLMS statt Programmiermodus (wie Q4) */
+    status('Programmiermodus'+($('#pw').value?' mit Passwort':'')+' …');
+    await IECP.login($('#pw').value,true);loadNosup();
+    try{do{round++;got=mode==='pow'?await readPower('',S.oLoop?round:0):await readInstant('',S.oLoop?round:0);if(!got)break;saveNosup();}while(S.oLoop&&!stopReq);}
+    finally{await IECP.bye();}}
+  finally{quickRun=false;}
   if(!got)return mode==='pow'?'⚠ Keine Leistung erhalten – Passwort nötig? (unter ⚙ eintragen)':'⚠ Keine Momentanwerte – Passwort nötig? (unter ⚙ eintragen)';
   autoSave();return `${mode==='pow'?'Leistung':'Zeigerwerte'} gelesen${round>1?` (${round} Runden)`:''}`;}
 /* L+G C003: JJMMTThhmmss + Hundertstel + Wochentag(1=Mo…7=So) + Sommerzeit(1/0) */
@@ -981,7 +1111,8 @@ async function meterTime(){
     const v=(f.body.match(/\(([^)]*)\)/)||[])[1];const mt=parseLg(v);if(!mt)throw new Error('Zeitformat unbekannt: '+v);return mt;}
   const g=async k=>{const a=await IECP.read(k+'()',5000);const m=a.match(/\((\d{6})/);if(!m)throw new Error(`Zähler liefert ${k} nicht (${a.trim()||'keine Antwort'})`);return m[1];};
   const d=await g('0.9.2'),t=await g('0.9.1');return new Date(2000+ +d.slice(0,2),+d.slice(2,4)-1,+d.slice(4,6),+t.slice(0,2),+t.slice(2,4),+t.slice(4,6));}
-async function readClock(){const mt=await meterTime();const now=new Date();
+async function readClock(){return clkShow(await meterTime());}
+function clkShow(mt){const now=new Date();
   const df=Math.round((mt-now)/1000)||0;$('#clkBox').innerHTML=`<div><span class="mut">Zähler</span><b>${mt.toLocaleString('de-DE')}</b></div><div><span class="mut">Handy</span><b>${now.toLocaleString('de-DE')}</b></div><div><span class="mut">Abweichung</span><b class="${Math.abs(df)>30?'warn':'ok'}">${df>=0?'+':''}${fmtN(df,0)} s</b></div>`;return df;}
 async function writeClock(){const n=new Date();
   if(isLG()){const v=lgTime(n);const r=await IECP.cmdRW('W2',`C003(${v})`);if(r.type!=='ACK')throw new Error('Zähler hat das Stellen abgelehnt ('+(r.type==='NAK'?'NAK':(r.head||r.body||r.type))+')');log('INFO','Zeit gestellt: '+v);return;}
@@ -992,7 +1123,9 @@ async function writeClock(){const n=new Date();
   if(r.type!=='ACK')throw new Error('Zähler hat die Uhrzeit nicht angenommen ('+(r.type==='NAK'?'NAK':(r.body||r.type))+')');log('INFO',`Zeit gestellt (${used}): ${d} ${tv}`);}
 async function clockOp(write){
   if(busy)return;if(!T&&!(await connect()))return;setBusy(true);prog('ind');showTab('mehr');
-  try{status('Programmiermodus …');await IECP.login($('#pw').value);
+  try{status('Zähler wird angesprochen …');const id=await IECP.handshake();
+    if(isLGE(id)){await dlmsClockOp(write);return;}   /* L+G mit Mode E: Uhr über DLMS (wie Q4) */
+    status('Programmiermodus …');await IECP.login($('#pw').value,true);
     try{const df=await readClock();
       if(write){const who=isLG()?'':/^\/EMH/.test(IECP.ident)?'':`\n\nHinweis: Für ${IECP.ident.slice(1,4)} ist das Stellen noch nicht erprobt (Datum 0.9.2 / Zeit 0.9.1).`;
         if(!confirm(`Zählerzeit weicht ${fmtN(df,0)} s ab.\nJetzt auf Handyzeit ${new Date().toLocaleTimeString('de-DE')} stellen?${who}`)){status('Zeitstellen abgebrochen.');return;}
@@ -1025,7 +1158,7 @@ const OPS={
   async power(){return quickLoop('pow');},
   async all(idPre){
     const ex=FORCE?FORCE.ex:[S.oInst&&'inst',S.oProf&&'prof',S.oLog&&'log'].filter(Boolean);const n=ex.length?2:1;const pre=i=>n>1?`${i}/${n} · `:'';
-    ST.mode='elec';ST.profile=null;ST.profileRaw='';ST.logbook=[];ST.logRaw='';ST.vals.clear();renderProfile();renderLogbook();
+    ST.mode='elec';ST.lgUsed=null;ST.profile=null;ST.profileRaw='';ST.logbook=[];ST.logRaw='';ST.vals.clear();renderProfile();renderLogbook();
     ST.live=true;showTab('werte');
     ST.tRead=Date.now();ST.range=(FORCE?FORCE.ex.includes('prof'):S.oProf)?[$('#lgFrom').value,$('#lgTo').value]:null;
     const r=await IECP.readout(p=>{const v=parseReadout(cutLines(p));setVals(v,true);status(`${pre(1)}Datenauslesung … ${v.length} Werte`);},typeof idPre==='string'?idPre:undefined);
@@ -1065,6 +1198,110 @@ $('#btnNosupReset').onclick=()=>{try{localStorage.removeItem(NKEY)}catch{}NOSUP=
 $('#btnGo').onclick=()=>{$('#readMenu').hidden=!$('#readMenu').hidden;};
 $('#btnStart').onclick=()=>{$('#readMenu').hidden=true;run('Auslesen',OPS.auto);};
 $('#btnClk').onclick=()=>clockOp(true);
+/* ---------- DLMS-Abläufe (L+G Mode E) ---------- */
+const DLKEY='zaehlerauslesung.dlms';
+/* je Zählertyp gemerkt: Server-Adresse je Client, Objektliste (Kurzname, Klasse, OBIS) */
+function dlPref(set){let all={};try{all=JSON.parse(localStorage.getItem(DLKEY))||{}}catch{}const t=meterType();
+  if(set){all[t]={...(all[t]||{}),...set};try{localStorage.setItem(DLKEY,JSON.stringify(all))}catch{};return;}return all[t]||{};}
+function pwList(){const l=String($('#pw').value||'').split(/[\s,;]+/).filter(Boolean);const p=pwPref();if(p&&l.includes(p))l.sort((a,b)=>(b===p)-(a===p));return l;}
+/* Sitzung: (Anmeldung) → Mode E → HDLC verbinden (Server-Adressen der Reihe nach) → AARQ → fn(d) → Abbau */
+async function dlmsRun(opt,fn){
+  if(!opt.pre){status('Zähler wird angesprochen …');await IECP.handshake(opt.hs);}
+  if(!isLGE(IECP.ident))throw new Error(`Zähler ${IECP.ident} bietet kein DLMS (Mode E) an.`);
+  const d=new DLMS(LINK);await IECP.modeE();
+  try{const pr=dlPref(),key='s'+opt.client;let srv=null;
+    for(const s of [...new Set([pr[key],...opt.servers].filter(x=>x!=null))]){status(`DLMS: Verbindungsaufbau (Server-Adresse ${s}) …`);if(await d.connect(s,opt.client)){srv=s;break;}}
+    if(srv==null)throw new Error('Zähler antwortet nicht im HDLC-Modus (Mode E). Kopf richtig aufgesetzt? Details unter Mehr → Protokoll.');
+    if(pr[key]!==srv)dlPref({[key]:srv});
+    if(opt.client===16){if(!(await d.assoc(null)))throw new Error('Zähler lehnt die öffentliche Verbindung ab.');log('INFO','DLMS: öffentliche Verbindung (Client 16)');}
+    else{const list=pwList();let ok=false;
+      for(let i=0;i<list.length&&!ok;i++){if(i){await d.close();await IECP.endE();await IECP.handshake(opt.hs);await IECP.modeE();   /* nächster Versuch: frisch anmelden wie beim ersten Mal */
+          if(!(await d.connect(srv,opt.client)))throw new Error('Zähler antwortet nach abgelehntem Passwort nicht mehr – kurz warten und erneut versuchen.');}
+        status(`DLMS: Anmeldung${list.length>1?` (Passwort ${i+1}/${list.length})`:''} …`);
+        if(await d.assoc(list[i])){ok=true;pwPref(list[i]);log('INFO',`DLMS-Anmeldung OK (Client ${opt.client}, LLS${list.length>1?`, Passwort ${i+1} von ${list.length}`:''})`);}}
+      if(!ok)throw new Error(list.length>1?`DLMS: alle ${list.length} Passwörter abgelehnt`:'DLMS: Passwort abgelehnt – unter ⚙ prüfen');}
+    return await fn(d);
+  }finally{await d.close();await IECP.endE();}}
+/* Objektliste (Association SN, Attribut 2) – einmal je Zählertyp lesen und merken */
+async function dlmsObjects(d){let o=dlPref().objs;if(o?.length)return o;
+  status('DLMS: Objektliste wird gelesen (einmalig je Zählertyp) …');prog('ind');d.onBlock=n=>status(`DLMS: Objektliste … Block ${n}`);
+  try{const [r]=await d.read([d.vaa+8]);if(!r.ok||!Array.isArray(r.v))throw new Error('Objektliste nicht lesbar (Fehler '+(r.err??'?')+')');
+    o=r.v.filter(e=>Array.isArray(e)&&e.length>=4).map(e=>[e[0]&0xffff,e[1],obisStr(e[3])]);}finally{d.onBlock=null;}
+  dlPref({objs:o});log('INFO',`DLMS: Objektliste mit ${o.length} Objekten gemerkt`);return o;}
+const DL_U={8:'°',27:'W',28:'VA',29:'var',30:'Wh',31:'VAh',32:'varh',33:'A',35:'V',44:'Hz'};
+/* Momentanwerte fürs Zeigerbild; Leistung (P/Q) nur, wenn die Objektliste bekannt ist */
+const W_INST=/^1-\d+:(?:(?:32|52|72|31|51|71|14)\.7\.0|81\.7\.\d+)\*255$/,W_POW=/^1-\d+:(?:1|2|3|4|16|21|22|23|24|41|42|43|44|61|62|63|64)\.7\.0\*255$/;
+/* Basisadressen (Attribut 1 = logischer Name) aus dem Q4-Mitschnitt ZMD „B40“: U L1–L3, I L1–L3, f, 5 Winkel */
+const LG_INST=[0x9ae8,0x9b78,0x9c08,0x9c98,0x9d28,0x9db8,0x9ed8,0xa118,0xa1a8,0xa238,0xa2c8,0xa358];
+async function dlmsInstList(d){const pr=dlPref();
+  if(pr.objs?.length)return pr.objs.filter(e=>(e[1]===3||e[1]===4)&&(W_INST.test(e[2])||W_POW.test(e[2]))).map(e=>[e[0],e[2]]);
+  const r=await d.read(LG_INST);const f=LG_INST.map((b,i)=>[b,r[i].ok?obisStr(r[i].v):'']);log('INFO','DLMS: '+f.map(x=>`0x${x[0].toString(16).toUpperCase()}=${x[1]||'–'}`).join(', '));
+  const ok=f.filter(x=>W_INST.test(x[1]));if(ok.filter(x=>/:(?:3[12]|5[12]|7[12])\.7\./.test(x[1])).length>=4)return ok;
+  log('INFO','DLMS: bekannte Adressen passen nicht – lese Objektliste');const o=await dlmsObjects(d);
+  return o.filter(e=>(e[1]===3||e[1]===4)&&(W_INST.test(e[2])||W_POW.test(e[2]))).map(e=>[e[0],e[2]]);}
+/* Wert (Attribut 2) und Skalierung/Einheit (Attribut 3) lesen → Einträge wie aus der IEC-Auslesung */
+async function dlmsValues(d,list){const sns=[];for(const [b] of list)sns.push(b+8,b+16);const r=await d.read(sns);const out=[];
+  list.forEach(([b,ln],k)=>{const v=r[2*k],su=r[2*k+1];if(!v?.ok||typeof v.v!=='number')return;
+    const s=su?.ok&&Array.isArray(su.v)?su.v:[0,255],sc=+s[0]||0,un=DL_U[s[1]]||'',x=v.v*10**sc;
+    if(un==='°'&&Math.abs(x)>360)return;   /* L+G meldet 400° = Winkel ungültig (keine Spannung/kein Strom) */
+    const key=ln.replace(/^\d+-\d+:/,'').replace(/\*255$/,'');
+    out.push({obis:key,key,value:x.toFixed(Math.max(0,-sc)),unit:un,raw:String(v.v),extra:'DLMS 0x'+(b+8).toString(16).toUpperCase()});});
+  return out;}
+async function dlmsIdent(d){try{const r=await d.read([0xfd08,0x3848]);const out=[];
+    if(r[0].ok&&dlStr(r[0].v))out.push({obis:'C.1.0',key:'C.1.0',value:dlStr(r[0].v),unit:'',raw:'',extra:'DLMS 0xFD08'});
+    if(r[1].ok&&dlStr(r[1].v))out.push({obis:'0.2.0',key:'0.2.0',value:dlStr(r[1].v),unit:'',raw:'',extra:'DLMS 0x3848'});
+    if(out.length)setVals(out,false);}catch(e){log('WARN','DLMS Kennung: '+e.message);}}
+/* Zeiger bzw. Leistung über DLMS (ersetzt den Programmiermodus bei L+G mit Mode E) */
+async function dlmsQuick(mode,pre){const pw=pwList();ST.ident=IECP.ident;
+  return dlmsRun({client:pw.length?32:16,servers:[1,17],pre},async d=>{
+    await dlmsIdent(d);let list;
+    if(mode==='pow'){const o=await dlmsObjects(d);list=o.filter(e=>(e[1]===3||e[1]===4)&&W_POW.test(e[2])).map(e=>[e[0],e[2]]);
+      if(!list.length)throw new Error('Keine Leistungsregister (1.7/2.7/3.7/4.7) in der Objektliste gefunden');}
+    else list=await dlmsInstList(d);
+    let round=0,got=0;
+    do{round++;status(`DLMS: ${mode==='pow'?'Leistung':'Zeiger'} …${S.oLoop?` Runde ${round}`:''}`);prog('ind');
+      const v=await dlmsValues(d,list);got=v.length;if(!got)break;ST.live=true;setVals(v,false);if(mode==='pow')renderPower();else fillPhInputs();
+      if(S.oLoop&&!stopReq)await sleep(700);}while(S.oLoop&&!stopReq);
+    if(!got)return mode==='pow'?'⚠ Keine Leistung erhalten (DLMS)':'⚠ Keine Momentanwerte erhalten (DLMS)';
+    autoSave();return `${mode==='pow'?'Leistung':'Zeigerwerte'} per DLMS gelesen${round>1?` (${round} Runden)`:''}`;});}
+/* Uhr (Klasse 8, 0.0.1.0.0.255): Datum/Zeit als 12 Byte – Jahr, Monat, Tag, Wochentag, h, min, s, 1/100 s, Abweichung, Status */
+const dtDec=v=>{const b=v?.os;if(!b||b.length<12)return null;return new Date((b[0]<<8)|b[1],b[2]-1,b[3],b[5],b[6],b[7],b[8]===0xff?0:b[8]*10);};
+/* wie Q4: Ortszeit, Hundertstel 0, Abweichung 0x8000 und Status 0xFF = „nicht angegeben“ (Sommerzeit regelt der Zähler) */
+const dtEnc=d=>{const y=d.getFullYear();return [9,12,y>>8,y&255,d.getMonth()+1,d.getDate(),d.getDay()||7,d.getHours(),d.getMinutes(),d.getSeconds(),0,0x80,0,0xff];};
+async function dlmsClock(d){const r=await d.read([0x2bc0,0x2bc8]);if(r[0].ok&&obisStr(r[0].v)==='0-0:1.0.0*255')return{b:0x2bc0,t:r[1].ok?dtDec(r[1].v):null};
+  log('INFO','DLMS: Uhr nicht auf 0x2BC0 – suche in der Objektliste');const o=await dlmsObjects(d);const e=o.find(x=>x[1]===8&&x[2]==='0-0:1.0.0*255');
+  if(!e)throw new Error('Uhr-Objekt (0.0.1.0.0.255) nicht gefunden');const [t]=await d.read([e[0]+8]);return{b:e[0],t:t.ok?dtDec(t.v):null};}
+async function dlmsClockOp(write){const pw=pwList();
+  if(write&&!pw.length)throw new Error('Zum Stellen ist das Zählerpasswort nötig (unter ⚙ eintragen).');
+  return dlmsRun({client:pw.length?32:16,servers:[1,17],pre:true},async d=>{
+    const c=await dlmsClock(d);if(!c.t)log('WARN','Zählerzeit nicht lesbar (Leserecht?)');const df=c.t?clkShow(c.t):NaN;
+    if(!write){status(c.t?`Zählerzeit gelesen – Abweichung ${fmtN(df,0)} s.`:'Zählerzeit nicht lesbar.',!c.t||Math.abs(df)>30?'warn':'ok');return;}
+    if(!confirm(`${c.t?`Zählerzeit weicht ${fmtN(df,0)} s ab.`:'Zählerzeit konnte nicht gelesen werden.'}\nJetzt auf Handyzeit ${new Date().toLocaleTimeString('de-DE')} stellen?`)){status('Zeitstellen abgebrochen.');return;}
+    await sleep(1000-new Date().getMilliseconds());const n=new Date();const code=await d.write(c.b+8,dtEnc(n));
+    if(code!==0)throw new Error(`Zähler hat das Stellen abgelehnt (DLMS-Fehler ${code} – Passwort mit Schreibrecht?)`);
+    log('INFO','Zeit gestellt (DLMS): '+n.toLocaleString('de-DE'));
+    const [t2]=await d.read([c.b+8]);const m2=t2.ok?dtDec(t2.v):null;
+    if(m2){const d2=clkShow(m2);status(`Uhrzeit gestellt – Abweichung jetzt ${fmtN(d2,0)} s.`,Math.abs(d2)>5?'warn':'ok');}else status('Uhrzeit gestellt (Kontrolle nicht lesbar).','ok');});}
+/* Modem im L+G-Zähler (Q4-Mitschnitt): 0x3C38 Netzbetreiber, 0x3C40 Signal (CSQ 0–31), 0x3C48 Netzscan „CSQ+MCCMNC“ je Eintrag, 0x3C50 Registrierung */
+function lgMdmDecode(q){const g=k=>q[k]?.ok?q[k].v:null,op=g(0),csq=g(1),scan=g(2),reg=g(3);
+  const sc=dlStr(scan),list=[...sc.matchAll(/(\d\d)(\d{5})/g)].map(m=>({csq:+m[1],plmn:m[2]}));
+  Object.assign(MDM,{sigT:'RSSI',csq:typeof csq==='number'?csq:null,rsrp:typeof csq==='number'&&csq<=31?-113+2*csq:null,plmn:dlStr(op),reg:typeof reg==='number'?reg:null,scan:list,t:new Date()});
+  if(MDM.rsrp!=null)(MDM.hist=MDM.hist||[]).push([Date.now(),MDM.rsrp,null]);}
+async function lgModem(count){let found=false;
+  try{status('Zähler wird angesprochen …');prog('ind');const id=await IECP.handshake(2500);ST.ident=id;
+    if(!isLGE(id))throw new Error(`Zähler ${id}: Modem-Empfang über den Zähler bisher nur bei L+G (Mode E)`);found=true;
+    return await dlmsRun({client:16,servers:[17,1],pre:true},async d=>{
+      try{const r=await d.read([0xfd08,0x3848]);if(r[0].ok)MDM.dev=dlStr(r[0].v);if(r[1].ok)MDM.fw=dlStr(r[1].v);}catch(e){log('WARN',e.message);}
+      /* 0x7D08 = IP-Adresse des Modems (4 Byte, im Q4-Mitschnitt 0A 4A 4B 18 = 10.74.75.24) */
+      try{const [ip]=await d.read([0x7d08]);if(ip.ok){const v=ip.v,x=typeof v==='number'?[v>>>24,(v>>16)&255,(v>>8)&255,v&255]:v?.os?.length===4?v.os:null;if(x)MDM.ip=x.join('.');}}catch(e){log('WARN','IP: '+e.message);}
+      const rd=async()=>{const q=await d.read([0x3c38,0x3c40,0x3c48,0x3c50]);if(!q[1].ok&&!q[0].ok)throw new Error('Zähler liefert keine Modemwerte (0x3C38 …) – anderer Typ? Protokoll (Mehr → Protokoll) bitte schicken.');lgMdmDecode(q);renderMdm();};
+      await rd();if(MDM.rsrp==null)throw new Error('Zähler meldet keinen Empfangswert (Modem aus/ohne Netz?)');
+      prog(null);let n=1;if(!count){mdmRun=true;$('#btnModem').textContent='■ Stopp';$('#btnModem').disabled=false;}
+      try{while(count?n<count&&!stopReq:(mdmRun&&!stopReq)){await sleep(1500);await rd();n++;
+          status(`${count?'Empfangstest':'Modem-Empfang'}: ${MDM.rsrp} dBm (CSQ ${MDM.csq}) · Messung ${n}${count?'/'+count:' – „Stopp“ zum Beenden'}`,'ok');}}
+      finally{mdmRun=false;$('#btnModem').textContent='📶 Modem-Empfang';}
+      return `Modem-Empfang (L+G): ${MDM.rsrp} dBm (${rateSig(MDM.rsrp)[0]}), ${n} Messungen`;});}
+  catch(e){if(found)e.final=true;throw e;}}
 /* ---------- Modem-Empfang (EMH-Modem, Protokoll aus Mitschnitt) ----------
    Anfrage: 52 03 <a> <b> <c> CRC16-XMODEM (high, low); Antwort: 06 <Länge> <a b c> <Daten> CRC.
    17 00 01 = Funkwerte, 07 00 01 = IMEI/IP/ICCID, 07 00 02 = Firmware/Seriennummer. */
@@ -1088,25 +1325,30 @@ function mdmDecode(radio,id,fw){
   if(id){const imei=asc(id.slice(1,16));const ip=id.slice(17,21).join('.');let icc='';for(const b of id.slice(33,43)){if(b===0xff)break;icc+=(b>>4).toString(16)+(b&15).toString(16);}
     Object.assign(MDM,{imei,ip,iccid:icc.replace(/f/gi,'')});}
   if(fw){const parts=asc(fw.map(x=>x||32)).trim().split(/\s{2,}/);Object.assign(MDM,{fw:parts[0]||'',msn:parts[1]||''});}}
+/* L+G-Zählermodem liefert CSQ → RSSI (dBm) statt LTE-RSRP; Bewertung und Skala passend dazu */
+const sigL=()=>MDM.sigT||'RSRP',sigMin=()=>MDM.sigT==='RSSI'?-113:-140,sigMax=()=>MDM.sigT==='RSSI'?-51:-50;
+function rateSig(v){return MDM.sigT==='RSSI'?(v>=-70?['sehr gut','var(--ok)']:v>=-85?['gut','var(--ok)']:v>=-95?['mittel','var(--acc)']:v>=-105?['schwach','var(--warn)']:['sehr schwach','var(--err)']):rateRSRP(v);}
 function rateRSRP(v){return v>=-80?['sehr gut','var(--ok)']:v>=-90?['gut','var(--ok)']:v>=-100?['mittel','var(--acc)']:v>=-110?['schwach','var(--warn)']:['sehr schwach','var(--err)'];}
 function renderMdm(){const m=MDM;if(m.rsrp==null&&!m.imei){$('#mdmCard').hidden=true;return;}$('#mdmCard').hidden=false;
   const bar=(lbl,v,min,max,unit,col,txt)=>{const p=Math.max(2,Math.min(100,(v-min)/(max-min)*100));return `<div class="mbar"><span class="lbl">${lbl}</span><div class="trk"><div class="fil" style="width:${p}%;background:${col}"></div></div><span class="v">${v} ${unit}${txt?` <span class="mut">· ${txt}</span>`:''}</span></div>`;};
-  let h='';if(m.rsrp!=null){const [rt,rc]=rateRSRP(m.rsrp);h+=bar('Signalstärke<br><span class="mut">RSRP</span>',m.rsrp,-140,-50,'dBm',rc,rt);
+  let h='';if(m.rsrp!=null){const [rt,rc]=rateSig(m.rsrp);h+=bar(`Signalstärke<br><span class="mut">${sigL()}</span>`,m.rsrp,sigMin(),sigMax(),'dBm',rc,rt);
     if(isFinite(m.rsrq)&&m.rsrq<0)h+=bar('Signalqualität<br><span class="mut">RSRQ</span>',m.rsrq,-20,-3,'dB',m.rsrq>=-10?'var(--ok)':m.rsrq>=-15?'var(--warn)':'var(--err)');}
   $('#mdmBars').innerHTML=h;
-  const rows=mdmRows();
+  const rows=mdmRows().filter(r=>PNG_KEEP.test(r[0]));
   $('#mdmTable').innerHTML=rows.map(r=>`<tr><td class="mut">${r[0]}</td><td class="mono">${esc(String(r[1]))}</td></tr>`).join('');
   $('#mdmTime').textContent=m.t?m.t.toLocaleTimeString('de-DE'):'';}
 function mdmRows(){const m=MDM;const pl=m.plmn?String(m.plmn):'';const st=mdmStats();const rows=[['Netz',m.act!=null?(ACT[m.act]||'Typ '+m.act)+(m.band?` · Band ${m.band}`:''):''],['Status',m.reg!=null?(REG[m.reg]||m.reg):''],
-    ['Provider',pl?`${pl} ${MNO[pl]||''}`:''],['Localisation ID (TAC)',m.tac||''],['Cell ID',m.cell||''],['IMEI',m.imei],['ICCID',m.iccid],['IP',m.ip],['Firmware',m.fw],['Modul-Nr.',m.msn]];
-  if(st&&st.n>1)rows.splice(2,0,['RSRP min / Ø / max',`${st.min} / ${st.avg} / ${st.max} dBm (${st.n} Messungen)`]);
+    ['Provider',pl?`${pl} ${MNO[pl]||''}`:''],['Localisation ID (TAC)',m.tac||''],['Cell ID',m.cell||''],['IMEI',m.imei],['ICCID',m.iccid],['IP',m.ip],['Firmware',m.fw],['Modul-Nr.',m.msn],['Zähler-ID',m.dev||'']];
+  if(m.csq!=null)rows.splice(2,0,['CSQ (0–31)',`${m.csq}${m.csq>31?' (unbekannt)':''}`]);
+  if(m.scan?.length)rows.splice(3,0,['Netzscan',[...new Set(m.scan.map(x=>x.plmn))].map(pl=>`${pl}${MNO[pl]?' '+MNO[pl]:''}: ${m.scan.filter(x=>x.plmn===pl).map(x=>-113+2*x.csq).join(' / ')} dBm`).join(' · ')]);
+  if(st&&st.n>1)rows.splice(2,0,[`${sigL()} min / Ø / max`,`${st.min} / ${st.avg} / ${st.max} dBm (${st.n} Messungen)`]);
   return rows.filter(r=>r[1]!==''&&r[1]!=null);}
 function mdmStats(){const h=(MDM.hist||[]).map(x=>x[1]).filter(isFinite);if(!h.length)return null;return{n:h.length,min:Math.min(...h),max:Math.max(...h),avg:Math.round(h.reduce((a,b)=>a+b,0)/h.length)};}
 const mdmName=ext=>`modem_${(meterNo()||MDM.imei||'zaehler').replace(/[^\w-]/g,'')}_${stamp()}.${ext}`;
 function mdmTxt(){const m=MDM;const L=['Modem-Empfang',`Zeit: ${(m.t||new Date()).toLocaleString('de-DE')}`];if(ST.ident&&ST.ident!=='SML')L.push(`Zähler: ${meterNo()||''} ${ST.ident}`.trim());
-  if(m.rsrp!=null)L.push(`Signalstärke RSRP: ${m.rsrp} dBm (${rateRSRP(m.rsrp)[0]})`);if(isFinite(m.rsrq)&&m.rsrq<0)L.push(`Signalqualität RSRQ: ${m.rsrq} dB`);
+  if(m.rsrp!=null)L.push(`Signalstärke ${sigL()}: ${m.rsrp} dBm (${rateSig(m.rsrp)[0]})`);if(isFinite(m.rsrq)&&m.rsrq<0)L.push(`Signalqualität RSRQ: ${m.rsrq} dB`);
   for(const [k,v] of mdmRows())L.push(`${k}: ${v}`);
-  if((m.hist||[]).length>1){L.push('','Verlauf (Zeit;RSRP dBm;RSRQ dB)');for(const [t,a,b] of m.hist)L.push(`${new Date(t).toLocaleTimeString('de-DE')};${a};${b}`);}
+  if((m.hist||[]).length>1){L.push('',m.sigT==='RSSI'?'Verlauf (Zeit;RSSI dBm)':'Verlauf (Zeit;RSRP dBm;RSRQ dB)');for(const [t,a,b] of m.hist)L.push(`${new Date(t).toLocaleTimeString('de-DE')};${a}${m.sigT==='RSSI'?'':';'+b}`);}
   return L.join('\r\n')+'\r\n';}
 /* ---------- Standort (Einbau) ---------- */
 function geoStart(){return new Promise(ok=>{if(!navigator.geolocation)return ok(null);let done=false;const fin=v=>{if(!done){done=true;ok(v);}};setTimeout(()=>fin(null),25000);
@@ -1136,15 +1378,15 @@ async function qrCanvas(text,size){const q=await qrLib();if(!q)return null;try{c
   for(let r=0;r<k;r++)for(let col=0;col<k;col++)if(qr.isDark(r,col))c.fillRect((col+2)*cell,(r+2)*cell,cell,cell);return cv;}catch{return null;}}
 /* Bild: Modem-Empfang und – beim Einbau – Standort mit Karte, Navigationslink und QR-Code */
 const MAPH=520;
-const PNG_KEEP=/^(Netz|Status|RSRP min|Modul-Nr)/;
-async function mdmPng(geo){const m=MDM,hasM=m.rsrp!=null||!!m.imei,rows=hasM?mdmRows().filter(r=>PNG_KEEP.test(r[0])):[],W=900,dpr=2,hist=hasM?(m.hist||[]):[];
+const PNG_KEEP=/^(Netz|Status|RS(RP|SI) min|CSQ|IP$|Modul-Nr|Zähler-ID)/;
+async function mdmPng(geo,title){const m=MDM,hasM=m.rsrp!=null||!!m.imei,rows=hasM?mdmRows().filter(r=>PNG_KEEP.test(r[0])):[],W=900,dpr=2,hist=hasM?(m.hist||[]):[];
   let map=null,qr=null,addr='';if(geo){[map,qr,addr]=await Promise.all([geoMap(geo,(W-80)*2,MAPH*2),qrCanvas(navUrl(geo),300),geoAddress(geo)]);}
   const geoH=geo?(70+(map?MAPH+20:0)+ (addr?40:0)+ 40*2 + 40):0;
   const H=130+(hasM?(m.rsrp!=null?120:0)+10+rows.length*40+(hist.length>1?230:0):0)+geoH+60;
   const cv=document.createElement('canvas');cv.width=W*dpr;cv.height=H*dpr;const c=cv.getContext('2d');c.scale(dpr,dpr);
   const F='-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif',G='#5f9e1f',GRAY='#6b7280';
   c.fillStyle='#fff';c.fillRect(0,0,W,H);c.fillStyle=G;c.fillRect(0,0,W,8);
-  c.fillStyle='#111';c.font=`700 34px ${F}`;c.fillText(geo?'Einbau':'Modem-Empfang',40,62);
+  c.fillStyle='#111';c.font=`700 34px ${F}`;const TT=title||(geo?'Einbau':'Modem-Empfang');c.fillText(TT,40,62);
   c.fillStyle=GRAY;c.font=`17px ${F}`;c.fillText(((m.t||new Date()).toLocaleString('de-DE'))+(meterNo()?`  ·  Zähler ${meterNo()}`:''),40,92);
   let y=130;const bar=(lbl,v,min,max,unit,col,txt)=>{c.fillStyle='#111';c.font=`600 18px ${F}`;c.fillText(lbl,40,y+20);
     const x0=250,w=420;c.fillStyle='#e5e7eb';c.beginPath();c.roundRect(x0,y+4,w,22,11);c.fill();
@@ -1154,27 +1396,34 @@ async function mdmPng(geo){const m=MDM,hasM=m.rsrp!=null||!!m.imei,rows=hasM?mdm
   const cssC=v=>v.replace('var(--ok)','#30a14e').replace('var(--acc)',G).replace('var(--warn)','#d4a000').replace('var(--err)','#d93025');
   const rowsDraw=(rs,rw=W-60)=>{for(const [i,[k,v]] of rs.entries()){if(i%2===0){c.fillStyle='#f3f4f6';c.fillRect(30,y,rw,40);}c.fillStyle=GRAY;c.font=`16px ${F}`;c.fillText(k,44,y+26);c.fillStyle='#111';c.font=`600 17px ui-monospace,Consolas,monospace`;c.fillText(String(v),300,y+26);y+=40;}};
   if(hasM){
-    if(m.rsrp!=null){const [rt,rc]=rateRSRP(m.rsrp);bar('Signalstärke (RSRP)',m.rsrp,-140,-50,'dBm',cssC(rc),rt);}
+    if(m.rsrp!=null){const [rt,rc]=rateSig(m.rsrp);bar(`Signalstärke (${sigL()})`,m.rsrp,sigMin(),sigMax(),'dBm',cssC(rc),rt);}
     if(isFinite(m.rsrq)&&m.rsrq<0)bar('Signalqualität (RSRQ)',m.rsrq,-20,-3,'dB',m.rsrq>=-10?'#30a14e':m.rsrq>=-15?'#d4a000':'#d93025');else if(m.rsrp!=null)y+=60;
     y+=10;rowsDraw(rows);
-    if(hist.length>1){y+=30;c.fillStyle='#111';c.font=`600 18px ${F}`;c.fillText('Verlauf RSRP',40,y);y+=14;const x0=80,w=W-120,h=170;const vs=hist.map(x=>x[1]);const lo=Math.min(...vs)-3,hi=Math.max(...vs)+3;
+    if(hist.length>1){y+=30;c.fillStyle='#111';c.font=`600 18px ${F}`;c.fillText('Verlauf '+sigL(),40,y);y+=14;const x0=80,w=W-120,h=170;const vs=hist.map(x=>x[1]);const lo=Math.min(...vs)-3,hi=Math.max(...vs)+3;
       c.strokeStyle='#e5e7eb';c.lineWidth=1;c.fillStyle=GRAY;c.font=`12px ${F}`;for(let k=0;k<=4;k++){const yy=y+h-k*h/4;c.beginPath();c.moveTo(x0,yy);c.lineTo(x0+w,yy);c.stroke();c.fillText(Math.round(lo+(hi-lo)*k/4),40,yy+4);}
       c.strokeStyle=G;c.lineWidth=2.5;c.beginPath();hist.forEach(([t,v],i)=>{const xx=x0+i/(hist.length-1)*w,yy=y+h-(v-lo)/(hi-lo)*h;i?c.lineTo(xx,yy):c.moveTo(xx,yy);});c.stroke();y+=h;}}
-  if(geo){y+=40;c.fillStyle='#111';c.font=`700 22px ${F}`;c.fillText('Einbauort',40,y);y+=20;
+  if(geo){y+=40;c.fillStyle='#111';c.font=`700 22px ${F}`;c.fillText(TT==='Einbau'?'Einbauort':'Standort',40,y);y+=20;
     if(map){c.save();c.beginPath();c.roundRect(40,y,W-80,MAPH,14);c.clip();c.drawImage(map,40,y,W-80,MAPH);c.restore();y+=MAPH+20;}
     const gr=[];if(addr)gr.push(['Adresse',addr]);gr.push(['Koordinaten',`${geo.lat.toFixed(6)}, ${geo.lon.toFixed(6)}`],['Genauigkeit',`± ${geo.acc} m`]);
     const ytab=y;rowsDraw(gr,qr?W-60-210:W-60);y+=10;
     if(qr){const s=Math.min(170,y-ytab+10);c.drawImage(qr,W-40-s,ytab-6,s,s);c.fillStyle=GRAY;c.font=`12px ${F}`;c.textAlign='center';c.fillText('QR scannen → Navigation',W-40-s/2,ytab+s+10);c.textAlign='left';}}
-  c.fillStyle=GRAY;c.font=`13px ${F}`;c.fillText('Zählerauslesung · '+(geo?'Einbau':'Modem-Empfang'),40,H-22);
+  c.fillStyle=GRAY;c.font=`13px ${F}`;c.fillText('Zählerauslesung · '+TT,40,H-22);
   const blob=await new Promise(r=>cv.toBlob(r,'image/png'));return [...new Uint8Array(await blob.arrayBuffer())];}
 $('#btnMdmPng').onclick=async()=>{if(MDM.rsrp==null&&!MDM.imei)return;await saveFiles([[mdmName('png'),await mdmPng()]],true);};
 let mdmRun=false;
+/* externes Modem (EMH-Protokoll) oder Modem im L+G-Zähler (DLMS) – zuletzt erfolgreiche Art zuerst */
 async function opModem(count){showTab('werte');for(const k in MDM)delete MDM[k];renderMdm();
+  const order=isLGE(ST.ident)||S.mdmKind==='lg'?[lgModem,extModem]:[extModem,lgModem];
+  try{for(const f of order){try{const r=await f(count);const k=f===lgModem?'lg':'ext';if(S.mdmKind!==k){S.mdmKind=k;saveS();}return r;}
+      catch(e){if(e.final||stopReq)throw e;log('WARN',e.message);for(const k in MDM)delete MDM[k];renderMdm();}}
+    throw new Error('Kein Modem gefunden – weder externes Modem noch L+G-Zähler antworten. Kopf richtig aufgesetzt? Protokoll (Mehr → Protokoll) bitte schicken.');}
+  finally{stopReq=false;}}
+async function extModem(count){
   const t=LINK.t;let cfg=null;const pref=S.mdmCfg?[S.mdmCfg,...MDM_CFG.filter(c=>c.b!==S.mdmCfg.b||c.p!==S.mdmCfg.p)]:MDM_CFG;
   try{
     for(const [i,c] of pref.entries()){status(`Modem wird gesucht … (${c.b} Baud 8${c.p}1)`);prog((i+.5)/pref.length*100);await mdmSet(c);
       const r=await mdmTxn(0x17,0,1,1200);if(r){cfg=c;mdmDecode(r);renderMdm();break;}}
-    if(!cfg)throw new Error('Modem antwortet nicht. Kopf auf die Modem-Optik setzen? Protokoll (Mehr → Protokoll) bitte schicken.');
+    if(!cfg)throw new Error('Externes Modem antwortet nicht.');
     S.mdmCfg=cfg;saveS();log('INFO',`Modem antwortet (${cfg.b} Baud 8${cfg.p}1)`);
     mdmDecode(null,await mdmTxn(7,0,1),await mdmTxn(7,0,2));renderMdm();
     prog(null);let n=0;if(!count){mdmRun=true;$('#btnModem').textContent='■ Stopp';$('#btnModem').disabled=false;}
@@ -1183,7 +1432,10 @@ async function opModem(count){showTab('werte');for(const k in MDM)delete MDM[k];
     return `Modem-Empfang: ${MDM.rsrp} dBm (${rateRSRP(MDM.rsrp)[0]}), ${n} Messungen`;}
   finally{mdmRun=false;stopReq=false;$('#btnModem').textContent='📶 Modem-Empfang';
     try{if(t instanceof BleT){for(const c of ['0','C','E','A'])await t.cmd(c);}else if(t instanceof SerialT)await t.setBaud(300,{dataBits:7,parity:'even',stopBits:1});}catch{}LINK.strip=true;}}
-$('#btnModem').onclick=()=>{if(mdmRun){mdmRun=false;stopReq=true;$('#btnModem').textContent='stoppt …';return;}run('Modem-Empfang',opModem);};
+$('#btnModem').onclick=()=>{if(mdmRun){mdmRun=false;stopReq=true;$('#btnModem').textContent='stoppt …';return;}const g=S.einGeo!==false?geoStart():null;run('Modem-Empfang',async()=>{const r=await opModem();
+  let geo=null;if(g){status('Standort wird ermittelt …');geo=await g;}
+  if(MDM.rsrp==null)return r;status('Bericht wird erstellt …');const png=await mdmPng(geo,'Empfangstest');
+  const m=await saveFiles([[mdmName('png'),png]]);return `${r} · Bericht: ${m}${geo?'':' (ohne Standort)'}`;});};
 $('#btnCfg').onclick=$('#connPill').onclick=()=>{$('#cfgBox').hidden=!$('#cfgBox').hidden;};
 const PWKEY='zaehlerauslesung.pw';
 function pwStore(){try{$('#pwKeep').checked?localStorage.setItem(PWKEY,$('#pw').value):localStorage.removeItem(PWKEY);}catch{}}
@@ -1231,7 +1483,7 @@ function renderHist(){const h=hist();$('#histTable').innerHTML=h.length?'<tr><th
 function loadSnap(e){ST.mode=e.mode||'elec';if(e.wf){Object.assign(S,e.wf);$('#ctP').value=S.ctP;$('#ctS').value=S.ctS;$('#vtP').value=S.vtP;saveS();_pp=null;setTimeout(wfChanged);}ST.ident=e.ident;ST.rawReadout=e.raw||'';ST.vals=new Map(e.vals.map(v=>[v.key,v]));ST.profileRaw=e.profileRaw||'';ST.profile=e.profileRaw?parseProfile(e.profileRaw):null;ST.logRaw=e.logRaw||'';ST.tInfo=e.ft?.t0||e.t;ST.tRead=e.ft?.tr||e.t;ST.tDone=e.ft?.td||e.t;ST.range=e.ft?.range||null;ST.logbook=e.logRaw?parseLogbook(e.logRaw):[];
   renderVals();fillPhInputs();renderProfile();renderLogbook();showTab('werte');}
 $('#btnSave').onclick=()=>{const h=hist();h.unshift(snapshot());while(h.length>60)h.pop();if(saveHist(h)){renderHist();status('Im Verlauf gespeichert.','ok');}};
-function download(name,text,type='text/csv'){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);}
+function download(name,text){return saveFiles([[name,[0xef,0xbb,0xbf,...new TextEncoder().encode(text)]]],true);}
 const stamp=()=>{const d=new Date();return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;};
 const csvQ=s=>`"${String(s??'').replace(/"/g,'""')}"`;
 
@@ -1308,7 +1560,7 @@ async function ioRun(kind,geoP){const aus=kind==='aus';
   if(!ST.rawReadout||ST.ident==='SML')throw new Error('Keine IEC-Auslesung – Dateien nur für Zähler mit Datenauslesung (nicht SML).');
   const names=aus?ausFiles():einFiles();let warn=r&&r.startsWith('⚠')?r+' · ':'',extra='';
   if(!aus){let mOk=false;if(S.einMdm!==false){await sleep(LINK.t instanceof DemoT?0:500);
-      try{await opModem(5);mOk=true;extra=` · Empfang ${MDM.rsrp} dBm (${rateRSRP(MDM.rsrp)[0]})`;}
+      try{await opModem(5);mOk=true;extra=` · Empfang ${MDM.rsrp} dBm (${rateSig(MDM.rsrp)[0]})`;}
       catch(e){log('WARN','Empfangstest: '+e.message);warn='⚠ '+warn+'Empfangstest: Modem antwortet nicht · ';for(const k in MDM)delete MDM[k];}}
     let geo=null;if(geoP){status('Standort wird ermittelt …');geo=await geoP;if(!geo)warn=(warn.startsWith('⚠')?warn:'⚠ '+warn)+'kein Standort (GPS erlaubt?) · ';else extra+=` · Standort ± ${geo.acc} m`;}
     if(mOk||geo){status('Bild wird erstellt …');names.push([`einbau_${(meterNo()||'zaehler').replace(/[^\w-]/g,'')}_${stamp()}.png`,await mdmPng(geo)]);}}
@@ -1317,14 +1569,14 @@ async function ioRun(kind,geoP){const aus=kind==='aus';
 $('#btnEin').onclick=()=>{const g=S.einGeo!==false?geoStart():null;run('Einbau',()=>ioRun('ein',g));};
 $('#btnAus').onclick=()=>run('Ausbau',()=>ioRun('aus'));
 
-$('#btnCsvVals').onclick=()=>download(`werte_${meterNo()||'zaehler'}_${stamp()}.csv`,'Kennzahl;Bedeutung;Wert;Einheit;Primär (WF '+WF().kP+');Zusatz\n'+[...ST.vals.values()].map(e=>[e.obis,describe(e.key),e.value.replace('.',','),e.unit,(()=>{const k=kFor(e.unit),v=parseFloat(e.value);return k!==1&&isFinite(v)?String(+(v*k).toPrecision(10)).replace('.',','):'';})(),e.extra].map(csvQ).join(';')).join('\n'));
-$('#btnCsvProf').onclick=()=>{const p=profP();download(`lastgang_${meterNo()||'zaehler'}_${stamp()}.csv`,['Zeit',...p.channels.map(c=>`${c.key} [${c.unit}]`),'Status'].join(';')+'\n'+p.rows.map(r=>[fmtDT(r.t),...r.v.map(v=>isFinite(v)?String(v).replace('.',','):''),r.st].join(';')).join('\n'));};
-$('#btnPngProf').onclick=()=>{const cv=$('#lgCanvas'),p=profP();const o=document.createElement('canvas');const pad=40*(window.devicePixelRatio||1);
+$('#btnCsvVals').onclick=()=>download(`werte_${meterNo()||'zaehler'}_${stamp()}.csv`,'Kennzahl;Bedeutung;Wert;Einheit;Zusatz\n'+[...ST.vals.values()].map(e=>[e.obis,describe(e.key),e.value.replace('.',','),e.unit,e.extra].map(csvQ).join(';')).join('\n'));
+$('#btnCsvProf').onclick=()=>{const p=ST.profile;download(`lastgang_${meterNo()||'zaehler'}_${stamp()}.csv`,['Zeit',...p.channels.map(c=>`${c.key} [${c.unit}]`),'Status'].join(';')+'\n'+p.rows.map(r=>[fmtDT(r.t),...r.v.map(v=>isFinite(v)?String(v).replace('.',','):''),r.st].join(';')).join('\n'));};
+$('#btnPngProf').onclick=async()=>{NOWF=true;drawProfile();const cv=$('#lgCanvas'),p=ST.profile;const o=document.createElement('canvas');const pad=40*(window.devicePixelRatio||1);
   o.width=cv.width;o.height=cv.height+pad;const c=o.getContext('2d');c.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--card');c.fillRect(0,0,o.width,o.height);
   c.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--fg');c.font=`${14*(window.devicePixelRatio||1)}px system-ui`;
   const ch=[...lgSel].map(i=>`${p.channels[i].key} [${p.channels[i].unit}]`).join(', ');
-  const tt=`Zähler ${meterNo()} · ${fmtDT(p.rows[0].t)} – ${fmtDT(p.rows[p.rows.length-1].t)} · ${ch}${WF().kP!==1?' · primär WF '+WF().kP:''}`;let fs=14*(window.devicePixelRatio||1);while(fs>6&&(c.font=`${fs}px system-ui`,c.measureText(tt).width>o.width-20))fs-=0.5;c.fillText(tt,10,pad*0.6);c.drawImage(cv,0,pad);
-  const a=document.createElement('a');a.href=o.toDataURL('image/png');a.download=`lastgang_${meterNo()||'zaehler'}_${stamp()}.png`;a.click();};
+  const tt=`Zähler ${meterNo()} · ${fmtDT(p.rows[0].t)} – ${fmtDT(p.rows[p.rows.length-1].t)} · ${ch}`;let fs=14*(window.devicePixelRatio||1);while(fs>6&&(c.font=`${fs}px system-ui`,c.measureText(tt).width>o.width-20))fs-=0.5;c.fillText(tt,10,pad*0.6);c.drawImage(cv,0,pad);
+  NOWF=false;drawProfile();const bl=await new Promise(r=>o.toBlob(r,'image/png'));await saveFiles([[`lastgang_${meterNo()||'zaehler'}_${stamp()}.png`,[...new Uint8Array(await bl.arrayBuffer())]]],true);};
 $('#btnExportAll').onclick=()=>download(`zaehlerauslesung_verlauf_${stamp()}.json`,JSON.stringify(hist(),null,1),'application/json');
 
 /* ---------- Import ---------- */
