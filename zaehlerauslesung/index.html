@@ -42,6 +42,15 @@ canvas{width:100%;display:block;touch-action:manipulation}
 .chk input{width:auto}
 #logbox{height:340px;overflow:auto;white-space:pre-wrap;word-break:break-all;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px}
 .checks li{margin:3px 0}
+.checks li.err{color:var(--err)}
+.chkSum{font-weight:700;font-size:19px;padding:10px 12px;border-radius:12px;margin-bottom:8px;background:rgba(48,209,88,.14);color:var(--ok)}
+.chkSum.warn{background:rgba(255,214,10,.14);color:var(--warn)}.chkSum.err{background:rgba(255,69,58,.14);color:var(--err)}
+.chkList{list-style:none;margin:0;padding:0}
+.chkList li{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:.5px solid var(--line)}
+.chkList li:last-child{border-bottom:0}
+.chkList .ic{flex:0 0 24px;height:24px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#000;background:var(--ok)}
+.chkList li.warn .ic{background:var(--warn)}.chkList li.err .ic{background:var(--err);color:#fff}.chkList li.info .ic{background:var(--fill,#2c2c2e);color:var(--mut)}
+.chkList b{font-weight:600;word-break:break-all}.chkList .mut{font-size:14px}
 .scroll{overflow-x:auto}
 .ph input{padding:6px;text-align:right}
 details summary{cursor:pointer;color:var(--acc);margin:6px 0}
@@ -217,6 +226,11 @@ th,td{border-bottom:.5px solid var(--line)}
 
 <!-- WERTE -->
 <section class="tab act" id="tab-werte">
+  <div class="card" id="chkCard" hidden>
+    <div class="row" style="justify-content:space-between;margin-bottom:6px"><h2 id="chkTitle" style="margin:0">Checkliste</h2><span id="chkTime" class="mut"></span></div>
+    <div id="chkSum" class="chkSum"></div>
+    <ul id="chkList" class="chkList"></ul>
+  </div>
   <div class="card" id="mdmCard" hidden>
     <div class="row" style="justify-content:space-between;margin-bottom:6px"><h2 style="margin:0">Modem-Empfang</h2><span id="mdmTime" class="mut"></span></div>
     <div class="row" style="margin-bottom:6px"><button id="btnMdmPng" class="pri">📷 Als Bild speichern (PNG)</button></div>
@@ -321,6 +335,10 @@ th,td{border-bottom:.5px solid var(--line)}
     <label>Software-Eintrag (C.60)<input id="sFSw"></label>
     <label class="chk" style="margin-top:6px"><input type="checkbox" id="sEinMdm"> Beim Einbau Empfangstest (5 Messungen) ins Bild</label>
     <label class="chk" style="margin-top:6px"><input type="checkbox" id="sEinGeo"> Beim Einbau Standort mit Karte und Navigationslink ins Bild (GPS)</label>
+    <label class="chk" style="margin-top:6px"><input type="checkbox" id="sEinConn"> Beim Einbau Anschlusscheck (Momentanwerte lesen, Drehfeld, Richtung, Zuordnung)</label>
+    <label class="chk" style="margin-top:6px"><input type="checkbox" id="sEinClk"> Beim Einbau Uhrzeit prüfen – bei mehr als 10 s Abweichung Stellen anbieten</label>
+    <label class="chk" style="margin-top:6px"><input type="checkbox" id="sProto"> Zusätzlich Protokoll als Bild speichern (Checkliste, Zeigerbild, Zählerstände)</label>
+    <div class="mut" style="margin-top:6px">Die bisherigen Dateien (.RAW bzw. .txt/.VL/.LP und Einbau-Bild) bleiben unverändert – das Protokoll kommt nur dazu.</div>
   </div>
 <!-- PC-SKRIPT -->
   <div class="card">
@@ -404,8 +422,8 @@ const fmtDT=d=>d?`${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()} 
 
 /* ---------- Einstellungen ---------- */
 const SKEY='zaehlerauslesung.settings';
-const S=Object.assign({transport:'ble',kind:'auto',oInst:false,oProf:false,oLog:false,addr:'',prof:'P.01',auto:true,oLoop:false,ctP:'',ctS:'5',vtP:'',baud:'auto',rcmd:'R5',profFmt:'season',hs:5000,cw:false,bleS:'',bleW:'',bleN:'',swPar:true,fD:'D014',einMdm:true,einGeo:true,fZ:'ZFA',fSw:'Q4Module-UWP 22.10.161.0'},(()=>{try{return JSON.parse(localStorage.getItem(SKEY))||{}}catch{return{}}})());
-const bindS=[['transport','#transport'],['baud','#sBaud'],['rcmd','#sRcmd'],['profFmt','#sProfFmt'],['hs','#sHs'],['cw','#sCw'],['bleS','#sBleS'],['bleW','#sBleW'],['bleN','#sBleN'],['oInst','#oInst'],['oProf','#oProf'],['oLog','#oLog'],['addr','#addr'],['prof','#lgProf'],['auto','#sAuto'],['oLoop','#oLoop'],['bleAll','#sBleAll'],['ctP','#ctP'],['ctS','#ctS'],['vtP','#vtP'],['fD','#sFD'],['einMdm','#sEinMdm'],['einGeo','#sEinGeo'],['fZ','#sFZ'],['fSw','#sFSw']];
+const S=Object.assign({transport:'ble',kind:'auto',oInst:false,oProf:false,oLog:false,addr:'',prof:'P.01',auto:true,oLoop:false,ctP:'',ctS:'5',vtP:'',baud:'auto',rcmd:'R5',profFmt:'season',hs:5000,cw:false,bleS:'',bleW:'',bleN:'',swPar:true,fD:'D014',einMdm:true,einGeo:true,einConn:true,einClk:true,proto:true,fZ:'ZFA',fSw:'Q4Module-UWP 22.10.161.0'},(()=>{try{return JSON.parse(localStorage.getItem(SKEY))||{}}catch{return{}}})());
+const bindS=[['transport','#transport'],['baud','#sBaud'],['rcmd','#sRcmd'],['profFmt','#sProfFmt'],['hs','#sHs'],['cw','#sCw'],['bleS','#sBleS'],['bleW','#sBleW'],['bleN','#sBleN'],['oInst','#oInst'],['oProf','#oProf'],['oLog','#oLog'],['addr','#addr'],['prof','#lgProf'],['auto','#sAuto'],['oLoop','#oLoop'],['bleAll','#sBleAll'],['ctP','#ctP'],['ctS','#ctS'],['vtP','#vtP'],['fD','#sFD'],['einMdm','#sEinMdm'],['einGeo','#sEinGeo'],['einConn','#sEinConn'],['einClk','#sEinClk'],['proto','#sProto'],['fZ','#sFZ'],['fSw','#sFSw']];
 if(S.transport==='demoheat')S.transport='demo';S.kind='auto';
 if(!S._v17){S.kind='auto';S._v17=1;}
 const saveS=()=>{try{localStorage.setItem(SKEY,JSON.stringify(S))}catch{}};
@@ -475,10 +493,10 @@ class BleT{
       if(/^0000180[af]/.test(s.uuid))continue;
       const w=S.bleW?chars.find(c=>c.uuid===S.bleW.toLowerCase()):chars.find(c=>c.properties.write||c.properties.writeWithoutResponse);
       const n=S.bleN?chars.find(c=>c.uuid===S.bleN.toLowerCase()):chars.find(c=>c.properties.notify||c.properties.indicate);
-      if(w&&n&&!found)found={s,w,n};
+      if(w&&n&&!found)found={s,w,n,w2:chars.find(c=>c!==w&&(c.properties.write||c.properties.writeWithoutResponse))};
     }
     if(!found)throw new Error('Kein Daten-Service gefunden. UUID mit nRF Connect ermitteln und unter Einstellungen → Bluetooth eintragen.');
-    this.w=found.w;this.n=found.n;
+    this.w=found.w;this.n=found.n;this.w2=found.w2||null;if(this.w2)log('INFO','Zweiter Schreibkanal (für HDLC-Daten mit 0x80): '+this.w2.uuid);
     await this.n.startNotifications();
     this._h=this._h||(e=>{const v=e.target.value;this.onData(Uint8Array.from(new Uint8Array(v.buffer,v.byteOffset,v.byteLength)));});
     if(this._hn!==this.n){this.n.addEventListener('characteristicvaluechanged',this._h);this._hn=this.n;}
@@ -493,6 +511,14 @@ class BleT{
     for(let i=0;i<u8.length;i+=20){const c=u8.slice(i,i+20),w=this.w;
     if(w.properties.writeWithoutResponse&&w.writeValueWithoutResponse)await w.writeValueWithoutResponse(c);
     else if(w.writeValueWithResponse)await w.writeValueWithResponse(c);else await w.writeValue(c);}}
+  /* Daten über den zweiten Schreibkanal (ohne Befehlsauswertung des Kopfes) */
+  async write2(u8){const w=this.w2;if(!w)throw new Error('kein zweiter Kanal');for(let i=0;i<u8.length;i+=20){const c=u8.slice(i,i+20);
+    if(w.properties.writeWithoutResponse&&w.writeValueWithoutResponse)await w.writeValueWithoutResponse(c);else await w.writeValueWithResponse(c);}}
+  /* HDLC-Rahmen in einem Stück senden (DvBTIR: 0x80 ist das Befehlszeichen und muss als 0x80 0x80 codiert werden –
+     aus dem Q4-Bluetooth-Mitschnitt vom 21.10.). Der Kopf entfernt die Verdopplung wieder. MTU reicht (247). */
+  async writeRaw(u8){const e=[];for(const x of u8){if(x===0x80)e.push(0x80);e.push(x);}const w=this.w,a=Uint8Array.from(e);
+    if(w.properties.writeWithoutResponse&&w.writeValueWithoutResponse)await w.writeValueWithoutResponse(a);
+    else if(w.writeValueWithResponse)await w.writeValueWithResponse(a);else await w.writeValue(a);}
   async setBaud(b){const z=Object.keys(BAUD).find(k=>BAUD[k]===b);if(z==null){log('WARN','Baudrate '+b+' vom Kopf nicht unterstützt');return;}await this.cmd(z);}
   async close(){try{this.dev?.gatt.disconnect()}catch{}}
   async info(link){const ask=async c=>{link.clear();try{await this.cmd(c);return (await link.wait(b=>{const i=b.indexOf(10);if(i<0)return null;const r=dec(b.slice(0,i)).trim();b.splice(0,i+1);return r;},800)).replace(/[^\x20-\x7e]/g,'');}catch{return '';}};
@@ -598,11 +624,16 @@ function findIdent(b){for(let i=0;i<b.length;i++){if(b[i]===0x2f&&b[i+1]!==0x3f&
 class IEC{
   constructor(link){this.l=link;this.baud=300;}
   async reset300(){const ble=this.l.t instanceof BleT;if(ble)await this.l.t.prep();else if(this.baud!==300&&!this.l.t.fixedBaud){await this.l.t.setBaud(300);}this.baud=300;await sleep(this.l.t instanceof DemoT?0:ble?120:600);}
+  /* to gesetzt (Erkennung/Modem) = ein Versuch; sonst zweiter Versuch mit Pause –
+     manche Zähler (Elster/ABB) brauchen nach einer Auslesung einige Sekunden, bis sie wieder auf /?! hören */
   async handshake(to){
-    await this.reset300();this.l.clear();
-    await this.l.send(enc(`/?${$('#addr').value.trim()}!\r\n`));
-    const id=await this.l.wait(findIdent,to||+S.hs||5000);
-    this.ident=id.trim();log('INFO','Kennung: '+this.ident);this.onIdent?.(this.ident);return this.ident;
+    for(let a=0;;a++){
+      await this.reset300();this.l.clear();
+      await this.l.send(enc(`/?${$('#addr').value.trim()}!\r\n`));
+      try{const id=await this.l.wait(findIdent,to||+S.hs||5000);
+        this.ident=id.trim();log('INFO','Kennung: '+this.ident);this.onIdent?.(this.ident);return this.ident;}
+      catch(e){if(to||a>=1)throw e;log('INFO','Keine Kennung – zweiter Versuch (Zähler braucht nach der Auslesung kurz)');await sleep(2500);}
+    }
   }
   pickBaud(){let z=BAUD[this.ident[4]]?this.ident[4]:'0';
     if(this.l.t.fixedBaud||S.baud==='hold')return '0';
@@ -690,11 +721,14 @@ function axData(b,i){const t=b[i++];let n;const u32=k=>((b[k]<<24)|(b[k+1]<<16)|
 const obisStr=v=>{const b=v?.os||[];return b.length===6?`${b[0]}-${b[1]}:${b[2]}.${b[3]}.${b[4]}*${b[5]}`:'';};
 const dlStr=v=>typeof v==='string'?v.replace(/\0+$/,'').trim():v?.os?String.fromCharCode(...v.os.filter(x=>x>=32&&x<127)).trim():'';
 class DLMS{
-  constructor(link){this.l=link;this.maxTx=128;this.vaa=0xfa00;this.onBlock=null;}
+  /* lim: max. Nutzdaten je Rahmen. Über den Bluetooth-Kopf kommen nur Rahmen ≤ 20 Byte (ein BLE-Paket) heil an
+     (Feldtest 21.10.: 9-Byte-Rahmen beantwortet, 32-Byte-Rahmen nie) → 9 Byte Nutzdaten, Rest per HDLC-Segmentierung */
+  constructor(link){this.l=link;this.maxTx=128;this.vaa=0xfa00;this.onBlock=null;this.ble=link.t instanceof BleT;}
   async tx(ctrl,info=[],seg=false){const len=7+(info.length?2+info.length:0);
     const f=[0xa0|(seg?8:0)|((len>>8)&7),len&255,this.da,this.ca,ctrl];
     if(info.length){const h=crcH(f);f.push(h&255,h>>8,...info);}
-    const c=crcH(f);f.push(c&255,c>>8);const out=[0x7e,...f,0x7e];log('TX',out,true);await this.l.t.write(new Uint8Array(out),true);}
+    const c=crcH(f);f.push(c&255,c>>8);const out=[0x7e,...f,0x7e];log('TX',out,true);
+    if(this.ble)await this.l.t.writeRaw(Uint8Array.from(out));else await this.l.t.write(new Uint8Array(out));}
   /* nächsten gültigen HDLC-Rahmen aus dem Puffer holen (Länge aus dem Kopf, kein Stuffing) */
   rx(timeout=4000){return this.l.wait(b=>{
     for(;;){const s=b.indexOf(0x7e);if(s<0){b.length=0;return null;}if(s>0)b.splice(0,s);
@@ -706,8 +740,11 @@ class DLMS{
       const ctrl=fr[i++];const info=L-2>i?fr.slice(i+2,L-2):[];
       return{ctrl,seg:!!(fr[0]&8),info,I:!(ctrl&1),ns:(ctrl>>1)&7};}},timeout);}
   async connect(server,client,timeout=1500){this.da=(server<<1)|1;this.ca=(client<<1)|1;this.l.clear();
-    await this.tx(0x93,[0x81,0x80,0x12,0x05,0x01,0xf8,0x06,0x01,0xf8,0x07,0x04,0,0,0,1,0x08,0x04,0,0,0,1]);
-    let f;try{f=await this.rx(timeout);}catch{log('INFO',`HDLC: keine Antwort von Server-Adresse ${server}`);return false;}
+    const snrm=this.ble?[]:[0x81,0x80,0x12,0x05,0x01,0xf8,0x06,0x01,0xf8,0x07,0x04,0,0,0,1,0x08,0x04,0,0,0,1];   /* über BLE ohne Parameter, wie Q4 */
+    await this.tx(0x93,snrm);
+    let f=null;for(let k=0;k<2&&!f;k++){if(k){log('INFO',`HDLC: Server-Adresse ${server} – zweiter Versuch`);await this.tx(0x93,snrm);}
+      try{f=await this.rx(timeout);}catch{}}
+    if(!f){log('INFO',`HDLC: keine Antwort von Server-Adresse ${server}`);return false;}
     if(f.ctrl!==0x73)throw new Error(f.ctrl===0x1f?'Zähler lehnt HDLC-Verbindung ab (DM)':'HDLC: unerwartete Antwort auf SNRM (0x'+f.ctrl.toString(16)+')');
     this.maxTx=128;const p=f.info;for(let i=3;i+1<p.length;){const id=p[i],n=p[i+1];let v=0;for(let k=0;k<n;k++)v=v*256+p[i+2+k];if(id===6)this.maxTx=v;i+=2+n;}
     this.ns=this.nr=0;this.server=server;this.client=client;log('INFO',`HDLC verbunden: Server ${server}, Client ${client}, max. ${this.maxTx} Byte je Rahmen`);return true;}
@@ -723,8 +760,10 @@ class DLMS{
     if(res===0&&diag===0)return true;
     log('WARN',`DLMS-Anmeldung abgelehnt (Ergebnis ${res}, Diagnose ${diag}${diag===13?' = Passwort falsch':diag===14?' = höhere Sicherheitsstufe nötig':''})`);return false;}
   /* APDU senden (bei Bedarf in Segmente zerlegt) und Antwort einsammeln (Segmente mit RR quittieren) */
-  async xfer(apdu){const pdu=[0xe6,0xe6,0,...apdu],mx=Math.max(16,this.maxTx||128);
-    for(let i=0;i<pdu.length;i+=mx){const last=i+mx>=pdu.length;await this.tx((this.nr<<5)|0x10|(this.ns<<1),pdu.slice(i,i+mx),!last);this.ns=(this.ns+1)&7;
+  /* Über Bluetooth lernend: kommt auf ein Stück keine Antwort, dasselbe Stück (gleiche Folgenummer) kleiner nochmal senden.
+     Feldtest 21.10.: 9-Byte-Rahmen kommen an, 20-Byte-Rahmen nicht. Funktionierende Größe wird gemerkt. */
+  async xfer(apdu){const pdu=[0xe6,0xe6,0,...apdu],mx=Math.max(1,this.maxTx||128);
+    for(let i=0;i<pdu.length;i+=mx){const last=i+mx>=pdu.length;if(this.ble)await sleep(20);await this.tx((this.nr<<5)|0x10|(this.ns<<1),pdu.slice(i,i+mx),!last);this.ns=(this.ns+1)&7;
       if(!last){const f=await this.rx(5000);if((f.ctrl&0x0f)!==1)throw new Error('HDLC: Segment nicht bestätigt');}}
     const out=[];
     for(;;){const f=await this.rx(8000);
@@ -874,6 +913,9 @@ function updatePhasor(){
   const d=getPh();const cv=$('#phCanvas');const dpr=window.devicePixelRatio||1;const w=cv.clientWidth||340,h=Math.min(w,420);
   cv.width=w*dpr;cv.height=h*dpr;cv.style.height=h+'px';const c=cv.getContext('2d');c.scale(dpr,dpr);
   const css=getComputedStyle(document.documentElement);const col=v=>css.getPropertyValue(v).trim();
+  drawPh(c,w,h,col,d);analyse(d);}
+/* Zeigerbild zeichnen – auf dem Bildschirm mit Theme-Farben, im Protokoll mit hellen Farben */
+function drawPh(c,w,h,col,d){
   const cx=w/2,cy=h/2,R=Math.min(w,h)/2-38;
   c.clearRect(0,0,w,h);c.strokeStyle=col('--grid');c.lineWidth=1;c.fillStyle=col('--mut');c.font='11px system-ui';c.textAlign='center';c.textBaseline='middle';
   for(const f of [.33,.66,1]){c.beginPath();c.arc(cx,cy,R*f,0,7);c.stroke();}
@@ -885,8 +927,7 @@ function updatePhasor(){
     if(head){const hs=9;c.beginPath();c.moveTo(x,y);c.lineTo(x-hs*Math.cos(r-.4),y+hs*Math.sin(r-.4));c.lineTo(x-hs*Math.cos(r+.4),y+hs*Math.sin(r+.4));c.fill();}
     c.font='bold 12px system-ui';const lx=cx+len*.82*Math.cos(r)-11*Math.sin(r),ly=cy-len*.82*Math.sin(r)-11*Math.cos(r);c.fillText(label,lx,ly);};
   d.forEach((x,i)=>{if(isFinite(x.U)&&isFinite(x.au))arrow(x.au,R*.95*x.U/Um,cols[i],4,'U'+(i+1),false);});
-  d.forEach((x,i)=>{if(isFinite(x.I)&&isFinite(x.au)&&isFinite(x.ai)&&x.I>0)arrow(x.au+x.ai,R*.62*Math.max(x.I/Im,.04),cols[i],2,'I'+(i+1),true);});
-  analyse(d);}
+  d.forEach((x,i)=>{if(isFinite(x.I)&&isFinite(x.au)&&isFinite(x.ai)&&x.I>0)arrow(x.au+x.ai,R*.62*Math.max(x.I/Im,.04),cols[i],2,'I'+(i+1),true);});}
 function analyse(d){
   const rows=[],checks=[];let Pt=0,Qt=0;
   d.forEach(x=>{const th=x.ai*Math.PI/180;const P=isFinite(x.Pm)?x.Pm:x.U*x.I*Math.cos(th),Q=isFinite(x.Qm)?x.Qm:-x.U*x.I*Math.sin(th);const phi=nAng(-x.ai);
@@ -898,22 +939,40 @@ function analyse(d){
   const S_=Math.hypot(Pt,Qt);
   const wk=WF().kP,kp=(v,u)=>wk!==1?`<b>${fmtP(v*wk,u)}</b><span class="sek">sek. ${fmtN(v,3)} ${u} · WF ${fmtN(wk,wk%1?2:0)}</span>`:`<b>${fmtN(v,3)} ${u}</b>`;
   $('#phKpi').innerHTML=`<div><span class="mut">P gesamt${wk!==1?' primär':''}</span>${kp(Pt/1000,'kW')}</div><div><span class="mut">Q gesamt${wk!==1?' primär':''}</span>${kp(Qt/1000,'kvar')}</div><div><span class="mut">S gesamt${wk!==1?' primär':''}</span>${kp(S_/1000,'kVA')}</div><div><span class="mut">cos φ gesamt</span><b>${S_?fmtN(Pt/S_,3):'–'}</b></div>`;
-  const ok=t=>checks.push(`<li class="ok">✓ ${t}</li>`),wa=t=>checks.push(`<li class="warn">⚠ ${t}</li>`);
-  const a2=nAng(d[1].au),a3=nAng(d[2].au);
-  if(isFinite(a2)&&isFinite(a3)){if(Math.abs(a2+120)<25&&Math.abs(a3-120)<25)ok('Rechtsdrehfeld (L1→L2→L3)');else if(Math.abs(a2-120)<25&&Math.abs(a3+120)<25)wa('Linksdrehfeld – Außenleiter vertauscht?');else wa(`Spannungswinkel ungewöhnlich (U2 ${fmtN(a2,0)}°, U3 ${fmtN(a3,0)}°)`);}
-  const Us=d.map(x=>x.U).filter(isFinite);
-  if(Us.length){const mx=Math.max(...Us);const nom=[57.7,63.5,100,110,230,400].reduce((a,b)=>Math.abs(b-mx)<Math.abs(a-mx)?b:a);
-    d.forEach(x=>{if(!isFinite(x.U))return;if(x.U<.5*nom)wa(`Spannung ${x.p} fehlt oder zu niedrig (${fmtN(x.U,1)} V)`);else if(Math.abs(x.U/nom-1)>.1)wa(`Spannung ${x.p} weicht >10 % von ${nom} V ab`);});
-    if(d.every(x=>isFinite(x.U)&&Math.abs(x.U/nom-1)<=.1))ok(`Spannungen plausibel (Nennwert ${nom} V)`);}
+  const it=connCheck(d);ST.conn={items:it,lvl:worst(it)};
+  $('#phChecks').innerHTML=it.map(x=>`<li class="${x.l==='info'?'mut':x.l}">${CK[x.l]} ${esc(x.t)}</li>`).join('')||'<li class="mut">Keine Werte</li>';}
+const CK={ok:'✓',warn:'⚠',err:'✗',info:'ℹ'};
+const worst=L=>L.some(x=>x.l==='err')?'err':L.some(x=>x.l==='warn')?'warn':'ok';
+/* Anschlusscheck: Drehfeld, Spannungen, Ströme, Energierichtung, Zuordnung I↔U, cos φ, Wandler */
+function connCheck(d){const L=[],add=(l,t)=>L.push({l,t});
+  if(!d.some(x=>isFinite(x.U)||isFinite(x.I)))return L;
+  const a2=nAng(d[1].au),a3=nAng(d[2].au),src=$('#phSource')?.textContent||'';
+  if(isFinite(a2)&&isFinite(a3)&&!/angenommen/.test(src)){if(Math.abs(a2+120)<25&&Math.abs(a3-120)<25)add('ok','Rechtsdrehfeld (L1→L2→L3)');else if(Math.abs(a2-120)<25&&Math.abs(a3+120)<25)add('err','Linksdrehfeld – Außenleiter vertauscht?');else add('warn',`Spannungswinkel ungewöhnlich (U2 ${fmtN(a2,0)}°, U3 ${fmtN(a3,0)}°)`);}
+  else if(isFinite(a2))add('info','Drehfeld nicht geprüft (Zähler liefert keine Spannungswinkel)');
+  const Us=d.map(x=>x.U).filter(isFinite);let nom=NaN;
+  if(Us.length){const mx=Math.max(...Us);nom=[57.7,63.5,100,110,230,400].reduce((a,b)=>Math.abs(b-mx)<Math.abs(a-mx)?b:a);
+    d.forEach(x=>{if(!isFinite(x.U))return;if(x.U<.5*nom)add('err',`Spannung ${x.p} fehlt (${fmtN(x.U,1)} V) – Sicherung / Spannungspfad prüfen`);else if(Math.abs(x.U/nom-1)>.1)add('warn',`Spannung ${x.p} weicht >10 % von ${nom} V ab (${fmtN(x.U,1)} V)`);});
+    if(d.every(x=>isFinite(x.U)&&Math.abs(x.U/nom-1)<=.1))add('ok',`Spannungen plausibel (Nennwert ${nom} V)`);}
   const Is=d.map(x=>x.I).filter(isFinite);const Imax=Math.max(...Is,0);
-  if(Imax>0){d.forEach(x=>{if(isFinite(x.I)&&x.I<.01*Imax)wa(`Kein Strom auf ${x.p}`);});
-    const act=d.filter(x=>x.I>=.05*Imax&&isFinite(x.P));const pos=act.filter(x=>x.P>0),neg=act.filter(x=>x.P<0);
-    if(pos.length&&neg.length){const odd=pos.length<neg.length?pos:neg;wa(`Energierichtung ${odd.map(x=>x.p).join(', ')} entgegengesetzt – Stromwandler K/L vertauscht?`);}
-    else if(act.length)ok(`Energierichtung einheitlich (${pos.length?'Bezug':'Lieferung'})`);
-    if(act.length===3){const ph=act.map(x=>x.phi);ph.forEach((p,i)=>{const others=ph.filter((_,k)=>k!==i);const m=(others[0]+others[1])/2;
-      const dv=Math.abs(nAng(p-m));if(dv>60&&dv<150&&Math.abs(others[0]-others[1])<30)wa(`φ ${act[i].p} weicht ${fmtN(Math.abs(nAng(p-m)),0)}° von den anderen ab – Strom falscher Spannung zugeordnet?`);});}
-    const actI=Is.filter(i=>i>0);if(actI.length===3&&Math.max(...actI)/Math.min(...actI)>2)checks.push('<li class="mut">ℹ Ströme stark unsymmetrisch</li>');}
-  $('#phChecks').innerHTML=checks.join('')||'<li class="mut">Keine Werte</li>';}
+  if(!(Imax>0)){add('info','Kein Laststrom – Energierichtung und Zuordnung nicht prüfbar');return L;}
+  d.forEach(x=>{if(isFinite(x.I)&&x.I>=.05*Imax&&isFinite(nom)&&isFinite(x.U)&&x.U<.5*nom)add('err',`Strom auf ${x.p}, aber keine Spannung`);});
+  d.forEach(x=>{if(isFinite(x.I)&&x.I<.01*Imax)add('warn',`Kein Strom auf ${x.p} – Prüfklemme noch gebrückt oder keine Last?`);});
+  const act=d.filter(x=>x.I>=.05*Imax&&isFinite(x.P));const pos=act.filter(x=>x.P>0),neg=act.filter(x=>x.P<0);let bad=new Set();
+  if(pos.length&&neg.length){const odd=pos.length<neg.length?pos:neg;odd.forEach(x=>bad.add(x.p));add('err',`Energierichtung ${odd.map(x=>x.p).join(', ')} entgegengesetzt – Stromwandler K/L vertauscht?`);}
+  else if(act.length)add('ok',`Energierichtung einheitlich (${pos.length?'Bezug':'Lieferung'})`);
+  if(act.length===3){const ph=act.map(x=>x.phi);let any=false;ph.forEach((p,i)=>{const o=ph.filter((_,k)=>k!==i);const m=(o[0]+o[1])/2;
+      const dv=Math.abs(nAng(p-m));if(dv>60&&dv<150&&Math.abs(o[0]-o[1])<30){any=true;bad.add(act[i].p);add('err',`φ ${act[i].p} weicht ${fmtN(dv,0)}° von den anderen ab – Strom falscher Spannung zugeordnet?`);}});
+    if(!any&&!(pos.length&&neg.length))add('ok','Zuordnung Strom ↔ Spannung plausibel');}
+  act.forEach(x=>{const pf=Math.abs(Math.cos(x.phi*Math.PI/180));if(!bad.has(x.p)&&isFinite(pf)&&pf<.5)add('warn',`cos φ ${x.p} nur ${fmtN(pf,2)} – Zuordnung prüfen (oder stark induktive Last)`);});
+  const actI=Is.filter(i=>i>0);if(actI.length===3&&Math.max(...actI)/Math.min(...actI)>2)add('info','Ströme stark unsymmetrisch');
+  if(+S.ctP>0){const sec=+S.ctS||5;d.forEach(x=>{if(isFinite(x.I)&&x.I>1.2*sec)add('warn',`Strom ${x.p} ${fmtN(x.I,2)} A über Wandler-Nennstrom ${sec} A (sekundär)`);});}
+  /* Wandlerverhältnis aus dem Zähler (0.4.2 Strom, 0.4.3 Spannung), falls der Zähler es liefert */
+  const kz=k=>{const e=ST.vals.get(k)||ST.vals.get(k+'.0');const v=parseFloat(e?.value);return isFinite(v)&&v>0?v:NaN;};
+  const mI=kz('0.4.2'),mU=kz('0.4.3'),w=WF();
+  if(isFinite(mI)){if(+S.ctP>0&&Math.abs(mI/w.kI-1)>.01)add('warn',`Stromwandler im Zähler ${fmtN(mI,0)} ≠ eingetragen ${fmtN(w.kI,0)} (${S.ctP}/${S.ctS} A)`);else if(+S.ctP>0)add('ok',`Stromwandlerfaktor im Zähler passt (${fmtN(mI,0)})`);else if(mI!==1)add('info',`Zähler ist mit Stromwandlerfaktor ${fmtN(mI,0)} parametriert – oben eintragen?`);}
+  if(isFinite(mU)&&+S.vtP>0&&Math.abs(mU/w.kU-1)>.01)add('warn',`Spannungswandler im Zähler ${fmtN(mU,0)} ≠ eingetragen ${fmtN(w.kU,0)}`);
+  return L;}
+
 window.addEventListener('resize',()=>{updatePhasor();drawProfile();});
 
 /* ---------- Lastgang ---------- */
@@ -1064,14 +1123,20 @@ async function readPower(pre,round){
   renderPower();return okP;}
 
 async function readExtras(ex,pre,notes){
-  if(isLGE(IECP.ident)&&ex.includes('inst')){status(pre+'Momentanwerte per DLMS …');ex=ex.filter(x=>x!=='inst');
-    try{await dlmsRun({client:pwList().length?32:16,servers:[1,17]},async d=>{const v=await dlmsValues(d,await dlmsInstList(d));if(!v.length)notes.push('keine Momentanwerte');else{setVals(v,false);fillPhInputs();}});}
-    catch(e){log('ERR',e.message);notes.push('Momentanwerte (DLMS): '+e.message);}
-    if(!ex.length)return;}
+  if(isLGE(IECP.ident)&&ex.includes('inst')){const wI=true,wC=false;let fb=false;
+    status(pre+(wI?'Momentanwerte':'Uhrzeit')+' per DLMS …');
+    try{await dlmsRun({client:pwList().length?32:16,servers:[1,17]},async d=>{
+      if(wI){const v=await dlmsValues(d,await dlmsInstList(d));if(!v.length)notes.push('keine Momentanwerte');else{setVals(v,false);fillPhInputs();}}
+      if(wC){status(pre+'Uhrzeit wird geprüft …');let c=null;
+        await clkCheck(async()=>{if(!c){c=await dlmsClock(d);if(c.t)return c.t;}const [t]=await d.read([c.b+8]);const m=t.ok?dtDec(t.v):null;if(!m)throw new Error('Zählerzeit nicht lesbar');return m;},
+          async()=>{await sleep(1000-new Date().getMilliseconds());const code=await d.write(c.b+8,dtEnc(new Date()));if(code!==0)throw new Error(`Zähler lehnt ab (DLMS-Fehler ${code})`);},d.client===32);}});}
+    catch(e){log('ERR',e.message);fb=true;log('INFO','Momentanwerte: DLMS geht nicht – nehme Programmiermodus');}
+    if(!fb)ex=ex.filter(x=>x!=='inst');if(!ex.length)return;}
   status(pre+'Programmiermodus'+($('#pw').value?' mit Passwort':'')+' …');prog('ind');
   await IECP.login($('#pw').value);loadNosup();
   try{
     if(ex.includes('inst')){if(!(await readInstant(pre)))notes.push('keine Momentanwerte');else saveNosup();}
+    if(ex.includes('clk')){status(pre+'Uhrzeit wird geprüft …');prog('ind');await clkCheck(meterTime,writeClock,true);}
     if(ex.includes('prof')){showTab('lastgang');
       const a=$('#lgFrom').value,b=$('#lgTo').value;const exp=Math.max(1,Math.round((new Date(b)-new Date(a))/9e5));
       status(pre+'Lastgang wird angefordert …');prog(0);
@@ -1092,9 +1157,11 @@ async function quickLoop(mode){
   ST.mode='elec';ST.vals.clear();ST.profile=null;ST.logbook=[];renderProfile();renderLogbook();showTab(mode==='pow'?'werte':'zeiger');
   stopReq=false;quickRun=mode;setBusy(true);let round=0,got=0;
   try{status('Zähler wird angesprochen …');const id=await IECP.handshake();
-    if(isLGE(id))return await dlmsQuick(mode,true);   /* L+G mit Mode E: DLMS statt Programmiermodus (wie Q4) */
+    let pre=true;
+    if(isLGE(id)){try{return await dlmsQuick(mode,true);}   /* L+G mit Mode E: DLMS wie Q4 … */
+      catch(e){if(stopReq)throw e;log('WARN','DLMS: '+e.message);log('INFO','DLMS geht nicht – nehme den Programmiermodus wie bisher');pre=false;ST.vals.clear();}}   /* … sonst wie bisher */
     status('Programmiermodus'+($('#pw').value?' mit Passwort':'')+' …');
-    await IECP.login($('#pw').value,true);loadNosup();
+    await IECP.login($('#pw').value,pre);loadNosup();
     try{do{round++;got=mode==='pow'?await readPower('',S.oLoop?round:0):await readInstant('',S.oLoop?round:0);if(!got)break;saveNosup();}while(S.oLoop&&!stopReq);}
     finally{await IECP.bye();}}
   finally{quickRun=false;}
@@ -1113,7 +1180,7 @@ async function meterTime(){
   const d=await g('0.9.2'),t=await g('0.9.1');return new Date(2000+ +d.slice(0,2),+d.slice(2,4)-1,+d.slice(4,6),+t.slice(0,2),+t.slice(2,4),+t.slice(4,6));}
 async function readClock(){return clkShow(await meterTime());}
 function clkShow(mt){const now=new Date();
-  const df=Math.round((mt-now)/1000)||0;$('#clkBox').innerHTML=`<div><span class="mut">Zähler</span><b>${mt.toLocaleString('de-DE')}</b></div><div><span class="mut">Handy</span><b>${now.toLocaleString('de-DE')}</b></div><div><span class="mut">Abweichung</span><b class="${Math.abs(df)>30?'warn':'ok'}">${df>=0?'+':''}${fmtN(df,0)} s</b></div>`;return df;}
+  const df=Math.round((mt-now)/1000)||0;$('#clkBox').innerHTML=`<div><span class="mut">Zähler</span><b>${mt.toLocaleString('de-DE')}</b></div><div><span class="mut">Handy</span><b>${now.toLocaleString('de-DE')}</b></div><div><span class="mut">Abweichung</span><b class="${Math.abs(df)>CLK_TOL?'warn':'ok'}">${df>=0?'+':''}${fmtN(df,0)} s</b></div>`;return df;}
 async function writeClock(){const n=new Date();
   if(isLG()){const v=lgTime(n);const r=await IECP.cmdRW('W2',`C003(${v})`);if(r.type!=='ACK')throw new Error('Zähler hat das Stellen abgelehnt ('+(r.type==='NAK'?'NAK':(r.head||r.body||r.type))+')');log('INFO','Zeit gestellt: '+v);return;}
   const d=`${pad(n.getFullYear()%100)}${pad(n.getMonth()+1)}${pad(n.getDate())}`;
@@ -1121,16 +1188,25 @@ async function writeClock(){const n=new Date();
   if(!used)throw new Error('Zähler hat das Datum nicht angenommen (Passwort mit Schreibrecht nötig?)');
   const t=new Date();const tv=`${pad(t.getHours())}${pad(t.getMinutes())}${pad(t.getSeconds())}`;const r=await IECP.cmdRW(used,`0.9.1(${tv})`);
   if(r.type!=='ACK')throw new Error('Zähler hat die Uhrzeit nicht angenommen ('+(r.type==='NAK'?'NAK':(r.body||r.type))+')');log('INFO',`Zeit gestellt (${used}): ${d} ${tv}`);}
+const CLK_TOL=10;   /* Sekunden – darüber bietet Einbau das Stellen an */
+/* Uhrzeit beim Ein-/Ausbau: lesen, dokumentieren; beim Einbau bei mehr als CLK_TOL Abweichung Stellen anbieten */
+async function clkCheck(rd,wr,canSet){
+  try{const mt=await rd();const df=clkShow(mt);ST.clk={df};log('INFO',`Uhrzeit: Abweichung ${df} s`);
+    if(Math.abs(df)>CLK_TOL&&FORCE?.setClk){
+      if(!canSet){ST.clk.note='ohne Passwort nicht stellbar';return;}
+      if(!confirm(`Zählerzeit weicht ${df>0?'+':''}${fmtN(df,0)} s ab (mehr als ${CLK_TOL} s).\nJetzt auf Handyzeit ${new Date().toLocaleTimeString('de-DE')} stellen?`)){ST.clk.note='Stellen abgelehnt';return;}
+      try{await wr();const d2=clkShow(await rd());Object.assign(ST.clk,{set:true,after:d2});log('INFO',`Uhrzeit gestellt (vorher ${df} s, jetzt ${d2} s)`);}
+      catch(e){ST.clk.setErr=e.message;log('ERR','Uhrzeit stellen: '+e.message);}}}
+  catch(e){ST.clk={err:e.message};log('WARN','Uhrzeit: '+e.message);}}
 async function clockOp(write){
   if(busy)return;if(!T&&!(await connect()))return;setBusy(true);prog('ind');showTab('mehr');
   try{status('Zähler wird angesprochen …');const id=await IECP.handshake();
-    if(isLGE(id)){await dlmsClockOp(write);return;}   /* L+G mit Mode E: Uhr über DLMS (wie Q4) */
     status('Programmiermodus …');await IECP.login($('#pw').value,true);
     try{const df=await readClock();
       if(write){const who=isLG()?'':/^\/EMH/.test(IECP.ident)?'':`\n\nHinweis: Für ${IECP.ident.slice(1,4)} ist das Stellen noch nicht erprobt (Datum 0.9.2 / Zeit 0.9.1).`;
         if(!confirm(`Zählerzeit weicht ${fmtN(df,0)} s ab.\nJetzt auf Handyzeit ${new Date().toLocaleTimeString('de-DE')} stellen?${who}`)){status('Zeitstellen abgebrochen.');return;}
         await writeClock();const d2=await readClock();status(`Uhrzeit gestellt – Abweichung jetzt ${fmtN(d2,0)} s.`,Math.abs(d2)>5?'warn':'ok');}
-      else status(`Zählerzeit gelesen – Abweichung ${fmtN(df,0)} s.`,Math.abs(df)>30?'warn':'ok');}
+      else status(`Zählerzeit gelesen – Abweichung ${fmtN(df,0)} s.`,Math.abs(df)>CLK_TOL?'warn':'ok');}
     finally{await IECP.bye();}}
   catch(e){log('ERR',e.message);status(e.message,'err');}
   finally{setBusy(false);prog(null);}}
@@ -1157,13 +1233,14 @@ const OPS={
   async quick(){return quickLoop('ph');},
   async power(){return quickLoop('pow');},
   async all(idPre){
-    const ex=FORCE?FORCE.ex:[S.oInst&&'inst',S.oProf&&'prof',S.oLog&&'log'].filter(Boolean);const n=ex.length?2:1;const pre=i=>n>1?`${i}/${n} · `:'';
+    const ex=FORCE?FORCE.ex.slice():[S.oInst&&'inst',S.oProf&&'prof',S.oLog&&'log'].filter(Boolean);const n=ex.length?2:1;const pre=i=>n>1?`${i}/${n} · `:'';
+    ST.chk=null;SAVEST=null;ST.conn=null;ST.clk=null;renderChk();
     ST.mode='elec';ST.lgUsed=null;ST.profile=null;ST.profileRaw='';ST.logbook=[];ST.logRaw='';ST.vals.clear();renderProfile();renderLogbook();
     ST.live=true;showTab('werte');
     ST.tRead=Date.now();ST.range=(FORCE?FORCE.ex.includes('prof'):S.oProf)?[$('#lgFrom').value,$('#lgTo').value]:null;
     const r=await IECP.readout(p=>{const v=parseReadout(cutLines(p));setVals(v,true);status(`${pre(1)}Datenauslesung … ${v.length} Werte`);},typeof idPre==='string'?idPre:undefined);
     ST.ident=r.ident;ST.rawReadout=r.text;ST.tDone=Date.now();ST.tInfo=ST.t0;setVals(parseReadout(r.text),true);
-    const notes=[];if(!r.ok)notes.push('Prüfsumme der Datenauslesung falsch');
+    const notes=[];ST.bccOk=r.ok;if(!r.ok)notes.push('Prüfsumme der Datenauslesung falsch');
     if(ex.length){try{await readExtras(ex,pre(2),notes);}catch(e){log('ERR',e.message);notes.push(errMsg(e));try{await IECP.bye()}catch{}}}
     autoSave();
     const parts=[`${ST.vals.size} Werte`];if(ex.includes('prof')&&ST.profile)parts.push(`${ST.profile.rows.length} Lastgangwerte`);if(ex.includes('log'))parts.push(`${ST.logbook.length} Logbucheinträge`);
@@ -1209,10 +1286,13 @@ async function dlmsRun(opt,fn){
   if(!opt.pre){status('Zähler wird angesprochen …');await IECP.handshake(opt.hs);}
   if(!isLGE(IECP.ident))throw new Error(`Zähler ${IECP.ident} bietet kein DLMS (Mode E) an.`);
   const d=new DLMS(LINK);await IECP.modeE();
-  try{const pr=dlPref(),key='s'+opt.client;let srv=null;
-    for(const s of [...new Set([pr[key],...opt.servers].filter(x=>x!=null))]){status(`DLMS: Verbindungsaufbau (Server-Adresse ${s}) …`);if(await d.connect(s,opt.client)){srv=s;break;}}
-    if(srv==null)throw new Error('Zähler antwortet nicht im HDLC-Modus (Mode E). Kopf richtig aufgesetzt? Details unter Mehr → Protokoll.');
-    if(pr[key]!==srv)dlPref({[key]:srv});
+  try{const pr=dlPref();let srv=null;
+    /* opt.clients: mehrere Clients der Reihe nach (z. B. öffentlich 16, dann 32 mit Passwort) – gemerkter zuerst */
+    let cls=opt.clients||[opt.client];if(pr.cl&&cls.includes(pr.cl))cls=[pr.cl,...cls.filter(x=>x!==pr.cl)];
+    for(const cl of cls){if(cl!==16&&!pwList().length){log('INFO',`DLMS: Client ${cl} übersprungen – kein Passwort eingetragen`);continue;}
+      const key='s'+cl;for(const s of [...new Set([pr[key],...(cl===16?opt.servers:[1,17])].filter(x=>x!=null))]){status(`DLMS: Verbindungsaufbau (Client ${cl}, Server-Adresse ${s}) …`);if(await d.connect(s,cl)){srv=s;break;}}
+      if(srv!=null){opt.client=cl;if(pr[key]!==srv)dlPref({[key]:srv});if(cls.length>1&&pr.cl!==cl)dlPref({cl});break;}}
+    if(srv==null)throw Object.assign(new Error(cls.length>1&&!pwList().length?'Zähler antwortet nicht auf die öffentliche Verbindung – bitte Zählerpasswort unter ⚙ eintragen und nochmal versuchen.':'Zähler antwortet nicht im HDLC-Modus (Mode E). Kopf richtig aufgesetzt? Details unter Mehr → Protokoll.'),{noHdlc:true});
     if(opt.client===16){if(!(await d.assoc(null)))throw new Error('Zähler lehnt die öffentliche Verbindung ab.');log('INFO','DLMS: öffentliche Verbindung (Client 16)');}
     else{const list=pwList();let ok=false;
       for(let i=0;i<list.length&&!ok;i++){if(i){await d.close();await IECP.endE();await IECP.handshake(opt.hs);await IECP.modeE();   /* nächster Versuch: frisch anmelden wie beim ersten Mal */
@@ -1275,7 +1355,7 @@ async function dlmsClockOp(write){const pw=pwList();
   if(write&&!pw.length)throw new Error('Zum Stellen ist das Zählerpasswort nötig (unter ⚙ eintragen).');
   return dlmsRun({client:pw.length?32:16,servers:[1,17],pre:true},async d=>{
     const c=await dlmsClock(d);if(!c.t)log('WARN','Zählerzeit nicht lesbar (Leserecht?)');const df=c.t?clkShow(c.t):NaN;
-    if(!write){status(c.t?`Zählerzeit gelesen – Abweichung ${fmtN(df,0)} s.`:'Zählerzeit nicht lesbar.',!c.t||Math.abs(df)>30?'warn':'ok');return;}
+    if(!write){status(c.t?`Zählerzeit gelesen – Abweichung ${fmtN(df,0)} s.`:'Zählerzeit nicht lesbar.',!c.t||Math.abs(df)>CLK_TOL?'warn':'ok');return;}
     if(!confirm(`${c.t?`Zählerzeit weicht ${fmtN(df,0)} s ab.`:'Zählerzeit konnte nicht gelesen werden.'}\nJetzt auf Handyzeit ${new Date().toLocaleTimeString('de-DE')} stellen?`)){status('Zeitstellen abgebrochen.');return;}
     await sleep(1000-new Date().getMilliseconds());const n=new Date();const code=await d.write(c.b+8,dtEnc(n));
     if(code!==0)throw new Error(`Zähler hat das Stellen abgelehnt (DLMS-Fehler ${code} – Passwort mit Schreibrecht?)`);
@@ -1290,7 +1370,7 @@ function lgMdmDecode(q){const g=k=>q[k]?.ok?q[k].v:null,op=g(0),csq=g(1),scan=g(
 async function lgModem(count){let found=false;
   try{status('Zähler wird angesprochen …');prog('ind');const id=await IECP.handshake(2500);ST.ident=id;
     if(!isLGE(id))throw new Error(`Zähler ${id}: Modem-Empfang über den Zähler bisher nur bei L+G (Mode E)`);found=true;
-    return await dlmsRun({client:16,servers:[17,1],pre:true},async d=>{
+    return await dlmsRun({clients:[16,32],servers:[17,1],pre:true},async d=>{
       try{const r=await d.read([0xfd08,0x3848]);if(r[0].ok)MDM.dev=dlStr(r[0].v);if(r[1].ok)MDM.fw=dlStr(r[1].v);}catch(e){log('WARN',e.message);}
       /* 0x7D08 = IP-Adresse des Modems (4 Byte, im Q4-Mitschnitt 0A 4A 4B 18 = 10.74.75.24) */
       try{const [ip]=await d.read([0x7d08]);if(ip.ok){const v=ip.v,x=typeof v==='number'?[v>>>24,(v>>16)&255,(v>>8)&255,v&255]:v?.os?.length===4?v.os:null;if(x)MDM.ip=x.join('.');}}catch(e){log('WARN','IP: '+e.message);}
@@ -1513,25 +1593,27 @@ const canDir='showDirectoryPicker' in window;
 const fileObjs=list=>list.map(([n,b])=>new File([Uint8Array.from(b)],n,{type:/\.png$/i.test(n)?'image/png':'text/plain'}));
 const canShareFiles=list=>{try{return !!(navigator.canShare&&navigator.share&&navigator.canShare({files:fileObjs(list)}));}catch{return false;}};
 const fmtList=list=>`${list.length} Datei${list.length>1?'en':''}`;
-async function dirWrite(list){for(const [n,b] of list){const fh=await DIR.getFileHandle(n,{create:true});const w=await fh.createWritable();await w.write(Uint8Array.from(b));await w.close();log('INFO',`Gespeichert in ${DIR.name}: ${n}`);}
+async function dirWrite(list){for(const [n,b] of list){const fh=await DIR.getFileHandle(n,{create:true});const w=await fh.createWritable();await w.write(Uint8Array.from(b));await w.close();
+    const f=await fh.getFile();if(f.size!==b.length)throw new Error(`${n}: nur ${f.size} von ${b.length} Byte geschrieben`);log('INFO',`Gespeichert und geprüft in ${DIR.name}: ${n}`);}
   return `${fmtList(list)} gespeichert in „${DIR.name}“`;}
 async function dlAll(list){for(const [n,b] of list){saveBytes(n,b);log('INFO','Datei heruntergeladen: '+n);await sleep(700);}return `${fmtList(list)} heruntergeladen`;}
 function showSaveBar(list){PENDING=list;$('#btnSaveNow').textContent=DIR?`📁 In „${DIR.name}“ speichern (${list.length})`:`📁 ${fmtList(list)} sichern`;$('#saveBar').hidden=false;}
 function hideSaveBar(){PENDING=null;$('#saveBar').hidden=true;}
 /* gesture=true: direkt aus einem Fingertipp aufgerufen (Teilen/Erlaubnis sofort möglich) */
 async function saveFiles(list,gesture){hideSaveBar();
+  const mark=(how,ok=true)=>{if(ST.chk&&list===ST.chk.list){SAVEST={how,ok,dir:DIR?.name||''};renderChk();}};
   try{
     if(DIR){let p=await DIR.queryPermission({mode:'readwrite'});if(p!=='granted'&&gesture)p=await DIR.requestPermission({mode:'readwrite'});
-      if(p==='granted'){const m=await dirWrite(list);status(m,'ok');return m;}
-      showSaveBar(list);return 'Fertig – jetzt „In Ordner speichern“ tippen';}
+      if(p==='granted'){const m=await dirWrite(list);mark('dir');status(m,'ok');return m;}
+      showSaveBar(list);mark('pending');return 'Fertig – jetzt „In Ordner speichern“ tippen';}
     if(canShareFiles(list)){
-      if(gesture){await navigator.share({files:fileObjs(list)});const m=`${fmtList(list)} weitergegeben`;status(m,'ok');return m;}
-      showSaveBar(list);return 'Fertig – jetzt „Dateien sichern“ tippen und Ordner wählen';}
-  }catch(e){if(e.name==='AbortError'){showSaveBar(list);status('Speichern abgebrochen – nochmal „Dateien sichern“ tippen.','warn');return 'Speichern abgebrochen';}
+      if(gesture){await navigator.share({files:fileObjs(list)});const m=`${fmtList(list)} weitergegeben`;mark('share');status(m,'ok');return m;}
+      showSaveBar(list);mark('pending');return 'Fertig – jetzt „Dateien sichern“ tippen und Ordner wählen';}
+  }catch(e){if(e.name==='AbortError'){showSaveBar(list);mark('abort');status('Speichern abgebrochen – nochmal „Dateien sichern“ tippen.','warn');return 'Speichern abgebrochen';}
     log('WARN','Speichern: '+e.message);}
-  const m=await dlAll(list);status(m,'ok');return m;}
+  const m=await dlAll(list);mark('dl');status(m,'ok');return m;}
 $('#btnSaveNow').onclick=async()=>{if(!PENDING)return;const l=PENDING;await saveFiles(l,true);};
-$('#btnSaveDl').onclick=async()=>{if(!PENDING)return;const l=PENDING;hideSaveBar();status(await dlAll(l),'ok');};
+$('#btnSaveDl').onclick=async()=>{if(!PENDING)return;const l=PENDING;hideSaveBar();status(await dlAll(l),'ok');if(ST.chk&&l===ST.chk.list){SAVEST={how:'dl',ok:true};renderChk();}};
 function dirInfo(){$('#dirInfo').textContent=DIR?`Ordner: ${DIR.name}`:canDir?'Downloads (Standard)':'';}
 $('#btnDir').onclick=async()=>{
   if(!canDir){status(IOS?'Am iPhone/iPad: nach dem Auslesen „Dateien sichern“ tippen → „In Dateien sichern“ → Ordner wählen (iOS merkt sich den letzten Ordner).':'Dieser Browser kann keinen Ordner fest wählen – nach dem Auslesen „Dateien sichern“ bzw. Download nutzen.','warn');return;}
@@ -1550,22 +1632,123 @@ function ausFiles(){const {nr,st}=fileBase();const info=infoBlock();const D=S.fD
   else log('WARN','Kein Lastgang ausgelesen – LP-Datei fehlt');
   return out;}
 $('#btnFAus').onclick=async()=>{const out=ausFiles();await saveFiles(out,true);if(!ST.profileRaw)status('⚠ Ohne Lastgang nur 2 Dateien – besser oben „Ausbau“ tippen.','warn');};
+/* ---------- Checkliste, Dateiprüfung, Protokoll (Ein-/Ausbau) ---------- */
+let SAVEST=null;
+const sgn=v=>(v>0?'+':'')+fmtN(v,0);
+/* Fehlerregister und Ereigniszähler aus der Auslesung, Logbuch-Zusammenfassung */
+function meterEvents(){const out=[];const g=k=>{const e=ST.vals.get(k)||ST.vals.get(k+'.0');return e?.value;};
+  const ff=ST.rawReadout?rawGet('F.F')??g('F.F'):g('F.F');
+  if(ff!=null){const v=String(ff).trim(),hx=v.replace(/[^0-9a-f]/gi,'');
+    if(/^0*$/.test(hx))out.push({l:'ok',t:'Fehlerregister',d:`F.F = ${v} (keine Fehler)`});
+    else{const n=parseInt(hx,16),bits=[];if(isFinite(n))for(let i=0;i<32;i++)if(n&(2**i))bits.push(i);
+      out.push({l:'warn',t:'Fehlerregister',d:`F.F = ${v} – Zähler meldet Fehler${bits.length?` (Bit ${bits.join(', ')})`:''}, Bedeutung laut Herstellerunterlagen`});}}
+  const pf=['C.7.0','C.7.1','C.7.2','C.7.3'].map(k=>[k,g(k)]).filter(x=>x[1]!=null&&x[1]!==''&&isFinite(parseInt(x[1],10)));
+  if(pf.length)out.push({l:'info',t:'Spannungsausfälle (Zähler)',d:pf.map(([k,v])=>`${k==='C.7.0'?'gesamt':'L'+k.slice(-1)}: ${parseInt(v,10)}`).join(' · ')});
+  if(ST.logbook?.length){const L=ST.logbook,wk=L.filter(e=>Date.now()-e.t<7*864e5).length,codes={};for(const e of L)codes[e.status]=(codes[e.status]||0)+1;
+    out.push({l:'info',t:'Logbuch-Auswertung',d:`${L.length} Einträge · davon letzte 7 Tage: ${wk} · häufigste Codes: ${Object.entries(codes).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([c,n])=>`${c} (${n}×)`).join(', ')} · letzter Eintrag ${fmtDT(L.reduce((a,e)=>e.t>a?e.t:a,L[0].t))}`});}
+  return out;}
+function buildChk(kind,c){const aus=kind==='aus',I=[],add=(l,t,d='')=>I.push({l,t,d});
+  add('ok','Zähler erkannt',`${meterNo()||'–'} · ${ST.ident}`);
+  add(ST.bccOk===false?'warn':'ok','Datenauslesung',`${ST.vals.size} Werte${ST.bccOk===false?' – Prüfsumme (BCC) falsch':' · Prüfsumme OK'}`);
+  if(aus){const p=ST.profile,n=p?.rows?.length||0;add(n?'ok':'err','Lastgang',n?`${n} Werte · ${fmtDT(p.rows[0].t)} – ${fmtDT(p.rows[n-1].t)}`:'nicht gelesen – LP-Datei fehlt');
+    add(ST.logRaw?'ok':'warn','Logbuch',ST.logRaw?`${ST.logbook.length} Einträge`:'nicht gelesen');}
+  for(const e of meterEvents())I.push(e);
+  if(c.clk){const k=ST.clk;
+    if(!k)add('warn','Uhrzeit','nicht geprüft (Programmiermodus/Passwort?)');
+    else if(k.err)add('warn','Uhrzeit','nicht lesbar – '+k.err);
+    else if(k.set)add(Math.abs(k.after)<=CLK_TOL?'ok':'warn','Uhrzeit gestellt',`vorher ${sgn(k.df)} s, jetzt ${sgn(k.after)} s`);
+    else if(Math.abs(k.df)<=CLK_TOL)add('ok','Uhrzeit',`Abweichung ${sgn(k.df)} s (Grenze ${CLK_TOL} s)`);
+    else add('warn','Uhrzeit',`Abweichung ${sgn(k.df)} s${k.setErr?' – Stellen fehlgeschlagen: '+k.setErr:k.note?' – '+k.note:aus?' (nur dokumentiert)':''}`);}
+  if(c.conn){const k=ST.conn;
+    if(!k||!k.items.length)add('warn','Anschlusscheck','keine Momentanwerte erhalten');
+    else{const bad=k.items.filter(x=>x.l==='err'||x.l==='warn'),inf=k.items.filter(x=>x.l==='info');
+      add(k.lvl,'Anschlusscheck',bad.length?bad.map(x=>x.t).join(' · '):(inf.length?inf.map(x=>x.t).join(' · ')+' · ':'')+`${k.items.filter(x=>x.l==='ok').length} Prüfungen in Ordnung`);}}
+  if(c.mdmTried){if(!c.mdmOk||MDM.rsrp==null)add('warn','Modem','antwortet nicht');
+    else{const [rt]=rateSig(MDM.rsrp),weak=/schwach/.test(rt),unreg=MDM.reg!=null&&![1,5].includes(MDM.reg);
+      add(weak||unreg?'warn':'ok','Modem',`${sigL()} ${MDM.rsrp} dBm (${rt})${MDM.reg!=null?' · '+(REG[MDM.reg]||MDM.reg):''}${MDM.plmn?' · '+MDM.plmn+(MNO[MDM.plmn]?' '+MNO[MDM.plmn]:''):''}${MDM.ip?' · IP '+MDM.ip:''}`);}}
+  if(c.geoTried)add(c.geo?'ok':'warn','Standort',c.geo?`${c.geo.lat.toFixed(6)}, ${c.geo.lon.toFixed(6)} (± ${c.geo.acc} m)`:'kein GPS (Standort erlaubt?)');
+  return I;}
+/* Inhalt jeder Datei vor dem Speichern prüfen */
+function checkFile(n,b){try{if(!b||!b.length)return{ok:false,msg:'Datei leer'};
+    if(/\.png$/i.test(n))return b[0]===0x89&&b[1]===0x50&&b[2]===0x4e&&b.length>2000?{ok:true,msg:`Bild ${Math.round(b.length/1024)} kB`}:{ok:false,msg:'Bild fehlerhaft'};
+    const s=dec(b);
+    if(/\.(raw|txt)$/i.test(n)){const i=b.indexOf(STX),j=b.indexOf(ETX,i);if(i<0||j<0)return{ok:false,msg:'STX/ETX fehlt'};
+      if(bcc(b.slice(i+1,j+1))!==b[j+1])return{ok:false,msg:'Prüfsumme (BCC) falsch'};const k=(s.slice(i,j).match(/\(/g)||[]).length;return k?{ok:true,msg:`${k} Werte, Prüfsumme OK`}:{ok:false,msg:'keine Werte'};}
+    if(/\.vl$/i.test(n))return /\*INFO\*/.test(s)&&/\*MET_DATA\*/.test(s)&&(s.match(/\(/g)||[]).length>3?{ok:true,msg:'Info- und Zählerdaten vorhanden'}:{ok:false,msg:'Abschnitt fehlt'};
+    if(/\.lp$/i.test(n)){const sec=(s.split('*READOUT_DATA*')[1]||'').split('*MESSAGE*')[0];const k=sec?parseProfile(sec).rows.length:0;return /\*INFO\*/.test(s)&&k?{ok:true,msg:`${k} Lastgangwerte`}:{ok:false,msg:'keine Lastgangwerte'};}
+    return{ok:true,msg:`${b.length} Byte`};}catch(e){return{ok:false,msg:e.message};}}
+function chkFiles(){return ST.chk.files.map(f=>{let l=f.ok?'ok':'err',d=f.msg;const s=SAVEST;
+  if(f.ok){if(!s){l='warn';d+=' · wird gespeichert …';}
+    else if(s.how==='dir'){d+=` · gespeichert in „${s.dir}“ und nachgeprüft`;}
+    else if(s.how==='dl')d+=' · heruntergeladen';else if(s.how==='share')d+=' · weitergegeben';
+    else{l='warn';d+=s.how==='abort'?' · Speichern abgebrochen – „Dateien sichern“ tippen':' · noch nicht gesichert – „Dateien sichern“ tippen';}}
+  return{l,t:f.n,d};});}
+function renderChk(){const c=ST.chk,card=$('#chkCard');if(!c){card.hidden=true;return;}card.hidden=false;
+  const all=[...c.items,...chkFiles()],w=worst(all),n=all.filter(x=>x.l==='err'||x.l==='warn').length;
+  $('#chkTitle').textContent=(c.kind==='aus'?'Ausbau':'Einbau')+' – Checkliste';$('#chkTime').textContent=new Date(c.t).toLocaleTimeString('de-DE');
+  const sum=$('#chkSum');sum.className='chkSum '+(n?w:'ok');sum.textContent=n?`${CK[w]} ${n} Punkt${n>1?'e':''} prüfen`:'✓ Alles erledigt';
+  $('#chkList').innerHTML=all.map(x=>`<li class="${x.l}"><span class="ic">${CK[x.l]}</span><div><b>${esc(x.t)}</b>${x.d?`<div class="mut">${esc(x.d)}</div>`:''}</div></li>`).join('');}
+/* Protokoll als ein Bild: Checkliste, Dateien, Anschlusscheck mit Zeigerbild, Zählerstände, Modem, Standort */
+async function protoPng(kind,items,files,geo){const aus=kind==='aus',W=900,dpr=2,HMAX=6000,F='-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif',G='#5f9e1f',GRAY='#6b7280';
+  const COL={ok:'#30a14e',warn:'#d4a000',err:'#d93025',info:'#9ca3af'};
+  const cv=document.createElement('canvas');cv.width=W*dpr;cv.height=HMAX*dpr;const c=cv.getContext('2d');c.scale(dpr,dpr);c.fillStyle='#fff';c.fillRect(0,0,W,HMAX);
+  const wrap=(t,maxW)=>{const out=[];let line='';for(const w of String(t).split(' ')){const tt=line?line+' '+w:w;if(c.measureText(tt).width>maxW&&line){out.push(line);line=w;}else line=tt;}if(line)out.push(line);return out;};
+  c.fillStyle=G;c.fillRect(0,0,W,8);
+  c.fillStyle='#111';c.font=`700 34px ${F}`;c.fillText(aus?'Ausbauprotokoll':'Einbauprotokoll',40,62);
+  c.fillStyle=GRAY;c.font=`17px ${F}`;c.fillText(`${new Date().toLocaleString('de-DE')}  ·  Zähler ${meterNo()||'–'}  ·  ${ST.ident}`,40,92);
+  let y=100;const wf=WF();if(wf.kP!==1){y+=24;c.fillText(`Wandler ${S.ctP||'–'}/${S.ctS} A${+S.vtP?` · ${S.vtP}/100 V`:''} · Faktor ${fmtN(wf.kP,wf.kP%1?2:0)}`,40,y);}
+  const all=[...items,...files.map(f=>({l:f.ok?'ok':'err'}))],w=worst(all),nb=all.filter(x=>x.l==='err'||x.l==='warn').length,ww=nb?w:'ok';
+  y+=22;c.fillStyle={ok:'#e8f5e9',warn:'#fff8e1',err:'#fdecea'}[ww];c.beginPath();c.roundRect(30,y,W-60,58,12);c.fill();
+  c.fillStyle=COL[ww];c.font=`700 25px ${F}`;c.fillText(nb?`${CK[w]}  ${nb} Punkt${nb>1?'e':''} prüfen`:'✓  Alles in Ordnung',52,y+38);y+=84;
+  const sec=t=>{y+=26;c.fillStyle='#111';c.font=`700 22px ${F}`;c.fillText(t,40,y+6);y+=20;};
+  const list=L=>{for(const x of L){c.font=`15px ${F}`;const dl=x.d?wrap(x.d,W-140):[];
+      c.fillStyle=COL[x.l];c.beginPath();c.arc(56,y+19,12,0,7);c.fill();c.fillStyle='#fff';c.font=`700 15px ${F}`;c.textAlign='center';c.fillText(CK[x.l],56,y+24);c.textAlign='left';
+      c.fillStyle='#111';c.font=`600 17px ${F}`;c.fillText(x.t,80,y+25);c.fillStyle=GRAY;c.font=`15px ${F}`;dl.forEach((l,i)=>c.fillText(l,80,y+47+i*20));
+      y+=36+dl.length*20;c.strokeStyle='#eee';c.lineWidth=1;c.beginPath();c.moveTo(40,y);c.lineTo(W-40,y);c.stroke();y+=4;}};
+  sec('Checkliste');list(items);
+  sec('Dateien');list(files.map(f=>({l:f.ok?'ok':'err',t:f.n,d:f.msg})));
+  const d=getPh();
+  if(!aus&&d.some(x=>isFinite(x.U)||isFinite(x.I))){analyse(d);sec('Anschlusscheck');y+=6;
+    const pc=document.createElement('canvas');pc.width=pc.height=680;const pg=pc.getContext('2d');pg.scale(2,2);pg.fillStyle='#fff';pg.fillRect(0,0,340,340);
+    const pal={'--grid':'#e5e7eb','--mut':'#6b7280','--l1':'#a0522d','--l2':'#111111','--l3':'#9ca3af'};drawPh(pg,340,340,v=>pal[v],d);
+    c.drawImage(pc,40,y,340,340);
+    let ty=y+20;const x0=400,cx=[0,45,150,250,330];c.font=`600 14px ${F}`;c.fillStyle=GRAY;['','U','I','φ','P'].forEach((h,i)=>c.fillText(h,x0+cx[i],ty));ty+=12;
+    d.forEach(p=>{ty+=28;c.fillStyle='#111';c.font=`600 15px ${F}`;c.fillText(p.p,x0,ty);c.font=`15px ${F}`;
+      [isFinite(p.U)?fmtN(p.U*wf.kU,1)+' V':'–',isFinite(p.I)?fmtN(p.I*wf.kI,2)+' A':'–',isFinite(p.phi)?fmtN(p.phi,1)+'°':'–',isFinite(p.P)?fmtP(p.P/1000*wf.kP,'kW'):'–'].forEach((v,i)=>c.fillText(v,x0+cx[i+1],ty));});
+    c.fillStyle=GRAY;c.font=`13px ${F}`;ty+=28;c.fillText(wf.kP!==1?'Werte primär (mit Wandlerfaktor)':'Werte sekundär / direkt',x0,ty);
+    c.fillText('Spannungen dick, Ströme dünn mit Pfeil',x0,ty+20);
+    y+=350;list((ST.conn?.items||[]).map(x=>({l:x.l,t:x.t,d:''})));}
+  const en=[...ST.vals.values()].filter(e=>/^[1-8]\.8\.\d$/.test(e.key)).slice(0,12);
+  if(en.length){sec('Zählerstände');en.forEach((e,i)=>{const xx=40+(i%2)*420;if(i%2===0)y+=30;c.fillStyle=GRAY;c.font=`14px ${F}`;c.fillText(`${e.key} ${describe(e.key)}`,xx,y);
+      c.fillStyle='#111';c.font=`600 15px ui-monospace,Consolas,monospace`;c.textAlign='right';c.fillText(`${e.value} ${e.unit}`,xx+400,y);c.textAlign='left';});y+=14;}
+  if(!aus&&MDM.rsrp!=null){sec('Modem');list([{l:/schwach/.test(rateSig(MDM.rsrp)[0])?'warn':'ok',t:'Signalstärke '+sigL(),d:`${MDM.rsrp} dBm (${rateSig(MDM.rsrp)[0]})`}].concat(mdmRows().filter(r=>/^(Netz|Status|Provider|IP|CSQ|IMEI|ICCID)/.test(r[0])).map(r=>({l:'info',t:r[0],d:String(r[1])}))));}
+  if(geo){sec('Standort');const addr=await withTimeout(geoAddress(geo),5000);list([{l:'info',t:addr||'Koordinaten',d:`${geo.lat.toFixed(6)}, ${geo.lon.toFixed(6)} (± ${geo.acc} m) · ${navUrl(geo)}`}]);}
+  y+=30;c.fillStyle=GRAY;c.font=`13px ${F}`;c.fillText(`Zählerauslesung · ${aus?'Ausbau':'Einbau'}protokoll · erstellt ${new Date().toLocaleString('de-DE')}`,40,y);y+=24;
+  const H=Math.min(HMAX,Math.ceil(y)),o=document.createElement('canvas');o.width=W*dpr;o.height=H*dpr;o.getContext('2d').drawImage(cv,0,0,W*dpr,H*dpr,0,0,W*dpr,H*dpr);
+  const blob=await new Promise(r=>o.toBlob(r,'image/png'));return [...new Uint8Array(await blob.arrayBuffer())];}
 /* Einbau / Ausbau: auslesen und gleich die Dateien im Q4-Format speichern */
 let FORCE=null;
 async function ioRun(kind,geoP){const aus=kind==='aus';
   if(aus){const dl=d=>new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,16);const t=new Date();t.setHours(0,0,0,0);
     $('#lgFrom').value=dl(new Date(t-7*864e5));$('#lgTo').value=dl(new Date(+t+864e5));}
-  FORCE={ex:aus?['prof','log']:[]};let r;
+  FORCE={ex:aus?['prof','log','clk']:[S.einConn!==false&&'inst',S.einClk!==false&&'clk'].filter(Boolean),setClk:!aus};let r;
   try{r=await OPS.auto();}finally{FORCE=null;}
   if(!ST.rawReadout||ST.ident==='SML')throw new Error('Keine IEC-Auslesung – Dateien nur für Zähler mit Datenauslesung (nicht SML).');
-  const names=aus?ausFiles():einFiles();let warn=r&&r.startsWith('⚠')?r+' · ':'',extra='';
+  const names=aus?ausFiles():einFiles();let warn=r&&r.startsWith('⚠')?r+' · ':'',extra='';const ctx={clk:aus||S.einClk!==false,conn:!aus&&S.einConn!==false};
   if(!aus){let mOk=false;if(S.einMdm!==false){await sleep(LINK.t instanceof DemoT?0:500);
       try{await opModem(5);mOk=true;extra=` · Empfang ${MDM.rsrp} dBm (${rateSig(MDM.rsrp)[0]})`;}
       catch(e){log('WARN','Empfangstest: '+e.message);warn='⚠ '+warn+'Empfangstest: Modem antwortet nicht · ';for(const k in MDM)delete MDM[k];}}
     let geo=null;if(geoP){status('Standort wird ermittelt …');geo=await geoP;if(!geo)warn=(warn.startsWith('⚠')?warn:'⚠ '+warn)+'kein Standort (GPS erlaubt?) · ';else extra+=` · Standort ± ${geo.acc} m`;}
-    if(mOk||geo){status('Bild wird erstellt …');names.push([`einbau_${(meterNo()||'zaehler').replace(/[^\w-]/g,'')}_${stamp()}.png`,await mdmPng(geo)]);}}
+    if(mOk||geo){status('Bild wird erstellt …');names.push([`einbau_${(meterNo()||'zaehler').replace(/[^\w-]/g,'')}_${stamp()}.png`,await mdmPng(geo)]);}
+    ctx.mdmTried=S.einMdm!==false;ctx.mdmOk=mOk;ctx.geoTried=!!geoP;ctx.geo=geo;}
+  /* Checkliste, Dateiprüfung und Protokoll – die bisherigen Dateien bleiben unverändert */
+  const items=buildChk(kind,ctx);let files=names.map(([n,b])=>({n,...checkFile(n,b)}));
+  if(S.proto!==false){status('Protokoll wird erstellt …');try{const pn=`${aus?'ausbau':'einbau'}_protokoll_${(meterNo()||'zaehler').replace(/[^\w-]/g,'')}_${stamp()}.png`,pb=await protoPng(kind,items,files,ctx.geo);
+    names.push([pn,pb]);files.push({n:pn,...checkFile(pn,pb)});}catch(e){log('ERR','Protokoll: '+e.message);}}
+  ST.chk={kind,items,files,list:names,t:Date.now()};SAVEST=null;renderChk();
   const m=await saveFiles(names);showTab('werte');
-  return warn+`${aus?'Ausbau':'Einbau'}: ${m}${extra}`;}
+  const all=[...items,...files.map(f=>({l:f.ok?'ok':'err'}))],nb=all.filter(x=>x.l==='err'||x.l==='warn').length;
+  return (nb?'⚠ ':'')+warn.replace(/^⚠ /,'')+`${aus?'Ausbau':'Einbau'}: ${m}${extra} · ${nb?`Checkliste: ${nb} Punkt${nb>1?'e':''} prüfen`:'Checkliste ✓'}`;}
 $('#btnEin').onclick=()=>{const g=S.einGeo!==false?geoStart():null;run('Einbau',()=>ioRun('ein',g));};
 $('#btnAus').onclick=()=>run('Ausbau',()=>ioRun('aus'));
 

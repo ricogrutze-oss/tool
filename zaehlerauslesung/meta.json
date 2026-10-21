@@ -2,5 +2,5 @@
   "name": "Zählerauslesung",
   "description": "Zähler über optischen Tastkopf (DvBTIR, Bluetooth/COM) auslesen – Einbau/Ausbau-Dateien, Werte, Zeigerdiagramm, Lastgang, Logbuch",
   "icon": "icon.svg",
-  "version": "1.23.0"
+  "version": "1.25.1"
 }
