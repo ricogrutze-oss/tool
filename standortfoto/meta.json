@@ -1,6 +1,5 @@
 {
-  "name": "Standortfoto",
-  "description": "Aktuellen Standort als Kartenbild (JPEG) mit Koordinaten und Genauigkeit speichern",
-  "icon": "icon.svg",
-  "version": "1.0"
+  "title": "Standortfoto",
+  "description": "Standort als Kartenbild (JPEG) mit Koordinaten und Genauigkeit",
+  "icon": "icon.svg"
 }
