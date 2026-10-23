@@ -1,5 +1,5 @@
 {
   "title": "Standortfoto",
-  "description": "Standort als Kartenbild (JPEG) mit Koordinaten und Genauigkeit",
+  "description": "Zählerstandort als Kartenbild (JPEG) mit Koordinaten, Genauigkeit und Maßstab",
   "icon": "icon.svg"
 }

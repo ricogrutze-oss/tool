@@ -1,5 +1,5 @@
 // Standortfoto – Service Worker (nur App-Hülle; Karte und Adresse kommen immer frisch aus dem Netz)
-const CACHE = 'standortfoto-v1';
+const CACHE = 'standortfoto-v2';
 const DATEIEN = ['./', './index.html', './manifest.json', './icon.svg', './icon-180.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
