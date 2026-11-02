@@ -1,4 +1,1 @@
-{
-  "name": "Vorinbetriebnahme-Protokoll",
-  "description": "Prüfprotokoll für Zähleranlagen MS/NS mit Foto-Auslesung"
-}
+{"name":"Vor-/Inbetriebnahme","description":"Protokoll für Zähleranlagen NS/MS/HS mit Zählerauslese, Bewertung je Komponente und Mängelschein","icon":"icon.svg"}

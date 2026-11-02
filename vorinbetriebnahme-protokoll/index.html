@@ -3,130 +3,171 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
-<title>Vorinbetriebnahme-Protokoll</title>
+<title>Vor-/Inbetriebnahme-Protokoll</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#00843d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Inbetriebnahme">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
 <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
 <style>
   :root{
-    --bg:#141210; --bg2:#1c1915; --card:#211d18; --border:#3a332a; --border-light:#4a4136;
-    --amber:#f0a830; --amber-dim:#a87a30; --text:#eee7da; --text-dim:#a89a86;
-    --ok:#5fae6b; --warn:#d9534f; --mono:'Consolas','SFMono-Regular',Menlo,monospace;
+    --bg:#f2f2f7; --card:#ffffff; --field:#f2f2f7; --border:#e5e5ea; --border-light:#d1d1d6;
+    --accent:#4d8a0c; --accent-bright:#86bc25; --accent-dim:#6f9d2a; --accent-soft:rgba(134,188,37,.18); --on-accent:#ffffff;
+    --text:#1c1c1e; --text-dim:#6e6e73; --ok:#2f9e44; --warn:#d92d20; --warn-soft:rgba(217,45,32,.10);
+    --glass:rgba(242,242,247,.82); --shadow:0 1px 2px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+    --mono:'SFMono-Regular',Menlo,Consolas,monospace;
   }
-  *{box-sizing:border-box;}
-  body{margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,'Segoe UI',Roboto,sans-serif; padding-bottom:90px;}
-  header{background:linear-gradient(180deg,#1c1915,#161310); border-bottom:2px solid var(--amber-dim); padding:14px 16px 10px; position:sticky; top:0; z-index:20;}
-  header h1{margin:0 0 2px; font-size:17px; color:var(--amber); letter-spacing:.3px;}
-  header .sub{font-size:11px; color:var(--text-dim);}
-  .steps{display:flex; gap:4px; margin-top:10px; flex-wrap:wrap;}
-  .step{flex:1; min-width:70px; text-align:center; padding:6px 2px; font-size:10px; border-radius:6px; background:var(--bg2); color:var(--text-dim); border:1px solid var(--border); cursor:pointer;}
-  .step.active{background:var(--amber); color:#1a1410; font-weight:700; border-color:var(--amber);}
-  .step.complete{border-color:var(--ok); color:var(--ok);}
-  .step.active.complete{background:var(--ok); color:#0e1a10; border-color:var(--ok);}
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#000000; --card:#1c1c1e; --field:#2c2c2e; --border:#38383a; --border-light:#48484a;
+      --accent:#9ad33a; --accent-bright:#9ad33a; --accent-dim:#7fae2e; --accent-soft:rgba(154,211,58,.18); --on-accent:#10200a;
+      --text:#f2f2f7; --text-dim:#98989f; --ok:#4cc263; --warn:#ff6b5e; --warn-soft:rgba(255,107,94,.14);
+      --glass:rgba(28,28,30,.82); --shadow:none;
+    }
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Roboto,sans-serif; padding-bottom:104px; -webkit-font-smoothing:antialiased;}
+
+  header{position:sticky; top:0; z-index:20; padding:calc(env(safe-area-inset-top) + 12px) 16px 10px; background:var(--glass); -webkit-backdrop-filter:saturate(180%) blur(20px); backdrop-filter:saturate(180%) blur(20px); border-bottom:1px solid var(--border);}
+  header::before{content:""; position:absolute; left:0; right:0; top:0; height:3px; background:linear-gradient(90deg,#86bc25,#4d8a0c);}
+  header h1{margin:0; font-size:20px; font-weight:700; letter-spacing:-.2px;}
+  header .sub{font-size:12px; color:var(--text-dim); margin-top:1px;}
+  .steps{display:flex; gap:6px; margin-top:10px; overflow-x:auto; scrollbar-width:none; padding-bottom:2px;}
+  .steps::-webkit-scrollbar{display:none;}
+  .step{flex:0 0 auto; padding:7px 13px; font-size:12.5px; border-radius:999px; background:var(--field); color:var(--text-dim); cursor:pointer; white-space:nowrap; transition:background .15s,color .15s;}
+  .step.active{background:var(--accent); color:var(--on-accent); font-weight:600;}
+  .step.complete{color:var(--accent); background:var(--accent-soft);}
+  .step.active.complete{background:var(--accent); color:var(--on-accent);}
 
   main{padding:14px 14px 20px; max-width:640px; margin:0 auto;}
   .panel{display:none;}
-  .panel.active{display:block; animation:fade .15s ease;}
-  @keyframes fade{from{opacity:0} to{opacity:1}}
+  .panel.active{display:block; animation:fade .18s ease;}
+  @keyframes fade{from{opacity:0; transform:translateY(4px)} to{opacity:1; transform:none}}
 
-  .card{background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:12px;}
-  .card h2{margin:0 0 10px; font-size:14px; color:var(--amber); border-bottom:1px solid var(--border); padding-bottom:6px;}
-  .card h3{margin:14px 0 8px; font-size:12.5px; color:var(--text); text-transform:uppercase; letter-spacing:.5px; opacity:.8;}
+  .card{background:var(--card); border-radius:18px; padding:16px; margin-bottom:14px; box-shadow:var(--shadow);}
+  .card h2{margin:0 0 12px; font-size:18px; font-weight:700; letter-spacing:-.2px;}
+  .card h3{margin:16px 0 8px; font-size:12px; font-weight:600; color:var(--accent); text-transform:uppercase; letter-spacing:.6px;}
 
-  label{display:block; font-size:11.5px; color:var(--text-dim); margin:8px 0 3px;}
+  label{display:block; font-size:12.5px; color:var(--text-dim); margin:10px 0 4px; font-weight:500;}
   input[type=text], input[type=number], input[type=date], select, textarea{
-    width:100%; padding:9px 10px; background:#171410; border:1px solid var(--border-light);
-    border-radius:7px; color:var(--text); font-size:14px; font-family:inherit;
+    width:100%; padding:11px 12px; background:var(--field); border:2px solid transparent;
+    border-radius:12px; color:var(--text); font-size:16px; font-family:inherit; -webkit-appearance:none; appearance:none;
   }
-  textarea{min-height:50px; resize:vertical; font-family:var(--mono); font-size:12.5px;}
-  input:focus, select:focus, textarea:focus{outline:none; border-color:var(--amber);}
+  select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%238e8e93' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center; padding-right:32px;}
+  textarea{min-height:56px; resize:vertical; font-size:15px;}
+  input:focus, select:focus, textarea:focus{outline:none; border-color:var(--accent-bright); background:var(--card);}
+  ::placeholder{color:var(--text-dim); opacity:.7;}
 
-  .row{display:flex; gap:8px;}
-  .row > *{flex:1;}
+  .row{display:flex; gap:10px;}
+  .row > *{flex:1; min-width:0;}
 
-  .choice-group{display:flex; gap:8px; flex-wrap:wrap;}
-  .choice{flex:1; min-width:100px; text-align:center; padding:12px 8px; border:1px solid var(--border-light);
-    border-radius:8px; background:#171410; cursor:pointer; font-size:13px; color:var(--text-dim);}
-  .choice.sel{border-color:var(--amber); background:#2a2013; color:var(--amber); font-weight:600;}
+  .choice-group{display:flex; gap:2px; flex-wrap:wrap; background:var(--field); padding:3px; border-radius:12px;}
+  .choice{flex:1 1 auto; min-width:0; text-align:center; padding:10px 10px; border-radius:9px; font-size:14px; line-height:1.25; color:var(--text); cursor:pointer; transition:background .15s,color .15s;}
+  .choice.sel{background:var(--card); color:var(--accent); font-weight:600; box-shadow:0 1px 3px rgba(0,0,0,.18);}
+  .choice.disabled, .tile.disabled{opacity:.35; pointer-events:none;}
+
+  .tiles{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .tile{background:var(--field); border:2px solid transparent; border-radius:14px; padding:12px; cursor:pointer; transition:border-color .15s,background .15s;}
+  .tile b{display:block; font-size:15px;}
+  .tile span{display:block; font-size:11.5px; color:var(--text-dim); margin-top:3px; line-height:1.3;}
+  .tile.sel{border-color:var(--accent-bright); background:var(--accent-soft);}
+  .tile:active{transform:scale(.98);}
 
   button{font-family:inherit; cursor:pointer;}
-  .btn{padding:10px 16px; border-radius:8px; border:1px solid var(--border-light); background:#211d18; color:var(--text); font-size:13.5px;}
-  .btn:active{transform:scale(.97);}
-  .btn-amber{background:var(--amber); color:#1a1410; border-color:var(--amber); font-weight:700;}
+  .btn{padding:12px 18px; border-radius:12px; border:none; background:var(--field); color:var(--accent); font-size:15px; font-weight:600; transition:transform .1s,opacity .1s;}
+  .btn:active{transform:scale(.97); opacity:.8;}
+  .btn-primary{background:var(--accent); color:var(--on-accent);}
   .btn-ghost{background:transparent; color:var(--text-dim);}
-  .btn-sm{padding:6px 10px; font-size:12px; border-radius:6px;}
+  .btn-sm{padding:9px 13px; font-size:13.5px; border-radius:10px;}
   .btn-block{width:100%;}
-  .btn-danger{color:var(--warn); border-color:#5a2f2d;}
+  .btn-danger{color:var(--warn); background:var(--warn-soft);}
 
-  .thumb{width:70px; height:70px; border-radius:8px; object-fit:cover; border:1px solid var(--border-light); background:#0d0b09; flex-shrink:0; display:block;}
-  .thumb.empty{background:#0d0b09;}
+  .thumb{width:70px; height:70px; border-radius:12px; object-fit:cover; background:var(--field); flex-shrink:0; display:block;}
   .photo-mini{flex:1;}
   .photo-mini .thumb{width:100%; height:64px;}
-  .status-line{font-size:11.5px; color:var(--text-dim); min-height:16px;}
+  .status-line{font-size:12.5px; color:var(--text-dim); min-height:16px; margin-top:4px;}
   .status-line.ok{color:var(--ok);}
   .status-line.err{color:var(--warn);}
 
-  .device-block{border:1px solid var(--border); border-radius:9px; padding:12px; margin-bottom:12px; background:#191510;}
-  .device-block h4{margin:0 0 8px; font-size:12.5px; color:var(--amber);}
+  .device-block{border-radius:14px; padding:12px; margin-bottom:12px; background:var(--field);}
+  .device-block h4{margin:0 0 8px; font-size:14px; color:var(--accent);}
+  .device-block input, .device-block select, .device-block textarea{background:var(--card);}
 
-  .check-cat{margin-bottom:14px;}
-  .check-cat-title{font-size:12px; text-transform:uppercase; letter-spacing:.5px; color:var(--amber-dim); margin:14px 0 6px; padding-top:8px; border-top:1px dashed var(--border);}
-  .check-item{display:flex; gap:10px; align-items:flex-start; padding:8px 0; border-bottom:1px solid #221e18;}
-  .check-item input[type=checkbox]{width:20px; height:20px; margin-top:1px; accent-color: var(--amber); flex-shrink:0;}
-  .check-item .txt{flex:1; font-size:13px; line-height:1.35;}
-  .note-toggle{font-size:10.5px; color:var(--text-dim); text-decoration:underline; margin-left:30px; cursor:pointer;}
-  .note-field{margin:4px 0 6px 30px; display:none;}
+  .check-cat{margin-bottom:6px;}
+  .check-cat-title{font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.6px; color:var(--accent); margin:16px 0 4px;}
+  .check-item{display:flex; gap:12px; align-items:flex-start; padding:11px 0; border-bottom:1px solid var(--border);}
+  .check-item:last-child{border-bottom:none;}
+  input[type=checkbox]{-webkit-appearance:none; appearance:none; width:26px; height:26px; border-radius:50%; border:2px solid var(--border-light); background:transparent; flex-shrink:0; position:relative; cursor:pointer; margin:0; transition:background .15s,border-color .15s;}
+  input[type=checkbox]:checked{background:var(--accent); border-color:var(--accent);}
+  input[type=checkbox]:checked::after{content:""; position:absolute; left:7px; top:3px; width:6px; height:12px; border:solid var(--on-accent); border-width:0 2.5px 2.5px 0; transform:rotate(45deg);}
+  .check-item .txt{flex:1; font-size:15px; line-height:1.35;}
+  .note-toggle{display:inline-block; font-size:12px; color:var(--accent); margin-top:3px; cursor:pointer;}
+  .note-field{margin:4px 0 2px; display:none;}
   .note-field.open{display:block;}
-  .note-field textarea{min-height:34px; font-family:inherit;}
+  .note-field textarea{min-height:40px; font-size:14px;}
 
-  footer.navbar{position:fixed; bottom:0; left:0; right:0; background:#171410; border-top:1px solid var(--border); padding:10px 14px; display:flex; gap:10px; z-index:20;}
-  footer.navbar .btn{flex:1;}
+  footer.navbar{position:fixed; bottom:0; left:0; right:0; background:var(--glass); -webkit-backdrop-filter:saturate(180%) blur(20px); backdrop-filter:saturate(180%) blur(20px); border-top:1px solid var(--border); padding:10px 14px calc(env(safe-area-inset-bottom) + 10px); display:flex; gap:10px; z-index:20;}
+  footer.navbar .btn{flex:1; padding:14px; font-size:16px; border-radius:14px;}
 
   .gps-box{display:flex; gap:8px; align-items:center;}
   .gps-box input{flex:1;}
 
-  .summary-line{display:flex; justify-content:space-between; font-size:13px; padding:5px 0; border-bottom:1px dotted var(--border);}
+  .summary-line{display:flex; justify-content:space-between; gap:12px; font-size:14px; padding:8px 0; border-bottom:1px solid var(--border);}
+  .summary-line:last-child{border-bottom:none;}
   .summary-line span:first-child{color:var(--text-dim);}
-  .hint{font-size:11px; color:var(--text-dim); margin-top:6px; line-height:1.4;}
+  .summary-line span:last-child{text-align:right;}
+  .hint{font-size:12px; color:var(--text-dim); margin-top:6px; line-height:1.45;}
+
+  .banner{border-radius:14px; padding:14px 16px; font-weight:600; font-size:15px; line-height:1.35; margin-bottom:12px;}
+  .banner small{display:block; font-weight:400; font-size:12.5px; margin-top:4px; opacity:.9;}
+  .banner.ok{background:var(--accent-soft); color:var(--accent);}
+  .banner.bad{background:var(--warn-soft); color:var(--warn);}
+  .banner.frist{background:rgba(255,159,10,.16); color:#a15c00;}
+  .banner.pending{background:var(--field); color:var(--text-dim);}
+  .mangel{padding:10px 0; border-bottom:1px solid var(--border); font-size:14px; line-height:1.35;}
+  .mangel:last-child{border-bottom:none;}
+  .kl{display:inline-block; font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; margin-right:4px; background:var(--field); color:var(--text-dim);}
+  .kl-keine{background:var(--warn-soft); color:var(--warn);} .kl-frist{background:rgba(255,159,10,.16); color:#a15c00;} .kl-hinweis{background:var(--accent-soft); color:var(--accent);}
+  .mangel .tol{display:flex; align-items:center; gap:8px; margin-top:6px; font-size:13px; color:var(--text-dim);}
+  .mangel .tol input[type=checkbox]{width:22px; height:22px;}
+  .find{font-size:13.5px; padding:5px 0; line-height:1.35;}
+  .find.warn{color:var(--warn);} .find.ok{color:var(--ok);} .find.info{color:var(--text-dim);}
+  .grid3{display:grid; grid-template-columns:44px 1fr 1fr 1fr; gap:6px; align-items:center;}
+  .grid3 .hd{font-size:12px; color:var(--text-dim); text-align:center;}
+  .grid3 .rl{font-size:12.5px; color:var(--text-dim);}
+  .grid3 input{padding:9px 6px; text-align:center; font-size:15px;}
+  details.more{margin-top:12px;}
+  details.more summary{cursor:pointer; color:var(--accent); font-weight:600; font-size:14px; padding:6px 0;}
+  pre.log{font-family:var(--mono); font-size:11px; background:var(--field); border-radius:10px; padding:8px; max-height:140px; overflow:auto; white-space:pre-wrap; word-break:break-all;}
+  .chips{display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;}
+  .chip{padding:6px 10px; border-radius:999px; background:var(--accent-soft); color:var(--accent); font-size:12.5px; cursor:pointer;}
 
   #scanOverlay{display:none; position:fixed; inset:0; background:#000; z-index:100; flex-direction:column; align-items:center; justify-content:center;}
-  #scanVideo{width:100%; max-width:480px; border:2px solid var(--amber);}
-  #libOverlay{display:none; position:fixed; inset:0; background:rgba(10,8,6,.92); z-index:90; overflow-y:auto;}
+  #scanVideo{width:100%; max-width:480px; border-radius:16px;}
+  #libOverlay{display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:90; overflow-y:auto;}
   #libOverlay .card{max-width:600px; margin:16px auto;}
-  .lib-entry{border:1px solid var(--border); border-radius:8px; padding:8px 10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;}
-  .lib-entry .info{font-size:12.5px;}
-  .lib-entry .info b{color:var(--amber);}
+  .lib-entry{background:var(--field); border-radius:12px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;}
+  .lib-entry .info{font-size:13px;}
+  .lib-entry .info b{color:var(--accent);}
 
-  @media print{
-    header, footer.navbar, .no-print{display:none !important;}
-    body{background:#fff; color:#000; padding:0; font-size:10px;}
-    .panel{display:block !important;}
-    .card{border:1px solid #999; background:#fff; page-break-inside:avoid; padding:6px 8px; margin-bottom:5px;}
-    .card h2{color:#000; font-size:11.5px; margin-bottom:4px; padding-bottom:3px;}
-    .card h3{font-size:9.5px; margin:6px 0 3px;}
-    label{font-size:8px; margin:2px 0 1px;}
-    input, select, textarea{border:1px solid #999; color:#000; background:#fff; padding:2px 4px; font-size:9px;}
-    textarea{min-height:20px;}
-    .row{gap:4px;}
-    .check-item{border-bottom:1px solid #ccc; padding:2px 0;}
-    .note-toggle{display:none;}
-    .summary-line{font-size:9.5px; padding:1px 0;}
-    .device-block{padding:6px; margin-bottom:5px;}
-    .thumb{display:none;}
-    #photoGalleryCard{page-break-before: always;}
-    #photoGalleryCard img{width:150px !important; height:150px !important;}
-  }
+  @media print{ header, footer.navbar, .no-print{display:none !important;} }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>Vorinbetriebnahme-Protokoll</h1>
-  <div class="sub">Zähleranlage · Mittel-/Niederspannung</div>
+  <h1>Vor-/Inbetriebnahme</h1>
+  <div class="sub">Zähleranlagen NS · MS · HS</div>
   <div class="steps no-print" id="stepNav"></div>
 </header>
 
 <div id="scanOverlay">
   <video id="scanVideo"></video>
-  <button class="btn btn-amber" style="margin-top:16px;" onclick="stopBarcodeScan()">Abbrechen</button>
+  <button class="btn btn-primary" style="margin-top:16px;" onclick="stopBarcodeScan()">Abbrechen</button>
 </div>
 
 <div id="libOverlay">
@@ -177,7 +218,7 @@
       </div>
     </div>
 
-    <button class="btn btn-amber btn-block" style="margin-top:10px;" onclick="addLibraryEntry()">+ Eintrag speichern</button>
+    <button class="btn btn-primary btn-block" style="margin-top:10px;" onclick="addLibraryEntry()">+ Eintrag speichern</button>
     <button class="btn btn-block" style="margin-top:8px;" onclick="closeLibrary()">Schließen</button>
   </div>
 </div>
@@ -187,21 +228,32 @@
   <!-- SETUP -->
   <div class="panel" id="panel-setup">
     <div class="card">
-      <h2>Anlage &amp; Messart</h2>
+      <h2>Anlage</h2>
       <label>Spannungsebene</label>
       <div class="choice-group" id="choiceEbene">
         <div class="choice" data-val="NS">Niederspannung</div>
         <div class="choice" data-val="MS">Mittelspannung</div>
         <div class="choice" data-val="HS">Hochspannung</div>
       </div>
-      <label style="margin-top:14px;">Messart</label>
-      <div class="choice-group" id="choiceMessart"></div>
+      <div id="messartWrap">
+        <label style="margin-top:14px;">Messart</label>
+        <div class="choice-group" id="choiceMessart"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Art des Termins</h2>
+      <div class="tiles" id="tilesVorgang">
+        <div class="tile" data-val="vor"><b>Vorinbetriebnahme</b><span>Nur MS / HS · Prüfung vor dem Zuschalten</span></div>
+        <div class="tile" data-val="ibn"><b>Inbetriebnahme</b><span>Prüfung und Zuschaltung der Anlage</span></div>
+        <div class="tile" data-val="nach"><b>Anlagenüberprüfung</b><span>Nachprüfung: nur die früheren Mängel erneut prüfen</span></div>
+        <div class="tile" data-val="bestand"><b>Bestandsanlage</b><span>Anlage vorhanden / wird zugebaut · Abnahme nach aktuellen Normen (annähernd)</span></div>
+      </div>
     </div>
     <div class="card">
       <h2>Standort</h2>
       <label>Anlagenbezeichnung / Messstellen-ID</label>
       <input type="text" id="anlName">
-      <label>Anlagen-ID</label>
+      <label>HarNES-Nr.</label>
       <input type="text" id="anlId">
       <div class="row">
         <div><label>Bezugsleistung (kW)</label><input type="text" id="anlBezug"></div>
@@ -234,6 +286,25 @@
       <h2>Isolationswiderstand (Riso)</h2>
       <div class="hint">Prüfspannung: 500 V DC. Jede Ader einzeln abklemmen, gegen alle anderen Adern und Erde messen, danach wieder anklemmen. Bei mehrfacher Messung jeweils den kleinsten gemessenen Wert eintragen.</div>
       <div id="risoFields"></div>
+    </div>
+  </div>
+
+  <!-- NACHPRÜFUNG -->
+  <div class="panel" id="panel-nach">
+    <div class="card">
+      <h2>Frühere Mängel laden</h2>
+      <div class="hint">Lade das JSON-Protokoll des vorherigen Termins (Export im Abschluss). Die damals festgestellten Mängel erscheinen unten zur Nachprüfung. Du kannst auch Mängel von Hand ergänzen.</div>
+      <button class="btn btn-block" style="margin-top:10px;" onclick="document.getElementById('nachImport').click()">Früheres Protokoll laden (JSON)</button>
+      <input type="file" accept=".json,application/json" id="nachImport" style="display:none">
+      <div class="status-line" id="nachStatus"></div>
+    </div>
+    <div class="card">
+      <h2>Nachprüfung der Mängel</h2>
+      <div id="nachList"></div>
+      <div class="row" style="margin-top:12px; align-items:center;">
+        <input type="text" id="nachNeu" placeholder="Mangel von Hand hinzufügen …">
+        <button class="btn btn-sm" style="flex:0 0 auto;" onclick="nachAdd()">+ Hinzufügen</button>
+      </div>
     </div>
   </div>
 
@@ -271,10 +342,56 @@
       <label>Zählernummer</label>
       <div style="display:flex; gap:6px;">
         <input type="text" id="z_nummer" style="flex:1;">
-        <button class="btn btn-sm" onclick="startBarcodeScan('z_nummer','status-zaehler-serial')">📡 Scan</button>
+        <button class="btn btn-sm" onclick="startBarcodeScan('z_nummer','status-zaehler-serial')">Scan</button>
       </div>
       <div class="status-line" id="status-zaehler-serial"></div>
-      <label style="margin-top:10px;">Fotos Zähler</label>
+      <div class="hint" id="z_hersteller"></div>
+
+      <h3>Auslesen mit Tastkopf</h3>
+      <button class="btn btn-primary btn-block" onclick="zConnectBle()">Tastkopf verbinden (Bluetooth)</button>
+      <div class="status-line" id="z_status"></div>
+      <div class="chips" id="z_chips"></div>
+      <details class="more">
+        <summary>Auslesetext einfügen oder Datei laden</summary>
+        <textarea id="z_paste" placeholder="OBIS-Datensatz, z. B. 1.8.0(001234.5678*kWh)" style="margin-top:8px;"></textarea>
+        <div class="row" style="margin-top:8px;">
+          <button class="btn btn-sm" onclick="zApplyPaste()">Auswerten</button>
+          <button class="btn btn-sm" onclick="document.getElementById('z_file').click()">Datei laden</button>
+        </div>
+        <input type="file" id="z_file" accept=".txt,.vl,.lp,.raw,text/*" style="display:none">
+        <label>Baud-Zeichen für die Datenphase (IEC 62056-21)</label>
+        <select id="z_baud">
+          <option value="0">0 – 300 Baud</option><option value="1">1 – 600</option><option value="2">2 – 1200</option>
+          <option value="3">3 – 2400</option><option value="4">4 – 4800</option><option value="5" selected>5 – 9600</option><option value="6">6 – 19200</option>
+        </select>
+        <div class="hint">Die Bluetooth-Anbindung des Tastkopfs ist noch ungetestet. Läuft sie nicht, den Datensatz mit der Q4-Software auslesen und hier als Text einfügen.</div>
+        <pre class="log" id="z_log" style="display:none;"></pre>
+      </details>
+    </div>
+
+    <div class="card">
+      <h2>Einbaustände</h2>
+      <div class="row">
+        <div><label>Wirkenergie Bezug A+ (kWh)</label><input type="text" id="zs_ap" inputmode="decimal"></div>
+        <div><label>Wirkenergie Lieferung A− (kWh)</label><input type="text" id="zs_am" inputmode="decimal"></div>
+      </div>
+      <div class="row">
+        <div><label>Blindenergie R+ (kvarh)</label><input type="text" id="zs_rp" inputmode="decimal"></div>
+        <div><label>Blindenergie R− (kvarh)</label><input type="text" id="zs_rm" inputmode="decimal"></div>
+      </div>
+      <div class="status-line" id="zs_info"></div>
+    </div>
+
+    <div class="card" id="zeigerCard">
+      <h2>Zeigerdiagramm (Wirkdiagramm)</h2>
+      <div class="hint" style="margin-top:0;">Werte aus der Auslesung oder von Hand eintragen. φ = Winkel zwischen Spannung und Strom je Phase.</div>
+      <div id="zeigerFields" style="margin-top:10px;"></div>
+      <div id="zeigerSvg" style="text-align:center; margin-top:12px;"></div>
+      <div id="zeigerFind" style="margin-top:6px;"></div>
+    </div>
+
+    <div class="card">
+      <h2>Fotos Zähler</h2>
       <div id="zaehlerPhotos"></div>
     </div>
   </div>
@@ -304,9 +421,9 @@
 
   <!-- CHECKLISTE -->
   <div class="panel" id="panel-checkliste">
-    <div class="card">
-      <h2>Absicherung</h2>
-      <label>Sicherung *</label>
+    <div class="card" id="absicherungCard">
+      <h2>Spannungspfadsicherung</h2>
+      <label>Sicherung</label>
       <div class="choice-group" id="choiceSicherung">
         <div class="choice" data-val="3polig">3-Polig Z 10A</div>
         <div class="choice" data-val="schmelz">Schmelzsicherung 10A (nur bei NS)</div>
@@ -320,6 +437,22 @@
     <div class="card">
       <h2>Prüf-Checkliste</h2>
       <div id="checklistContainer"></div>
+    </div>
+    <div class="card" id="wandlerChecklistCard">
+      <h2>Prüf-Checkliste Wandler</h2>
+      <div id="wandlerChecklistContainer"></div>
+    </div>
+    <div class="card" id="liveChecklistCard">
+      <h2>Prüf-Checkliste Zähler</h2>
+      <div id="liveChecklistContainer"></div>
+    </div>
+  </div>
+
+  <!-- ABSCHLUSS-CHECK -->
+  <div class="panel" id="panel-ende">
+    <div class="card" id="endChecklistCard">
+      <h2>Abschluss-Check (Plombierung u. a.)</h2>
+      <div id="endChecklistContainer"></div>
     </div>
   </div>
 
@@ -341,21 +474,27 @@
       <div class="hint" id="extraPhotoHint"></div>
     </div>
     <div class="card">
-      <h2>Ergebnis &amp; Unterschrift</h2>
-      <div class="choice-group" id="choiceErgebnis">
-        <div class="choice" data-val="frei">Freigegeben</div>
-        <div class="choice" data-val="maengel">Mängel / Nacharbeit</div>
+      <h2>Ergebnis</h2>
+      <div id="ergebnisBanner"></div>
+      <div id="maengelListe"></div>
+      <div id="fristWrap" style="display:none;">
+        <label>Frist zur Beseitigung der Mängel (Mängelkarte)</label>
+        <input type="date" id="fristDate">
       </div>
-      <label>Mängel / Bemerkungen</label>
+      <label>Weitere Mängel (je Zeile ein Mangel, erscheinen im Mängelschein)</label>
       <textarea id="maengelText"></textarea>
+      <label>Interne Bemerkung</label>
+      <textarea id="bemerkungText"></textarea>
       <label>Unterschrift Prüfer</label>
       <input type="text" id="unterschrift">
     </div>
     <div class="card no-print">
-      <h2>Export</h2>
-      <button class="btn btn-amber btn-block" onclick="window.print()">🖨️ Drucken / Als PDF speichern</button>
-      <button class="btn btn-block" style="margin-top:8px;" onclick="exportJson()">⬇️ Als JSON exportieren</button>
-      <button class="btn btn-block btn-danger" style="margin-top:8px;" onclick="if(confirm('Neues, leeres Protokoll starten?'))resetAll()">🗑️ Neues Protokoll</button>
+      <h2>Ausgabe</h2>
+      <button class="btn btn-primary btn-block" onclick="openInternalReport()">Inbetriebsetzungsprotokoll intern (PDF)</button>
+      <button class="btn btn-block" style="margin-top:10px;" onclick="openExternalReport()">Mängelschein für Kunde / Installateur (PDF)</button>
+      <div class="hint">Im geöffneten Bericht „Drucken / Als PDF speichern“ wählen. Mängel und Ergebnis werden automatisch aus den Eingaben abgeleitet.</div>
+      <button class="btn btn-block" style="margin-top:10px;" onclick="exportJson()">Als JSON exportieren (für Nachprüfung)</button>
+      <button class="btn btn-block btn-danger" style="margin-top:10px;" onclick="if(confirm('Neues, leeres Protokoll starten?'))resetAll()">Neues Protokoll</button>
     </div>
   </div>
 
@@ -363,96 +502,289 @@
 
 <footer class="navbar no-print">
   <button class="btn" id="btnBack">← Zurück</button>
-  <button class="btn btn-amber" id="btnNext">Weiter →</button>
+  <button class="btn btn-primary" id="btnNext">Weiter →</button>
 </footer>
 
 <script>
 /* ---------------- STATE ---------------- */
 const state = {
-  ebene:null, messart:null, vtCount:3,
+  vorgang:null, ebene:null, messart:null, vtCount:3,
   standort:{name:'',id:'',bezug:'',einspeise:'',strasse:'',hausnr:'',plz:'',ort:'',gps:'',pruefer:'',datum:''},
   ct:null, vt:null, kombi:null,
   riso:{iL1:'',iL2:'',iL3:'',uL1:'',uL2:'',uL3:''},
   absicherung:{sicherung:'', sonstigesText:''},
-  zaehler:{photos:[null,null]},
+  zaehler:{z_nummer:'', photos:[null,null], hersteller:'', kandidaten:[], stand:{ap:'',am:'',rp:'',rm:'',zeit:'',quelle:''}, mw:{u1:'',u2:'',u3:'',i1:'',i2:'',i3:'',w1:'',w2:'',w3:'',uu12:'',uu13:''}, zeiger:null},
+  nachpruefung:{items:[], quelle:''},
   modem:{typ:'',sim:'',verbindungstest:'',notizen:'',photos:[null,null]},
   checklist:{},
-  abschluss:{ergebnis:'',maengel:'',unterschrift:'',weitereFotos:[]}
+  abschluss:{ergebnis:'',maengel:'',bemerkung:'',unterschrift:'',weitereFotos:[],teil:{},frist:'',maengelListe:[]}
 };
 const LS_KEY = 'vibn_protokoll_draft_v2';
 function saveDraft(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){} }
 function loadDraft(){ try{ const raw=localStorage.getItem(LS_KEY); if(raw) Object.assign(state, JSON.parse(raw)); }catch(e){} }
+function ensureDefaults(){
+  const z=state.zaehler; z.photos=z.photos||[null,null]; z.kandidaten=z.kandidaten||[];
+  z.stand=Object.assign({ap:'',am:'',rp:'',rm:'',zeit:'',quelle:''}, z.stand||{});
+  z.mw=Object.assign(Object.fromEntries(MW_KEYS.map(k=>[k,''])), z.mw||{});
+  const a=state.abschluss; a.teil=a.teil||{}; a.frist=a.frist||''; a.bemerkung=a.bemerkung||''; a.maengelListe=a.maengelListe||[];
+  state.nachpruefung=state.nachpruefung||{items:[],quelle:''}; state.nachpruefung.items=state.nachpruefung.items||[];
+  if(state.vorgang===undefined) state.vorgang=null;
+}
+
+/* ---------------- VORGANG / SICHTBARKEIT ---------------- */
+function isMSorHS(){ return state.ebene==='MS' || state.ebene==='HS'; }
+function isPruefung(){ return !!state.vorgang && state.vorgang!=='nach'; }   // alles außer reine Nachprüfung
+function isLive(){ return state.vorgang==='ibn' || state.vorgang==='bestand'; } // Anlage steht unter Spannung
+function hasWandlerAny(){ return isPruefung() && (isMSorHS() || (state.ebene==='NS' && state.messart==='halbindirekt')); }
+function hasCtPanel(){ return isPruefung() && ((isMSorHS() && state.messart==='wandler') || (state.ebene==='NS' && state.messart==='halbindirekt')); }
+function hasVtPanel(){ return isPruefung() && isMSorHS() && state.messart==='wandler'; }
+function hasKombiPanel(){ return isPruefung() && isMSorHS() && state.messart==='kombiwandler'; }
+function hasRiso(){ return isPruefung() && isMSorHS(); }   // Isolationsmessung nur MS/HS
+
+const VORGANG_LABEL = {vor:'Vorinbetriebnahme', ibn:'Inbetriebnahme', nach:'Anlagenüberprüfung', bestand:'Bestandsanlage'};
+const ERG_TEXT = {
+  vor:    {ja:'Vorinbetriebnahme bestanden – Anlage ohne Mängel, bereit zur Inbetriebnahme', hinweis:'Vorinbetriebnahme bestanden – bereit zur Inbetriebnahme, mit Hinweisen', frist:'Vorinbetriebnahme bestanden – Inbetriebnahme möglich, Mängelkarte mit Frist', nein:'Vorinbetriebnahme nicht bestanden – Anlage nicht bereit zur Inbetriebnahme aufgrund der Mängel'},
+  ibn:    {ja:'Anlage in Betrieb genommen', hinweis:'Anlage in Betrieb genommen – mit Hinweisen', frist:'Anlage in Betrieb genommen – Mängelkarte mit Frist', nein:'Anlage nicht in Betrieb genommen aufgrund der Mängel'},
+  nach:   {ja:'Alle Mängel behoben – Anlage abgenommen', hinweis:'Anlage abgenommen – es verbleiben Hinweise', frist:'Mängel bestehen weiterhin – Anlage in Betrieb, Mängelkarte mit neuer Frist', nein:'Mängel bestehen weiterhin – Anlage nicht in Betrieb zu setzen'},
+  bestand:{ja:'Bestandsanlage abgenommen', hinweis:'Bestandsanlage abgenommen – mit Hinweisen (Bestandsschutz)', frist:'Bestandsanlage in Betrieb – Mängelkarte mit Frist', nein:'Bestandsanlage nicht abgenommen aufgrund der Mängel'}
+};
+const RISO_MIN_MOHM = 1;   // Mindestwert Isolationswiderstand bei 500 V DC (anpassbar)
+
+/* ---------------- BEWERTUNG JE KOMPONENTE ----------------
+   Quelle: „Inbetriebsetzung von Wandlermessungen – Bewertung festgestellter Mängel“ (Stand 01.11.2026, fachliche Bewertung, keine Rechtsberatung) – gilt nur für Niederspannungsanlagen.
+   Klassen: keine = Keine Inbetriebsetzung · frist = Inbetriebsetzung, Mängelkarte mit Frist · hinweis = Inbetriebsetzung, Hinweis · entfaellt = kein Mangel der Kundenanlage
+   neu = Neuerrichtung sowie geänderte oder erweiterte Anlagenteile; bestand = unveränderter Teil der Kundenanlage */
+const KLASSE_LABEL = {keine:'Keine Inbetriebsetzung', frist:'Mängelkarte mit Frist', hinweis:'Hinweis', entfaellt:'entfällt'};
+const KLASSE_RANG = {keine:0, frist:1, hinweis:2, entfaellt:3};
+const BEWERTUNG = {
+  b_grenze:{komp:'Grenze Wandlermessung', mangel:'Direktmessung trotz > 32/44 A Dauer- bzw. > 63 A Aussetzbetrieb',
+    neu:{k:'keine', t:'Zählerplatz für den Betriebsstrom nicht ausgelegt; Messung außerhalb des Messbereichs.'},
+    bestand:{k:'frist', t:'Umrüstung auf halbindirekte Messung. Entsteht der Betriebsstrom durch Zubau, wird der Zubau nicht in Betrieb gesetzt.'},
+    begr:'Thermische Überlastung, Messrichtigkeit.', quelle:'§ 15 Abs. 2 NAV; § 31 MessEG; VDE-AR-N 4100:2026 Abschn. 7.3'},
+  b_netzform:{komp:'Netzform', mangel:'Netzform entspricht nicht den Vorgaben des Netzbetreibers',
+    variants:{
+      wirksam:{label:'Schutzmaßnahme wirksam', neu:{k:'frist', t:'Schutzmaßnahme wirksam: Mängelkarte.'}, bestand:{k:'hinweis', t:'Bei Errichtung zulässig: Hinweis.'}},
+      unwirksam:{label:'Schutzmaßnahme nicht wirksam (z. B. PEN < 10 mm² Cu)', neu:{k:'keine', t:'Schutzmaßnahme nicht wirksam (z. B. PEN < 10 mm² Cu).'}, bestand:{k:'keine', t:'Schutzmaßnahme nicht wirksam: Anlage nicht weiter betreiben.'}}},
+    begr:'Maßgeblich ist die Wirksamkeit des Fehlerschutzes.', quelle:'§ 15 NAV; § 49 EnWG; TAB 2023 Abschn. 7.4.2'},
+  b_lastschaltleiste:{komp:'Lastschaltleisten', mangel:'Absicherung/Anzahl für die Anschlussleistung nicht ausreichend',
+    neu:{k:'keine', t:'Kabel und Schaltgeräte werden über ihre Bemessung hinaus belastet.'},
+    bestand:{k:'frist', t:'Sofern sich die Leistung nicht erhöht; sonst wie Neuanlage.'},
+    begr:'Sicherheit, erhebliche Störung.', quelle:'§ 15 Abs. 2 NAV; Avacon TAB-Erg. zu 5 und 14'},
+  b_ueberspannung:{komp:'Überspannungsschutz', mangel:'Überspannungsschutz nicht vorhanden',
+    neu:{k:'frist', t:'Keine unmittelbare Gefährdung; die Nachrüstung ist nach Risikobewertung vorzunehmen.'},
+    bestand:{k:'hinweis', t:'Bestandsschutz; bei Änderung oder Erweiterung nachzurüsten.'},
+    begr:'Kein Verweigerungsgrund.', quelle:'DIN VDE 0100-443/-534; TAB 2023 Abschn. 1 (3)'},
+  b_beruehrung:{komp:'Berührungsschutz', mangel:'Berührungsschutz nicht oder nicht vollständig vorhanden',
+    neu:{k:'keine', t:'Verpflichtend bei Gefahr für Leib oder Leben.'},
+    bestand:{k:'keine', t:'Verpflichtend. Ist der Berührungsschutz nicht sofort herstellbar, wird die Anschlussnutzung unterbrochen.'},
+    begr:'Gefahr für Leib oder Leben.', quelle:'§ 15 Abs. 2 S. 2, § 24 Abs. 1 NAV; TAB 2023 Abschn. 7.4.2'},
+  b_trenn:{komp:'Trennvorrichtung', mangel:'Netz- oder anlagenseitige Trennvorrichtung nicht vorhanden',
+    neu:{k:'keine', t:'Die Messung kann nicht sicher freigeschaltet werden; die Trennvorrichtung für die Inbetriebsetzung fehlt.'},
+    bestand:{k:'frist', t:'Anlage bleibt in Betrieb; Arbeiten an den Wandlern nur nach Freischaltung am Hausanschlusskasten.'},
+    begr:'Freischaltung aus jeder Energieflussrichtung.', quelle:'§ 14 NAV; DIN VDE 0603-2-2 Abschn. 12.101.1; Avacon TAB-Erg. zu 4.2'},
+  b_stromwandler:{komp:'Stromwandler', mangel:'0,5 S / FS 5 oder Übersetzung nicht eingehalten, Konformität fehlt', intern:true,
+    neu:{k:'entfaellt', t:'Entfällt – die Wandler stellt der gMSB bei.'},
+    bestand:{k:'hinweis', t:'Kein Mangel der Kundenanlage. Der Wandlertausch erfolgt durch Avacon Netz GmbH als gMSB.'},
+    begr:'Die Wandler stellt der gMSB bei.', quelle:'§ 3 Abs. 2 MsbG; §§ 31, 33 MessEG; Avacon gMSB 5.1.1, 5.3.4'},
+  b_abgriff:{komp:'Spannungsabgriff (Messkreis)', mangel:'Abgriff nicht netzseitig, nicht erd- und kurzschlusssicher, Spannungspfad fehlerhaft verdrahtet',
+    neu:{k:'keine', t:'Mängelbeseitigung durch den Anlagenerrichter; anschließend neuer Termin zur Prüfung unter Last.'},
+    bestand:{k:'frist', t:'Kurze Frist. Nach Mängelbeseitigung erfolgen Prüfung unter Last und Plombierung durch den MSB.'},
+    begr:'Messrichtigkeit, Kurzschlussschutz.', quelle:'§ 3 Abs. 2 MsbG; §§ 31, 33 MessEG; DIN VDE 0603-2-2 Abschn. 12.3.1.3; Avacon gMSB 5.3.1'},
+  b_sekundaer:{komp:'Sekundärverdrahtung (Messkreis)', mangel:'Aluminiumleiter, vertauschte Adern, Querschnitt/Länge nicht auf die Bürde abgestimmt',
+    neu:{k:'keine', t:'Liegt die Bürde außerhalb 25–100 %, ist eine eichrechtskonforme Messung nicht gewährleistet.'},
+    bestand:{k:'frist', t:'Aluminiumleiter bei Änderung der Anlage erneuern, danach Prüfung unter Last. Lose Klemmstellen sofort beheben.'},
+    begr:'Messrichtigkeit; offener Stromwandlerkreis.', quelle:'§ 31 Abs. 2 Nr. 1 MessEG; VDE-AR-N 4100:2026 Tab. 10; Avacon gMSB 5.3.2'},
+  b_pruefklemme:{komp:'Prüfklemme (Messkreis)', mangel:'Prüfklemme ohne Kurzschließmöglichkeit, Längstrennung oder Prüfbuchsen',
+    neu:{k:'keine', t:'Ein spannungsfreier Zählerwechsel und die Prüfung mit dem Prüfzähler sind nicht möglich.'},
+    bestand:{k:'frist', t:'Zählerarbeiten bis zur Nachrüstung nur freigeschaltet; danach Prüfung unter Last.'},
+    begr:'', quelle:'VDE-AR-N 4100:2026 Abschn. 7.3.2.2; Avacon TAB-Erg. zu 7.3; Avacon gMSB 5.3.3'},
+  b_pruefklemme_bed:{komp:'Prüfklemme – Bedienung', mangel:'Prüfklemme funktionsfähig, jedoch nicht werkzeuglos bedienbar',
+    neu:{k:'hinweis', t:'Austausch bei Arbeiten am Messkreis mit ausführen; Ausführung vorab im Rahmen der Baufreigabe abstimmen.'},
+    bestand:{k:'hinweis', t:'Bestandsschutz; bei späteren Arbeiten am Messkreis gegen aktuelle Ausführung tauschen.'},
+    begr:'Anforderung an die Handhabung, kein Sicherheits- oder Messmangel; Fassung 2019 bis 31.03.2027 anwendbar.', quelle:'BGH EnVR 45/13; Avacon TAB-Erg. zu 7.3'},
+  b_zaehlerplatz:{komp:'Zählerplatz', mangel:'Zählertafel ohne Gehäuse (kein Zählerschrank)',
+    neu:{k:'keine', t:'Kein Zählerplatz nach DIN VDE 0603; eine Plombierung ist nicht möglich.'},
+    bestand:{k:'hinweis', t:'Bestandsschutz. Bei Änderung oder Erweiterung ist der Zählerplatz zu erneuern.'},
+    begr:'', quelle:'§ 22 NAV; Avacon gMSB 5.1; TAB 2023 Abschn. 7.4.1 (2), Anhang G'},
+  b_smgw:{komp:'SMGW, Steuerbox', mangel:'RfZ bzw. Steuergerätefeld nicht vorbereitet',
+    neu:{k:'frist', t:'Der gMSB baut die Messtechnik ein und setzt bis zur Trennvorrichtung im NAR in Betrieb; fehlende Voraussetzungen werden dokumentiert.'},
+    bestand:{k:'frist', t:'Wie Neuanlage.'},
+    begr:'', quelle:'Avacon gMSB 6.1.6, 6.1.7, 6.2'},
+  b_kundenschnittstelle:{komp:'Kundenschnittstelle', mangel:'RJ45-Buchse/Steuersignal-Klemmleiste im AAR des zentralen Zählerplatzes fehlt',
+    neu:{k:'frist', t:'Die Steuerbarkeit kann erst nach Herstellung der Schnittstelle umgesetzt werden.'},
+    bestand:{k:'frist', t:'In Bestandsanlagen gelten die gleichen Anforderungen wie für Neuanlagen.'},
+    begr:'', quelle:'Avacon gMSB 6.1.4.1, 6.1.5.2, 6.1.7, 6.2; § 14a EnWG'},
+  b_fae:{komp:'Einspeisemanagement (FAE/FRE)', mangel:'Einrichtung nach § 9 EEG fehlt oder nicht funktionsfähig (ab 25 kW Fernreduzierung, ab 100 kW zusätzlich Ist-Einspeisung)',
+    neu:{k:'frist', t:'Anlage wird in Betrieb gesetzt; der Netzbetreiber erhebt die Zahlung nach § 52 EEG.'},
+    bestand:{k:'frist', t:'Wie Neuanlage.'},
+    begr:'10 €/kW installierter Leistung je (auch angebrochenem) Kalendermonat ab Netzanschluss bis zur Behebung; danach rückwirkend 2 €/kW; Defekt: Monat + Folgemonat frei.', quelle:'§§ 9, 52 EEG'},
+  b_naschutz:{komp:'NA-Schutz', mangel:'Zentraler NA-Schutz ab 30 kW nicht vorhanden',
+    neu:{k:'keine', t:'Verpflichtend: Netzparallelbetrieb der EZA erst nach Nachweis des zentralen NA-Schutzes.'},
+    bestand:{k:'frist', t:'Nur im Wechselrichter integriert: kurze Frist. Kein NA-Schutz: Netzparallelbetrieb unterbinden.'},
+    begr:'Inselnetzbildung, Gefahr für Personal.', quelle:'VDE-AR-N 4105; § 10 Abs. 2 EEG; Avacon TAB-Erg. zu 4.2'},
+  b_kuppel:{komp:'Kuppelschalter', mangel:'Kuppelschalter nicht nach dem Ruhestromprinzip angesteuert oder ohne Rückmeldung',
+    neu:{k:'keine', t:'Netzparallelbetrieb erst nach Korrektur; bei Ausfall der Hilfsspannung muss der Kuppelschalter unverzögert auslösen.'},
+    bestand:{k:'frist', t:'Kurze Frist.'},
+    begr:'Fehlersicherheit des NA-Schutzes.', quelle:'VDE-AR-N 4105; VDE-AR-N 4100:2026 Abschn. 7.3.3.3.2'}
+};
+// Mängel ohne Zeile in der Bewertungsmatrix (alle MS/HS-Mängel sowie nicht zugeordnete NS-Punkte): konservativ eingestuft (Neuanlage: keine Inbetriebsetzung, Bestand: Mängelkarte mit Frist)
+const BEW_DEFAULT = {neu:{k:'keine', t:''}, bestand:{k:'frist', t:''}, begr:'', quelle:''};
+// Zuordnung bestehender Checklistenpunkte / Messwerte zu Matrix-Zeilen
+const BEW_MAP = {
+  w_klemmverbindung:'b_sekundaer', v_phasengleich:'b_sekundaer', v_querschnitt:'b_sekundaer', pk_klemmverbindung:'b_sekundaer', s_vektor:'b_sekundaer',
+  pk_geschlossen:'b_pruefklemme', pk_bruecken_offen:'b_pruefklemme', buerde:'b_sekundaer'
+};
+// Zeile → konkrete Wertung (Spalte Neuanlage/Bestand, Variante)
+function bewertungFuer(compId, key, variant){
+  const comp = BEWERTUNG[compId];
+  const teilNeu = state.vorgang!=='bestand' || (state.abschluss.teil||{})[key]==='neu';
+  const col = teilNeu ? 'neu' : 'bestand';
+  if(!comp) return {k:BEW_DEFAULT[col].k, t:'', begr:'', quelle:'', comp:null, col};
+  let e = comp[col];
+  if(comp.variants){ const v = comp.variants[variant||'unwirksam'] || comp.variants.unwirksam; e = v[col]; }
+  return {k:e.k, t:e.t, begr:comp.begr||'', quelle:comp.quelle||'', comp:comp, col};
+}
 
 /* ---------------- CHECKLIST ---------------- */
+// Einträge: [id, Text, Hinweis, Geltungsbereich]; Bereich: all | wandler (Wandlermessung vorhanden) | ms (MS/HS) | live (Anlage unter Spannung); mit + kombinierbar
 const CHECKLIST = [
-  { cat:'Wandler', tag:'wandler', items:[
-    ['w_einbaulage','Einbaulage Stromwandler P1 (Netzbetreiber) / P2 (Kunde)'],
-    ['w_klemmverbindung','Klemmverbindung geprüft'],
-    ['w_erdung_min4','Erdung vorhanden (min. 4 mm² Cu)'],
-    ['w_erdung_ks_strom','Erdung und Kurzschluss der nicht verwendeten Kerne (Strom)','Gemäß TAB ist die Verwendung von Stromwandlern für Schutzgeräte nicht zulässig. Die nicht benötigten Kerne sind am Wandler kurzgeschlossen. Für die Schutzgeräte sind Kabelumbauwandler einzusetzen.'],
-    ['w_erdung_spannung','Erdung der nicht verwendeten Kerne (Spannung)'],
+  { cat:'Wandler', items:[
+    ['w_einbaulage','Einbaulage Stromwandler P1 (Avacon) P2 (Kunde)','','wandler'],
+    ['w_klemmverbindung','Klemmverbindung geprüft','','wandler'],
+    ['w_erdung_min4','Erdung vorhanden (min. 4 mm² Cu)','','ms'],
+    ['w_erdung_ks_strom','Erdung und Kurzschluss der nicht verwendeten Kerne (Strom)','Gemäß TAB ist die Verwendung von Stromwandlern für Schutzgeräte nicht zulässig. Die nicht benötigten Kerne sind am Wandler kurzgeschlossen. Für die Schutzgeräte sind Kabelumbauwandler einzusetzen.','ms'],
+    ['w_erdung_spannung','Erdung der nicht verwendeten Kerne (Spannung)','','ms'],
   ]},
-  { cat:'Plombiert', tag:'wandler', items:[
-    ['p_spannungspfad','Spannungspfadsicherung'],
-    ['p_messzelle','Messzelle / Wandlerabdeckung'],
-    ['p_zaehler_modem','Zähler / Modem'],
-    ['p_pruefklemme','Prüfklemme'],
+  { cat:'Verdrahtung', items:[
+    ['v_phasengleich','Phasengleichheit von Strom und Spannung','','wandler'],
+    ['v_geschirmt','Geschirmte Leitung geerdet','','ms'],
+    ['v_querschnitt','Querschnitt ausreichend','','all'],
+    ['v_kabelverlegung','Kabelverlegung ohne Beschädigung','','all'],
   ]},
-  { cat:'Zähler', tag:'beide', items:[
-    ['z_bedienbereich','Bedienbereich ausreichend (frei zu haltender Arbeits- und Bedienbereich: min. 1,2 m Tiefe, je 0,3 m seitlich, min. 2 m Höhe)'],
+  { cat:'Prüfklemme', items:[
+    ['pk_klemmverbindung','Klemmverbindung geprüft','','wandler'],
+    ['pk_geschlossen','Strom und Spannung geschlossen','','wandler'],
+    ['pk_bruecken_offen','Strombrücken offen','','wandler'],
   ]},
-  { cat:'Verdrahtung', tag:'beide', items:[
-    ['v_phasengleich','Phasengleichheit von Strom und Spannung'],
-    ['v_geschirmt','Geschirmte Leitung geerdet'],
-    ['v_querschnitt','Querschnitt ausreichend'],
-    ['v_kabelverlegung','Kabelverlegung ohne Beschädigung'],
+  { cat:'Zähler', items:[
+    ['z_bedienbereich','Bedienbereich ausreichend','Frei zu haltender Arbeits- und Bedienbereich: min. 1,2 m Tiefe, je 0,3 m seitlich, min. 2 m durchgängige Höhe.','all'],
   ]},
-  { cat:'Prüfklemme', tag:'beide', items:[
-    ['pk_klemmverbindung','Klemmverbindung geprüft'],
-    ['pk_geschlossen','Strom und Spannung geschlossen'],
-    ['pk_bruecken_offen','Strombrücken offen'],
+  { cat:'Plombierung', items:[
+    ['p_spannungspfad','Spannungspfadsicherung','','ms'],
+    ['p_messzelle','Messzelle / Wandlerabdeckung','','wandler'],
+    ['p_zaehler_modem','Zähler / Modem','','all'],
+    ['p_pruefklemme','Prüfklemme','','wandler'],
   ]},
-  { cat:'Sicherheit (nur MS)', tag:'ms', items:[
-    ['ms_5regeln','Fünf Sicherheitsregeln beachtet, Anlage spannungsfrei geschaltet'],
-    ['ms_schaltauftrag','Schaltauftrag / Schaltberechtigung vorhanden'],
-    ['ms_erdung','Erdung und Kurzschließung der Anlage vorgenommen'],
-    ['ms_spannungsfrei','Spannungsfreiheit vor Wandleranschluss geprüft'],
+  { cat:'Sicherheit (MS/HS)', items:[
+    ['ms_erdung','Erdung und Kurzschließung der Anlage vorgenommen','','ms'],
+    ['ms_spannungsfrei','Spannungsfreiheit vor Wandleranschluss geprüft','','ms'],
   ]},
-  { cat:'Spannungs- und Stromprüfung', tag:'beide', items:[
-    ['s_sternspannung','Spannung L1-N, L2-N, L3-N gemessen und dokumentiert'],
-    ['s_verkettete','Verkettete Spannung L1-L2, L2-L3, L3-L1 gemessen'],
-    ['s_drehfeld','Drehfeldrichtung geprüft (rechtsdrehend)'],
-    ['s_strom','Stromaufnahme je Phase plausibilisiert'],
-    ['s_vektor','Vektordiagramm / Winkelmessung durchgeführt'],
+  { cat:'Spannungs- und Stromprüfung', items:[
+    ['s_sternspannung','Spannung L1-N, L2-N, L3-N gemessen und dokumentiert','','live'],
+    ['s_verkettete','Verkettete Spannung L1-L2, L2-L3, L3-L1 gemessen','','live'],
+    ['s_drehfeld','Drehfeldrichtung geprüft (rechtsdrehend)','','live'],
+    ['s_strom','Stromaufnahme je Phase plausibilisiert','','live'],
+    ['s_vektor','Zeigerdiagramm / Wirkdiagramm plausibel','Wird aus den Werten der Zählerauslesung automatisch geprüft.','live'],
   ]},
-  { cat:'Abschluss', tag:'beide', items:[
-    ['a_fotos','Foto-Dokumentation vollständig'],
-    ['a_unterschrift','Protokoll unterschrieben'],
+  { cat:'Kundenanlage / Zählerplatz (Bewertung je Komponente: NS)', items:[
+    ['b_grenze','Messart passend zum Betriebsstrom (Direktmessung höchstens 32/44 A Dauer bzw. 63 A Aussetzbetrieb)','','direkt'],
+    ['b_netzform','Netzform entspricht den Vorgaben des Netzbetreibers','','ns'],
+    ['b_lastschaltleiste','Absicherung / Anzahl der Lastschaltleisten für die Anschlussleistung ausreichend','','ns'],
+    ['b_ueberspannung','Überspannungsschutz vorhanden','','ns'],
+    ['b_beruehrung','Berührungsschutz vollständig vorhanden','','ns'],
+    ['b_trenn','Netz- und anlagenseitige Trennvorrichtung vorhanden','','ns'],
+    ['b_stromwandler','Stromwandler 0,5 S / FS 5, Übersetzung eingehalten, Konformität vorhanden','','ns+wandler'],
+    ['b_abgriff','Spannungsabgriff netzseitig, erd- und kurzschlusssicher, Spannungspfad richtig verdrahtet','','wandler'],
+    ['b_pruefklemme','Prüfklemme mit Kurzschließmöglichkeit, Längstrennung und Prüfbuchsen','','wandler'],
+    ['b_pruefklemme_bed','Prüfklemme werkzeuglos bedienbar','','ns+wandler'],
+    ['b_zaehlerplatz','Zählerplatz mit Gehäuse (Zählerschrank) vorhanden','','all'],
+    ['b_smgw','RfZ bzw. Steuergerätefeld für SMGW / Steuerbox vorbereitet','','ns'],
+    ['b_kundenschnittstelle','RJ45-Buchse / Steuersignal-Klemmleiste im AAR des zentralen Zählerplatzes vorhanden','','ns'],
+    ['b_fae','Einspeisemanagement nach § 9 EEG vorhanden und funktionsfähig','','ns+einsp'],
+    ['b_naschutz','Zentraler NA-Schutz vorhanden (ab 30 kW)','','ns+na30'],
+    ['b_kuppel','Kuppelschalter nach Ruhestromprinzip angesteuert, mit Rückmeldung','','ns+einsp'],
   ]},
 ];
+// Punkte, die der Installateur / Kunde zu verantworten hat (erscheinen im Mängelschein); Wert = Anforderung
+const EXT_ITEMS = {
+  w_einbaulage:'Einbaulage Stromwandler: P1 Netzbetreiber (Avacon), P2 Kunde',
+  w_klemmverbindung:'Klemmverbindungen fachgerecht und fest ausgeführt',
+  w_erdung_min4:'Erdung mit mindestens 4 mm² Cu',
+  w_erdung_ks_strom:'Gemäß TAB ist die Verwendung von Stromwandlern für Schutzgeräte nicht zulässig. Nicht benötigte Kerne sind am Wandler kurzgeschlossen; für Schutzgeräte sind Kabelumbauwandler einzusetzen.',
+  w_erdung_spannung:'Nicht verwendete Kerne der Spannungswandler geerdet',
+  z_bedienbereich:'Frei zu haltender Arbeits- und Bedienbereich: Tiefe min. 1,2 m, seitlich je 0,3 m, durchgängige Höhe min. 2 m',
+  v_phasengleich:'Strom- und Spannungspfad phasengleich zugeordnet',
+  v_geschirmt:'Geschirmte Leitung geerdet',
+  v_querschnitt:'Leitungsquerschnitt ausreichend',
+  v_kabelverlegung:'Kabelverlegung ohne Beschädigung',
+  pk_klemmverbindung:'Klemmverbindungen der Prüfklemme fachgerecht und fest',
+  pk_geschlossen:'Strom- und Spannungspfad an der Prüfklemme geschlossen',
+  pk_bruecken_offen:'Strombrücken an der Prüfklemme offen (Betriebszustand)',
+  b_abgriff:'Spannungsabgriff netzseitig, erd- und kurzschlusssicher; Spannungspfad richtig verdrahtet',
+  b_pruefklemme:'Prüfklemme mit Kurzschließmöglichkeit, Längstrennung und Prüfbuchsen',
+  b_zaehlerplatz:'Zählerplatz mit Gehäuse (Zählerschrank) vorhanden',
+  s_vektor:'Phasenzuordnung und Polarität von Strom- und Spannungspfad korrekt (Zeigerdiagramm plausibel)'
+};
+// Optional: Kapitelverweise auf die Avacon-TAB, z. B. { w_erdung_min4:'TAB MS, Kap. x.y' } – solange leer, erscheint keine Verweis-Spalte
+const TAB_REF = {};
+// Folge bei MS/HS je Punkt (Auswahl von Rico, 02.11.2026); nicht aufgeführte Punkte: keine Inbetriebsetzung. Bei NS gilt die Bewertungsmatrix.
+const MSHS_FOLGE = { pk_geschlossen:'hinweis', pk_bruecken_offen:'hinweis', p_spannungspfad:'hinweis', p_messzelle:'hinweis', p_zaehler_modem:'hinweis', p_pruefklemme:'hinweis' };
 
-/* ---------------- PANELS / NAVIGATION ---------------- */
-function isMSorHS(){ return state.ebene==='MS' || state.ebene==='HS'; }
+const SCOPE = {
+  all:()=>true,
+  wandler:()=>hasWandlerAny(),
+  ms:()=>isMSorHS(),
+  ns:()=>state.ebene==='NS',
+  live:()=>isLive(),
+  direkt:()=>isPruefung() && state.ebene==='NS' && state.messart==='direkt',
+  einsp:()=>(parseNum(state.standort.einspeise)||0)>0,
+  na30:()=>(parseNum(state.standort.einspeise)||0)>=30
+};
+function scopeOk(s){ return (s||'all').split('+').every(k=> SCOPE[k] ? SCOPE[k]() : true); }
+function visibleItems(){
+  const out = [];
+  if(!isPruefung()) return out;
+  CHECKLIST.forEach(cat=> cat.items.forEach(([id,label,hint,scope])=>{ if(scopeOk(scope)) out.push({cat:cat.cat,id,label,hint}); }));
+  return out;
+}
+// Die Bewertungsmatrix gilt nur für Niederspannungsanlagen; bei MS/HS gibt es keine Zuordnung (konservative Standardeinstufung)
+function compFor(id){ if(state.ebene!=='NS') return null; return BEWERTUNG[id] ? id : (BEW_MAP[id]||null); }
+// Reihenfolge im Ablauf: zuerst Checkliste (bei Mängeln wird kein Zähler eingebaut), Wandler-Punkte im Wandler-Reiter, Spannungs-/Stromprüfung im Zähler-Reiter
+function wandlerHostPanelId(){ const ids=activePanels().map(p=>p.id).filter(x=>x==='ct'||x==='vt'||x==='kombi'); return ids.length ? ids[ids.length-1] : null; }
+// Aufteilung der Checkliste (Auswahl von Rico, 02.11.2026): Standard = Anfang (Reiter „Checkliste“)
+const ITEM_HOST = {
+  w_einbaulage:'wandler', w_klemmverbindung:'wandler', w_erdung_min4:'wandler', w_erdung_ks_strom:'wandler', w_erdung_spannung:'wandler', v_querschnitt:'wandler', b_stromwandler:'wandler',
+  s_sternspannung:'zaehler', s_verkettete:'zaehler', s_drehfeld:'zaehler', s_strom:'zaehler', s_vektor:'zaehler',
+  v_phasengleich:'ende', pk_klemmverbindung:'ende', pk_geschlossen:'ende', pk_bruecken_offen:'ende',
+  p_spannungspfad:'ende', p_messzelle:'ende', p_zaehler_modem:'ende', p_pruefklemme:'ende'
+};
+function hostOf(id){
+  const h = ITEM_HOST[id] || 'checkliste';
+  if(h==='wandler') return wandlerHostPanelId() ? 'wandler' : 'checkliste';
+  return h;
+}
+function itemsDone(host){ return visibleItems().filter(i=>hostOf(i.id)===host).every(i=>state.checklist[i.id] && state.checklist[i.id].checked); }
+function absicherungVisible(){ return hasWandlerAny(); }
 
 /* ---------------- RISO ---------------- */
 function risoRowHtml(id, label, desc){
   return `<div style="margin-bottom:14px; padding-bottom:10px; border-bottom:1px dashed var(--border);">
-    <label style="color:var(--amber); font-weight:600; margin-bottom:2px;">${label}</label>
+    <label style="color:var(--accent); font-weight:600; margin-bottom:2px;">${label}</label>
     <div class="hint" style="margin-top:0;">${desc}</div>
     <input type="text" id="riso_${id}" placeholder="MΩ — kleinster gemessener Wert">
   </div>`;
 }
 function buildRisoFields(){
-  const hasCurrent = isMSorHS() || (state.ebene==='NS' && state.messart==='halbindirekt');
+  const hasCurrent = isMSorHS();
   const hasVoltage = isMSorHS();
   const container = document.getElementById('risoFields');
   let html = '';
   if(hasCurrent || hasVoltage){
-    html += `<div class="no-print" style="margin-bottom:16px; padding-bottom:14px; border-bottom:2px solid var(--amber-dim);">
-      <label style="color:var(--amber);">Wert für alle Messungen übernehmen</label>
+    html += `<div class="no-print" style="margin-bottom:16px; padding-bottom:14px; border-bottom:2px solid var(--accent-dim);">
+      <label style="color:var(--accent);">Wert für alle Messungen übernehmen</label>
       <div style="display:flex; gap:6px;">
         <input type="text" id="riso_alle" placeholder="MΩ">
-        <button class="btn btn-sm btn-amber" onclick="applyRisoToAll()">Übernehmen</button>
+        <button class="btn btn-sm btn-primary" onclick="applyRisoToAll()">Übernehmen</button>
       </div>
       <div class="hint">Trägt den Wert in alle Messungen unten ein — im Protokoll bleiben trotzdem alle Einzelmessungen einzeln aufgeführt.</div>
     </div>`;
@@ -474,7 +806,7 @@ function buildRisoFields(){
 function applyRisoToAll(){
   const val = document.getElementById('riso_alle').value.trim();
   if(!val) return;
-  const hasCurrent = isMSorHS() || (state.ebene==='NS' && state.messart==='halbindirekt');
+  const hasCurrent = isMSorHS();
   const hasVoltage = isMSorHS();
   const ids = [...(hasCurrent?['iL1','iL2','iL3']:[]), ...(hasVoltage?['uL1','uL2','uL3']:[])];
   ids.forEach(id=>{
@@ -494,14 +826,16 @@ function bindRisoFields(){
 }
 
 const PANEL_DEFS = [
-  {id:'setup', label:'Setup'},
-  {id:'riso', label:'Riso', cond:()=> isMSorHS() || (state.ebene==='NS' && state.messart==='halbindirekt')},
-  {id:'ct', label:'Stromwandler', cond:()=> (isMSorHS() && state.messart==='wandler') || state.messart==='halbindirekt'},
-  {id:'vt', label:'Spannungswandler', cond:()=> isMSorHS() && state.messart==='wandler'},
-  {id:'kombi', label:'Kombiwandler', cond:()=> isMSorHS() && state.messart==='kombiwandler'},
-  {id:'zaehler', label:'Zähler'},
-  {id:'modem', label:'Modem'},
-  {id:'checkliste', label:'Checkliste'},
+  {id:'setup', label:'Start'},
+  {id:'nach', label:'Nachprüfung', cond:()=> state.vorgang==='nach'},
+  {id:'checkliste', label:'Checkliste', cond:()=> isPruefung()},
+  {id:'riso', label:'Riso', cond:()=> hasRiso()},
+  {id:'ct', label:'Stromwandler', cond:()=> hasCtPanel()},
+  {id:'vt', label:'Spannungswandler', cond:()=> hasVtPanel()},
+  {id:'kombi', label:'Kombiwandler', cond:()=> hasKombiPanel()},
+  {id:'modem', label:'Modem', cond:()=> isPruefung()},
+  {id:'zaehler', label:'Zähler', cond:()=> isPruefung()},
+  {id:'ende', label:'Abschluss-Check', cond:()=> isPruefung()},
   {id:'abschluss', label:'Abschluss'},
 ];
 let stepIndex = 0;
@@ -517,7 +851,7 @@ function renderStepNav(){
     const complete = isStepComplete(p.id);
     d.className = 'step' + (i===stepIndex?' active':'') + (complete?' complete':'');
     d.textContent = (i+1)+' '+p.label + (complete?' ✓':'');
-    d.onclick = ()=>{ if(i<=stepIndex || (state.ebene && state.messart)) showStepByIndex(i); };
+    d.onclick = ()=>{ if(i<=stepIndex || (state.vorgang && state.ebene && (state.messart||state.vorgang==='nach'))) showStepByIndex(i); };
     nav.appendChild(d);
   });
 }
@@ -533,18 +867,20 @@ function showStepByIndex(i){
   document.getElementById('btnBack').style.visibility = i===0 ? 'hidden' : 'visible';
   document.getElementById('btnNext').textContent = i===panels.length-1 ? 'Fertig ✓' : 'Weiter →';
   if(panels[i].id==='riso') buildRisoFields();
+  if(panels[i].id==='nach') buildNachList();
+  if(panels[i].id==='zaehler') buildZaehlerPanel();
   if(panels[i].id==='ct') buildCtBlocks();
   if(panels[i].id==='vt') buildVtBlocks();
   if(panels[i].id==='kombi') buildKombiBlocks();
-  if(panels[i].id==='checkliste') refreshChecklistVisibility();
-  if(panels[i].id==='abschluss'){ buildSummary(); buildPhotoGallery(); buildExtraPhotos(); }
+  refreshChecklistVisibility();
+  if(panels[i].id==='abschluss'){ buildSummary(); buildPhotoGallery(); buildExtraPhotos(); buildErgebnis(); }
   window.scrollTo(0,0);
 }
 
 document.getElementById('btnNext').onclick = ()=>{
   const panels = activePanels();
-  if(panels[stepIndex].id==='setup' && (!state.ebene || !state.messart)){
-    alert('Bitte Spannungsebene und Messart wählen.'); return;
+  if(panels[stepIndex].id==='setup' && (!state.vorgang || !state.ebene || (!state.messart && state.vorgang!=='nach'))){
+    alert('Bitte Art des Termins, Spannungsebene und Messart wählen.'); return;
   }
   if(stepIndex < panels.length-1) showStepByIndex(stepIndex+1);
 };
@@ -553,31 +889,22 @@ document.getElementById('btnBack').onclick = ()=>{ if(stepIndex>0) showStepByInd
 /* ---------------- COMPLETION CHECK ---------------- */
 function isStepComplete(id){
   switch(id){
-    case 'setup': return !!(state.ebene && state.messart && state.standort.name && state.standort.pruefer && state.standort.datum);
+    case 'setup': return !!(state.vorgang && state.ebene && (state.messart || state.vorgang==='nach') && state.standort.name && state.standort.pruefer && state.standort.datum);
+    case 'nach': return !!(state.nachpruefung.items.length && state.nachpruefung.items.every(i=>i.status));
     case 'riso': {
-      const hasCurrent = isMSorHS() || (state.ebene==='NS' && state.messart==='halbindirekt');
-      const hasVoltage = isMSorHS();
-      if(!hasCurrent && !hasVoltage) return true;
-      const need = [...(hasCurrent?['iL1','iL2','iL3']:[]), ...(hasVoltage?['uL1','uL2','uL3']:[])];
+      const need = ['iL1','iL2','iL3','uL1','uL2','uL3'];
       return need.every(k=>state.riso[k]);
     }
-    case 'ct': return !!(state.ct && state.ct.primaer && state.ct.sekundaer && state.ct.phases.every(p=>p.seriennummer));
-    case 'vt': return !!(state.vt && state.vt.primaer && state.vt.sekundaer && state.vt.phases.every(p=>p.seriennummer));
-    case 'kombi': return !!(state.kombi && state.kombi.primaerA && state.kombi.sekundaerA && state.kombi.primaerV && state.kombi.sekundaerV && state.kombi.phases.every(p=>p.seriennummer));
-    case 'zaehler': return !!state.zaehler.z_nummer;
+    case 'ct': return !!(state.ct && state.ct.primaer && state.ct.sekundaer && state.ct.phases.every(p=>p.seriennummer)) && (wandlerHostPanelId()!=='ct' || itemsDone('wandler'));
+    case 'vt': return !!(state.vt && state.vt.primaer && state.vt.sekundaer && state.vt.phases.every(p=>p.seriennummer)) && (wandlerHostPanelId()!=='vt' || itemsDone('wandler'));
+    case 'kombi': return !!(state.kombi && state.kombi.primaerA && state.kombi.sekundaerA && state.kombi.primaerV && state.kombi.sekundaerV && state.kombi.phases.every(p=>p.seriennummer)) && (wandlerHostPanelId()!=='kombi' || itemsDone('wandler'));
+    case 'zaehler': return !!(state.zaehler.z_nummer && state.zaehler.stand.ap) && itemsDone('zaehler');
     case 'modem': return !!(state.modem.sim || state.modem.notizen);
     case 'checkliste': {
-      const hasWandler = isMSorHS() || (state.ebene==='NS' && state.messart==='halbindirekt');
-      let all = !!state.absicherung.sicherung;
-      CHECKLIST.forEach(cat=>{
-        let show = true;
-        if(cat.tag==='ms') show = isMSorHS();
-        if(cat.tag==='wandler') show = hasWandler;
-        if(show) cat.items.forEach(([iid])=>{ if(!(state.checklist[iid] && state.checklist[iid].checked)) all=false; });
-      });
-      return all;
+      return itemsDone('checkliste');
     }
-    case 'abschluss': return !!(state.abschluss.ergebnis && state.abschluss.unterschrift);
+    case 'ende': return (!absicherungVisible() || !!state.absicherung.sicherung) && itemsDone('ende');
+    case 'abschluss': return !!state.abschluss.unterschrift && gatherOffen().length===0;
   }
   return false;
 }
@@ -586,25 +913,36 @@ function isStepComplete(id){
 function init(){
   loadDraft();
   loadLibrary();
+  ensureDefaults();
   ensureCtState(); ensureVtState(); ensureKombiState();
   bindSetup();
+  bindNach();
   buildChecklist();
   bindZaehlerModem();
+  bindZaehlerExtras();
   hydrateForm();
-  renderStepNav();
+  syncSetupUI();
   showStepByIndex(0);
   document.getElementById('pruefdatum').value = state.standort.datum || new Date().toISOString().slice(0,10);
 }
 
 /* ---------------- SETUP ---------------- */
 function bindSetup(){
+  document.querySelectorAll('#tilesVorgang .tile').forEach(el=>{
+    el.onclick = ()=>{
+      const v = el.dataset.val;
+      if(v==='vor' && state.ebene==='NS') return;
+      if(v==='nach' && !(state.nachpruefung.items||[]).length) offerTakeCurrentMaengel();
+      state.vorgang = v;
+      syncSetupUI(); saveDraft();
+    };
+  });
   document.querySelectorAll('#choiceEbene .choice').forEach(el=>{
     el.onclick = ()=>{
+      if(state.vorgang==='vor' && el.dataset.val==='NS') return;
       state.ebene = el.dataset.val;
-      document.querySelectorAll('#choiceEbene .choice').forEach(c=>c.classList.remove('sel'));
-      el.classList.add('sel');
       state.messart = null;
-      buildMessartChoices(); renderStepNav(); saveDraft();
+      syncSetupUI(); saveDraft();
     };
   });
   const map = {anlName:'name', anlId:'id', anlBezug:'bezug', anlEinspeise:'einspeise', anlStrasse:'strasse', anlHausnr:'hausnr', anlPlz:'plz', anlOrt:'ort', pruefer:'pruefer', pruefdatum:'datum'};
@@ -613,6 +951,21 @@ function bindSetup(){
   });
   document.getElementById('gpsField').addEventListener('input', e=>{ state.standort.gps=e.target.value; saveDraft(); });
   document.getElementById('btnGps').onclick = getGps;
+}
+function syncSetupUI(){
+  // Vorinbetriebnahme gibt es nur bei MS/HS: NS ist dann gesperrt, und umgekehrt
+  if(state.vorgang==='vor' && state.ebene==='NS'){ state.ebene=null; state.messart=null; }
+  document.querySelectorAll('#tilesVorgang .tile').forEach(t=>{
+    t.classList.toggle('sel', t.dataset.val===state.vorgang);
+    t.classList.toggle('disabled', t.dataset.val==='vor' && state.ebene==='NS');
+  });
+  document.querySelectorAll('#choiceEbene .choice').forEach(c=>{
+    c.classList.toggle('sel', c.dataset.val===state.ebene);
+    c.classList.toggle('disabled', state.vorgang==='vor' && c.dataset.val==='NS');
+  });
+  document.getElementById('messartWrap').style.display = (state.vorgang==='nach') ? 'none' : '';
+  buildMessartChoices();
+  renderStepNav();
 }
 
 function buildMessartChoices(){
@@ -624,7 +977,7 @@ function buildMessartChoices(){
     options=[['wandler','Wandlermessung (getrennt)'],['kombiwandler','Kombiwandler']];
     if(!state.messart) state.messart='wandler';
   }
-  else { box.innerHTML='<div class="hint">Bitte zuerst Spannungsebene wählen.</div>'; return; }
+  else { box.innerHTML='<div class="hint" style="padding:8px;">Bitte zuerst die Spannungsebene wählen.</div>'; return; }
   options.forEach(([val,label])=>{
     const d = document.createElement('div');
     d.className = 'choice'+(state.messart===val?' sel':'');
@@ -662,6 +1015,7 @@ function hydrateForm(){
   document.getElementById('modem_notizen').value = state.modem.notizen||'';
 
   document.getElementById('maengelText').value = state.abschluss.maengel||'';
+  document.getElementById('bemerkungText').value = state.abschluss.bemerkung||'';
   document.getElementById('unterschrift').value = state.abschluss.unterschrift||'';
   if(state.abschluss.ergebnis) document.querySelectorAll('#choiceErgebnis .choice').forEach(c=>c.classList.toggle('sel', c.dataset.val===state.abschluss.ergebnis));
 
@@ -676,8 +1030,10 @@ function bindZaehlerModem(){
   document.getElementById('modem_sim').addEventListener('input', e=>{ state.modem.sim=e.target.value; saveDraft(); updateStepCompletionUI(); });
   document.getElementById('modem_verbindungstest').addEventListener('change', e=>{ state.modem.verbindungstest=e.target.value; saveDraft(); });
   document.getElementById('modem_notizen').addEventListener('input', e=>{ state.modem.notizen=e.target.value; saveDraft(); updateStepCompletionUI(); });
-  document.getElementById('maengelText').addEventListener('input', e=>{ state.abschluss.maengel=e.target.value; saveDraft(); });
-  document.getElementById('unterschrift').addEventListener('input', e=>{ state.abschluss.unterschrift=e.target.value; saveDraft(); updateStepCompletionUI(); });
+  document.getElementById('maengelText').addEventListener('input', e=>{ state.abschluss.maengel=e.target.value; saveDraft(); buildErgebnis(); });
+  document.getElementById('fristDate').addEventListener('input', e=>{ state.abschluss.frist=e.target.value; saveDraft(); });
+  document.getElementById('bemerkungText').addEventListener('input', e=>{ state.abschluss.bemerkung=e.target.value; saveDraft(); });
+  document.getElementById('unterschrift').addEventListener('input', e=>{ state.abschluss.unterschrift=e.target.value; saveDraft(); updateStepCompletionUI(); buildErgebnis(); });
   document.querySelectorAll('#choiceErgebnis .choice').forEach(el=>{
     el.onclick = ()=>{
       state.abschluss.ergebnis = el.dataset.val;
@@ -1340,34 +1696,39 @@ function renderWfaktorBox(){
 
 /* ---------------- CHECKLIST ---------------- */
 function buildChecklist(){
-  const container = document.getElementById('checklistContainer');
-  container.innerHTML = '';
+  ['checklistContainer','wandlerChecklistContainer','liveChecklistContainer','endChecklistContainer'].forEach(id=>{ document.getElementById(id).innerHTML=''; });
   CHECKLIST.forEach(cat=>{
-    const catDiv = document.createElement('div');
-    catDiv.className = 'check-cat'; catDiv.dataset.tag = cat.tag;
-    const title = document.createElement('div');
-    title.className = 'check-cat-title'; title.textContent = cat.cat;
-    catDiv.appendChild(title);
-    cat.items.forEach(([id,label,itemHint])=>{
+    const catDivs = {};
+    const CONT = {checkliste:'checklistContainer', wandler:'wandlerChecklistContainer', zaehler:'liveChecklistContainer', ende:'endChecklistContainer'};
+    cat.items.forEach(([id,label,itemHint,scope])=>{
+      const hk = ITEM_HOST[id]||'checkliste';
+      if(!catDivs[hk]){
+        const cd = document.createElement('div'); cd.className='check-cat';
+        const t = document.createElement('div'); t.className='check-cat-title'; t.textContent=cat.cat; cd.appendChild(t);
+        document.getElementById(CONT[hk]).appendChild(cd); catDivs[hk]=cd;
+      }
+      const catDiv = catDivs[hk];
       if(!state.checklist[id]) state.checklist[id] = {checked:false, note:''};
       const item = document.createElement('div');
-      item.className = 'check-item';
+      item.className = 'check-item'; item.dataset.scope = scope||'all';
       item.innerHTML = `
         <input type="checkbox" id="chk-${id}">
         <div style="flex:1;">
           <div class="txt">${label}</div>
           ${itemHint ? `<div class="hint" style="margin-top:2px;">${itemHint}</div>` : ''}
+          ${(BEWERTUNG[id]&&BEWERTUNG[id].variants) ? `<div id="varwrap-${id}" style="margin-top:6px;"><label style="margin:0 0 3px;">Falls nicht erfüllt:</label><select id="var-${id}"><option value="">– wählen –</option>${Object.entries(BEWERTUNG[id].variants).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('')}</select></div>` : ''}
           <span class="note-toggle" data-id="${id}">+ Notiz</span>
           <div class="note-field" id="notefield-${id}"><textarea id="note-${id}"></textarea></div>
         </div>`;
       catDiv.appendChild(item);
     });
-    container.appendChild(catDiv);
   });
   Object.keys(state.checklist).forEach(id=>{
     const chk = document.getElementById('chk-'+id); if(!chk) return;
     chk.checked = state.checklist[id].checked;
-    chk.addEventListener('change', e=>{ state.checklist[id].checked=e.target.checked; saveDraft(); updateStepCompletionUI(); });
+    chk.addEventListener('change', e=>{ state.checklist[id].checked=e.target.checked; syncVariantUi(id); saveDraft(); updateStepCompletionUI(); });
+    const vs = document.getElementById('var-'+id);
+    if(vs){ vs.value = state.checklist[id].variant||''; vs.addEventListener('change', e=>{ state.checklist[id].variant=e.target.value; saveDraft(); updateStepCompletionUI(); }); syncVariantUi(id); }
     const note = document.getElementById('note-'+id);
     note.value = state.checklist[id].note;
     note.addEventListener('input', e=>{ state.checklist[id].note=e.target.value; saveDraft(); });
@@ -1381,60 +1742,76 @@ function buildChecklist(){
   });
 
   document.querySelectorAll('#choiceSicherung .choice').forEach(el=>{
-    el.classList.toggle('sel', state.absicherung.sicherung===el.dataset.val);
     el.onclick = ()=>{
       state.absicherung.sicherung = el.dataset.val;
-      document.querySelectorAll('#choiceSicherung .choice').forEach(c=>c.classList.remove('sel'));
-      el.classList.add('sel');
-      document.getElementById('sicherungSonstigesBox').style.display = el.dataset.val==='sonstiges' ? 'block' : 'none';
+      refreshChecklistVisibility();
       saveDraft(); updateStepCompletionUI();
     };
   });
-  document.getElementById('sicherungSonstigesBox').style.display = state.absicherung.sicherung==='sonstiges' ? 'block' : 'none';
   document.getElementById('sicherungSonstigesText').value = state.absicherung.sonstigesText||'';
   document.getElementById('sicherungSonstigesText').addEventListener('input', e=>{ state.absicherung.sonstigesText=e.target.value; saveDraft(); });
 }
+function syncVariantUi(id){ const w=document.getElementById('varwrap-'+id); if(w) w.style.display = (state.checklist[id] && state.checklist[id].checked) ? 'none' : ''; }
+function syncChecklistDom(id){
+  const chk = document.getElementById('chk-'+id); if(chk) chk.checked = !!(state.checklist[id]&&state.checklist[id].checked);
+  const note = document.getElementById('note-'+id); if(note && state.checklist[id]) note.value = state.checklist[id].note||'';
+}
+function placeChecklistCards(){
+  const w = wandlerHostPanelId();
+  document.getElementById('panel-'+(w||'checkliste')).appendChild(document.getElementById('wandlerChecklistCard'));
+  document.getElementById('panel-zaehler').appendChild(document.getElementById('liveChecklistCard'));
+  document.getElementById('panel-ende').insertBefore(document.getElementById('absicherungCard'), document.getElementById('panel-ende').firstChild);
+}
 function refreshChecklistVisibility(){
-  const hasWandler = isMSorHS() || (state.ebene==='NS' && state.messart==='halbindirekt');
-  document.querySelectorAll('.check-cat').forEach(cat=>{
-    const tag = cat.dataset.tag;
-    let show = true;
-    if(tag==='ms') show = isMSorHS();
-    if(tag==='wandler') show = hasWandler;
-    cat.style.display = show ? '' : 'none';
+  placeChecklistCards();
+  ['wandlerChecklistCard','liveChecklistCard','endChecklistCard'].forEach(cid=>{
+    const c=document.getElementById(cid); c.style.display = [...c.querySelectorAll('.check-item')].some(it=>scopeOk(it.dataset.scope)) ? '' : 'none';
   });
+  document.querySelectorAll('.check-cat').forEach(cat=>{
+    let any = false;
+    cat.querySelectorAll('.check-item').forEach(it=>{
+      const ok = scopeOk(it.dataset.scope); it.style.display = ok ? '' : 'none'; if(ok) any = true;
+    });
+    cat.style.display = any ? '' : 'none';
+  });
+  // Absicherung: nur bei Wandlermessung; Schmelzsicherung nur bei NS
+  const card = document.getElementById('absicherungCard');
+  card.style.display = absicherungVisible() ? '' : 'none';
+  document.querySelectorAll('#choiceSicherung .choice').forEach(el=>{
+    const hide = el.dataset.val==='schmelz' && state.ebene!=='NS';
+    el.style.display = hide ? 'none' : '';
+    if(hide && state.absicherung.sicherung==='schmelz') state.absicherung.sicherung='';
+    el.classList.toggle('sel', state.absicherung.sicherung===el.dataset.val);
+  });
+  document.getElementById('sicherungSonstigesBox').style.display = state.absicherung.sicherung==='sonstiges' ? 'block' : 'none';
 }
 
-/* ---------------- SUMMARY / GALLERY / EXPORT ---------------- */
+/* ---------------- SUMMARY / GALLERY ---------------- */
 function buildSummary(){
   const el = document.getElementById('summaryBox');
-  const hasWandler = isMSorHS() || (state.ebene==='NS' && state.messart==='halbindirekt');
-  let visibleTotal=0, visibleDone=0;
-  CHECKLIST.forEach(cat=>{
-    let show = true;
-    if(cat.tag==='ms') show = isMSorHS();
-    if(cat.tag==='wandler') show = hasWandler;
-    if(show) cat.items.forEach(([id])=>{ visibleTotal++; if(state.checklist[id] && state.checklist[id].checked) visibleDone++; });
-  });
+  const items = visibleItems();
+  const done = items.filter(i=>state.checklist[i.id] && state.checklist[i.id].checked).length;
   const adresse = [ [state.standort.strasse,state.standort.hausnr].filter(Boolean).join(' '),
                      [state.standort.plz,state.standort.ort].filter(Boolean).join(' ') ].filter(Boolean).join(', ');
   const r = computeWandlerfaktor();
   const risoVals = Object.values(state.riso).map(v=>parseNum(v)).filter(v=>v!=null);
   const risoMin = risoVals.length ? Math.min(...risoVals) : null;
-  el.innerHTML = `
-    <div class="summary-line"><span>Anlage</span><span>${state.standort.name||'–'}</span></div>
-    <div class="summary-line"><span>Adresse</span><span>${adresse||'–'}</span></div>
-    <div class="summary-line"><span>GPS</span><span>${state.standort.gps||'–'}</span></div>
-    <div class="summary-line"><span>Spannungsebene</span><span>${state.ebene||'–'}</span></div>
-    <div class="summary-line"><span>Messart</span><span>${state.messart||'–'}</span></div>
-    <div class="summary-line"><span>Zählernummer</span><span>${state.zaehler.z_nummer||'–'}</span></div>
-    <div class="summary-line"><span>Wandlerfaktor</span><span>${r.total || '–'}</span></div>
-    <div class="summary-line"><span>Riso (kleinster Wert)</span><span>${risoMin!=null ? risoMin+' MΩ' : '–'}</span></div>
-    <div class="summary-line"><span>Checkliste</span><span>${visibleDone} / ${visibleTotal} erledigt</span></div>
-    <div class="summary-line"><span>Prüfer</span><span>${state.standort.pruefer||'–'}</span></div>
-    <div class="summary-line"><span>Datum</span><span>${document.getElementById('pruefdatum').value||'–'}</span></div>
-  `;
+  const L = (a,b)=>`<div class="summary-line"><span>${a}</span><span>${b}</span></div>`;
+  let html = L('Art des Termins', VORGANG_LABEL[state.vorgang]||'–') + L('Anlage', state.standort.name||'–') + L('Adresse', adresse||'–')
+    + L('Spannungsebene', state.ebene||'–');
+  if(isPruefung()){
+    html += L('Messart', ({direkt:'Direktmessung',halbindirekt:'Halbindirekt',wandler:'Wandlermessung',kombiwandler:'Kombiwandler'}[state.messart])||'–') + L('Zählernummer', state.zaehler.z_nummer||'–')
+      + (hasWandlerAny() ? L('Wandlerfaktor', r.total||'–') : '')
+      + (hasRiso() ? L('Riso (kleinster Wert)', risoMin!=null ? risoMin+' MΩ' : '–') : '')
+      + L('Checkliste', done+' / '+items.length+' erledigt');
+  } else {
+    const it = state.nachpruefung.items;
+    html += L('Nachprüfung', it.filter(i=>i.status==='behoben').length+' / '+it.length+' Mängel behoben');
+  }
+  html += L('Prüfer', state.standort.pruefer||'–') + L('Datum', fmtDateDe()||'–');
+  el.innerHTML = html;
 }
+
 function photoTile(src, label){
   return `<div style="width:100px;">
     <img src="${src}" style="width:100px;height:100px;object-fit:cover;border-radius:8px;border:1px solid var(--border-light);">
@@ -1478,6 +1855,7 @@ function removeExtraPhoto(i){ state.abschluss.weitereFotos.splice(i,1); saveDraf
 
 function exportJson(){
   state.standort.datum = document.getElementById('pruefdatum').value;
+  state.abschluss.maengelListe = snapshotMaengel(computeErgebnis());
   const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -1489,7 +1867,679 @@ function resetAll(){ localStorage.removeItem(LS_KEY); location.reload(); }
 
 document.getElementById('pruefdatum').addEventListener('input', e=>{ state.standort.datum=e.target.value; saveDraft(); updateStepCompletionUI(); });
 
+/* ---------------- MÄNGEL / ERGEBNIS (automatisch, nach Bewertungsmatrix) ---------------- */
+function buerdePct(soll, gem){ const s=parseNum(soll), g=parseNum(gem); return (s && g!=null) ? Math.round(g/s*100) : null; }
+function mkMangel(key, text, ext, opts){
+  const b = bewertungFuer(opts.comp||null, key, opts.variant);
+  return {key, text, ext, comp:opts.comp||null, req:opts.req||'', massn:b.t, begr:b.begr, quelle:b.quelle||opts.quelle||'', cls:b.k, note:opts.note||''};
+}
+function buerdeMangel(list, label, key, soll, gem){
+  const r = computeBuerdeErgebnis(soll, gem);
+  if(r && r.status!=='io'){
+    list.push(mkMangel('buerde:'+key, label+': gemessene Bürde '+gem+' VA bei Wandlerbürde '+soll+' ('+buerdePct(soll,gem)+' %) – '+(r.status==='unter'?'Wandler unterbürdet':'Wandler überbürdet'),
+      true, {comp:compFor('buerde'), req:'Zulässige Auslastung der Wandlerbürde: 25 % bis 100 %'}));
+  }
+}
+function wandlerGruppen(){   // einheitliche Sicht auf alle Wandler-Phasen für Mängel-/Offen-Prüfung
+  const out = [];
+  if(hasCtPanel() && state.ct) state.ct.phases.forEach((p,i)=>out.push({label:'Stromwandler L'+(i+1), key:'ct'+i, soll:state.ct.sollbuerde, gem:p.gemessenebuerde, serial:p.seriennummer}));
+  if(hasVtPanel() && state.vt) state.vt.phases.forEach((p,i)=>out.push({label:'Spannungswandler L'+(i+1), key:'vt'+i, soll:state.vt.sollbuerde, gem:p.gemessenebuerde, serial:p.seriennummer}));
+  if(hasKombiPanel() && state.kombi) state.kombi.phases.forEach((p,i)=>{
+    out.push({label:'Kombiwandler L'+(i+1)+' (Strom)', key:'ka'+i, soll:state.kombi.buerdeA, gem:p.gemessenA, serial:p.seriennummer});
+    out.push({label:'Kombiwandler L'+(i+1)+' (Spannung)', key:'kv'+i, soll:state.kombi.buerdeV, gem:p.gemessenV, serial:p.seriennummer});
+  });
+  return out;
+}
+
+function gatherMaengel(){
+  const list = [];
+  if(state.vorgang==='nach'){
+    state.nachpruefung.items.forEach((it,i)=>{
+      if(it.status==='offen') list.push({key:'nach:'+i, text:it.text, ext:it.ext!==false, comp:null, req:it.req||'', massn:it.massn||'', begr:it.begr||'', quelle:it.quelle||it.ref||'', cls:it.cls||'keine', note:it.note||''});
+    });
+    return list;
+  }
+  if(!isPruefung()) return list;
+  const zs = (state.zaehler.zeiger||{}).status;
+  visibleItems().forEach(({id,label})=>{
+    const c = state.checklist[id] || {};
+    if(c.checked) return;
+    if(id==='s_vektor' && (zs==null || zs==='leer' || zs==='unvollstaendig')) return;   // noch nicht auswertbar → „offen“, kein Mangel
+    const comp = compFor(id), def = BEWERTUNG[id];
+    let text = def ? def.komp+': '+def.mangel : 'Nicht erfüllt: '+label;
+    if(def && def.variants && c.variant && def.variants[c.variant]) text += ' ('+def.variants[c.variant].label+')';
+    const ext = comp ? !BEWERTUNG[comp].intern : (id in EXT_ITEMS);
+    const m = mkMangel('chk:'+id, text, ext, {comp, variant:c.variant, req:def?'':(EXT_ITEMS[id]||''), quelle:TAB_REF[id]||'', note:c.note||''});
+    if(state.ebene!=='NS' && MSHS_FOLGE[id]) m.cls = MSHS_FOLGE[id];
+    list.push(m);
+  });
+  wandlerGruppen().forEach(g=> buerdeMangel(list, g.label, g.key, g.soll, g.gem));
+  if(hasRiso()){
+    [['iL1','Stromwandler L1'],['iL2','Stromwandler L2'],['iL3','Stromwandler L3'],['uL1','Spannungswandler L1'],['uL2','Spannungswandler L2'],['uL3','Spannungswandler L3']].forEach(([k,l])=>{
+      const v = parseNum(state.riso[k]);
+      if(v!=null && v<RISO_MIN_MOHM) list.push(mkMangel('riso:'+k, l+': Isolationswiderstand zu niedrig ('+state.riso[k]+' MΩ)', true, {req:'Isolationswiderstand mind. '+RISO_MIN_MOHM+' MΩ bei 500 V DC'}));
+    });
+  }
+  String(state.abschluss.maengel||'').split(/\n+/).map(t=>t.trim()).filter(Boolean).forEach((t,i)=>{
+    list.push(mkMangel('text:'+i, t, true, {}));
+  });
+  return list;
+}
+
+function gatherOffen(){   // fehlende Eingaben des Prüfers (keine Mängel der Anlage)
+  const o = [];
+  if(!state.vorgang){ o.push('Art des Termins wählen'); return o; }
+  if(state.vorgang==='nach'){
+    if(!state.nachpruefung.items.length) o.push('Keine Mängel zur Nachprüfung hinterlegt');
+    state.nachpruefung.items.forEach(it=>{ if(!it.status) o.push('Nachprüfung offen: '+it.text); });
+  } else {
+    if(!state.ebene || !state.messart) o.push('Spannungsebene / Messart wählen');
+    wandlerGruppen().forEach(g=>{
+      if(!g.serial) o.push(g.label+': Seriennummer fehlt');
+      if(!computeBuerdeErgebnis(g.soll, g.gem)) o.push(g.label+': Bürdemessung fehlt');
+    });
+    if(hasRiso()) ['iL1','iL2','iL3','uL1','uL2','uL3'].forEach(k=>{ if(parseNum(state.riso[k])==null) o.push('Riso '+k.replace('iL','Strom L').replace('uL','Spannung L')+' fehlt'); });
+    if(!state.zaehler.z_nummer) o.push('Zählernummer fehlt');
+    if(!state.zaehler.stand.ap) o.push('Einbaustand (Wirkenergie Bezug) fehlt');
+    if(isLive()){ const zs=(state.zaehler.zeiger||{}).status; if(zs==null||zs==='leer'||zs==='unvollstaendig') o.push('Zeigerdiagramm: Werte unvollständig'); }
+    if(absicherungVisible() && !state.absicherung.sicherung) o.push('Absicherung nicht angegeben');
+    visibleItems().forEach(({id})=>{ const d=BEWERTUNG[id], c=state.checklist[id]||{}; if(d && d.variants && !c.checked && !c.variant) o.push(d.komp+': Wirksamkeit der Schutzmaßnahme angeben'); });
+    if(collectPhotos().length===0) o.push('Keine Fotos aufgenommen');
+  }
+  if(!state.abschluss.unterschrift) o.push('Unterschrift fehlt');
+  return o;
+}
+
+function computeErgebnis(){
+  const alle = gatherMaengel();
+  const offen = gatherOffen();
+  const rel = alle.filter(m=>m.cls!=='entfaellt');
+  const by = k=> rel.filter(m=>m.cls===k);
+  const keine = by('keine'), frist = by('frist'), hinweis = by('hinweis');
+  const status = keine.length ? 'nein' : offen.length ? 'unvollstaendig' : frist.length ? 'frist' : hinweis.length ? 'hinweis' : 'ja';
+  const t = ERG_TEXT[state.vorgang] || {};
+  const label = status==='unvollstaendig' ? 'Prüfung unvollständig – noch nicht abschließend bewertbar' : (t[status]||'');
+  state.abschluss.ergebnis = status;
+  return {status, label, maengel:rel, keine, frist, hinweis, offen, ext:rel.filter(m=>m.ext)};
+}
+
+function buildErgebnis(){
+  const r = computeErgebnis();
+  const cls = (r.status==='ja'||r.status==='hinweis') ? 'ok' : r.status==='nein' ? 'bad' : r.status==='frist' ? 'frist' : 'pending';
+  let sub = '';
+  if(r.keine.length) sub = '<small>'+r.keine.length+' Mangel/Mängel ohne Inbetriebsetzung'+(r.frist.length?', '+r.frist.length+' mit Frist':'')+'.</small>';
+  else if(r.frist.length) sub = '<small>'+r.frist.length+' Mangel/Mängel mit Frist.</small>';
+  else if(r.hinweis.length) sub = '<small>'+r.hinweis.length+' Hinweis(e).</small>';
+  document.getElementById('ergebnisBanner').innerHTML = '<div class="banner '+cls+'">'+(state.vorgang?r.label:'Bitte zuerst die Art des Termins wählen.')+sub+'</div>';
+  const bestand = state.vorgang==='bestand';
+  let html = '';
+  if(r.maengel.length){
+    html += '<h3 style="margin-top:4px;">Festgestellte Punkte</h3>' + r.maengel.map(m=>{
+      const neu = (state.abschluss.teil||{})[m.key]==='neu';
+      return `<div class="mangel"><div><span class="kl kl-${m.cls}">${KLASSE_LABEL[m.cls]}</span> ${esc(m.text)}${m.ext?'':' <span style="color:var(--text-dim);">(intern)</span>'}</div>`
+        + (m.massn ? `<div class="hint" style="margin-top:3px;">${esc(m.massn)}</div>` : '')
+        + (bestand ? `<div class="choice-group" style="margin-top:8px;" data-key="${esc(m.key)}"><div class="choice ${neu?'':'sel'}" data-v="bestand">Unveränderter Bestand</div><div class="choice ${neu?'sel':''}" data-v="neu">Neu / geändert</div></div>` : '')
+        + '</div>';
+    }).join('');
+  }
+  if(r.offen.length){
+    html += '<h3>Noch offen (Eingaben fehlen)</h3>' + r.offen.map(t=>`<div class="mangel" style="color:var(--text-dim);">${esc(t)}</div>`).join('');
+  }
+  const box = document.getElementById('maengelListe');
+  box.innerHTML = html;
+  box.querySelectorAll('.choice-group[data-key]').forEach(g=>{
+    g.querySelectorAll('.choice').forEach(c=>{
+      c.onclick = ()=>{ state.abschluss.teil[g.dataset.key] = c.dataset.v; saveDraft(); buildErgebnis(); };
+    });
+  });
+  document.getElementById('fristWrap').style.display = r.frist.length ? '' : 'none';
+  document.getElementById('fristDate').value = state.abschluss.frist||'';
+  state.abschluss.maengelListe = snapshotMaengel(r);
+  saveDraft();
+}
+function snapshotMaengel(r){   // für die Nachprüfung: nur Punkte, die behoben werden müssen
+  return r.maengel.filter(m=>m.cls==='keine'||m.cls==='frist').map(m=>({text:m.text, req:m.req, massn:m.massn, begr:m.begr, quelle:m.quelle, cls:m.cls, ext:m.ext}));
+}
+
+/* ---------------- NACHPRÜFUNG ---------------- */
+function itemFromSnapshot(m){ return {text:m.text, req:m.req||'', massn:m.massn||'', begr:m.begr||'', quelle:m.quelle||m.ref||'', cls:m.cls||'keine', ext:m.ext!==false, status:'', note:''}; }
+function offerTakeCurrentMaengel(){
+  if(!isPruefung()) return;
+  const list = snapshotMaengel(computeErgebnis());
+  if(!list.length) return;
+  if(confirm(list.length+' Mangel/Mängel aus dem aktuellen Protokoll zur Nachprüfung übernehmen?')){
+    state.nachpruefung.items = list.map(itemFromSnapshot);
+    state.nachpruefung.quelle = 'Aktuelles Protokoll';
+  }
+}
+function buildNachList(){
+  const box = document.getElementById('nachList');
+  const items = state.nachpruefung.items;
+  if(!items.length){ box.innerHTML = '<div class="hint">Noch keine Mängel hinterlegt – Protokoll laden oder unten von Hand ergänzen.</div>'; return; }
+  box.innerHTML = items.map((it,i)=>`
+    <div class="mangel">
+      <div><span class="kl kl-${it.cls||'keine'}">${KLASSE_LABEL[it.cls||'keine']}</span> ${esc(it.text)}</div>
+      <div class="choice-group" style="margin-top:8px;" data-i="${i}">
+        <div class="choice ${it.status==='behoben'?'sel':''}" data-v="behoben">Behoben</div>
+        <div class="choice ${it.status==='offen'?'sel':''}" data-v="offen">Nicht behoben</div>
+      </div>
+      <input type="text" id="nachnote-${i}" placeholder="Bemerkung" value="${esc(it.note||'')}" style="margin-top:8px;">
+    </div>`).join('');
+  box.querySelectorAll('.choice-group').forEach(g=>{
+    g.querySelectorAll('.choice').forEach(c=>{
+      c.onclick = ()=>{ items[+g.dataset.i].status = c.dataset.v; saveDraft(); buildNachList(); updateStepCompletionUI(); };
+    });
+  });
+  items.forEach((it,i)=>{ document.getElementById('nachnote-'+i).addEventListener('input', e=>{ it.note=e.target.value; saveDraft(); }); });
+  const st = document.getElementById('nachStatus');
+  if(st && state.nachpruefung.quelle) st.textContent = 'Quelle: '+state.nachpruefung.quelle;
+}
+function nachAdd(){
+  const el = document.getElementById('nachNeu'); const t = el.value.trim(); if(!t) return;
+  state.nachpruefung.items.push({text:t, req:'', massn:'', begr:'', quelle:'', cls:'keine', ext:true, status:'', note:''});
+  el.value=''; saveDraft(); buildNachList(); updateStepCompletionUI();
+}
+function bindNach(){
+  document.getElementById('nachImport').addEventListener('change', e=>{
+    const f = e.target.files[0]; if(!f) return;
+    const r = new FileReader();
+    r.onload = ()=>{
+      const st = document.getElementById('nachStatus');
+      try{
+        const d = JSON.parse(r.result);
+        const list = (d.abschluss && d.abschluss.maengelListe) || [];
+        if(!list.length){ st.textContent='In dieser Datei sind keine Mängel hinterlegt.'; st.className='status-line err'; return; }
+        state.nachpruefung.items = list.map(itemFromSnapshot);
+        state.nachpruefung.quelle = (d.standort&&d.standort.name?d.standort.name+' · ':'')+(d.standort&&d.standort.datum?d.standort.datum:'Protokoll geladen');
+        const s = d.standort||{};
+        Object.keys(state.standort).forEach(k=>{ if(!state.standort[k] && s[k] && k!=='datum' && k!=='pruefer') state.standort[k]=s[k]; });
+        if(!state.ebene && d.ebene) state.ebene = d.ebene;
+        hydrateStandort(); saveDraft(); buildNachList(); syncSetupUI();
+        st.textContent = list.length+' Mängel geladen.'; st.className='status-line ok';
+      }catch(err){ st.textContent='Datei konnte nicht gelesen werden.'; st.className='status-line err'; }
+    };
+    r.readAsText(f); e.target.value='';
+  });
+}
+function hydrateStandort(){
+  const m = {anlName:'name', anlId:'id', anlBezug:'bezug', anlEinspeise:'einspeise', anlStrasse:'strasse', anlHausnr:'hausnr', anlPlz:'plz', anlOrt:'ort', gpsField:'gps', pruefer:'pruefer'};
+  Object.entries(m).forEach(([id,k])=>{ const el=document.getElementById(id); if(el) el.value = state.standort[k]||''; });
+}
+
+/* ---------------- ZÄHLER: AUSLESEN / EINBAUSTÄNDE / ZEIGERDIAGRAMM ---------------- */
+const MW_KEYS = ['u1','u2','u3','i1','i2','i3','w1','w2','w3','uu12','uu13'];
+const MANUFACTURERS = {EMH:'EMH metering', LGZ:'Landis+Gyr', LGB:'Landis+Gyr', ISK:'Iskra', ELS:'Elster', EFR:'EFR', ITR:'Itron', KAM:'Kamstrup', MCS:'Metcom', MET:'Metcom', APA:'Apator', ZIV:'ZIV'};
+
+function zStatus(msg, cls){ const el=document.getElementById('z_status'); if(!el) return; el.textContent=msg; el.className='status-line'+(cls?' '+cls:''); }
+function zLog(msg){ const el=document.getElementById('z_log'); if(!el) return; el.style.display='block'; el.textContent = (el.textContent+msg).slice(-2500); }
+
+function parseObis(text){
+  const res = {ident:'', vals:{}};
+  String(text).split(/\r?\n/).forEach(line=>{
+    line = line.trim(); if(!line) return;
+    if(line[0]==='/' && !res.ident){ res.ident = line; return; }
+    const m = line.match(/^(?:\d+-\d+:)?([0-9A-Za-z]+(?:\.[0-9A-Za-z]+)+)(?:\*\d+)?\(([^)]*)\)/);
+    if(m && !(m[1] in res.vals)) res.vals[m[1]] = m[2];
+  });
+  return res;
+}
+function obisNum(v){ if(v==null) return null; const n = parseFloat(String(v).split('*')[0].replace(',','.')); return isNaN(n) ? null : n; }
+function fmtNum(n, d){ return n==null ? '' : String(parseFloat(n.toFixed(d==null?4:d))); }
+
+function applyReadout(text){
+  const p = parseObis(text);
+  const v = p.vals;
+  if(!p.ident && !Object.keys(v).length){ zStatus('Keine auswertbaren Daten gefunden.','err'); return false; }
+  const z = state.zaehler;
+  // Hersteller aus der Kennung (/XXXn...)
+  if(p.ident){ const code = p.ident.slice(1,4).toUpperCase(); z.hersteller = (MANUFACTURERS[code]||code)+' – '+p.ident.slice(1); }
+  // Zählernummer: Kandidaten anbieten, erster Treffer wird übernommen
+  const cands = [];
+  ['96.1.0','0.0.0','C.1.0','0.0.1','96.1.1','C.1.1'].forEach(c=>{ if(v[c]) cands.push({code:c, val:v[c].split('*')[0].trim()}); });
+  z.kandidaten = cands;
+  if(cands.length){ z.z_nummer = cands[0].val; document.getElementById('z_nummer').value = z.z_nummer; }
+  // Einbaustände
+  const st = z.stand;
+  const set = (key,code)=>{ const n = obisNum(v[code]); if(n!=null) st[key] = fmtNum(n,4); };
+  set('ap','1.8.0'); set('am','2.8.0'); set('rp','3.8.0'); set('rm','4.8.0');
+  st.zeit = new Date().toLocaleString('de-DE'); st.quelle = 'Auslesung'+(z.hersteller?' ('+z.hersteller.split(' – ')[0]+')':'');
+  // Momentanwerte für das Zeigerdiagramm
+  const mw = z.mw;
+  const pick = (key, code)=>{ const n = obisNum(v[code]); if(n!=null) mw[key] = fmtNum(n,2); };
+  pick('u1','32.7.0'); pick('u2','52.7.0'); pick('u3','72.7.0');
+  pick('i1','31.7.0'); pick('i2','51.7.0'); pick('i3','71.7.0');
+  // Winkel U–I je Phase; sonst aus P und Q (φ = atan2(Q,P))
+  [['w1','81.7.4','36.7.0','38.7.0'],['w2','81.7.15','56.7.0','58.7.0'],['w3','81.7.26','76.7.0','78.7.0']].forEach(([k,ang,pc,qc])=>{
+    const a = obisNum(v[ang]);
+    if(a!=null) mw[k] = fmtNum(normDeg(a),1);
+    else { const P=obisNum(v[pc]), Q=obisNum(v[qc]); if(P!=null && Q!=null && (P||Q)) mw[k] = fmtNum(Math.atan2(Q,P)*180/Math.PI,1); }
+  });
+  const a12 = obisNum(v['81.7.1']), a13 = obisNum(v['81.7.2']);
+  if(a12!=null) mw.uu12 = fmtNum(norm360(a12),1);
+  if(a13!=null) mw.uu13 = fmtNum(norm360(a13),1);
+  saveDraft(); hydrateZaehlerPanel();
+  const found = ['1.8.0','2.8.0'].filter(c=>v[c]).length;
+  zStatus('Ausgelesen'+(z.z_nummer?': Zähler '+z.z_nummer:'')+(found?'':' (keine Zählerstände gefunden)')+'.', found?'ok':'err');
+  updateStepCompletionUI();
+  return true;
+}
+function normDeg(a){ a = ((a+180)%360+360)%360-180; return a; }
+function norm360(a){ return ((a%360)+360)%360; }
+
+function zApplyPaste(){ applyReadout(document.getElementById('z_paste').value); }
+
+/* ---- Transport: Web Bluetooth (BLE-UART) und Web Serial ---- */
+const dec7 = bytes => String.fromCharCode(...Array.from(bytes).map(b=>b&0x7f));   // 7E1: Paritätsbit entfernen
+const wait = ms => new Promise(r=>setTimeout(r,ms));
+function enc(s){ return Uint8Array.from(Array.from(s).map(c=>c.charCodeAt(0))); }
+function readoutComplete(buf){ return buf.indexOf('\x03')>=0 || /\n!\r?\n/.test(buf); }
+
+async function zConnectBle(){
+  if(!navigator.bluetooth){ zStatus('Web Bluetooth wird hier nicht unterstützt (Chrome auf Android verwenden) – alternativ Auslesetext einfügen.','err'); return; }
+  try{
+    zStatus('Gerät wählen …');
+    const dev = await navigator.bluetooth.requestDevice({acceptAllDevices:true, optionalServices:[
+      '6e400001-b5a3-f393-e0a9-e50e24dcca9e','0000ffe0-0000-1000-8000-00805f9b34fb','0000fff0-0000-1000-8000-00805f9b34fb','49535343-fe7d-4ae5-8fa9-9fafd205e455']});
+    zStatus('Verbinde …');
+    const server = await dev.gatt.connect();
+    let tx=null, rx=null;
+    for(const s of await server.getPrimaryServices()){
+      for(const c of await s.getCharacteristics()){
+        if(!rx && (c.properties.notify||c.properties.indicate)) rx=c;
+        if(!tx && (c.properties.write||c.properties.writeWithoutResponse)) tx=c;
+      }
+    }
+    if(!rx || !tx) throw new Error('keine UART-Charakteristik gefunden');
+    let buf='';
+    await rx.startNotifications();
+    rx.addEventListener('characteristicvaluechanged', e=>{ buf += dec7(new Uint8Array(e.target.value.buffer)); });
+    const send = async s=>{ const b=enc(s); for(let i=0;i<b.length;i+=20){ const part=b.slice(i,i+20); if(tx.properties.writeWithoutResponse) await tx.writeValueWithoutResponse(part); else await tx.writeValue(part); await wait(30); } };
+    await iecDialog(send, ()=>buf, b=>{ buf=b; });
+    try{ dev.gatt.disconnect(); }catch(e){}
+  }catch(err){ zStatus('Verbindung fehlgeschlagen: '+(err.message||err),'err'); zLog('\n'+err+'\n'); }
+}
+
+// IEC 62056-21, Mode C: Anfrage → Kennung → Quittung (Datenauslesung) → Datensatz
+async function iecDialog(send, getBuf, setBuf){
+  const baudChar = (document.getElementById('z_baud')||{}).value || '5';
+  zStatus('Sende Anfrage …'); setBuf('');
+  await send('/?!\r\n');
+  let t0 = Date.now();
+  while(!/\/.*\r?\n/.test(getBuf()) && Date.now()-t0<6000) await wait(100);
+  const ident = (getBuf().match(/\/[^\r\n]*/)||[''])[0];
+  zLog('\n< '+ident+'\n');
+  if(!ident) throw new Error('keine Antwort des Zählers (Tastkopf aufgesetzt?)');
+  zStatus('Zähler antwortet: '+ident.slice(1,20)+' – lese Daten …');
+  setBuf('');
+  await wait(300);
+  await send('\x06'+'0'+baudChar+'0'+'\r\n');
+  t0 = Date.now(); let lastLen = 0, lastChange = Date.now();
+  while(Date.now()-t0<25000){
+    await wait(200);
+    const b = getBuf();
+    if(b.length!==lastLen){ lastLen=b.length; lastChange=Date.now(); }
+    if(readoutComplete(b)) break;
+    if(b.length>50 && Date.now()-lastChange>3500) break;
+  }
+  const data = getBuf();
+  zLog(data.slice(0,1500)+'\n');
+  if(data.length<20) throw new Error('keine Daten empfangen');
+  applyReadout(ident+'\n'+data);
+}
+
+/* ---- Felder, Anzeige, Analyse ---- */
+function bindZaehlerExtras(){
+  ['ap','am','rp','rm'].forEach(k=>{
+    const el = document.getElementById('zs_'+k);
+    el.addEventListener('input', e=>{ state.zaehler.stand[k]=e.target.value; if(!state.zaehler.stand.zeit) state.zaehler.stand.zeit=new Date().toLocaleString('de-DE'); if(!state.zaehler.stand.quelle) state.zaehler.stand.quelle='Handeingabe'; saveDraft(); updateStepCompletionUI(); });
+  });
+  document.getElementById('z_file').addEventListener('change', e=>{
+    const f = e.target.files[0]; if(!f) return;
+    const r = new FileReader(); r.onload = ()=>{ document.getElementById('z_paste').value = String(r.result).slice(0,200000); applyReadout(String(r.result)); }; r.readAsText(f, 'latin1');
+    e.target.value='';
+  });
+}
+function hydrateZaehlerPanel(){
+  const z = state.zaehler;
+  document.getElementById('z_nummer').value = z.z_nummer||'';
+  ['ap','am','rp','rm'].forEach(k=>{ document.getElementById('zs_'+k).value = z.stand[k]||''; });
+  document.getElementById('zs_info').textContent = z.stand.zeit ? 'Stand vom '+z.stand.zeit+(z.stand.quelle?' · '+z.stand.quelle:'') : '';
+  document.getElementById('z_hersteller').textContent = z.hersteller ? 'Zähler: '+z.hersteller : '';
+  const chips = document.getElementById('z_chips');
+  chips.innerHTML = (z.kandidaten||[]).length>1 ? '<span class="hint" style="width:100%;margin:0;">Weitere Nummern aus der Auslesung – antippen zum Übernehmen:</span>' + z.kandidaten.map((c,i)=>`<span class="chip" data-i="${i}">${c.val} (${c.code})</span>`).join('') : '';
+  chips.querySelectorAll('.chip').forEach(ch=>{ ch.onclick=()=>{ z.z_nummer = z.kandidaten[+ch.dataset.i].val; document.getElementById('z_nummer').value=z.z_nummer; saveDraft(); updateStepCompletionUI(); }; });
+  buildZeigerFields();
+  renderZeiger();
+}
+function buildZaehlerPanel(){
+  document.getElementById('zeigerCard').style.display = isLive() ? '' : 'none';
+  hydrateZaehlerPanel();
+}
+function buildZeigerFields(){
+  const mw = state.zaehler.mw;
+  const row = (lbl, pre, unit)=>`<div class="rl">${lbl}</div>` + [1,2,3].map(i=>`<input type="text" inputmode="decimal" id="zm_${pre}${i}" value="${mw[pre+i]||''}" placeholder="${unit}">`).join('');
+  document.getElementById('zeigerFields').innerHTML =
+    `<div class="grid3"><div></div><div class="hd">L1</div><div class="hd">L2</div><div class="hd">L3</div>`
+    + row('U (V)','u','V') + row('I (A)','i','A') + row('φ U–I','w','°') + `</div>`
+    + `<div class="row" style="margin-top:10px;"><div><label>Winkel U1–U2 (°, optional)</label><input type="text" inputmode="decimal" id="zm_uu12" value="${mw.uu12||''}" placeholder="120"></div>`
+    + `<div><label>Winkel U1–U3 (°, optional)</label><input type="text" inputmode="decimal" id="zm_uu13" value="${mw.uu13||''}" placeholder="240"></div></div>`;
+  MW_KEYS.forEach(k=>{
+    const el = document.getElementById('zm_'+k); if(!el) return;
+    el.addEventListener('input', e=>{ mw[k]=e.target.value; saveDraft(); renderZeiger(); updateStepCompletionUI(); });
+  });
+}
+
+function analyseZeiger(){
+  const mw = state.zaehler.mw, n = k=>parseNum(mw[k]);
+  const U=[n('u1'),n('u2'),n('u3')], I=[n('i1'),n('i2'),n('i3')], W=[n('w1'),n('w2'),n('w3')];
+  const all = [...U,...I,...W];
+  if(!all.some(v=>v!=null)) return {status:'leer', findings:[]};
+  const f = [];
+  const add=(level,text)=>f.push({level,text});
+  if(U.every(v=>v!=null)){
+    const mx=Math.max(...U), mn=Math.min(...U);
+    if(mn<=0) add('warn','Eine Phasenspannung fehlt (0 V) – Spannungspfad / Sicherung prüfen.');
+    else if((mx-mn)/mx>0.10) add('warn','Phasenspannungen unsymmetrisch (Abweichung > 10 %).');
+    else add('ok','Spannungen L1–L3 symmetrisch.');
+    if(mn>0 && !((mx<70 && mn>50) || (mn>200 && mx<260))) add('warn','Spannungsbereich ungewöhnlich (erwartet ca. 57,7 V sekundär bzw. 230 V).');
+  }
+  if(I.every(v=>v!=null)){
+    const mx=Math.max(...I), mn=Math.min(...I);
+    if(mx<=0) add('warn','Kein Strom gemessen – Zeigerdiagramm nicht aussagekräftig (zu wenig Last?).');
+    else if(mn<0.05*mx) add('warn','Eine Phase ohne Strom – Stromwandlerkreis offen oder Brücke an der Prüfklemme prüfen.');
+    else if((mx-mn)/mx>0.30) add('info','Ströme unsymmetrisch (> 30 %) – bei ungleicher Last möglich.');
+    else add('ok','Ströme L1–L3 plausibel.');
+  }
+  if(W.every(v=>v!=null)){
+    const mean = Math.atan2(W.reduce((s,a)=>s+Math.sin(a*Math.PI/180),0), W.reduce((s,a)=>s+Math.cos(a*Math.PI/180),0))*180/Math.PI;
+    const dev = Math.max(...W.map(a=>Math.abs(normDeg(a-mean))));
+    const neg = W.filter(a=>Math.cos(a*Math.PI/180)<0).length;
+    if(neg>0 && neg<3) add('warn','Wirkleistung in einzelnen Phasen negativ – Phasenzuordnung oder Wandlerpolarität (P1/P2) prüfen.');
+    else if(dev>30) add('warn','Winkel U–I weichen zwischen den Phasen stark ab (> 30°) – Zuordnung Strom/Spannung prüfen.');
+    else add('ok','Winkel U–I gleichmäßig (φ ≈ '+Math.round(mean)+'°).');
+    if(neg===3) add('info','Wirkleistung in allen Phasen negativ (Einspeisung) – bei Bezug Polarität prüfen.');
+  }
+  const a12=n('uu12'), a13=n('uu13');
+  if(a12!=null && a13!=null){
+    const A=norm360(a12), B=norm360(a13), near=(x,y)=>Math.abs(normDeg(x-y))<=15;
+    if(near(A,120)&&near(B,240)) add('ok','Drehfeld rechtsdrehend.');
+    else if(near(A,240)&&near(B,120)) add('warn','Drehfeld linksdrehend – Phasen vertauscht.');
+    else add('warn','Winkel zwischen den Spannungen nicht ca. 120° / 240° – Messung prüfen.');
+  }
+  const hasWarn = f.some(x=>x.level==='warn');
+  const complete = all.every(v=>v!=null);
+  return {status: hasWarn ? 'warn' : (complete ? 'ok' : 'unvollstaendig'), findings:f};
+}
+
+// Zeigerdiagramm als SVG: Spannungen durchgezogen, Ströme gestrichelt; φ positiv = Strom eilt nach
+function zeigerSvg(size, mono){
+  const mw = state.zaehler.mw, n = k=>parseNum(mw[k]);
+  const U=[n('u1'),n('u2'),n('u3')], I=[n('i1'),n('i2'),n('i3')], W=[n('w1'),n('w2'),n('w3')];
+  const R=size/2-18, cx=size/2, cy=size/2;
+  const col = mono ? ['#000','#000','#000'] : ['#8b5a2b','#222','#8a8a8a'];
+  const ang = [90, 90-120, 90-240];
+  const pt=(a,len)=>[cx+len*Math.cos(a*Math.PI/180), cy-len*Math.sin(a*Math.PI/180)];
+  const imax = Math.max(0,...I.filter(v=>v!=null));
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" style="max-width:100%;height:auto;">`
+    + `<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="#999" stroke-width="1" stroke-dasharray="3 3"/>`
+    + `<line x1="${cx-R}" y1="${cy}" x2="${cx+R}" y2="${cy}" stroke="#ccc"/><line x1="${cx}" y1="${cy-R}" x2="${cx}" y2="${cy+R}" stroke="#ccc"/>`;
+  const arrow=(x,y,c,dash,label)=>`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="${c}" stroke-width="2.2"${dash?' stroke-dasharray="6 4"':''}/>`
+    + `<circle cx="${x}" cy="${y}" r="3.2" fill="${c}"/><text x="${x+(x>=cx?6:-6)}" y="${y+(y>=cy?14:-6)}" font-size="12" font-family="Arial" fill="${c}" text-anchor="${x>=cx?'start':'end'}">${label}</text>`;
+  for(let i=0;i<3;i++){
+    const [ux,uy]=pt(ang[i],R); s += arrow(ux,uy,col[i],false,'U'+(i+1));
+    if(I[i]!=null && W[i]!=null && imax>0){ const len=Math.max(14,R*0.72*I[i]/imax); const [ix,iy]=pt(ang[i]-W[i],len); s += arrow(ix,iy,col[i],true,'I'+(i+1)); }
+  }
+  return s+'</svg>';
+}
+function renderZeiger(){
+  const box = document.getElementById('zeigerSvg'); if(!box) return;
+  const res = analyseZeiger();
+  state.zaehler.zeiger = {status:res.status, findings:res.findings};
+  const hasData = res.status!=='leer';
+  box.innerHTML = hasData ? zeigerSvg(240,false) : '';
+  document.getElementById('zeigerFind').innerHTML = res.findings.map(x=>`<div class="find ${x.level}">${x.level==='ok'?'✓':x.level==='warn'?'⚠':'ℹ'} ${x.text}</div>`).join('')
+    + (res.status==='unvollstaendig' ? '<div class="find info">Noch nicht alle Werte eingetragen.</div>' : '');
+  // Checklistenpunkt „Zeigerdiagramm plausibel“ automatisch nachführen
+  if(isLive() && (res.status==='ok' || res.status==='warn')){
+    const c = state.checklist.s_vektor || (state.checklist.s_vektor={checked:false,note:''});
+    c.checked = res.status==='ok';
+    c.note = res.status==='warn' ? res.findings.filter(x=>x.level==='warn').map(x=>x.text).join(' ') : '';
+    syncChecklistDom('s_vektor');
+  }
+  saveDraft();
+}
+
+/* ---------------- BERICHTE (intern + Mängelschein) ---------------- */
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function fmtDateDe(){
+  const d = (document.getElementById('pruefdatum')||{}).value || state.standort.datum || '';
+  const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? m[3]+'.'+m[2]+'.'+m[1] : d;
+}
+function reportTitle(){
+  const e = state.ebene||'';
+  return ({vor:'Vorinbetriebnahme '+e, ibn:'Inbetriebnahme '+e, nach:'Anlagenüberprüfung (Nachprüfung) '+e, bestand:'Abnahme Bestandsanlage '+e}[state.vorgang]||'Protokoll').trim();
+}
+function addressLines(){
+  const s = state.standort;
+  return [ [s.strasse,s.hausnr].filter(Boolean).join(' '), [s.plz,s.ort].filter(Boolean).join(' ') ].filter(Boolean);
+}
+function reportCss(){
+  return '@page{size:A4;margin:12mm}'
+  + '*{box-sizing:border-box}'
+  + 'body{font-family:Arial,Helvetica,sans-serif;font-size:10pt;color:#111;margin:0;padding:12px;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+  + '.toolbar{margin-bottom:12px}.toolbar button{padding:12px 18px;font-size:15px;border-radius:12px;border:none;background:#4d8a0c;color:#fff;font-weight:600}'
+  + 'h1{font-size:19pt;margin:0 0 10px 0;font-weight:600}'
+  + 'h3{font-size:10.5pt;margin:8px 0 3px 0}'
+  + '.head{display:flex;justify-content:space-between;gap:16px;margin-bottom:10px}'
+  + '.head .l{flex:1}.head .r{min-width:42%}'
+  + 'table{border-collapse:collapse;width:100%}'
+  + 'th{font-size:8.5pt;text-align:left;color:#444;font-weight:600;padding:2px 6px}'
+  + 'td{padding:2px 6px;font-size:9.5pt;vertical-align:top}'
+  + '.blk{border-top:2px solid #86bc25;padding-top:3px;margin-top:6px;page-break-inside:avoid}'
+  + '.blkh{font-weight:700;font-size:10pt;margin-bottom:2px}.blkh span{font-weight:400;font-size:9pt;color:#333;margin-left:8px}'
+  + '.bad{color:#b00020;font-weight:700}'
+  + '.cols{column-count:3;column-gap:14px;margin-top:8px}'
+  + '.cat{break-inside:avoid;margin-bottom:8px}.cat h3{font-size:10pt}'
+  + '.it{font-size:8.5pt;margin:2px 0;line-height:1.25}.it.open{color:#b00020}.it.tol{color:#8a6d00}'
+  + '.res{margin-top:12px;padding:8px 10px;border-left:5px solid #86bc25;background:#f3f9e6;font-size:11pt;font-weight:700}'
+  + '.res.nein{border-left-color:#b00020;background:#fdecee;color:#8a0018}.res.frist{border-left-color:#e08a00;background:#fff4e0;color:#7a4a00}.res.unv{border-left-color:#888;background:#f0f0f0;color:#333}'
+  + '.kls{display:inline-block;font-size:8pt;font-weight:700;padding:1px 6px;border-radius:8px;margin-right:4px;background:#eee}.kls.keine{background:#fdecee;color:#8a0018}.kls.frist{background:#fff4e0;color:#7a4a00}.kls.hinweis{background:#eef5dd;color:#3d6a08}'
+  + '.fine{font-size:8pt;color:#555;margin-top:6px}'
+  + '.sign{margin-top:18px;display:flex;justify-content:space-between;align-items:flex-end}'
+  + '.sig{font-family:"Brush Script MT",cursive;font-size:20pt;color:#1a3a8a;min-height:30px}'
+  + '.photos{page-break-before:always}.pgrid{display:flex;flex-wrap:wrap;gap:10px}'
+  + '.photo{width:48%;page-break-inside:avoid}'
+  + '.photo .pn{font-size:8.5pt;color:#555;letter-spacing:.5px;border-bottom:1px dashed #aaa;margin-bottom:4px;text-transform:uppercase}'
+  + '.photo img{width:100%;max-height:85mm;object-fit:contain;object-position:left top}'
+  + '.mt th,.mt td{border:1px solid #999;padding:5px 7px}.mt th{background:#eef5dd}'
+  + '.nr{width:28px;text-align:center}.chk{width:60px;text-align:center;font-size:14pt}'
+  + '.note{font-size:8.5pt;color:#444;margin-top:2px}'
+  + '.box{border:1px solid #999;padding:8px 10px;margin:8px 0}'
+  + '.line{border-top:1px solid #111;margin-top:34px;padding-top:3px;font-size:8.5pt;color:#444}'
+  + '.two{display:flex;gap:16px;align-items:flex-start}.two>div{flex:1}'
+  + '@media print{.toolbar{display:none}body{padding:0}}';
+}
+function wrapReport(title, bodyHtml){
+  return '<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(title)+'</title><style>'+reportCss()+'</style></head><body><div class="toolbar"><button onclick="window.print()">Drucken / Als PDF speichern</button></div>'+bodyHtml+'</body></html>';
+}
+function openReport(html){
+  const url = URL.createObjectURL(new Blob([html], {type:'text/html'}));
+  const w = window.open(url, '_blank');
+  if(!w) alert('Der Bericht konnte nicht geöffnet werden (Pop-up blockiert?). Bitte Pop-ups für diese Seite erlauben.');
+}
+function reportFileTitle(prefix){
+  const n = (state.standort.name||'Anlage').replace(/[^\wäöüÄÖÜß-]+/g,'_');
+  return prefix+'_'+n+'_'+fmtDateDe().replace(/\./g,'-');
+}
+function ratioText(g){ return (g && g.primaer && g.sekundaer) ? g.primaer+'/'+g.sekundaer : ''; }
+function wandlerTableHtml(title, ratio, klasse, buerde, rows, withRiso){
+  const body = rows.map(r=>{
+    const res = computeBuerdeErgebnis(buerde, r.gem);
+    return '<tr><td style="width:40px"><b>'+esc(r.label)+'</b></td><td>'+esc(r.serial||'–')+'</td><td>'+esc(r.gem?r.gem+' VA':'–')+'</td>'
+      + '<td class="'+(res&&res.status!=='io'?'bad':'')+'">'+(res?esc(res.text):'–')+'</td>'
+      + (withRiso ? '<td>'+esc(r.riso?r.riso+' MΩ':'–')+'</td>' : '')+'</tr>';
+  }).join('');
+  return '<div class="blk"><div class="blkh">'+esc(title)+'<span>'+esc(ratio||'–')+' · Klasse '+esc(klasse||'–')+' · Wandlerbürde '+esc(buerde||'–')+'</span></div>'
+    + '<table><thead><tr><th>Phase</th><th>Seriennummer</th><th>Bürde gemessen</th><th>Auslastung</th>'+(withRiso?'<th>Riso (500 V)</th>':'')+'</tr></thead><tbody>'+body+'</tbody></table></div>';
+}
+function collectPhotos(){
+  const out = [];
+  const add = (src,label)=>{ if(src) out.push({src:src,label:label}); };
+  (state.zaehler.photos||[]).forEach((p,i)=>add(p,'Zähler '+(i+1)));
+  (state.modem.photos||[]).forEach(p=>add(p,'Modem'));
+  const grp = g=> g && g.phases.forEach(p=>{ (p.photos||[]).forEach((ph,i)=>add(ph,p.label+' – Typenschild '+(i+1))); add(p.buerdePhoto,p.label+' – Bürdemessung'); });
+  if(hasCtPanel()) grp(state.ct);
+  if(hasVtPanel()) grp(state.vt);
+  if(hasKombiPanel()) grp(state.kombi);
+  (state.abschluss.weitereFotos||[]).forEach(p=>add(p,'Weiteres Foto'));
+  return out;
+}
+function checklistReportHtml(){
+  const items = visibleItems();
+  let html = '<div class="cols">';
+  CHECKLIST.forEach(cat=>{
+    const its = items.filter(i=>i.cat===cat.cat);
+    if(!its.length) return;
+    html += '<div class="cat"><h3>Checkliste '+esc(cat.cat)+'</h3>';
+    html += its.map(({id,label})=>{
+      const c = state.checklist[id] || {};
+      return '<div class="it '+(c.checked?'':'open')+'">'+(c.checked?'☑':'☐')+' '+esc(label)+(c.note?' <i>('+esc(c.note)+')</i>':'')+'</div>';
+    }).join('');
+    html += '</div>';
+  });
+  if(absicherungVisible()){
+    const sicherungTxt = {'3polig':'3-Polig Z 10A','schmelz':'Schmelzsicherung 10A (nur bei NS)'}[state.absicherung.sicherung]
+      || (state.absicherung.sicherung==='sonstiges' ? 'Sonstiges: '+(state.absicherung.sonstigesText||'–') : '–');
+    html += '<div class="cat"><h3>Spannungspfadsicherung</h3><div class="it">'+esc(sicherungTxt)+'</div></div>';
+  }
+  return html + '</div>';
+}
+function zaehlerBlockHtml(){
+  const z = state.zaehler, st = z.stand, wf = computeWandlerfaktor();
+  const mod = state.modem;
+  let html = '<div class="blk"><table><tbody>'
+    + '<tr><td style="width:34%"><b>Zähler</b></td><td>'+esc(z.z_nummer||'–')+(z.hersteller?' <span style="color:#555;font-size:8.5pt">('+esc(z.hersteller.split(' – ')[0])+')</span>':'')+'</td><td style="width:26%"><b>'+(hasWandlerAny()?'Wandlerkonstante':'')+'</b></td></tr>'
+    + '<tr><td>Modem/SMGW</td><td>'+esc(mod.sim||'–')+(mod.verbindungstest?' · Verbindungstest '+(mod.verbindungstest==='io'?'erfolgreich':'nicht erfolgreich'):'')+'</td><td><b>'+(hasWandlerAny()?esc(wf.total||'–'):'')+'</b></td></tr>'
+    + '</tbody></table></div>';
+  html += '<div class="blk"><div class="blkh">Einbaustände'+(st.zeit?'<span>'+esc(st.zeit)+(st.quelle?' · '+esc(st.quelle):'')+'</span>':'')+'</div>'
+    + '<table><thead><tr><th>Wirk Bezug A+ (kWh)</th><th>Wirk Lieferung A− (kWh)</th><th>Blind R+ (kvarh)</th><th>Blind R− (kvarh)</th></tr></thead><tbody><tr>'
+    + ['ap','am','rp','rm'].map(k=>'<td>'+esc(st[k]||'–')+'</td>').join('')+'</tr></tbody></table></div>';
+  return html;
+}
+function zeigerReportHtml(){
+  if(!isLive()) return '';
+  const res = state.zaehler.zeiger || {status:'leer',findings:[]};
+  if(res.status==='leer') return '';
+  const mw = state.zaehler.mw;
+  const tab = '<table style="margin-top:4px"><thead><tr><th></th><th>U (V)</th><th>I (A)</th><th>φ U–I (°)</th></tr></thead><tbody>'
+    + [1,2,3].map(i=>'<tr><td><b>L'+i+'</b></td><td>'+esc(mw['u'+i]||'–')+'</td><td>'+esc(mw['i'+i]||'–')+'</td><td>'+esc(mw['w'+i]||'–')+'</td></tr>').join('')
+    + '</tbody></table>'
+    + ((mw.uu12||mw.uu13) ? '<div class="fine">Winkel U1–U2: '+esc(mw.uu12||'–')+'° · U1–U3: '+esc(mw.uu13||'–')+'°</div>' : '');
+  return '<div class="blk"><div class="blkh">Zeigerdiagramm (Wirkdiagramm)<span>Zählerauslesung'+(state.zaehler.stand.zeit?' · '+esc(state.zaehler.stand.zeit):'')+'</span></div><div class="two"><div style="max-width:210px">'+zeigerSvg(220,true)+'</div><div>'
+    + tab + (res.findings||[]).map(f=>'<div class="it '+(f.level==='warn'?'open':'')+'">'+(f.level==='ok'?'✓':f.level==='warn'?'⚠':'ℹ')+' '+esc(f.text)+'</div>').join('')+'</div></div></div>';
+}
+
+/* ---- Gemeinsame Bausteine ---- */
+function fmtIso(d){ const m=String(d||'').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? m[3]+'.'+m[2]+'.'+m[1] : (d||''); }
+function resClass(st){ return st==='ja'||st==='hinweis' ? '' : st==='nein' ? ' nein' : st==='frist' ? ' frist' : ' unv'; }
+const TXT_VERWEIGERUNG = 'Die Inbetriebsetzung wird verweigert bei Mängeln, welche die Sicherheit gefährden oder erhebliche Störungen erwarten lassen (§ 15 Abs. 2 NAV), oder wenn eine mess- und eichrechtskonforme Messung nicht gewährleistet ist (§ 3 Abs. 2 MsbG, §§ 31, 33 MessEG).';
+const TXT_FRIST = 'Werden die Mängel nicht fristgerecht beseitigt, kann die Unterbrechung der Anschlussnutzung vier Wochen nach Androhung erfolgen (§ 24 Abs. 2 NAV).';
+
+/* ---- Intern: Vor-/Inbetriebnahmeprotokoll ---- */
+function buildInternalHtml(){
+  const s = state.standort, r = computeErgebnis();
+  const adr = addressLines();
+  const messart = {direkt:'Direktmessung',halbindirekt:'Halbindirekte Messung',wandler:'Wandlermessung',kombiwandler:'Kombiwandler'}[state.messart] || '';
+  let html = '<h1>'+esc(reportTitle())+'</h1>';
+  html += '<div class="head"><div class="l"><div>'+esc(s.name||'')+'</div>'+adr.map(a=>'<div>'+esc(a)+'</div>').join('')+'<div style="margin-top:6px;color:#444">'+esc(messart)+'</div></div>'
+    + '<div class="r">'+(s.einspeise?'<div>Einspeiseleistung: '+esc(s.einspeise)+' kW</div>':'')+(s.bezug?'<div>Bezugsleistung: '+esc(s.bezug)+' kW</div>':'')
+    + (s.id?'<div>HarNES-Nr.: '+esc(s.id)+'</div>':'')+(s.gps?'<div style="color:#444;font-size:9pt">GPS: '+esc(s.gps)+'</div>':'')+'</div></div>';
+
+  if(state.vorgang==='nach'){
+    html += '<div class="blk"><div class="blkh">Nachprüfung der Mängel'+(state.nachpruefung.quelle?'<span>Quelle: '+esc(state.nachpruefung.quelle)+'</span>':'')+'</div>'
+      + '<table class="mt"><thead><tr><th class="nr">Nr.</th><th>Mangel</th><th style="width:90px">Ergebnis</th><th>Bemerkung</th></tr></thead><tbody>'
+      + state.nachpruefung.items.map((it,i)=>'<tr><td class="nr">'+(i+1)+'</td><td><span class="kls '+(it.cls||'keine')+'">'+esc(KLASSE_LABEL[it.cls||'keine'])+'</span> '+esc(it.text)+'</td><td class="'+(it.status==='offen'?'bad':'')+'">'+(it.status==='behoben'?'behoben':it.status==='offen'?'nicht behoben':'offen')+'</td><td>'+esc(it.note||'')+'</td></tr>').join('')
+      + '</tbody></table></div>';
+  } else {
+    html += zaehlerBlockHtml();
+    const rr = hasRiso();
+    if(hasCtPanel() && state.ct) html += wandlerTableHtml('Stromwandler', ratioText(state.ct), state.ct.klasse, state.ct.sollbuerde,
+      state.ct.phases.map((p,i)=>({label:'L'+(i+1), serial:p.seriennummer, gem:p.gemessenebuerde, riso:state.riso['iL'+(i+1)]})), rr);
+    if(hasVtPanel() && state.vt) html += wandlerTableHtml('Spannungswandler', ratioText(state.vt), state.vt.klasse, state.vt.sollbuerde,
+      state.vt.phases.map((p,i)=>({label:'L'+(i+1), serial:p.seriennummer, gem:p.gemessenebuerde, riso:state.riso['uL'+(i+1)]})), rr);
+    if(hasKombiPanel() && state.kombi){
+      const k = state.kombi;
+      html += wandlerTableHtml('Kombiwandler – Stromteil', ratioText({primaer:k.primaerA,sekundaer:k.sekundaerA}), k.klasseA, k.buerdeA,
+        k.phases.map((p,i)=>({label:'L'+(i+1), serial:p.seriennummer, gem:p.gemessenA, riso:state.riso['iL'+(i+1)]})), rr);
+      html += wandlerTableHtml('Kombiwandler – Spannungsteil', ratioText({primaer:k.primaerV,sekundaer:k.sekundaerV}), k.klasseV, k.buerdeV,
+        k.phases.map((p,i)=>({label:'L'+(i+1), serial:p.seriennummer, gem:p.gemessenV, riso:state.riso['uL'+(i+1)]})), rr);
+    }
+    html += zeigerReportHtml();
+    html += checklistReportHtml();
+  }
+
+  html += '<div class="res'+resClass(r.status)+'">'+esc(r.label)+'</div>';
+  [['keine','Mängel – keine Inbetriebsetzung',r.keine],['frist','Mängelkarte mit Frist',r.frist],['hinweis','Hinweise',r.hinweis]].forEach(([k,t,l])=>{
+    if(!l.length) return;
+    html += '<h3>'+t+(k==='frist'&&state.abschluss.frist?' – Frist bis '+esc(fmtIso(state.abschluss.frist)):'')+'</h3><ul style="margin:2px 0 0 18px;font-size:9.5pt">'
+      + l.map(m=>'<li>'+esc(m.text)+(m.ext?'':' <i>(intern)</i>')+(m.massn?'<div class="fine" style="margin:0">'+esc(m.massn)+'</div>':'')+'</li>').join('')+'</ul>';
+  });
+  if(r.offen.length) html += '<h3>Nicht dokumentiert</h3><ul style="margin:2px 0 0 18px;font-size:9pt;color:#555">'+r.offen.map(t=>'<li>'+esc(t)+'</li>').join('')+'</ul>';
+  if(state.abschluss.bemerkung) html += '<h3>Bemerkung</h3><div style="font-size:9.5pt;white-space:pre-wrap">'+esc(state.abschluss.bemerkung)+'</div>';
+  html += '<div class="sign"><div style="color:#444;font-size:9pt">Prüfer: '+esc(s.pruefer||'–')+'</div>'
+    + '<div style="text-align:center"><div class="sig">'+esc(state.abschluss.unterschrift||'')+'</div><div style="font-style:italic">'+esc(fmtDateDe())+'</div></div></div>';
+  html += '<div class="fine">'+(state.ebene==='NS' ? 'Bewertung der Mängel nach „Bewertung je Komponente“ (Stand 01.11.2026), Spalte '+(state.vorgang==='bestand'?'Bestandsanlage bzw. Neuanlage je Mangel':'Neuanlage')+' – fachliche Bewertung, keine Rechtsberatung.' : 'MS/HS: keine Bewertungsmatrix hinterlegt – jeder Mangel verhindert die Inbetriebsetzung'+(state.vorgang==='bestand'?' (Bestand: Mängelkarte mit Frist).':'.'))+'</div>';
+
+  const photos = collectPhotos();
+  if(photos.length){
+    html += '<div class="photos"><h1>'+esc(reportTitle())+' – Fotos</h1><div class="pgrid">'
+      + photos.map((p,i)=>'<div class="photo"><div class="pn">'+(i+1)+'. Bild – '+esc(p.label)+'</div><img src="'+p.src+'"></div>').join('')
+      + '</div></div>';
+  }
+  return html;
+}
+
+/* ---- Extern: Mängelschein ---- */
+function maengelTabelle(list, mitBehoben){
+  return '<table class="mt"><thead><tr><th class="nr">Nr.</th><th>Feststellung</th><th>Folge / Maßnahme</th><th>Begründung und Rechtsgrundlage</th>'+(mitBehoben?'<th class="chk" style="font-size:8.5pt">Behoben</th>':'')+'</tr></thead><tbody>'
+    + list.map((m,i)=>'<tr><td class="nr">'+(i+1)+'</td><td><b>'+esc(m.text)+'</b>'+(m.req?'<div class="note">Anforderung: '+esc(m.req)+'</div>':'')+(m.note?'<div class="note">Bemerkung: '+esc(m.note)+'</div>':'')+'</td>'
+      + '<td>'+esc(m.massn||'')+'</td><td>'+esc(m.begr||'')+(m.quelle?'<div class="note">'+esc(m.quelle)+'</div>':'')+'</td>'+(mitBehoben?'<td class="chk">☐</td>':'')+'</tr>').join('')
+    + '</tbody></table>';
+}
+function buildExternalHtml(){
+  const s = state.standort, r = computeErgebnis();
+  const adr = addressLines();
+  const ext = r.ext;
+  const keine = ext.filter(m=>m.cls==='keine'), frist = ext.filter(m=>m.cls==='frist'), hinweis = ext.filter(m=>m.cls==='hinweis');
+  const anlass = {vor:'der Vorinbetriebnahme', ibn:'der Inbetriebnahme', nach:'der Nachprüfung', bestand:'der Abnahme der Bestandsanlage'}[state.vorgang] || 'der Prüfung';
+  let html = '<h1>Mängelschein</h1><div style="margin:-6px 0 10px;color:#444">'+esc(reportTitle())+'</div>';
+  html += '<div class="head"><div class="l"><div><b>'+esc(s.name||'')+'</b></div>'+adr.map(a=>'<div>'+esc(a)+'</div>').join('')+'</div>'
+    + '<div class="r">'+(s.id?'<div>HarNES-Nr.: '+esc(s.id)+'</div>':'')+'<div>Datum der Prüfung: '+esc(fmtDateDe())+'</div>'
+    + (state.zaehler.z_nummer && state.vorgang!=='nach' ? '<div>Zählernummer: '+esc(state.zaehler.z_nummer)+'</div>' : '')+'</div></div>';
+  html += '<div class="res'+resClass(r.status)+'">'+esc(r.label)+'</div>';
+  if(!ext.length){
+    html += '<div class="box"><b>Es wurden keine vom Installateur bzw. Anlagenbetreiber zu behebenden Mängel festgestellt.</b></div>';
+  } else {
+    html += '<p>Bei '+anlass+' wurden die nachfolgenden Feststellungen getroffen. Bitte beheben Sie die Mängel und melden Sie die Beseitigung dem Messstellenbetreiber zur Nachprüfung.</p>';
+    if(keine.length) html += '<h3>Mängel – keine Inbetriebsetzung bis zur Beseitigung</h3>'+(state.ebene==='NS'?'<div class="fine" style="margin:0 0 4px">'+esc(TXT_VERWEIGERUNG)+'</div>':'')+maengelTabelle(keine,true);
+    if(frist.length){
+      html += '<h3 style="margin-top:12px">Mängelkarte mit Frist – Inbetriebsetzung erfolgt</h3>'
+        + '<div style="margin:0 0 4px"><b>Frist zur Beseitigung: '+(state.abschluss.frist?esc(fmtIso(state.abschluss.frist)):'________________')+'</b></div>'+maengelTabelle(frist,true)
+        + (state.ebene==='NS' ? '<div class="fine">'+esc(TXT_FRIST)+'</div>' : '');
+    }
+    if(hinweis.length) html += '<h3 style="margin-top:12px">Hinweise (kein Verweigerungsgrund)</h3>'+maengelTabelle(hinweis,false);
+  }
+  html += '<div class="sign" style="margin-top:40px"><div style="width:46%"><div class="sig">'+esc(state.abschluss.unterschrift||'')+'</div><div class="line">Prüfer Messstellenbetreiber'+(s.pruefer?': '+esc(s.pruefer):'')+' · '+esc(fmtDateDe())+'</div></div>'
+    + '<div style="width:46%"><div class="line">Kenntnisnahme Installateur / Anlagenbetreiber (Ort, Datum, Unterschrift)</div></div></div>';
+  return html;
+}
+function openInternalReport(){ openReport(wrapReport(reportFileTitle('Protokoll'), buildInternalHtml())); }
+function openExternalReport(){ openReport(wrapReport(reportFileTitle('Maengelschein'), buildExternalHtml())); }
+
+
 init();
 </script>
+<script>if('serviceWorker' in navigator){ window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }</script>
 </body>
 </html>
