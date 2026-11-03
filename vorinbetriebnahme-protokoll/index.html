@@ -165,6 +165,14 @@ body.ns .buerde-only{display:none!important}
 .finish-warn{color:var(--warn)}
 .modal-actions{display:flex;flex-direction:column;gap:10px;margin-top:14px}
 #saveBadge{font-size:11px;margin-left:8px;color:var(--text-dim)}
+.hdr-btn{position:absolute; right:14px; top:calc(env(safe-area-inset-top) + 12px); width:40px; height:40px; border-radius:50%; border:none; background:var(--field); color:var(--accent); display:flex; align-items:center; justify-content:center}
+.hdr-btn .ic{margin:0; width:22px; height:22px}
+.hist-item{background:var(--field); border-radius:14px; padding:12px 14px; margin-bottom:8px; cursor:pointer}
+.hist-top{display:flex; justify-content:space-between; gap:8px; align-items:center}
+.hist-sub{font-size:12.5px; color:var(--text-dim); margin-top:2px}
+.hist-res{font-size:12.5px; margin-top:6px; font-weight:600}
+.hist-act{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px}
+#histSearch{margin:10px 0}
 
   .ic{width:1.15em;height:1.15em;vertical-align:-.2em;margin-right:.4em;flex-shrink:0}
   .btn-sm{display:inline-flex;align-items:center;justify-content:center}
@@ -189,6 +197,7 @@ body.ns .buerde-only{display:none!important}
 <body>
 
 <header>
+  <button class="hdr-btn no-print" id="btnHist" aria-label="Verlauf: frühere Protokolle"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg></button>
   <h1>Vor-/Inbetriebnahme</h1>
   <div class="sub">Zähleranlagen NS · MS · HS<span id="saveBadge"></span></div>
   <div class="steps no-print" id="stepNav"></div>
@@ -371,12 +380,13 @@ body.ns .buerde-only{display:none!important}
       <label>Zählernummer</label>
       <div style="display:flex; gap:6px;">
         <input type="text" id="z_nummer" style="flex:1;">
-        <button class="btn btn-sm" onclick="startBarcodeScan('z_nummer','status-zaehler-serial')">Scan</button>
+        <button class="btn btn-sm" onclick="startBarcodeScan('z_nummer','status-zaehler-serial')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M7 8v8M10 8v8M13 8v8M17 8v8"/></svg>Scan</button>
       </div>
       <div class="status-line" id="status-zaehler-serial"></div>
       <div class="hint" id="z_hersteller"></div>
 
       <h3>Auslesen mit Tastkopf</h3>
+      <div class="hint" id="z_readHint" style="margin:0 0 8px;"></div>
       <button class="btn btn-primary btn-block" onclick="zConnectBle()">Tastkopf verbinden (Bluetooth)</button>
       <div class="status-line" id="z_status"></div>
       <div class="chips" id="z_chips"></div>
@@ -404,7 +414,7 @@ body.ns .buerde-only{display:none!important}
         <div><label>Wirkenergie Bezug A+ (kWh)</label><input type="text" id="zs_ap" inputmode="decimal"></div>
         <div><label>Wirkenergie Lieferung A− (kWh)</label><input type="text" id="zs_am" inputmode="decimal"></div>
       </div>
-      <div class="row">
+      <div class="row" id="zsBlindRow">
         <div><label>Blindenergie R+ (kvarh)</label><input type="text" id="zs_rp" inputmode="decimal"></div>
         <div><label>Blindenergie R− (kvarh)</label><input type="text" id="zs_rm" inputmode="decimal"></div>
       </div>
@@ -514,7 +524,7 @@ body.ns .buerde-only{display:none!important}
       <textarea id="maengelText"></textarea>
       <label>Interne Bemerkung</label>
       <textarea id="bemerkungText"></textarea>
-      <label>Unterschrift Prüfer</label>
+      <label>Unterschrift Prüfer (wird für die nächsten Protokolle gemerkt)</label>
       <input type="text" id="unterschrift">
     </div>
     <div class="card no-print">
@@ -529,6 +539,15 @@ body.ns .buerde-only{display:none!important}
   </div>
 
 </main>
+<div class="modal" id="histModal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="histTitle">
+    <h2 id="histTitle">Verlauf</h2>
+    <div class="hint" style="margin:0;">Frühere Protokolle. Antippen zeigt die Aktionen.</div>
+    <input type="text" id="histSearch" placeholder="Suchen (Anlage, Adresse, Zählernummer)">
+    <div id="histList"></div>
+    <div class="modal-actions"><button class="btn btn-block" id="histClose">Schließen</button></div>
+  </div>
+</div>
 <div class="modal" id="finishModal" hidden>
   <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="finishTitle">
     <h2 id="finishTitle">Fertigstellen</h2>
@@ -725,7 +744,7 @@ const CHECKLIST = [
     ['s_verkettete','Verkettete Spannung L1-L2, L2-L3, L3-L1 gemessen','','live'],
     ['s_drehfeld','Drehfeldrichtung geprüft (rechtsdrehend)','','live'],
     ['s_strom','Stromaufnahme je Phase plausibilisiert','','live'],
-    ['s_vektor','Zeigerdiagramm / Wirkdiagramm plausibel','Wird aus den Werten der Zählerauslesung automatisch geprüft.','live'],
+    ['s_vektor','Zeigerdiagramm / Wirkdiagramm plausibel','Wird aus den Werten der Zählerauslesung automatisch geprüft.','live+gross'],
   ]},
   { cat:'Kundenanlage / Zählerplatz (Bewertung je Komponente: NS)', items:[
     ['b_grenze','Messart passend zum Betriebsstrom (Direktmessung höchstens 32/44 A Dauer bzw. 63 A Aussetzbetrieb)','','direkt'],
@@ -777,6 +796,7 @@ const SCOPE = {
   ms:()=>isMSorHS(),
   ns:()=>state.ebene==='NS',
   live:()=>isLive(),
+  gross:()=>hasFullReadout(),
   direkt:()=>isPruefung() && state.ebene==='NS' && state.messart==='direkt',
   einsp:()=>(parseNum(state.standort.einspeise)||0)>0,
   na30:()=>(parseNum(state.standort.einspeise)||0)>=30
@@ -817,6 +837,14 @@ function fristIso(){
   const p = n=>String(n).padStart(2,'0');
   return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
 }
+
+// Größte angegebene Leistung (Bezug oder Einspeisung) in kW; ohne Angabe: unbekannt
+function leistungKw(){
+  const v = [parseNum(state.standort.bezug), parseNum(state.standort.einspeise)].filter(x=>x!=null);
+  return v.length ? Math.max(...v) : null;
+}
+// Volle Auslesung (Blindenergie, Messwerte, Zeigerdiagramm) erst über 100 kW; darunter nur A+ (1.8.0) und A− (2.8.0)
+function hasFullReadout(){ const p = leistungKw(); return p==null ? true : p>100; }
 
 /* ---------------- RISO ---------------- */
 function risoRowHtml(id, label, desc){
@@ -967,6 +995,7 @@ function init(){
   loadDraft();
   loadLibrary();
   ensureDefaults();
+  if(!state.pid) state.pid = newPid();
   ensureCtState(); ensureVtState(); ensureKombiState();
   bindSetup();
   bindNach();
@@ -974,6 +1003,7 @@ function init(){
   bindZaehlerModem();
   bindZaehlerExtras();
   hydrateForm();
+  applyProfil();
   syncSetupUI();
   showStepByIndex(0);
   document.getElementById('pruefdatum').value = state.standort.datum || new Date().toISOString().slice(0,10);
@@ -1074,8 +1104,8 @@ function hydrateForm(){
 
   document.getElementById('zaehlerPhotos').innerHTML = twoPhotoRowHtml('zaehler');
   document.getElementById('modemPhotos').innerHTML = onePhotoRowHtml('modem');
-  bindTwoPhotoSlots('zaehler', state.zaehler, 'z_nummer');
-  bindOnePhotoSlot('modem', state.modem, null);
+  bindTwoPhotoSlots('zaehler', state.zaehler, 'z_nummer', 'status-zaehler-serial');
+  bindOnePhotoSlot('modem', state.modem, 'modem_sim', 'status-modem-serial');
 }
 
 function bindZaehlerModem(){
@@ -1234,23 +1264,7 @@ function ensureTesseract(){
   });
   return tesseractLoading;
 }
-function groupRecognitionHtml(prefix){
-  return `<div style="margin-bottom:12px;">
-    <label>Typenschild-Foto (automatische Erkennung aus Bibliothek)</label>
-    <div style="display:flex; gap:8px; align-items:flex-start;">
-      <img class="thumb empty" id="thumb-${prefix}-typenschild">
-      <div style="display:flex; flex-direction:column; gap:4px; flex:1;">
-        <input type="file" accept="image/*" capture="environment" style="display:none" id="file-${prefix}-typenschild-cam">
-        <input type="file" accept="image/*" style="display:none" id="file-${prefix}-typenschild-gal">
-        <div style="display:flex; gap:4px;">
-          <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${prefix}-typenschild-cam').click()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>Kamera</button>
-          <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${prefix}-typenschild-gal').click()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 9"/></svg>Galerie</button>
-        </div>
-        <div class="status-line" id="status-${prefix}-typenschild"></div>
-      </div>
-    </div>
-  </div>`;
-}
+function groupRecognitionHtml(prefix){ return ''; }
 function bindGroupRecognition(prefix, groupObj, kind){
   ['cam','gal'].forEach(mode=>{
     const inp = document.getElementById(`file-${prefix}-typenschild-${mode}`);
@@ -1314,14 +1328,47 @@ function stopBarcodeScan(){
   document.getElementById('scanOverlay').style.display = 'none';
   try{ if(currentScanControls) currentScanControls.stop(); }catch(e){}
 }
-async function tryDecodeFromDataUrl(dataUrl, targetId){
+function loadImg(url){ return new Promise(res=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=()=>res(null); i.src=url; }); }
+async function decodeBarcodesFromUrl(url){
+  const out = [];
   try{
-    if(!window.ZXing) return;
-    const reader = new ZXing.BrowserMultiFormatReader();
-    const result = await reader.decodeFromImageUrl(dataUrl);
-    const el = document.getElementById(targetId);
-    if(el && result && !el.value){ el.value = result.getText(); el.dispatchEvent(new Event('input')); }
-  }catch(err){ /* optional, silent fallback */ }
+    if('BarcodeDetector' in window){
+      const img = await loadImg(url);
+      if(img){ const r = await new BarcodeDetector().detect(img); r.forEach(b=>{ if(b.rawValue && !out.includes(b.rawValue)) out.push(b.rawValue); }); }
+    }
+  }catch(e){}
+  if(!out.length){
+    try{ if(window.ZXing){ const r = await new ZXing.BrowserMultiFormatReader().decodeFromImageUrl(url); if(r) out.push(r.getText()); } }catch(e){}
+  }
+  return out;
+}
+async function tryDecodeFromDataUrl(dataUrl, targetId, statusId){
+  const st = statusId ? document.getElementById(statusId) : null;
+  const el = document.getElementById(targetId);
+  const codes = await decodeBarcodesFromUrl(dataUrl);
+  if(codes.length && el){
+    if(!el.value){ el.value = codes[0]; el.dispatchEvent(new Event('input')); }
+    if(st){
+      st.className = 'status-line ok';
+      st.innerHTML = '✓ Barcode erkannt: '+esc(codes[0]);
+      if(codes.length>1){ st.innerHTML += ' · weitere: '; codes.slice(1).forEach(c=>{ const b=document.createElement('span'); b.className='chip'; b.textContent=c; b.onclick=()=>{ el.value=c; el.dispatchEvent(new Event('input')); }; st.appendChild(b); }); }
+    }
+  } else if(st && !(el && el.value)){
+    st.className = 'status-line err'; st.textContent = 'Kein Barcode erkannt. Bitte näher fotografieren oder „Scan“ benutzen.';
+  }
+}
+async function recognizeTypeFromPhoto(prefix, groupObj, kind, url, statusId){
+  if(!library.some(l=>l.kind===kind)) return;
+  if(kind==='kombi' ? groupObj.primaerA : groupObj.primaer) return;
+  const st = document.getElementById(statusId);
+  try{
+    if(st){ st.textContent='Erkenne Typ aus Foto …'; st.className='status-line'; }
+    await ensureTesseract();
+    const { data:{ text } } = await Tesseract.recognize(url, 'eng+deu');
+    const m = matchLibrary(text, kind);
+    if(m){ applyLibraryEntry(prefix, groupObj, m); if(st){ st.textContent='✓ Typ erkannt: '+m.name; st.className='status-line ok'; } }
+    else if(st){ st.textContent=''; }
+  }catch(e){ if(st) st.textContent=''; }
 }
 
 /* ---------------- PHOTO HELPERS ---------------- */
@@ -1376,7 +1423,7 @@ function onePhotoRowHtml(prefix){
     </div>
   </div>`;
 }
-function bindOnePhotoSlot(prefix, obj, decodeTargetId){
+function bindOnePhotoSlot(prefix, obj, decodeTargetId, statusId){
   ['cam','gal'].forEach(mode=>{
     const inp = document.getElementById(`file-${prefix}-1-${mode}`);
     if(!inp) return;
@@ -1388,12 +1435,12 @@ function bindOnePhotoSlot(prefix, obj, decodeTargetId){
       if(th){ th.src = url; th.classList.remove('empty'); }
       obj.photos[0] = url;
       saveDraft(); updateStepCompletionUI();
-      if(decodeTargetId) tryDecodeFromDataUrl(url, decodeTargetId);
+      if(decodeTargetId) tryDecodeFromDataUrl(url, decodeTargetId, statusId);
     });
   });
   if(obj.photos[0]){ const t=document.getElementById(`thumb-${prefix}-1`); if(t) t.src=obj.photos[0]; }
 }
-function bindTwoPhotoSlots(prefix, obj, decodeTargetId){
+function bindTwoPhotoSlots(prefix, obj, decodeTargetId, statusId, onPhoto){
   [1,2].forEach(idx=>{
     ['cam','gal'].forEach(mode=>{
       const inp = document.getElementById(`file-${prefix}-${idx}-${mode}`);
@@ -1406,7 +1453,8 @@ function bindTwoPhotoSlots(prefix, obj, decodeTargetId){
         if(th){ th.src = url; th.classList.remove('empty'); }
         obj.photos[idx-1] = url;
         saveDraft(); updateStepCompletionUI();
-        if(idx===1 && decodeTargetId) tryDecodeFromDataUrl(url, decodeTargetId);
+        if(decodeTargetId) tryDecodeFromDataUrl(url, decodeTargetId, statusId);
+        if(onPhoto) onPhoto(url);
       });
     });
   });
@@ -1492,6 +1540,7 @@ function phaseBlockHtml(prefix, p){
       <button class="btn btn-sm" onclick="startBarcodeScan('${base}-serial','status-${base}')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M7 8v8M10 8v8M13 8v8M17 8v8"/></svg>Scan</button>
     </div>
     <div class="status-line" id="status-${base}"></div>
+    <div class="status-line" id="status-${base}-typ"></div>
     <label style="margin-top:8px;">Fotos Typenschild</label>
     <div id="photos-${base}"></div>
     <label class="buerde-only" style="margin-top:8px;">Bürdemessung</label>
@@ -1520,7 +1569,7 @@ function bindPhaseBlock(prefix, p, groupObj){
   serialEl.addEventListener('input', e=>{ p.seriennummer=e.target.value; saveDraft(); updateStepCompletionUI(); });
 
   document.getElementById('photos-'+base).innerHTML = twoPhotoRowHtml(base);
-  bindTwoPhotoSlots(base, p, base+'-serial');
+  bindTwoPhotoSlots(base, p, base+'-serial', 'status-'+base, url=>recognizeTypeFromPhoto(prefix, groupObj, prefix, url, 'status-'+base+'-typ'));
 
   if(p.buerdePhoto) document.getElementById('thumb-'+base+'-buerde').src = p.buerdePhoto;
   document.getElementById('file-'+base+'-buerde-cam').addEventListener('change', e=>handleSimplePhoto(e, val=>{p.buerdePhoto=val;}, 'thumb-'+base+'-buerde'));
@@ -1656,6 +1705,7 @@ function kombiPhaseBlockHtml(p){
       <button class="btn btn-sm" onclick="startBarcodeScan('${base}-serial','status-${base}')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M7 8v8M10 8v8M13 8v8M17 8v8"/></svg>Scan</button>
     </div>
     <div class="status-line" id="status-${base}"></div>
+    <div class="status-line" id="status-${base}-typ"></div>
     <label style="margin-top:8px;">Fotos Typenschild</label>
     <div id="photos-${base}"></div>
     <label class="buerde-only" style="margin-top:8px;">Bürdemessung</label>
@@ -1701,7 +1751,7 @@ function bindKombiPhaseBlock(p){
   serialEl.addEventListener('input', e=>{ p.seriennummer=e.target.value; saveDraft(); updateStepCompletionUI(); });
 
   document.getElementById('photos-'+base).innerHTML = twoPhotoRowHtml(base);
-  bindTwoPhotoSlots(base, p, base+'-serial');
+  bindTwoPhotoSlots(base, p, base+'-serial', 'status-'+base, url=>recognizeTypeFromPhoto('kombi', state.kombi, 'kombi', url, 'status-'+base+'-typ'));
 
   if(p.buerdePhoto) document.getElementById('thumb-'+base+'-buerde').src = p.buerdePhoto;
   document.getElementById('file-'+base+'-buerde-cam').addEventListener('change', e=>handleSimplePhoto(e, val=>{p.buerdePhoto=val;}, 'thumb-'+base+'-buerde'));
@@ -2008,7 +2058,7 @@ function gatherOffen(){   // fehlende Eingaben des Prüfers (keine Mängel der A
     if(hasRiso()) ['iL1','iL2','iL3','uL1','uL2','uL3'].forEach(k=>{ if(parseNum(state.riso[k])==null) o.push('Riso '+k.replace('iL','Strom L').replace('uL','Spannung L')+' fehlt'); });
     if(!state.zaehler.z_nummer) o.push('Zählernummer fehlt');
     if(!state.zaehler.stand.ap) o.push('Einbaustand (Wirkenergie Bezug) fehlt');
-    if(isLive()){ const zs=(state.zaehler.zeiger||{}).status; if(zs==null||zs==='leer'||zs==='unvollstaendig') o.push('Zeigerdiagramm: Werte unvollständig'); }
+    if(isLive() && hasFullReadout()){ const zs=(state.zaehler.zeiger||{}).status; if(zs==null||zs==='leer'||zs==='unvollstaendig') o.push('Zeigerdiagramm: Werte unvollständig'); }
     if(absicherungVisible() && !state.absicherung.sicherung) o.push('Absicherung nicht angegeben');
     visibleItems().forEach(({id})=>{ const d=BEWERTUNG[id], c=state.checklist[id]||{}; if(d && d.variants && !c.checked && !c.variant) o.push(d.komp+': Wirksamkeit der Schutzmaßnahme angeben'); });
     if(collectPhotos().length===0) o.push('Keine Fotos aufgenommen');
@@ -2169,8 +2219,11 @@ function applyReadout(text){
   // Einbaustände
   const st = z.stand;
   const set = (key,code)=>{ const n = obisNum(v[code]); if(n!=null) st[key] = fmtNum(n,4); };
-  set('ap','1.8.0'); set('am','2.8.0'); set('rp','3.8.0'); set('rm','4.8.0');
+  set('ap','1.8.0'); set('am','2.8.0');
+  const voll = hasFullReadout();
+  if(voll){ set('rp','3.8.0'); set('rm','4.8.0'); }
   st.zeit = new Date().toLocaleString('de-DE'); st.quelle = 'Auslesung'+(z.hersteller?' ('+z.hersteller.split(' – ')[0]+')':'');
+  if(voll){
   // Momentanwerte für das Zeigerdiagramm
   const mw = z.mw;
   const pick = (key, code)=>{ const n = obisNum(v[code]); if(n!=null) mw[key] = fmtNum(n,2); };
@@ -2185,6 +2238,7 @@ function applyReadout(text){
   const a12 = obisNum(v['81.7.1']), a13 = obisNum(v['81.7.2']);
   if(a12!=null) mw.uu12 = fmtNum(norm360(a12),1);
   if(a13!=null) mw.uu13 = fmtNum(norm360(a13),1);
+  }
   saveDraft(); hydrateZaehlerPanel();
   const found = ['1.8.0','2.8.0'].filter(c=>v[c]).length;
   zStatus('Ausgelesen'+(z.z_nummer?': Zähler '+z.z_nummer:'')+(found?'':' (keine Zählerstände gefunden)')+'.', found?'ok':'err');
@@ -2280,7 +2334,11 @@ function hydrateZaehlerPanel(){
   renderZeiger();
 }
 function buildZaehlerPanel(){
-  document.getElementById('zeigerCard').style.display = isLive() ? '' : 'none';
+  const voll = hasFullReadout();
+  document.getElementById('zeigerCard').style.display = (isLive() && voll) ? '' : 'none';
+  document.getElementById('zsBlindRow').style.display = voll ? '' : 'none';
+  const kw = leistungKw();
+  document.getElementById('z_readHint').textContent = voll ? '' : 'Anlage bis 100 kW'+(kw!=null?' ('+String(kw).replace('.',',')+' kW)':'')+': es werden nur Wirkenergie Bezug A+ (1.8.0) und Lieferung A− (2.8.0) erfasst, kein Zeigerdiagramm.';
   hydrateZaehlerPanel();
 }
 function buildZeigerFields(){
@@ -2497,13 +2555,14 @@ function zaehlerBlockHtml(){
     + '<tr><td style="width:34%"><b>Zähler</b></td><td>'+esc(z.z_nummer||'–')+(z.hersteller?' <span style="color:#555;font-size:8.5pt">('+esc(z.hersteller.split(' – ')[0])+')</span>':'')+'</td><td style="width:26%"><b>'+(hasWandlerAny()?'Wandlerkonstante':'')+'</b></td></tr>'
     + '<tr><td>Modem/SMGW</td><td>'+esc(mod.sim||'–')+(mod.verbindungstest?' · Verbindungstest '+(mod.verbindungstest==='io'?'erfolgreich':'nicht erfolgreich'):'')+'</td><td><b>'+(hasWandlerAny()?esc(wf.total||'–'):'')+'</b></td></tr>'
     + '</tbody></table></div>';
+  const voll = hasFullReadout();
   html += '<div class="blk"><div class="blkh">Einbaustände'+(st.zeit?'<span>'+esc(st.zeit)+(st.quelle?' · '+esc(st.quelle):'')+'</span>':'')+'</div>'
-    + '<table><thead><tr><th>Wirk Bezug A+ (kWh)</th><th>Wirk Lieferung A− (kWh)</th><th>Blind R+ (kvarh)</th><th>Blind R− (kvarh)</th></tr></thead><tbody><tr>'
-    + ['ap','am','rp','rm'].map(k=>'<td>'+esc(st[k]||'–')+'</td>').join('')+'</tr></tbody></table></div>';
+    + '<table><thead><tr><th>Wirk Bezug A+ (kWh)</th><th>Wirk Lieferung A− (kWh)</th>'+(voll?'<th>Blind R+ (kvarh)</th><th>Blind R− (kvarh)</th>':'')+'</tr></thead><tbody><tr>'
+    + (voll?['ap','am','rp','rm']:['ap','am']).map(k=>'<td>'+esc(st[k]||'–')+'</td>').join('')+'</tr></tbody></table></div>';
   return html;
 }
 function zeigerReportHtml(size){
-  if(!isLive()) return '';
+  if(!isLive() || !hasFullReadout()) return '';
   const res = state.zaehler.zeiger || {status:'leer',findings:[]};
   if(res.status==='leer') return '';
   const mw = state.zaehler.mw;
@@ -2621,13 +2680,14 @@ function idbOpen(){ return new Promise((res,rej)=>{ const r=indexedDB.open(IDB_N
 async function idbGet(k){ const db=await idbOpen(); return new Promise((res,rej)=>{ const q=db.transaction(IDB_STORE).objectStore(IDB_STORE).get(k); q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); }); }
 async function idbSet(k,v){ const db=await idbOpen(); return new Promise((res,rej)=>{ const t=db.transaction(IDB_STORE,'readwrite'); t.objectStore(IDB_STORE).put(v,k); t.oncomplete=()=>res(); t.onerror=()=>rej(t.error); t.onabort=()=>rej(t.error); }); }
 async function idbDel(k){ const db=await idbOpen(); return new Promise((res,rej)=>{ const t=db.transaction(IDB_STORE,'readwrite'); t.objectStore(IDB_STORE).delete(k); t.oncomplete=()=>res(); t.onerror=()=>rej(t.error); }); }
-let _saveTimer = null;
+let _saveTimer = null, _lastArch = 0;
 function setSaveBadge(ok){ const b=document.getElementById('saveBadge'); if(b){ b.textContent = ok ? '● automatisch gespeichert' : '● Speichern fehlgeschlagen'; b.style.color = ok ? 'var(--ok)' : 'var(--warn)'; } }
 function saveDraft(){ clearTimeout(_saveTimer); _saveTimer = setTimeout(flushDraft, 300); }
 async function flushDraft(){
   clearTimeout(_saveTimer);
   const raw = JSON.stringify(state);
-  try{ await idbSet(LS_KEY, raw); try{ localStorage.removeItem(LS_KEY); }catch(e){} setSaveBadge(true); }
+  try{ await idbSet(LS_KEY, raw); try{ localStorage.removeItem(LS_KEY); }catch(e){} setSaveBadge(true);
+    if(Date.now()-_lastArch > 20000){ _lastArch = Date.now(); archiveCurrent().catch(()=>{}); } }
   catch(e){ try{ localStorage.setItem(LS_KEY, raw); setSaveBadge(true); }catch(e2){ setSaveBadge(false); } }
 }
 async function bootDraft(){
@@ -2636,7 +2696,7 @@ async function bootDraft(){
 }
 window.addEventListener('pagehide', ()=>{ flushDraft(); });
 document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') flushDraft(); });
-function resetAll(){ idbDel(LS_KEY).catch(()=>{}).then(()=>{ try{ localStorage.removeItem(LS_KEY); }catch(e){} location.reload(); }); }
+function resetAll(){ archiveCurrent().catch(()=>{}).then(()=>idbDel(LS_KEY)).catch(()=>{}).then(()=>{ try{ localStorage.removeItem(LS_KEY); }catch(e){} location.reload(); }); }
 
 /* ---------------- FERTIG: PDFs erzeugen und per E-Mail teilen ---------------- */
 const PDF_LIBS = ['https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js','https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'];
@@ -2707,7 +2767,8 @@ async function openFinish(){
     const b1 = await htmlToPdfBlob(buildInternalHtml());
     const b2 = await htmlToPdfBlob(buildExternalHtml());
     _finish.files = [ new File([b1], reportFileTitle('Protokoll')+'.pdf', {type:'application/pdf'}), new File([b2], reportFileTitle('Maengelschein')+'.pdf', {type:'application/pdf'}) ];
-    prog.textContent = 'Fertig: Protokoll (intern) und Mängelschein als PDF erstellt.';
+    state.abschluss.fertigTs = Date.now(); await flushDraft(); await archiveCurrent(true);
+    prog.textContent = 'Fertig: Protokoll (intern) und Mängelschein als PDF erstellt. Das Protokoll liegt im Verlauf.';
     ['finishShare','finishSave'].forEach(id=>document.getElementById(id).disabled = false);
   }catch(e){
     prog.textContent = 'PDF-Erstellung nicht möglich ('+(e&&e.message||e)+'). Die PDF-Bausteine werden einmalig aus dem Internet geladen. Alternativ die Berichte öffnen und über „Drucken / Als PDF speichern“ sichern.';
@@ -2737,6 +2798,94 @@ document.getElementById('finishShare').onclick = finishShare;
 document.getElementById('finishSave').onclick = finishSave;
 document.getElementById('finishClose').onclick = closeFinish;
 document.getElementById('finishOpen').onclick = ()=>{ openInternalReport(); setTimeout(openExternalReport, 600); };
+
+
+/* ---------------- PRÜFER-PROFIL (Name + Unterschrift merken) ---------------- */
+const PROFIL_KEY = 'vibn_profil_v1';
+function profilLoad(){ try{ return JSON.parse(localStorage.getItem(PROFIL_KEY)||'{}')||{}; }catch(e){ return {}; } }
+function profilSave(part){ try{ localStorage.setItem(PROFIL_KEY, JSON.stringify(Object.assign(profilLoad(), part))); }catch(e){} }
+function applyProfil(){
+  const p = profilLoad();
+  if(p.pruefer && !state.standort.pruefer){ state.standort.pruefer = p.pruefer; document.getElementById('pruefer').value = p.pruefer; }
+  if(p.unterschrift && !state.abschluss.unterschrift){ state.abschluss.unterschrift = p.unterschrift; document.getElementById('unterschrift').value = p.unterschrift; }
+  saveDraft();
+}
+document.getElementById('pruefer').addEventListener('input', e=>profilSave({pruefer:e.target.value}));
+document.getElementById('unterschrift').addEventListener('input', e=>profilSave({unterschrift:e.target.value}));
+
+/* ---------------- VERLAUF (frühere Protokolle) ---------------- */
+function newPid(){ return 'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+async function histLoad(){ try{ return (await idbGet('hist')) || []; }catch(e){ return []; } }
+async function archiveCurrent(force){
+  const s = state;
+  if(!s.pid) return;
+  const has = !!(s.standort.name || s.standort.strasse || (s.zaehler && s.zaehler.z_nummer));
+  if(!has && !force) return;
+  const list = await histLoad();
+  let label = ''; try{ label = computeErgebnis().label; }catch(e){}
+  const entry = {pid:s.pid, ts:Date.now(), name:s.standort.name||'(ohne Namen)', adr:addressLines().join(', '), datum:s.standort.datum||'', vorgang:s.vorgang, ebene:s.ebene,
+    ergebnis:label, zaehler:(s.zaehler&&s.zaehler.z_nummer)||'', fertig:!!(s.abschluss&&s.abschluss.fertigTs), state:JSON.stringify(s)};
+  const i = list.findIndex(e=>e.pid===s.pid);
+  if(i>=0) list[i] = entry; else list.unshift(entry);
+  list.sort((a,b)=>b.ts-a.ts);
+  await idbSet('hist', list.slice(0,40));
+}
+const VORGANG_KURZ = {vor:'Vorinbetriebnahme', ibn:'Inbetriebnahme', nach:'Nachprüfung', bestand:'Bestandsanlage'};
+async function openHist(){
+  document.getElementById('histModal').hidden = false;
+  document.getElementById('histSearch').value = '';
+  try{ await archiveCurrent(); }catch(e){}
+  renderHist();
+}
+async function renderHist(){
+  const q = document.getElementById('histSearch').value.trim().toLowerCase();
+  const box = document.getElementById('histList');
+  const list = (await histLoad()).filter(e=> !q || (e.name+' '+e.adr+' '+e.zaehler+' '+e.datum).toLowerCase().includes(q));
+  if(!list.length){ box.innerHTML = '<div class="hint">'+(q?'Keine Treffer.':'Noch keine Protokolle im Verlauf. Jedes Protokoll wird automatisch hier abgelegt.')+'</div>'; return; }
+  box.innerHTML = list.map(e=>{
+    const d = new Date(e.ts).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    const aktuell = e.pid===state.pid;
+    return `<div class="hist-item" data-pid="${esc(e.pid)}">
+      <div class="hist-top"><b>${esc(e.name)}</b><span class="kl ${e.fertig?'kl-hinweis':''}">${aktuell?'aktuell':(e.fertig?'fertig':'Entwurf')}</span></div>
+      <div class="hist-sub">${esc(e.adr||'')}</div>
+      <div class="hist-sub">${esc((VORGANG_KURZ[e.vorgang]||'')+(e.ebene?' '+e.ebene:''))} · ${esc(e.datum?fmtIso(e.datum):d)}${e.zaehler?' · Zähler '+esc(e.zaehler):''}</div>
+      ${e.ergebnis?`<div class="hist-res">${esc(e.ergebnis)}</div>`:''}
+      <div class="hist-act" hidden>
+        ${aktuell?'':`<button class="btn btn-sm btn-primary" data-act="open">Öffnen</button>`}
+        <button class="btn btn-sm" data-act="nach">Nachprüfung starten</button>
+        ${aktuell?'':`<button class="btn btn-sm btn-danger" data-act="del">Löschen</button>`}
+      </div></div>`;
+  }).join('');
+  box.querySelectorAll('.hist-item').forEach(it=>{
+    it.onclick = ev=>{
+      const act = ev.target.closest('[data-act]');
+      if(!act){ it.querySelector('.hist-act').hidden = !it.querySelector('.hist-act').hidden; return; }
+      histAction(it.dataset.pid, act.dataset.act, act);
+    };
+  });
+}
+async function histAction(pid, act, btn){
+  const list = await histLoad(); const e = list.find(x=>x.pid===pid); if(!e) return;
+  if(act==='del'){
+    if(btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn.textContent='Wirklich löschen?'; return; }
+    await idbSet('hist', list.filter(x=>x.pid!==pid)); renderHist(); return;
+  }
+  await archiveCurrent();
+  if(act==='open'){
+    await idbSet(LS_KEY, e.state); location.reload(); return;
+  }
+  if(act==='nach'){
+    const st = JSON.parse(e.state);
+    const items = ((st.abschluss&&st.abschluss.maengelListe)||[]).map(itemFromSnapshot);
+    const partial = {pid:newPid(), vorgang:'nach', ebene:st.ebene, messart:st.messart,
+      standort:Object.assign({}, st.standort, {datum:'', pruefer:(profilLoad().pruefer||st.standort.pruefer||'')}),
+      nachpruefung:{items, quelle:'Protokoll vom '+(st.standort.datum?fmtIso(st.standort.datum):new Date(e.ts).toLocaleDateString('de-DE'))}};
+    await idbSet(LS_KEY, JSON.stringify(partial)); location.reload();
+  }
+}
+document.getElementById('btnHist').onclick = openHist;
+document.getElementById('histClose').onclick = ()=>{ document.getElementById('histModal').hidden = true; };
+document.getElementById('histSearch').addEventListener('input', renderHist);
 
 
 bootDraft().then(init);
