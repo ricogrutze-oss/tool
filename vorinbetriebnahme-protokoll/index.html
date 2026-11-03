@@ -155,13 +155,42 @@
   .lib-entry .info b{color:var(--accent);}
 
   @media print{ header, footer.navbar, .no-print{display:none !important;} }
+body.ns .buerde-only{display:none!important}
+.modal{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px}
+.modal[hidden]{display:none}
+.modal-box{background:var(--card);color:var(--text);border-radius:20px;padding:18px;max-width:440px;width:100%;max-height:90vh;overflow:auto;box-shadow:var(--shadow)}
+.modal-box h2{margin:0 0 10px}
+#finishStatus>div{padding:3px 0;font-size:14px}
+.finish-res{font-weight:700;font-size:15px!important;padding-bottom:6px!important}
+.finish-warn{color:var(--warn)}
+.modal-actions{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+#saveBadge{font-size:11px;margin-left:8px;color:var(--text-dim)}
+
+  .ic{width:1.15em;height:1.15em;vertical-align:-.2em;margin-right:.4em;flex-shrink:0}
+  .btn-sm{display:inline-flex;align-items:center;justify-content:center}
+  .btn-sm .ic{width:19px;height:19px}
+  .btn .ic:only-child{margin:0}
+  .thumb.empty{border:1.5px dashed var(--border-light);background:var(--field) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238e8e93' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z'/%3E%3Ccircle cx='12' cy='13' r='3.5'/%3E%3C/svg%3E") center/26px no-repeat; opacity:.9}
+  .thumb.empty[src]{border:none;background-image:none;opacity:1}
+  .card{border-radius:20px; padding:18px 16px; border:1px solid var(--border)}
+  .device-block{background:var(--card); border:1px solid var(--border); border-radius:16px; padding:14px; margin-bottom:12px}
+  .device-block h4{margin:0 0 4px; font-size:14.5px}
+  .device-block input, .device-block select, .device-block textarea{background:var(--field)}
+  .check-cat{background:var(--field); border-radius:14px; padding:2px 14px 2px; margin:12px 0 0}
+  .check-cat-title{margin:12px 0 2px}
+  .check-cat .note-field textarea{background:var(--card)}
+  .photo-mini .btn-sm{padding:8px 0}
+  .device-block{margin-top:12px}
+  .check-item:last-of-type, .check-cat .check-item:last-child{border-bottom:none}
+  .step{border:1px solid transparent}
+  .step.active{box-shadow:0 2px 8px rgba(77,138,12,.25)}
 </style>
 </head>
 <body>
 
 <header>
   <h1>Vor-/Inbetriebnahme</h1>
-  <div class="sub">Zähleranlagen NS · MS · HS</div>
+  <div class="sub">Zähleranlagen NS · MS · HS<span id="saveBadge"></span></div>
   <div class="steps no-print" id="stepNav"></div>
 </header>
 
@@ -172,7 +201,7 @@
 
 <div id="libOverlay">
   <div class="card">
-    <h2>📚 Typenbibliothek</h2>
+    <h2><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M9 7h6"/></svg>Typenbibliothek</h2>
     <div class="hint">Einmal hinterlegte Wandlertypen werden ab sofort per Foto automatisch erkannt (Abgleich über einen eindeutigen Erkennungstext, z. B. Artikelnummer vom Typenschild).</div>
     <div id="libList" style="margin-top:10px;"></div>
     <h3>Neuer Eintrag</h3>
@@ -262,7 +291,7 @@
       <label>GPS-Position</label>
       <div class="gps-box">
         <input type="text" id="gpsField" readonly>
-        <button class="btn btn-sm" id="btnGps">📍 Orten</button>
+        <button class="btn btn-sm" id="btnGps"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>Orten</button>
       </div>
       <div class="status-line" id="gpsStatus"></div>
       <div class="row">
@@ -403,7 +432,7 @@
       <label>Seriennummer</label>
       <div style="display:flex; gap:6px;">
         <input type="text" id="modem_sim" style="flex:1;">
-        <button class="btn btn-sm" onclick="startBarcodeScan('modem_sim','status-modem-serial')">📡 Scan</button>
+        <button class="btn btn-sm" onclick="startBarcodeScan('modem_sim','status-modem-serial')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M7 8v8M10 8v8M13 8v8M17 8v8"/></svg>Scan</button>
       </div>
       <div class="status-line" id="status-modem-serial"></div>
       <label>Verbindungstest</label>
@@ -478,8 +507,8 @@
       <div id="ergebnisBanner"></div>
       <div id="maengelListe"></div>
       <div id="fristWrap" style="display:none;">
-        <label>Frist zur Beseitigung der Mängel (Mängelkarte)</label>
-        <input type="date" id="fristDate">
+        <label>Frist zur Beseitigung (automatisch: 4 Wochen ab Prüfdatum)</label>
+        <input type="date" id="fristDate" readonly>
       </div>
       <label>Weitere Mängel (je Zeile ein Mangel, erscheinen im Mängelschein)</label>
       <textarea id="maengelText"></textarea>
@@ -490,15 +519,28 @@
     </div>
     <div class="card no-print">
       <h2>Ausgabe</h2>
-      <button class="btn btn-primary btn-block" onclick="openInternalReport()">Inbetriebsetzungsprotokoll intern (PDF)</button>
-      <button class="btn btn-block" style="margin-top:10px;" onclick="openExternalReport()">Mängelschein für Kunde / Installateur (PDF)</button>
-      <div class="hint">Im geöffneten Bericht „Drucken / Als PDF speichern“ wählen. Mängel und Ergebnis werden automatisch aus den Eingaben abgeleitet.</div>
+      <button class="btn btn-primary btn-block" onclick="openFinish()">PDFs erstellen und per E-Mail senden</button>
+      <div class="hint">Erstellt das Inbetriebsetzungsprotokoll (intern) und den Mängelschein als PDF und öffnet das E-Mail-Programm mit beiden Anhängen.</div>
+      <button class="btn btn-block" style="margin-top:10px;" onclick="openInternalReport()">Protokoll intern ansehen / drucken</button>
+      <button class="btn btn-block" style="margin-top:10px;" onclick="openExternalReport()">Mängelschein ansehen / drucken</button>
       <button class="btn btn-block" style="margin-top:10px;" onclick="exportJson()">Als JSON exportieren (für Nachprüfung)</button>
       <button class="btn btn-block btn-danger" style="margin-top:10px;" onclick="if(confirm('Neues, leeres Protokoll starten?'))resetAll()">Neues Protokoll</button>
     </div>
   </div>
 
 </main>
+<div class="modal" id="finishModal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="finishTitle">
+    <h2 id="finishTitle">Fertigstellen</h2>
+    <div id="finishStatus"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary btn-block" id="finishShare" disabled>E-Mail mit beiden PDFs öffnen</button>
+      <button class="btn btn-block" id="finishSave" disabled>PDFs auf dem Gerät speichern</button>
+      <button class="btn btn-block" id="finishOpen" hidden>Berichte zum Drucken öffnen</button>
+      <button class="btn btn-block" id="finishClose">Schließen</button>
+    </div>
+  </div>
+</div>
 
 <footer class="navbar no-print">
   <button class="btn" id="btnBack">← Zurück</button>
@@ -520,8 +562,7 @@ const state = {
   abschluss:{ergebnis:'',maengel:'',bemerkung:'',unterschrift:'',weitereFotos:[],teil:{},frist:'',maengelListe:[]}
 };
 const LS_KEY = 'vibn_protokoll_draft_v2';
-function saveDraft(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){} }
-function loadDraft(){ try{ const raw=localStorage.getItem(LS_KEY); if(raw) Object.assign(state, JSON.parse(raw)); }catch(e){} }
+function loadDraft(){ try{ const raw = window.__draftRaw || localStorage.getItem(LS_KEY); if(raw) Object.assign(state, JSON.parse(raw)); }catch(e){} }
 function ensureDefaults(){
   const z=state.zaehler; z.photos=z.photos||[null,null]; z.kandidaten=z.kandidaten||[];
   z.stand=Object.assign({ap:'',am:'',rp:'',rm:'',zeit:'',quelle:''}, z.stand||{});
@@ -766,6 +807,17 @@ function hostOf(id){
 function itemsDone(host){ return visibleItems().filter(i=>hostOf(i.id)===host).every(i=>state.checklist[i.id] && state.checklist[i.id].checked); }
 function absicherungVisible(){ return hasWandlerAny(); }
 
+// NS (bis 1 kV): keine Bürdemessung der Wandler (Wunsch Rico, 03.11.2026)
+function hasBuerde(){ return state.ebene!=='NS'; }
+// Frist zur Beseitigung der Mängel: pauschal 4 Wochen (28 Tage) ab Prüfdatum
+function fristIso(){
+  const base = (document.getElementById('pruefdatum')||{}).value || (state.standort&&state.standort.datum) || '';
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(base) ? new Date(base+'T12:00:00') : new Date();
+  d.setDate(d.getDate()+28);
+  const p = n=>String(n).padStart(2,'0');
+  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
+}
+
 /* ---------------- RISO ---------------- */
 function risoRowHtml(id, label, desc){
   return `<div style="margin-bottom:14px; padding-bottom:10px; border-bottom:1px dashed var(--border);">
@@ -861,6 +913,7 @@ function showStepByIndex(i){
   const panels = activePanels();
   if(i<0 || i>=panels.length) return;
   stepIndex = i;
+  document.body.classList.toggle('ns', state.ebene==='NS');
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+panels[i].id).classList.add('active');
   renderStepNav();
@@ -882,7 +935,7 @@ document.getElementById('btnNext').onclick = ()=>{
   if(panels[stepIndex].id==='setup' && (!state.vorgang || !state.ebene || (!state.messart && state.vorgang!=='nach'))){
     alert('Bitte Art des Termins, Spannungsebene und Messart wählen.'); return;
   }
-  if(stepIndex < panels.length-1) showStepByIndex(stepIndex+1);
+  if(stepIndex < panels.length-1) showStepByIndex(stepIndex+1); else openFinish();
 };
 document.getElementById('btnBack').onclick = ()=>{ if(stepIndex>0) showStepByIndex(stepIndex-1); };
 
@@ -1190,8 +1243,8 @@ function groupRecognitionHtml(prefix){
         <input type="file" accept="image/*" capture="environment" style="display:none" id="file-${prefix}-typenschild-cam">
         <input type="file" accept="image/*" style="display:none" id="file-${prefix}-typenschild-gal">
         <div style="display:flex; gap:4px;">
-          <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${prefix}-typenschild-cam').click()">📷 Kamera</button>
-          <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${prefix}-typenschild-gal').click()">🖼️ Galerie</button>
+          <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${prefix}-typenschild-cam').click()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>Kamera</button>
+          <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${prefix}-typenschild-gal').click()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 9"/></svg>Galerie</button>
         </div>
         <div class="status-line" id="status-${prefix}-typenschild"></div>
       </div>
@@ -1273,7 +1326,22 @@ async function tryDecodeFromDataUrl(dataUrl, targetId){
 
 /* ---------------- PHOTO HELPERS ---------------- */
 function fileToBase64(file){
-  return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(file); });
+  return new Promise((res,rej)=>{
+    const fr = new FileReader();
+    fr.onload = ()=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const M = 1600, k = Math.min(1, M/Math.max(img.naturalWidth, img.naturalHeight));
+        const w = Math.round(img.naturalWidth*k), h = Math.round(img.naturalHeight*k);
+        const c = document.createElement('canvas'); c.width = w; c.height = h;
+        c.getContext('2d').drawImage(img,0,0,w,h);
+        res(c.toDataURL('image/jpeg',0.82).split(',')[1]);
+      };
+      img.onerror = ()=>res(String(fr.result).split(',')[1]);
+      img.src = fr.result;
+    };
+    fr.onerror = rej; fr.readAsDataURL(file);
+  });
 }
 function twoPhotoRowHtml(prefix){
   return `<div class="row" style="margin:6px 0;">
@@ -1282,8 +1350,8 @@ function twoPhotoRowHtml(prefix){
       <input type="file" accept="image/*" capture="environment" style="display:none" id="file-${prefix}-1-cam">
       <input type="file" accept="image/*" style="display:none" id="file-${prefix}-1-gal">
       <div style="display:flex;gap:4px;margin-top:4px;">
-        <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${prefix}-1-cam').click()">📷</button>
-        <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${prefix}-1-gal').click()">🖼️</button>
+        <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${prefix}-1-cam').click()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
+        <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${prefix}-1-gal').click()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 9"/></svg></button>
       </div>
     </div>
     <div class="photo-mini">
@@ -1291,8 +1359,8 @@ function twoPhotoRowHtml(prefix){
       <input type="file" accept="image/*" capture="environment" style="display:none" id="file-${prefix}-2-cam">
       <input type="file" accept="image/*" style="display:none" id="file-${prefix}-2-gal">
       <div style="display:flex;gap:4px;margin-top:4px;">
-        <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${prefix}-2-cam').click()">📷</button>
-        <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${prefix}-2-gal').click()">🖼️</button>
+        <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${prefix}-2-cam').click()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
+        <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${prefix}-2-gal').click()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 9"/></svg></button>
       </div>
     </div>
   </div>`;
@@ -1303,8 +1371,8 @@ function onePhotoRowHtml(prefix){
     <input type="file" accept="image/*" capture="environment" style="display:none" id="file-${prefix}-1-cam">
     <input type="file" accept="image/*" style="display:none" id="file-${prefix}-1-gal">
     <div style="display:flex;gap:4px;margin-top:4px;">
-      <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${prefix}-1-cam').click()">📷</button>
-      <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${prefix}-1-gal').click()">🖼️</button>
+      <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${prefix}-1-cam').click()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
+      <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${prefix}-1-gal').click()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 9"/></svg></button>
     </div>
   </div>`;
 }
@@ -1392,7 +1460,7 @@ function groupFieldsHtml(prefix, opts){
           ${opts.klasseOptions.map(k=>`<option value="${k}">${k}</option>`).join('')}
         </select>
       </div>
-      <div><label>Wandlerbürde</label>
+      <div class="buerde-only"><label>Wandlerbürde</label>
         <select id="${prefix}_sollbuerde">
           <option value="">– wählen –</option>
           ${opts.buerdeOptions.map(b=>`<option value="${b}">${b}</option>`).join('')}
@@ -1421,20 +1489,20 @@ function phaseBlockHtml(prefix, p){
     <label>Seriennummer</label>
     <div style="display:flex; gap:6px;">
       <input type="text" id="${base}-serial" style="flex:1;">
-      <button class="btn btn-sm" onclick="startBarcodeScan('${base}-serial','status-${base}')">📡 Scan</button>
+      <button class="btn btn-sm" onclick="startBarcodeScan('${base}-serial','status-${base}')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M7 8v8M10 8v8M13 8v8M17 8v8"/></svg>Scan</button>
     </div>
     <div class="status-line" id="status-${base}"></div>
     <label style="margin-top:8px;">Fotos Typenschild</label>
     <div id="photos-${base}"></div>
-    <label style="margin-top:8px;">Bürdemessung</label>
-    <div class="row">
+    <label class="buerde-only" style="margin-top:8px;">Bürdemessung</label>
+    <div class="row buerde-only">
       <div>
         <img class="thumb empty" id="thumb-${base}-buerde" style="margin-bottom:6px;">
         <input type="file" accept="image/*" capture="environment" style="display:none" id="file-${base}-buerde-cam">
         <input type="file" accept="image/*" style="display:none" id="file-${base}-buerde-gal">
         <div style="display:flex;gap:4px;">
-          <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${base}-buerde-cam').click()">📷</button>
-          <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${base}-buerde-gal').click()">🖼️</button>
+          <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${base}-buerde-cam').click()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
+          <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${base}-buerde-gal').click()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 9"/></svg></button>
         </div>
       </div>
       <div>
@@ -1493,7 +1561,7 @@ function recomputeBuerdeDisplays(prefix, groupObj){
 function buildCtBlocks(){
   ensureCtState();
   const c = document.getElementById('ctContainer');
-  c.innerHTML = '<div class="no-print" style="margin-bottom:10px;"><button class="btn btn-sm" onclick="openLibrary()">📚 Typenbibliothek verwalten</button></div>'
+  c.innerHTML = '<div class="no-print" style="margin-bottom:10px;"><button class="btn btn-sm" onclick="openLibrary()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M9 7h6"/></svg>Typenbibliothek verwalten</button></div>'
     + groupRecognitionHtml('ct')
     + groupFieldsHtml('ct', {
       title:'Stromwandler (gilt für alle 3 Phasen)', unit:'A',
@@ -1510,7 +1578,7 @@ function buildCtBlocks(){
 function buildVtBlocks(){
   ensureVtState();
   const c = document.getElementById('vtContainer');
-  c.innerHTML = '<div class="no-print" style="margin-bottom:10px;"><button class="btn btn-sm" onclick="openLibrary()">📚 Typenbibliothek verwalten</button></div>'
+  c.innerHTML = '<div class="no-print" style="margin-bottom:10px;"><button class="btn btn-sm" onclick="openLibrary()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M9 7h6"/></svg>Typenbibliothek verwalten</button></div>'
     + groupRecognitionHtml('vt')
     + groupFieldsHtml('vt', {
       title:'Spannungswandler (gilt für alle Phasen)', unit:'V',
@@ -1546,7 +1614,7 @@ function kombiGroupHtml(){
     <div><label>Klasse Strom</label>
       <select id="kombi_klasseA"><option value="">– wählen –</option><option value="0.5S">0.5S</option><option value="0.2S">0.2S</option><option value="0.1">0.1</option></select>
     </div>
-    <div><label>Wandlerbürde Strom</label>
+    <div class="buerde-only"><label>Wandlerbürde Strom</label>
       <select id="kombi_buerdeA"><option value="">– wählen –</option><option value="5 VA">5 VA</option><option value="10 VA">10 VA</option><option value="15 VA">15 VA</option></select>
     </div>
   </div>
@@ -1561,7 +1629,7 @@ function kombiGroupHtml(){
     <div><label>Klasse Spannung</label>
       <select id="kombi_klasseV"><option value="">– wählen –</option><option value="0.5">0.5</option><option value="0.2">0.2</option><option value="0.1">0.1</option></select>
     </div>
-    <div><label>Wandlerbürde Spannung</label>
+    <div class="buerde-only"><label>Wandlerbürde Spannung</label>
       <select id="kombi_buerdeV"><option value="">– wählen –</option><option value="5 VA">5 VA</option><option value="10 VA">10 VA</option><option value="15 VA">15 VA</option></select>
     </div>
   </div>`;
@@ -1585,20 +1653,20 @@ function kombiPhaseBlockHtml(p){
     <label>Seriennummer</label>
     <div style="display:flex; gap:6px;">
       <input type="text" id="${base}-serial" style="flex:1;">
-      <button class="btn btn-sm" onclick="startBarcodeScan('${base}-serial','status-${base}')">📡 Scan</button>
+      <button class="btn btn-sm" onclick="startBarcodeScan('${base}-serial','status-${base}')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M7 8v8M10 8v8M13 8v8M17 8v8"/></svg>Scan</button>
     </div>
     <div class="status-line" id="status-${base}"></div>
     <label style="margin-top:8px;">Fotos Typenschild</label>
     <div id="photos-${base}"></div>
-    <label style="margin-top:8px;">Bürdemessung</label>
-    <div class="row">
+    <label class="buerde-only" style="margin-top:8px;">Bürdemessung</label>
+    <div class="row buerde-only">
       <div>
         <img class="thumb empty" id="thumb-${base}-buerde" style="margin-bottom:6px;">
         <input type="file" accept="image/*" capture="environment" style="display:none" id="file-${base}-buerde-cam">
         <input type="file" accept="image/*" style="display:none" id="file-${base}-buerde-gal">
         <div style="display:flex;gap:4px;">
-          <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${base}-buerde-cam').click()">📷</button>
-          <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${base}-buerde-gal').click()">🖼️</button>
+          <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${base}-buerde-cam').click()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
+          <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${base}-buerde-gal').click()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 9"/></svg></button>
         </div>
       </div>
       <div>
@@ -1650,7 +1718,7 @@ function bindKombiPhaseBlock(p){
 function buildKombiBlocks(){
   ensureKombiState();
   const c = document.getElementById('kombiContainer');
-  c.innerHTML = '<div class="no-print" style="margin-bottom:10px;"><button class="btn btn-sm" onclick="openLibrary()">📚 Typenbibliothek verwalten</button></div>'
+  c.innerHTML = '<div class="no-print" style="margin-bottom:10px;"><button class="btn btn-sm" onclick="openLibrary()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M9 7h6"/></svg>Typenbibliothek verwalten</button></div>'
     + groupRecognitionHtml('kombi')
     + kombiGroupHtml();
   state.kombi.phases.forEach(p=>{ c.innerHTML += kombiPhaseBlockHtml(p); });
@@ -1863,7 +1931,6 @@ function exportJson(){
   a.download = 'vibn_'+name+'_'+(document.getElementById('pruefdatum').value||'')+'.json';
   a.click();
 }
-function resetAll(){ localStorage.removeItem(LS_KEY); location.reload(); }
 
 document.getElementById('pruefdatum').addEventListener('input', e=>{ state.standort.datum=e.target.value; saveDraft(); updateStepCompletionUI(); });
 
@@ -1913,7 +1980,7 @@ function gatherMaengel(){
     if(state.ebene!=='NS' && MSHS_FOLGE[id]) m.cls = MSHS_FOLGE[id];
     list.push(m);
   });
-  wandlerGruppen().forEach(g=> buerdeMangel(list, g.label, g.key, g.soll, g.gem));
+  if(hasBuerde()) wandlerGruppen().forEach(g=> buerdeMangel(list, g.label, g.key, g.soll, g.gem));
   if(hasRiso()){
     [['iL1','Stromwandler L1'],['iL2','Stromwandler L2'],['iL3','Stromwandler L3'],['uL1','Spannungswandler L1'],['uL2','Spannungswandler L2'],['uL3','Spannungswandler L3']].forEach(([k,l])=>{
       const v = parseNum(state.riso[k]);
@@ -1936,7 +2003,7 @@ function gatherOffen(){   // fehlende Eingaben des Prüfers (keine Mängel der A
     if(!state.ebene || !state.messart) o.push('Spannungsebene / Messart wählen');
     wandlerGruppen().forEach(g=>{
       if(!g.serial) o.push(g.label+': Seriennummer fehlt');
-      if(!computeBuerdeErgebnis(g.soll, g.gem)) o.push(g.label+': Bürdemessung fehlt');
+      if(hasBuerde() && !computeBuerdeErgebnis(g.soll, g.gem)) o.push(g.label+': Bürdemessung fehlt');
     });
     if(hasRiso()) ['iL1','iL2','iL3','uL1','uL2','uL3'].forEach(k=>{ if(parseNum(state.riso[k])==null) o.push('Riso '+k.replace('iL','Strom L').replace('uL','Spannung L')+' fehlt'); });
     if(!state.zaehler.z_nummer) o.push('Zählernummer fehlt');
@@ -1993,7 +2060,8 @@ function buildErgebnis(){
     });
   });
   document.getElementById('fristWrap').style.display = r.frist.length ? '' : 'none';
-  document.getElementById('fristDate').value = state.abschluss.frist||'';
+  state.abschluss.frist = fristIso();
+  document.getElementById('fristDate').value = state.abschluss.frist;
   state.abschluss.maengelListe = snapshotMaengel(r);
   saveDraft();
 }
@@ -2348,17 +2416,23 @@ function reportCss(){
   + '.fine{font-size:8pt;color:#555;margin-top:6px}'
   + '.sign{margin-top:18px;display:flex;justify-content:space-between;align-items:flex-end}'
   + '.sig{font-family:"Brush Script MT",cursive;font-size:20pt;color:#1a3a8a;min-height:30px}'
-  + '.photos{page-break-before:always}.pgrid{display:flex;flex-wrap:wrap;gap:10px}'
+  + '.pgrid{display:flex;flex-wrap:wrap;gap:10px}'
   + '.photo{width:48%;page-break-inside:avoid}'
   + '.photo .pn{font-size:8.5pt;color:#555;letter-spacing:.5px;border-bottom:1px dashed #aaa;margin-bottom:4px;text-transform:uppercase}'
-  + '.photo img{width:100%;max-height:85mm;object-fit:contain;object-position:left top}'
+  + '.photo img{width:100%;max-height:70mm;object-fit:contain;object-position:left top}'
   + '.mt th,.mt td{border:1px solid #999;padding:5px 7px}.mt th{background:#eef5dd}'
   + '.nr{width:28px;text-align:center}.chk{width:60px;text-align:center;font-size:14pt}'
   + '.note{font-size:8.5pt;color:#444;margin-top:2px}'
   + '.box{border:1px solid #999;padding:8px 10px;margin:8px 0}'
   + '.line{border-top:1px solid #111;margin-top:34px;padding-top:3px;font-size:8.5pt;color:#444}'
   + '.two{display:flex;gap:16px;align-items:flex-start}.two>div{flex:1}'
-  + '@media print{.toolbar{display:none}body{padding:0}}';
+  + '.pg{width:186mm;max-width:100%;margin:0 auto 14px}'
+  + '.int{font-size:9pt}.int h1{font-size:15pt;margin:0 0 6px}.int .head{margin-bottom:6px;font-size:9pt}.int td{font-size:8.5pt;padding:1px 5px}.int th{font-size:7.5pt;padding:1px 5px}'
+  + '.int .blk{margin-top:4px}.int .blkh{font-size:9pt}.int .cols{column-count:3;column-gap:10px;margin-top:4px}.int .cat{margin-bottom:5px}.int .cat h3{font-size:8.5pt;margin:2px 0}'
+  + '.int .it{font-size:7.5pt;margin:1px 0;line-height:1.2}.int .res{margin-top:6px;padding:5px 8px;font-size:10pt}.int .sign{margin-top:12px}'
+  + '.ext{font-size:8.5pt}.ext h1{font-size:15pt;margin:0 0 4px}.ext .head{margin-bottom:6px}.ext .mt th,.ext .mt td{font-size:7.5pt;padding:3px 5px}.ext .note{font-size:7pt}'
+  + '.ext p{margin:4px 0;font-size:8.5pt}.ext h3{font-size:9pt;margin:6px 0 2px}.ext .fine{font-size:7pt}.ext .line{margin-top:20px;font-size:7.5pt}.ext .res{margin-top:6px;padding:5px 8px;font-size:10pt}.ext .box{padding:5px 8px;margin:5px 0}'
+  + '@media print{.toolbar{display:none}body{padding:0}.pg{width:auto;margin:0;page-break-after:always}.pg:last-child{page-break-after:auto}}';
 }
 function wrapReport(title, bodyHtml){
   return '<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(title)+'</title><style>'+reportCss()+'</style></head><body><div class="toolbar"><button onclick="window.print()">Drucken / Als PDF speichern</button></div>'+bodyHtml+'</body></html>';
@@ -2374,21 +2448,22 @@ function reportFileTitle(prefix){
 }
 function ratioText(g){ return (g && g.primaer && g.sekundaer) ? g.primaer+'/'+g.sekundaer : ''; }
 function wandlerTableHtml(title, ratio, klasse, buerde, rows, withRiso){
+  const bu = hasBuerde();
   const body = rows.map(r=>{
-    const res = computeBuerdeErgebnis(buerde, r.gem);
-    return '<tr><td style="width:40px"><b>'+esc(r.label)+'</b></td><td>'+esc(r.serial||'–')+'</td><td>'+esc(r.gem?r.gem+' VA':'–')+'</td>'
-      + '<td class="'+(res&&res.status!=='io'?'bad':'')+'">'+(res?esc(res.text):'–')+'</td>'
+    const res = bu ? computeBuerdeErgebnis(buerde, r.gem) : null;
+    return '<tr><td style="width:40px"><b>'+esc(r.label)+'</b></td><td>'+esc(r.serial||'–')+'</td>'
+      + (bu ? '<td>'+esc(r.gem?r.gem+' VA':'–')+'</td><td class="'+(res&&res.status!=='io'?'bad':'')+'">'+(res?esc(res.text):'–')+'</td>' : '')
       + (withRiso ? '<td>'+esc(r.riso?r.riso+' MΩ':'–')+'</td>' : '')+'</tr>';
   }).join('');
-  return '<div class="blk"><div class="blkh">'+esc(title)+'<span>'+esc(ratio||'–')+' · Klasse '+esc(klasse||'–')+' · Wandlerbürde '+esc(buerde||'–')+'</span></div>'
-    + '<table><thead><tr><th>Phase</th><th>Seriennummer</th><th>Bürde gemessen</th><th>Auslastung</th>'+(withRiso?'<th>Riso (500 V)</th>':'')+'</tr></thead><tbody>'+body+'</tbody></table></div>';
+  return '<div class="blk"><div class="blkh">'+esc(title)+'<span>'+esc(ratio||'–')+' · Klasse '+esc(klasse||'–')+(bu?' · Wandlerbürde '+esc(buerde||'–'):'')+'</span></div>'
+    + '<table><thead><tr><th>Phase</th><th>Seriennummer</th>'+(bu?'<th>Bürde gemessen</th><th>Auslastung</th>':'')+(withRiso?'<th>Riso (500 V)</th>':'')+'</tr></thead><tbody>'+body+'</tbody></table></div>';
 }
 function collectPhotos(){
   const out = [];
   const add = (src,label)=>{ if(src) out.push({src:src,label:label}); };
   (state.zaehler.photos||[]).forEach((p,i)=>add(p,'Zähler '+(i+1)));
   (state.modem.photos||[]).forEach(p=>add(p,'Modem'));
-  const grp = g=> g && g.phases.forEach(p=>{ (p.photos||[]).forEach((ph,i)=>add(ph,p.label+' – Typenschild '+(i+1))); add(p.buerdePhoto,p.label+' – Bürdemessung'); });
+  const grp = g=> g && g.phases.forEach(p=>{ (p.photos||[]).forEach((ph,i)=>add(ph,p.label+' – Typenschild '+(i+1))); if(hasBuerde()) add(p.buerdePhoto,p.label+' – Bürdemessung'); });
   if(hasCtPanel()) grp(state.ct);
   if(hasVtPanel()) grp(state.vt);
   if(hasKombiPanel()) grp(state.kombi);
@@ -2427,7 +2502,7 @@ function zaehlerBlockHtml(){
     + ['ap','am','rp','rm'].map(k=>'<td>'+esc(st[k]||'–')+'</td>').join('')+'</tr></tbody></table></div>';
   return html;
 }
-function zeigerReportHtml(){
+function zeigerReportHtml(size){
   if(!isLive()) return '';
   const res = state.zaehler.zeiger || {status:'leer',findings:[]};
   if(res.status==='leer') return '';
@@ -2436,7 +2511,7 @@ function zeigerReportHtml(){
     + [1,2,3].map(i=>'<tr><td><b>L'+i+'</b></td><td>'+esc(mw['u'+i]||'–')+'</td><td>'+esc(mw['i'+i]||'–')+'</td><td>'+esc(mw['w'+i]||'–')+'</td></tr>').join('')
     + '</tbody></table>'
     + ((mw.uu12||mw.uu13) ? '<div class="fine">Winkel U1–U2: '+esc(mw.uu12||'–')+'° · U1–U3: '+esc(mw.uu13||'–')+'°</div>' : '');
-  return '<div class="blk"><div class="blkh">Zeigerdiagramm (Wirkdiagramm)<span>Zählerauslesung'+(state.zaehler.stand.zeit?' · '+esc(state.zaehler.stand.zeit):'')+'</span></div><div class="two"><div style="max-width:210px">'+zeigerSvg(220,true)+'</div><div>'
+  return '<div class="blk"><div class="blkh">Zeigerdiagramm (Wirkdiagramm)<span>Zählerauslesung'+(state.zaehler.stand.zeit?' · '+esc(state.zaehler.stand.zeit):'')+'</span></div><div class="two"><div style="max-width:'+((size||220)-10)+'px">'+zeigerSvg(size||220,true)+'</div><div>'
     + tab + (res.findings||[]).map(f=>'<div class="it '+(f.level==='warn'?'open':'')+'">'+(f.level==='ok'?'✓':f.level==='warn'?'⚠':'ℹ')+' '+esc(f.text)+'</div>').join('')+'</div></div></div>';
 }
 
@@ -2451,10 +2526,11 @@ function buildInternalHtml(){
   const s = state.standort, r = computeErgebnis();
   const adr = addressLines();
   const messart = {direkt:'Direktmessung',halbindirekt:'Halbindirekte Messung',wandler:'Wandlermessung',kombiwandler:'Kombiwandler'}[state.messart] || '';
-  let html = '<h1>'+esc(reportTitle())+'</h1>';
+  let html = '<div class="pg int"><h1>'+esc(reportTitle())+'</h1>';
   html += '<div class="head"><div class="l"><div>'+esc(s.name||'')+'</div>'+adr.map(a=>'<div>'+esc(a)+'</div>').join('')+'<div style="margin-top:6px;color:#444">'+esc(messart)+'</div></div>'
     + '<div class="r">'+(s.einspeise?'<div>Einspeiseleistung: '+esc(s.einspeise)+' kW</div>':'')+(s.bezug?'<div>Bezugsleistung: '+esc(s.bezug)+' kW</div>':'')
     + (s.id?'<div>HarNES-Nr.: '+esc(s.id)+'</div>':'')+(s.gps?'<div style="color:#444;font-size:9pt">GPS: '+esc(s.gps)+'</div>':'')+'</div></div>';
+  html += '<div class="res'+resClass(r.status)+'">'+esc(r.label)+'</div>';
 
   if(state.vorgang==='nach'){
     html += '<div class="blk"><div class="blkh">Nachprüfung der Mängel'+(state.nachpruefung.quelle?'<span>Quelle: '+esc(state.nachpruefung.quelle)+'</span>':'')+'</div>'
@@ -2475,14 +2551,15 @@ function buildInternalHtml(){
       html += wandlerTableHtml('Kombiwandler – Spannungsteil', ratioText({primaer:k.primaerV,sekundaer:k.sekundaerV}), k.klasseV, k.buerdeV,
         k.phases.map((p,i)=>({label:'L'+(i+1), serial:p.seriennummer, gem:p.gemessenV, riso:state.riso['uL'+(i+1)]})), rr);
     }
-    html += zeigerReportHtml();
+    html += zeigerReportHtml(150);
     html += checklistReportHtml();
   }
 
-  html += '<div class="res'+resClass(r.status)+'">'+esc(r.label)+'</div>';
+  const p2 = !!(r.keine.length||r.frist.length||r.hinweis.length||r.offen.length||state.abschluss.bemerkung);
+  if(p2) html += '</div><div class="pg int"><h1 style="font-size:13pt">'+esc(reportTitle())+' – Mängel und Hinweise</h1>';
   [['keine','Mängel – keine Inbetriebsetzung',r.keine],['frist','Mängelkarte mit Frist',r.frist],['hinweis','Hinweise',r.hinweis]].forEach(([k,t,l])=>{
     if(!l.length) return;
-    html += '<h3>'+t+(k==='frist'&&state.abschluss.frist?' – Frist bis '+esc(fmtIso(state.abschluss.frist)):'')+'</h3><ul style="margin:2px 0 0 18px;font-size:9.5pt">'
+    html += '<h3>'+t+(k==='frist'&&fristIso()?' – Frist bis '+esc(fmtIso(fristIso())):'')+'</h3><ul style="margin:2px 0 0 18px;font-size:9.5pt">'
       + l.map(m=>'<li>'+esc(m.text)+(m.ext?'':' <i>(intern)</i>')+(m.massn?'<div class="fine" style="margin:0">'+esc(m.massn)+'</div>':'')+'</li>').join('')+'</ul>';
   });
   if(r.offen.length) html += '<h3>Nicht dokumentiert</h3><ul style="margin:2px 0 0 18px;font-size:9pt;color:#555">'+r.offen.map(t=>'<li>'+esc(t)+'</li>').join('')+'</ul>';
@@ -2491,11 +2568,11 @@ function buildInternalHtml(){
     + '<div style="text-align:center"><div class="sig">'+esc(state.abschluss.unterschrift||'')+'</div><div style="font-style:italic">'+esc(fmtDateDe())+'</div></div></div>';
   html += '<div class="fine">'+(state.ebene==='NS' ? 'Bewertung der Mängel nach „Bewertung je Komponente“ (Stand 01.11.2026), Spalte '+(state.vorgang==='bestand'?'Bestandsanlage bzw. Neuanlage je Mangel':'Neuanlage')+' – fachliche Bewertung, keine Rechtsberatung.' : 'MS/HS: keine Bewertungsmatrix hinterlegt – jeder Mangel verhindert die Inbetriebsetzung'+(state.vorgang==='bestand'?' (Bestand: Mängelkarte mit Frist).':'.'))+'</div>';
 
+  html += '</div>';
   const photos = collectPhotos();
-  if(photos.length){
-    html += '<div class="photos"><h1>'+esc(reportTitle())+' – Fotos</h1><div class="pgrid">'
-      + photos.map((p,i)=>'<div class="photo"><div class="pn">'+(i+1)+'. Bild – '+esc(p.label)+'</div><img src="'+p.src+'"></div>').join('')
-      + '</div></div>';
+  for(let k=0;k<photos.length;k+=6){
+    html += '<div class="pg"><h1 style="font-size:14pt">'+esc(reportTitle())+' – Fotos</h1><div class="pgrid">'
+      + photos.slice(k,k+6).map((p,j)=>'<div class="photo"><div class="pn">'+(k+j+1)+'. Bild – '+esc(p.label)+'</div><img src="'+p.src+'"></div>').join('') + '</div></div>';
   }
   return html;
 }
@@ -2513,7 +2590,7 @@ function buildExternalHtml(){
   const ext = r.ext;
   const keine = ext.filter(m=>m.cls==='keine'), frist = ext.filter(m=>m.cls==='frist'), hinweis = ext.filter(m=>m.cls==='hinweis');
   const anlass = {vor:'der Vorinbetriebnahme', ibn:'der Inbetriebnahme', nach:'der Nachprüfung', bestand:'der Abnahme der Bestandsanlage'}[state.vorgang] || 'der Prüfung';
-  let html = '<h1>Mängelschein</h1><div style="margin:-6px 0 10px;color:#444">'+esc(reportTitle())+'</div>';
+  let html = '<div class="pg ext"><h1>Mängelschein</h1><div style="margin:-6px 0 10px;color:#444">'+esc(reportTitle())+'</div>';
   html += '<div class="head"><div class="l"><div><b>'+esc(s.name||'')+'</b></div>'+adr.map(a=>'<div>'+esc(a)+'</div>').join('')+'</div>'
     + '<div class="r">'+(s.id?'<div>HarNES-Nr.: '+esc(s.id)+'</div>':'')+'<div>Datum der Prüfung: '+esc(fmtDateDe())+'</div>'
     + (state.zaehler.z_nummer && state.vorgang!=='nach' ? '<div>Zählernummer: '+esc(state.zaehler.z_nummer)+'</div>' : '')+'</div></div>';
@@ -2525,20 +2602,144 @@ function buildExternalHtml(){
     if(keine.length) html += '<h3>Mängel – keine Inbetriebsetzung bis zur Beseitigung</h3>'+(state.ebene==='NS'?'<div class="fine" style="margin:0 0 4px">'+esc(TXT_VERWEIGERUNG)+'</div>':'')+maengelTabelle(keine,true);
     if(frist.length){
       html += '<h3 style="margin-top:12px">Mängelkarte mit Frist – Inbetriebsetzung erfolgt</h3>'
-        + '<div style="margin:0 0 4px"><b>Frist zur Beseitigung: '+(state.abschluss.frist?esc(fmtIso(state.abschluss.frist)):'________________')+'</b></div>'+maengelTabelle(frist,true)
+        + '<div style="margin:0 0 4px"><b>Frist zur Beseitigung: '+(fristIso()?esc(fmtIso(fristIso())):'________________')+' <span style="font-weight:400">(vier Wochen ab Prüfdatum)</span></b></div>'+maengelTabelle(frist,true)
         + (state.ebene==='NS' ? '<div class="fine">'+esc(TXT_FRIST)+'</div>' : '');
     }
     if(hinweis.length) html += '<h3 style="margin-top:12px">Hinweise (kein Verweigerungsgrund)</h3>'+maengelTabelle(hinweis,false);
   }
-  html += '<div class="sign" style="margin-top:40px"><div style="width:46%"><div class="sig">'+esc(state.abschluss.unterschrift||'')+'</div><div class="line">Prüfer Messstellenbetreiber'+(s.pruefer?': '+esc(s.pruefer):'')+' · '+esc(fmtDateDe())+'</div></div>'
+  html += '<div class="sign" style="margin-top:24px"><div style="width:46%"><div class="sig">'+esc(state.abschluss.unterschrift||'')+'</div><div class="line">Prüfer Messstellenbetreiber'+(s.pruefer?': '+esc(s.pruefer):'')+' · '+esc(fmtDateDe())+'</div></div>'
     + '<div style="width:46%"><div class="line">Kenntnisnahme Installateur / Anlagenbetreiber (Ort, Datum, Unterschrift)</div></div></div>';
+  html += '</div>';
   return html;
 }
 function openInternalReport(){ openReport(wrapReport(reportFileTitle('Protokoll'), buildInternalHtml())); }
 function openExternalReport(){ openReport(wrapReport(reportFileTitle('Maengelschein'), buildExternalHtml())); }
 
+/* ---------------- SPEICHERN (IndexedDB) ---------------- */
+const IDB_NAME = 'vibn', IDB_STORE = 'kv';
+function idbOpen(){ return new Promise((res,rej)=>{ const r=indexedDB.open(IDB_NAME,1); r.onupgradeneeded=()=>r.result.createObjectStore(IDB_STORE); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+async function idbGet(k){ const db=await idbOpen(); return new Promise((res,rej)=>{ const q=db.transaction(IDB_STORE).objectStore(IDB_STORE).get(k); q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); }); }
+async function idbSet(k,v){ const db=await idbOpen(); return new Promise((res,rej)=>{ const t=db.transaction(IDB_STORE,'readwrite'); t.objectStore(IDB_STORE).put(v,k); t.oncomplete=()=>res(); t.onerror=()=>rej(t.error); t.onabort=()=>rej(t.error); }); }
+async function idbDel(k){ const db=await idbOpen(); return new Promise((res,rej)=>{ const t=db.transaction(IDB_STORE,'readwrite'); t.objectStore(IDB_STORE).delete(k); t.oncomplete=()=>res(); t.onerror=()=>rej(t.error); }); }
+let _saveTimer = null;
+function setSaveBadge(ok){ const b=document.getElementById('saveBadge'); if(b){ b.textContent = ok ? '● automatisch gespeichert' : '● Speichern fehlgeschlagen'; b.style.color = ok ? 'var(--ok)' : 'var(--warn)'; } }
+function saveDraft(){ clearTimeout(_saveTimer); _saveTimer = setTimeout(flushDraft, 300); }
+async function flushDraft(){
+  clearTimeout(_saveTimer);
+  const raw = JSON.stringify(state);
+  try{ await idbSet(LS_KEY, raw); try{ localStorage.removeItem(LS_KEY); }catch(e){} setSaveBadge(true); }
+  catch(e){ try{ localStorage.setItem(LS_KEY, raw); setSaveBadge(true); }catch(e2){ setSaveBadge(false); } }
+}
+async function bootDraft(){
+  try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(e){}
+  try{ window.__draftRaw = (await idbGet(LS_KEY)) || null; }catch(e){ window.__draftRaw = null; }
+}
+window.addEventListener('pagehide', ()=>{ flushDraft(); });
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') flushDraft(); });
+function resetAll(){ idbDel(LS_KEY).catch(()=>{}).then(()=>{ try{ localStorage.removeItem(LS_KEY); }catch(e){} location.reload(); }); }
 
-init();
+/* ---------------- FERTIG: PDFs erzeugen und per E-Mail teilen ---------------- */
+const PDF_LIBS = ['https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js','https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'];
+function loadScriptOnce(src){ return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=()=>res(); s.onerror=()=>rej(new Error('Bibliothek konnte nicht geladen werden')); document.head.appendChild(s); }); }
+async function ensurePdfLibs(){
+  if(!(window.jspdf && window.jspdf.jsPDF)) await loadScriptOnce(PDF_LIBS[0]);
+  if(!window.html2canvas) await loadScriptOnce(PDF_LIBS[1]);
+}
+// Bibliotheken im Hintergrund vorladen (Service Worker legt sie ab; danach auch offline verfügbar)
+setTimeout(()=>{ if(navigator.onLine) PDF_LIBS.forEach(u=>{ fetch(u,{mode:'no-cors'}).catch(()=>{}); }); }, 5000);
+
+async function htmlToPdfBlob(bodyHtml){
+  await ensurePdfLibs();
+  const ifr = document.createElement('iframe');
+  ifr.setAttribute('aria-hidden','true');
+  ifr.style.cssText = 'position:fixed;left:-12000px;top:0;width:720px;height:1200px;border:0';
+  document.body.appendChild(ifr);
+  try{
+    await new Promise(res=>{ ifr.onload = res; ifr.srcdoc = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>'+reportCss()+'body{padding:0!important;margin:0}.pg{margin:0!important}</style></head><body>'+bodyHtml+'</body></html>'; });
+    const doc = ifr.contentDocument;
+    await Promise.all([...doc.images].map(i=> i.complete ? Promise.resolve() : new Promise(r=>{ i.onload = i.onerror = r; })));
+    const pdf = new window.jspdf.jsPDF({unit:'mm', format:'a4', compress:true});
+    const PW = 186, PH = 273, MX = 12, MY = 12;
+    let first = true;
+    for(const el of [...doc.querySelectorAll('.pg')]){
+      const canvas = await window.html2canvas(el, {scale:2, backgroundColor:'#ffffff', useCORS:true, logging:false, windowWidth:720});
+      let w = PW, ratio = PW/canvas.width, totalH = canvas.height*ratio;
+      if(totalH > PH && totalH <= PH*1.15){ ratio = PH/canvas.height; w = canvas.width*ratio; totalH = PH; }   // knapp zu lang: auf eine Seite verkleinern
+      const slicePx = Math.floor(PH/ratio);
+      for(let y=0; y<canvas.height; y+=slicePx){
+        const h = Math.min(slicePx, canvas.height-y);
+        const c = document.createElement('canvas'); c.width = canvas.width; c.height = h;
+        const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,c.width,h); ctx.drawImage(canvas,0,y,canvas.width,h,0,0,canvas.width,h);
+        if(!first) pdf.addPage(); first = false;
+        pdf.addImage(c.toDataURL('image/jpeg',0.9), 'JPEG', MX, MY, w, h*ratio);
+      }
+    }
+    return pdf.output('blob');
+  } finally { ifr.remove(); }
+}
+
+let _finish = {files:null};
+function emailSubject(){
+  const s = state.standort, adr = addressLines().join(', ');
+  return reportTitle()+' – '+[s.name,adr].filter(Boolean).join(', ')+' ('+fmtDateDe()+')';
+}
+function emailBody(){
+  const r = computeErgebnis(), s = state.standort;
+  let t = 'Ergebnis: '+r.label+'\n';
+  if(r.frist.length) t += 'Frist zur Beseitigung der Mängel: '+fmtIso(fristIso())+'\n';
+  t += '\nAnlage: '+[s.name, addressLines().join(', ')].filter(Boolean).join(', ')+'\nPrüfdatum: '+fmtDateDe()+(s.pruefer?'\nPrüfer: '+s.pruefer:'')+'\n\nAnlagen: Inbetriebsetzungsprotokoll (intern) und Mängelschein.';
+  return t;
+}
+function finishLine(txt, cls){ const d=document.createElement('div'); d.textContent=txt; if(cls) d.className=cls; document.getElementById('finishStatus').appendChild(d); return d; }
+function closeFinish(){ document.getElementById('finishModal').hidden = true; }
+async function openFinish(){
+  const m = document.getElementById('finishModal'); m.hidden = false;
+  const st = document.getElementById('finishStatus'); st.innerHTML = '';
+  ['finishShare','finishSave'].forEach(id=>document.getElementById(id).disabled = true);
+  document.getElementById('finishOpen').hidden = true;
+  try{ state.standort.datum = document.getElementById('pruefdatum').value || state.standort.datum; buildErgebnis(); }catch(e){}
+  const r = computeErgebnis();
+  finishLine(r.label, 'finish-res');
+  if(r.offen.length){ finishLine('Noch nicht vollständig dokumentiert:', 'finish-warn'); r.offen.slice(0,8).forEach(t=>finishLine('• '+t,'finish-warn')); if(r.offen.length>8) finishLine('… und '+(r.offen.length-8)+' weitere','finish-warn'); }
+  const prog = finishLine('PDFs werden erstellt …');
+  try{
+    await flushDraft();
+    const b1 = await htmlToPdfBlob(buildInternalHtml());
+    const b2 = await htmlToPdfBlob(buildExternalHtml());
+    _finish.files = [ new File([b1], reportFileTitle('Protokoll')+'.pdf', {type:'application/pdf'}), new File([b2], reportFileTitle('Maengelschein')+'.pdf', {type:'application/pdf'}) ];
+    prog.textContent = 'Fertig: Protokoll (intern) und Mängelschein als PDF erstellt.';
+    ['finishShare','finishSave'].forEach(id=>document.getElementById(id).disabled = false);
+  }catch(e){
+    prog.textContent = 'PDF-Erstellung nicht möglich ('+(e&&e.message||e)+'). Die PDF-Bausteine werden einmalig aus dem Internet geladen. Alternativ die Berichte öffnen und über „Drucken / Als PDF speichern“ sichern.';
+    prog.className = 'finish-warn';
+    document.getElementById('finishOpen').hidden = false;
+  }
+}
+function downloadFiles(files){
+  files.forEach((f,i)=> setTimeout(()=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(f); a.download=f.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); }, i*500));
+}
+async function finishShare(){
+  const files = _finish.files; if(!files) return;
+  try{
+    if(navigator.canShare && navigator.canShare({files})){
+      await navigator.share({files, title:emailSubject(), text:emailBody()});
+      finishLine('Zum Teilen übergeben.');
+      return;
+    }
+  }catch(e){ if(e && e.name==='AbortError') return; }
+  // Fallback (z. B. Desktop): PDFs speichern und E-Mail-Programm ohne Anhang öffnen
+  downloadFiles(files);
+  finishLine('Die PDFs wurden gespeichert. Bitte im E-Mail-Programm anhängen.');
+  location.href = 'mailto:?subject='+encodeURIComponent(emailSubject())+'&body='+encodeURIComponent(emailBody()+'\n\n(PDFs bitte anhängen)');
+}
+function finishSave(){ if(_finish.files) downloadFiles(_finish.files); }
+document.getElementById('finishShare').onclick = finishShare;
+document.getElementById('finishSave').onclick = finishSave;
+document.getElementById('finishClose').onclick = closeFinish;
+document.getElementById('finishOpen').onclick = ()=>{ openInternalReport(); setTimeout(openExternalReport, 600); };
+
+
+bootDraft().then(init);
 </script>
 <script>if('serviceWorker' in navigator){ window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }</script>
 </body>
