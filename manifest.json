@@ -1,7 +1,8 @@
 {
+  "id": "toolbox",
   "name": "Rico's Toolbox",
   "short_name": "Toolbox",
-  "description": "Sammlung aller Werkzeuge: Blinkzähler, Fahrtenbuch, Bürde-Rechner und mehr.",
+  "description": "Sammlung aller Werkzeuge",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
