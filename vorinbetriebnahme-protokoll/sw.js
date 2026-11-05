@@ -1,5 +1,5 @@
 // Service Worker: Cache-first für die App-Dateien, zur Laufzeit werden auch geladene Bibliotheken (Barcode, Texterkennung) zwischengespeichert.
-const CACHE = 'vibn-v4';
+const CACHE = 'vibn-v5';
 const CORE = ['./','./index.html','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png'];
 self.addEventListener('install', e=>{ e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting())); });
 self.addEventListener('activate', e=>{ e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });

@@ -147,7 +147,7 @@
   .chip{padding:6px 10px; border-radius:999px; background:var(--accent-soft); color:var(--accent); font-size:12.5px; cursor:pointer;}
 
   #scanOverlay{display:none; position:fixed; inset:0; background:#000; z-index:100; flex-direction:column; align-items:center; justify-content:center;}
-  #scanVideo{width:100%; max-width:480px; border-radius:16px;}
+  #scanVideo{width:100%; max-width:560px; max-height:70vh; object-fit:cover; border-radius:16px;}
   #libOverlay{display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:90; overflow-y:auto;}
   #libOverlay .card{max-width:600px; margin:16px auto;}
   .lib-entry{background:var(--field); border-radius:12px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;}
@@ -205,7 +205,8 @@ body.ns .buerde-only{display:none!important}
 
 <div id="scanOverlay">
   <video id="scanVideo"></video>
-  <button class="btn btn-primary" style="margin-top:16px;" onclick="stopBarcodeScan()">Abbrechen</button>
+  <div class="hint" style="color:#fff;margin:10px 16px 0;text-align:center">Barcode im Bild halten, etwas Abstand lassen</div>
+  <div style="display:flex;gap:10px;margin-top:14px"><button class="btn" id="scanTorch" hidden onclick="toggleTorch()">Licht an</button><button class="btn btn-primary" onclick="stopBarcodeScan()">Abbrechen</button></div>
 </div>
 
 <div id="libOverlay">
@@ -1298,50 +1299,173 @@ function bindGroupRecognition(prefix, groupObj, kind){
   });
 }
 
-/* ---------------- BARCODE SCAN ---------------- */
-let currentScanControls = null;
-async function startBarcodeScan(targetId, statusId){
-  const status = document.getElementById(statusId);
-  if(status){ status.textContent='Kamera wird gestartet...'; status.className='status-line'; }
-  if(!window.ZXing){ if(status){ status.textContent='Scan-Bibliothek nicht geladen (kein Internet?). Bitte manuell eintragen.'; status.className='status-line err'; } return; }
-  try{
-    const reader = new ZXing.BrowserMultiFormatReader();
-    document.getElementById('scanOverlay').style.display = 'flex';
-    const devices = await reader.listVideoInputDevices();
-    const deviceId = devices.length ? devices[devices.length-1].deviceId : undefined;
-    reader.decodeFromVideoDevice(deviceId, 'scanVideo', (result, err, controls)=>{
-      currentScanControls = controls;
-      if(result){
-        const el = document.getElementById(targetId);
-        if(el){ el.value = result.getText(); el.dispatchEvent(new Event('input')); }
-        if(status){ status.textContent = '✓ Erkannt: '+result.getText(); status.className='status-line ok'; }
-        controls.stop();
-        document.getElementById('scanOverlay').style.display = 'none';
-      }
-    });
-  }catch(err){
-    if(status){ status.textContent = 'Scan fehlgeschlagen ('+String(err.message||err).slice(0,70)+'). Bitte manuell eintragen.'; status.className='status-line err'; }
-    document.getElementById('scanOverlay').style.display = 'none';
-  }
-}
-function stopBarcodeScan(){
-  document.getElementById('scanOverlay').style.display = 'none';
-  try{ if(currentScanControls) currentScanControls.stop(); }catch(e){}
-}
-function loadImg(url){ return new Promise(res=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=()=>res(null); i.src=url; }); }
-async function decodeBarcodesFromUrl(url){
-  const out = [];
+/* ---------------- BARCODE: gemeinsamer Decoder ---------------- */
+const BC_FORMATS = ['code_128','code_39','code_93','ean_13','ean_8','itf','codabar','data_matrix','qr_code','upc_a'];
+let _bd = null, _zxReader = null;
+async function getBD(){
+  if(_bd!==null) return _bd;
+  _bd = false;
   try{
     if('BarcodeDetector' in window){
-      const img = await loadImg(url);
-      if(img){ const r = await new BarcodeDetector().detect(img); r.forEach(b=>{ if(b.rawValue && !out.includes(b.rawValue)) out.push(b.rawValue); }); }
+      let f = BC_FORMATS;
+      if(BarcodeDetector.getSupportedFormats){ const sup = await BarcodeDetector.getSupportedFormats(); f = BC_FORMATS.filter(x=>sup.includes(x)); }
+      if(f.length) _bd = new BarcodeDetector({formats:f});
     }
+  }catch(e){ _bd = false; }
+  return _bd;
+}
+function getZX(){
+  if(_zxReader) return _zxReader;
+  if(!window.ZXing || !ZXing.MultiFormatReader) return null;
+  const F = ZXing.BarcodeFormat, H = new Map();
+  H.set(ZXing.DecodeHintType.TRY_HARDER, true);
+  H.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [F.CODE_128,F.CODE_39,F.CODE_93,F.EAN_13,F.EAN_8,F.ITF,F.CODABAR,F.DATA_MATRIX,F.QR_CODE,F.UPC_A].filter(Boolean));
+  const r = new ZXing.MultiFormatReader(); r.setHints(H); _zxReader = r; return r;
+}
+function zxDecodeCanvas(c){
+  const r = getZX(); if(!r) return null;
+  const src = new ZXing.HTMLCanvasElementLuminanceSource(c);
+  for(const B of [ZXing.HybridBinarizer, ZXing.GlobalHistogramBinarizer]){
+    try{ const res = r.decode(new ZXing.BinaryBitmap(new B(src))); if(res) return res.getText(); }catch(e){}
+  }
+  return null;
+}
+function cropCanvas(srcCanvas, x, y, w, h, maxSide, rot){
+  const sc = Math.min(1, maxSide/Math.max(w,h));
+  const cw = Math.max(1,Math.round(w*sc)), ch = Math.max(1,Math.round(h*sc));
+  const c = document.createElement('canvas');
+  if(rot){ c.width = ch; c.height = cw; const g = c.getContext('2d'); g.translate(ch,0); g.rotate(Math.PI/2); g.drawImage(srcCanvas,x,y,w,h,0,0,cw,ch); }
+  else { c.width = cw; c.height = ch; c.getContext('2d').drawImage(srcCanvas,x,y,w,h,0,0,cw,ch); }
+  return c;
+}
+const _tick = ()=>new Promise(r=>setTimeout(r,0));
+async function toBitmapCanvas(src){
+  let bmp = null;
+  try{
+    if(src instanceof Blob && window.createImageBitmap) bmp = await createImageBitmap(src);
   }catch(e){}
-  if(!out.length){
-    try{ if(window.ZXing){ const r = await new ZXing.BrowserMultiFormatReader().decodeFromImageUrl(url); if(r) out.push(r.getText()); } }catch(e){}
+  let w, h, c = document.createElement('canvas');
+  if(bmp){ w = bmp.width; h = bmp.height; }
+  else {
+    const url = src instanceof Blob ? URL.createObjectURL(src) : src;
+    const img = await loadImg(url); if(!img) return null;
+    bmp = img; w = img.naturalWidth; h = img.naturalHeight;
+  }
+  const sc = Math.min(1, 3000/Math.max(w,h));
+  c.width = Math.round(w*sc); c.height = Math.round(h*sc);
+  c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
+  return c;
+}
+/* src: File/Blob oder URL. Liefert Liste erkannter Codes. */
+async function decodeBarcodesFromUrl(src){
+  const out = []; const add = v=>{ v=String(v||'').trim(); if(v && !out.includes(v)) out.push(v); };
+  const full = await toBitmapCanvas(src); if(!full) return out;
+  const W = full.width, H = full.height, t0 = Date.now();
+  const bd = await getBD();
+  // Region: ganz, dann Kacheln (überlappend), jeweils auch 90° gedreht
+  const regions = [[0,0,W,H]];
+  [[2,2],[3,3],[1,3],[3,1]].forEach(([nx,ny])=>{
+    const tw = W/nx*1.35, th = H/ny*1.35;
+    for(let j=0;j<ny;j++) for(let i=0;i<nx;i++){
+      const x = Math.min(Math.max(0,(W-tw)/(Math.max(nx-1,1))*i),W-tw), y = Math.min(Math.max(0,(H-th)/(Math.max(ny-1,1))*j),H-th);
+      regions.push([nx===1?0:x, ny===1?0:y, nx===1?W:Math.min(tw,W), ny===1?H:Math.min(th,H)]);
+    }
+  });
+  for(const [x,y,w,h] of regions){
+    for(const rot of [false,true]){
+      if(Date.now()-t0 > 9000) return out;
+      for(const maxSide of [1600,1000]){
+        const c = cropCanvas(full,x,y,w,h,maxSide,rot);
+        try{
+          if(bd){ const r = await bd.detect(c); r.forEach(b=>add(b.rawValue)); }
+        }catch(e){}
+        if(!out.length){ const t = zxDecodeCanvas(c); if(t) add(t); }
+        if(out.length) return out;
+        await _tick();
+      }
+    }
   }
   return out;
 }
+
+/* ---------------- BARCODE: Live-Scanner (Rückkamera) ---------------- */
+let _scanStream = null, _scanRun = false;
+async function pickBackCamera(){
+  const base = {width:{ideal:1920}, height:{ideal:1080}};
+  let stream = await navigator.mediaDevices.getUserMedia({video:Object.assign({facingMode:{exact:'environment'}},base), audio:false}).catch(()=>null);
+  if(!stream) stream = await navigator.mediaDevices.getUserMedia({video:Object.assign({facingMode:{ideal:'environment'}},base), audio:false});
+  const tr = stream.getVideoTracks()[0];
+  const st = tr.getSettings ? tr.getSettings() : {};
+  if(st.facingMode === 'user'){
+    try{
+      const devs = (await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='videoinput');
+      const back = devs.filter(d=>/back|rear|rück|hinten|environment/i.test(d.label));
+      const pick = back.find(d=>!/ultra|wide|tele/i.test(d.label)) || back[0] || (devs.length>1?devs[devs.length-1]:null);
+      if(pick && pick.deviceId!==st.deviceId){
+        stream.getTracks().forEach(t=>t.stop());
+        stream = await navigator.mediaDevices.getUserMedia({video:Object.assign({deviceId:{exact:pick.deviceId}},base), audio:false});
+      }
+    }catch(e){}
+  }
+  try{ const t = stream.getVideoTracks()[0], cap = t.getCapabilities ? t.getCapabilities() : {};
+    const adv = []; if(cap.focusMode && cap.focusMode.includes('continuous')) adv.push({focusMode:'continuous'});
+    if(adv.length) await t.applyConstraints({advanced:adv}); }catch(e){}
+  return stream;
+}
+async function startBarcodeScan(targetId, statusId){
+  const status = document.getElementById(statusId);
+  const setSt = (t,c)=>{ if(status){ status.textContent=t; status.className='status-line '+(c||''); } };
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ setSt('Kamera nicht verfügbar. Bitte Foto aufnehmen oder manuell eintragen.','err'); return; }
+  const ov = document.getElementById('scanOverlay'), vid = document.getElementById('scanVideo');
+  ov.style.display = 'flex'; _scanRun = true;
+  try{
+    _scanStream = await pickBackCamera();
+    vid.setAttribute('playsinline',''); vid.muted = true; vid.srcObject = _scanStream; await vid.play();
+    const tr = _scanStream.getVideoTracks()[0], cap = tr.getCapabilities ? tr.getCapabilities() : {};
+    const tb = document.getElementById('scanTorch'); tb.hidden = !cap.torch; tb.dataset.on = '';
+    const bd = await getBD();
+    if(!bd && !getZX()){ setSt('Scan-Bibliothek nicht geladen (kein Internet?). Bitte Foto aufnehmen.','err'); stopBarcodeScan(); return; }
+    const cv = document.createElement('canvas'); let phase = 0;
+    const loop = async ()=>{
+      if(!_scanRun) return;
+      if(vid.readyState >= 2 && vid.videoWidth){
+        const vw = vid.videoWidth, vh = vid.videoHeight;
+        // abwechselnd mittlerer Streifen (schnell), ganzes Bild, mittlerer Streifen gedreht
+        const modes = [[0,vh*0.25,vw,vh*0.5,false],[0,0,vw,vh,false],[vw*0.25,0,vw*0.5,vh,true]];
+        const [x,y,w,h,rot] = modes[phase++ % modes.length];
+        const tmp = document.createElement('canvas'); tmp.width = vw; tmp.height = vh; tmp.getContext('2d').drawImage(vid,0,0);
+        const c = cropCanvas(tmp,x,y,w,h,1280,rot);
+        let code = null;
+        try{ if(bd){ const r = await bd.detect(c); if(r.length) code = r[0].rawValue; } }catch(e){}
+        if(!code) code = zxDecodeCanvas(c);
+        if(code){
+          const el = document.getElementById(targetId);
+          if(el){ el.value = code; el.dispatchEvent(new Event('input')); }
+          setSt('✓ Erkannt: '+code,'ok');
+          try{ navigator.vibrate && navigator.vibrate(60); }catch(e){}
+          stopBarcodeScan(); return;
+        }
+      }
+      setTimeout(loop, 40);
+    };
+    loop();
+  }catch(err){
+    setSt('Kamera fehlgeschlagen ('+String(err.message||err).slice(0,60)+'). Bitte Foto aufnehmen oder manuell eintragen.','err');
+    stopBarcodeScan();
+  }
+}
+function stopBarcodeScan(){
+  _scanRun = false;
+  document.getElementById('scanOverlay').style.display = 'none';
+  try{ if(_scanStream) _scanStream.getTracks().forEach(t=>t.stop()); }catch(e){}
+  _scanStream = null;
+}
+async function toggleTorch(){
+  try{ const t = _scanStream.getVideoTracks()[0], b = document.getElementById('scanTorch'); const on = b.dataset.on!=='1';
+    await t.applyConstraints({advanced:[{torch:on}]}); b.dataset.on = on?'1':''; b.textContent = on?'Licht aus':'Licht an'; }catch(e){}
+}
+
+/* ---------------- BARCODE SCAN ---------------- */
 async function tryDecodeFromDataUrl(dataUrl, targetId, statusId){
   const st = statusId ? document.getElementById(statusId) : null;
   const el = document.getElementById(targetId);
@@ -1435,7 +1559,7 @@ function bindOnePhotoSlot(prefix, obj, decodeTargetId, statusId){
       if(th){ th.src = url; th.classList.remove('empty'); }
       obj.photos[0] = url;
       saveDraft(); updateStepCompletionUI();
-      if(decodeTargetId) tryDecodeFromDataUrl(url, decodeTargetId, statusId);
+      if(decodeTargetId) tryDecodeFromDataUrl(file, decodeTargetId, statusId);
     });
   });
   if(obj.photos[0]){ const t=document.getElementById(`thumb-${prefix}-1`); if(t) t.src=obj.photos[0]; }
@@ -1453,7 +1577,7 @@ function bindTwoPhotoSlots(prefix, obj, decodeTargetId, statusId, onPhoto){
         if(th){ th.src = url; th.classList.remove('empty'); }
         obj.photos[idx-1] = url;
         saveDraft(); updateStepCompletionUI();
-        if(decodeTargetId) tryDecodeFromDataUrl(url, decodeTargetId, statusId);
+        if(decodeTargetId) tryDecodeFromDataUrl(file, decodeTargetId, statusId);
         if(onPhoto) onPhoto(url);
       });
     });
