@@ -1293,7 +1293,9 @@ async function dlmsRun(opt,fn){
     /* opt.clients: mehrere Clients der Reihe nach (z. B. öffentlich 16, dann 32 mit Passwort) – gemerkter zuerst.
        Wichtig: erst HDLC verbinden UND anmelden; scheitert die Anmeldung, zum nächsten Client (B40 nimmt HDLC auf
        Client 16 an, lehnt aber die öffentliche Anmeldung ab – dann muss Client 32 mit Passwort drankommen). */
-    let cls=opt.clients||[opt.client];if(pr.cl&&cls.includes(pr.cl))cls=[pr.cl,...cls.filter(x=>x!==pr.cl)];
+    let cls=opt.clients||[opt.client];
+    if(cls.length>1&&pwList().length)cls=[32,...cls.filter(x=>x!==32)];   /* mit Passwort gleich Client 32 (der B40 beantwortet die öffentliche Anmeldung nicht) */
+    if(pr.cl&&cls.includes(pr.cl))cls=[pr.cl,...cls.filter(x=>x!==pr.cl)];
     for(let ci=0;ci<cls.length&&chosen==null;ci++){const cl=cls[ci];
       if(cl!==16&&!pwList().length){log('INFO',`DLMS: Client ${cl} übersprungen – kein Passwort eingetragen`);continue;}
       if(ci){await d.close();await IECP.endE();await IECP.handshake(opt.hs);await IECP.modeE();}   /* für den nächsten Client frisch */
@@ -1301,13 +1303,14 @@ async function dlmsRun(opt,fn){
       for(const s of [...new Set([pr[key],...(cl===16?opt.servers:[1,17])].filter(x=>x!=null))]){status(`DLMS: Verbindungsaufbau (Client ${cl}, Server-Adresse ${s}) …`);if(await d.connect(s,cl)){s2=s;break;}}
       if(s2==null)continue;   /* HDLC nicht verbunden → nächster Client */
       hdlcOk=true;let ok=false;
-      if(cl===16){ok=await d.assoc(null);if(ok)log('INFO','DLMS: öffentliche Verbindung (Client 16)');}
+      /* Anmeldung; bleibt sie ohne Antwort (Timeout) oder wird abgelehnt, zum nächsten Client statt hart abzubrechen */
+      if(cl===16){try{ok=await d.assoc(null);}catch(e){log('INFO',`DLMS: Client 16 ohne Antwort (${e.message})`);ok=false;}if(ok)log('INFO','DLMS: öffentliche Verbindung (Client 16)');}
       else{const list=pwList();
         for(let i=0;i<list.length&&!ok;i++){if(i){await d.close();await IECP.endE();await IECP.handshake(opt.hs);await IECP.modeE();if(!(await d.connect(s2,cl))){s2=null;break;}}
           status(`DLMS: Anmeldung${list.length>1?` (Passwort ${i+1}/${list.length})`:''} …`);
-          if(await d.assoc(list[i])){ok=true;pwPref(list[i]);log('INFO',`DLMS-Anmeldung OK (Client ${cl}, LLS${list.length>1?`, Passwort ${i+1} von ${list.length}`:''})`);}}}
+          try{if(await d.assoc(list[i])){ok=true;pwPref(list[i]);log('INFO',`DLMS-Anmeldung OK (Client ${cl}, LLS${list.length>1?`, Passwort ${i+1} von ${list.length}`:''})`);}}catch(e){log('WARN',`DLMS: Anmeldung Client ${cl} Fehler (${e.message})`);}}}
       if(ok&&s2!=null){srv=s2;opt.client=cl;chosen=cl;if(pr[key]!==s2)dlPref({[key]:s2});if(cls.length>1&&pr.cl!==cl)dlPref({cl});}
-      else log('INFO',`DLMS: Client ${cl} verbindet, aber Anmeldung abgelehnt`+(ci<cls.length-1?' – nächster Client':''));}
+      else log('INFO',`DLMS: Client ${cl} verbindet, aber Anmeldung nicht möglich`+(ci<cls.length-1?' – nächster Client':''));}
     if(chosen==null){
       if(!hdlcOk)throw Object.assign(new Error(cls.length>1&&!pwList().length?'Zähler antwortet nicht auf die öffentliche Verbindung – bitte Zählerpasswort unter ⚙ eintragen und nochmal versuchen.':'Zähler antwortet nicht im HDLC-Modus (Mode E). Kopf richtig aufgesetzt? Details unter Mehr → Protokoll.'),{noHdlc:true});
       throw new Error(pwList().length?'DLMS: Anmeldung von allen Clients abgelehnt – Passwort unter ⚙ prüfen':'DLMS: Zähler verlangt ein Passwort – unter ⚙ eintragen');}
