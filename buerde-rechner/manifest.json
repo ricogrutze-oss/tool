@@ -2,7 +2,7 @@
   "id": "buerde-rechner",
   "name": "Bürde Rechner",
   "short_name": "Bürde",
-  "description": "Bürde, Messpfad-Fehler und Stromwandler-Prüfprotokoll in einer App",
+  "description": "Bürde Strom, Bürde Spannung (mit Spannungsfall) und Stromwandler-Prüfprotokoll in einer App",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

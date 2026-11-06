@@ -50,6 +50,20 @@
             .res-highlight-row { background-color: #e7eff6 !important; -webkit-print-color-adjust: exact; }
             .print-footer { display: block !important; text-align: right; font-size: 0.75rem; margin-top: 40px; padding-top: 10px; border-top: 1px solid #ddd; }
         }
+
+        /* Vorschläge */
+        .vs-wrap { display: none; }
+        .vs-box { background: var(--tb-panel2, #f8f9fa); border: 1px solid var(--tb-edge, #dee2e6); border-radius: 10px; padding: 14px 16px; margin: 12px 0; font-size: 0.92rem; }
+        .vs-box h6 { font-weight: bold; margin: 0 0 8px; }
+        .vs-box table { width: 100%; font-size: 0.85rem; margin: 8px 0; border-collapse: collapse; }
+        .vs-box td, .vs-box th { padding: 5px 6px; border-bottom: 1px solid var(--tb-edge, #dee2e6); text-align: left; }
+        .vs-box tr.vs-ok td { font-weight: bold; color: var(--tb-green, #198754); }
+        .vs-box tr.vs-rec td { background: color-mix(in srgb, var(--tb-green, #198754) 14%, transparent); }
+        .vs-hint { font-size: 0.8rem; opacity: .75; }
+        .vs-title { font-weight: bold; text-transform: uppercase; margin: 18px 0 4px; font-size: 0.95rem; }
+        .stat-box { background: var(--tb-panel2, #f8f9fa); border: 1px solid var(--tb-edge, #dee2e6); border-radius: 10px; color: var(--tb-text, inherit); }
+        .stat-label { color: var(--tb-dim, #6c757d); }
+        .text-muted { color: var(--tb-dim, #6c757d) !important; }
         .header-print { display: none; }
         .print-footer { display: none; }
     </style>
@@ -122,7 +136,7 @@ body{background:var(--tb-bg);color:var(--tb-text)}
 <div class="container">
     <div class="card no-print">
         <div class="header-bg">
-            <h4 class="mb-0">Bürde-Rechner</h4>
+            <h4 class="mb-0">Bürde Strom</h4>
         </div>
         
         <div class="nav-mode">
@@ -151,6 +165,7 @@ body{background:var(--tb-bg);color:var(--tb-text)}
                         <option value="2.5" selected>2,5 mm²</option>
                         <option value="4">4 mm²</option>
                         <option value="6">6 mm²</option>
+                        <option value="10">10 mm²</option>
                     </select>
                 </div>
                 <div class="col-6">
@@ -201,20 +216,21 @@ body{background:var(--tb-bg);color:var(--tb-text)}
             
             <div class="row mb-4">
                 <div class="col-6">
-                    <div class="p-3 border rounded bg-light">
-                        <small class="text-muted d-block text-uppercase">Ist-Leistung (S)</small>
+                    <div class="p-3 stat-box">
+                        <small class="stat-label d-block text-uppercase">Ist-Leistung (S)</small>
                         <span id="prot_sist" class="fw-bold fs-5">-</span>
                     </div>
                 </div>
                 <div class="col-6">
-                    <div class="p-3 border rounded bg-light">
-                        <small class="text-muted d-block text-uppercase">Widerstand (R)</small>
+                    <div class="p-3 stat-box">
+                        <small class="stat-label d-block text-uppercase">Widerstand (R)</small>
                         <span id="prot_res" class="fw-bold fs-5">-</span>
                     </div>
                 </div>
             </div>
 
             <div id="res_error_display" class="error-note shadow-sm"></div>
+            <div id="vorschlaege" class="vs-wrap no-print"></div>
             
             <div id="norm_table_container"></div>
 
@@ -254,6 +270,7 @@ function updateInfo() {
 function clearAll() {
     document.getElementById('main-input').value = '';
     document.getElementById('result_box').style.display = 'none';
+    var vb = document.getElementById('vorschlaege'); if (vb) { vb.style.display = 'none'; vb.innerHTML = ''; }
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -303,10 +320,10 @@ function calculate() {
         devElement.className = "text-success-bold";
     }
 
-    showResult(sIst, last, wc);
+    showResult(sIst, last, wc, dist);
 }
 
-function showResult(sIst, last, wc) {
+function showResult(sIst, last, wc, dist) {
     document.getElementById('result_box').style.display = 'block';
     const amp = document.getElementById('res_ampel');
     const errDisp = document.getElementById('res_error_display');
@@ -337,7 +354,95 @@ function showResult(sIst, last, wc) {
             </tbody>
         </table>`;
     
+    renderVorschlaege(sIst, last, dist);
     document.getElementById('result_box').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ---------- Vorschläge, wenn die Bürde nicht im Bereich 25-100 % liegt ----------
+const Q_LIST = [1.5, 2.5, 4, 6, 10];
+const E12 = (function () {
+    const out = [];
+    [0.01, 0.1, 1, 10, 100].forEach(d => [1, 1.2, 1.5, 1.8, 2.2, 2.7, 3.3, 3.9, 4.7, 5.6, 6.8, 8.2].forEach(m => out.push(+(m * d).toPrecision(3))));
+    return out.sort((a, b) => a - b);
+})();
+function fmtDE(x, d) { return x.toLocaleString('de-DE', { minimumFractionDigits: d, maximumFractionDigits: d }); }
+
+function renderVorschlaege(sIst, last, dist) {
+    const box = document.getElementById('vorschlaege');
+    if (!box) return;
+    if (last >= 25 && last <= 100) { box.style.display = 'none'; box.innerHTML = ''; return; }
+
+    const q = parseFloat(document.getElementById('querschnitt').value);
+    const i = parseFloat(document.getElementById('isec').value);
+    const sn = parseFloat(document.getElementById('nenn').value);
+    const R_ue = (2 * 1) / (56 * 2.5);
+    const i2 = i * i;
+    const hoch = last > 100;
+    let h = '<div class="vs-title">Vorschläge – ' + (hoch ? 'Bürde zu hoch' : 'Bürde zu niedrig') + '</div>';
+
+    // 1) Querschnitt ändern (nur wenn eine Länge bekannt ist)
+    let passend = [];
+    if (dist > 0) {
+        let rows = '';
+        Q_LIST.forEach(qq => {
+            const s = i2 * ((2 * dist) / (56 * qq) + R_ue);
+            const p = s / sn * 100;
+            const ok = p >= 25 && p <= 100;
+            if (ok) passend.push({ q: qq, s: s, p: p });
+            rows += '<tr class="' + (ok ? 'vs-ok' : '') + '"><td>' + String(qq).replace('.', ',') + ' mm²' + (qq === q ? ' (aktuell)' : '') + '</td><td>' +
+                fmtDE(s, 2) + ' VA</td><td>' + fmtDE(p, 1) + ' %</td><td>' + (ok ? '✓ passt' : (p > 100 ? 'zu hoch' : 'zu niedrig')) + '</td></tr>';
+        });
+        let best = null;
+        passend.forEach(o => { if (!best || Math.abs(o.p - 62.5) < Math.abs(best.p - 62.5)) best = o; });
+        h += '<div class="vs-box"><h6>Option 1: Querschnitt anpassen</h6>';
+        if (best) {
+            h += 'Bei <strong>' + fmtDE(dist, 1) + ' m</strong> passt der Querschnitt <strong>' + String(best.q).replace('.', ',') + ' mm²</strong> (Bürde ' + fmtDE(best.s, 2) + ' VA = ' + fmtDE(best.p, 1) + ' %).';
+        } else if (hoch) {
+            h += 'Bei <strong>' + fmtDE(dist, 1) + ' m</strong> reicht auch 10 mm² nicht aus. Leitung kürzen oder Option 2 wählen.';
+        } else {
+            h += 'Bei <strong>' + fmtDE(dist, 1) + ' m</strong> bringt kein Standardquerschnitt die Bürde in den Bereich. Siehe Bürdewiderstand (Option 2).';
+        }
+        h += '<table><thead><tr><th>Querschnitt</th><th>Bürde</th><th>Auslastung</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
+        h += '<div class="vs-hint">Mindestquerschnitt laut Anschlussbedingungen des Netzbetreibers beachten. Zeilen in Grün liegen im Bereich 25–100 %.</div></div>';
+    }
+
+    if (hoch) {
+        // 2) Alternativen bei zu hoher Bürde
+        h += '<div class="vs-box"><h6>Option 2: Rahmenbedingungen ändern</h6><ul class="mb-0">';
+        const Lmax = (qq) => Math.max(0, ((sn / i2) - R_ue) * 56 * qq / 2);
+        h += '<li>Leitung kürzen: bei ' + String(q).replace('.', ',') + ' mm² sind höchstens <strong>' + fmtDE(Lmax(q), 1) + ' m</strong> möglich (100 %), bei 10 mm² <strong>' + fmtDE(Lmax(10), 1) + ' m</strong>.</li>';
+        if (sn < 10) { const p10 = sIst / 10 * 100; h += '<li>Wandler mit höherer Nennbürde (<strong>10 VA</strong>) verwenden: dann ' + fmtDE(p10, 1) + ' % Auslastung' + (p10 > 100 ? ' (reicht allein nicht, mit Querschnitt oder Länge kombinieren)' : '') + '.</li>'; }
+        if (i > 1) h += '<li>Sekundärstrom <strong>1 A</strong> statt 5 A: die Bürde sinkt auf ein Fünfundzwanzigstel (' + fmtDE(sIst / 25, 2) + ' VA, ' + fmtDE(sIst / 25 / sn * 100, 1) + ' %). Dann Auslastung neu prüfen, sie kann unter 25 % fallen.</li>';
+        h += '</ul></div>';
+    } else {
+        // 2) Bürdewiderstand in Reihe bei zu niedriger Bürde
+        const Rges = sIst / i2;
+        const sZiel = 0.40 * sn;
+        const R25 = Math.max(0, (0.25 * sn - sIst) / i2);
+        const Rziel = Math.max(0, (sZiel - sIst) / i2);
+        let cand = null;
+        E12.forEach(e => {
+            const p = (sIst + i2 * e) / sn * 100;
+            if (p >= 25 && p <= 100 && (!cand || Math.abs(Math.log(e / Rziel)) < Math.abs(Math.log(cand / Rziel)))) cand = e;
+        });
+        h += '<div class="vs-box"><h6>Option 2: Bürdewiderstand in Reihe</h6>';
+        if (cand !== null) {
+            const sNeu = sIst + i2 * cand;
+            const pNeu = sNeu / sn * 100;
+            const pR = i2 * cand;
+            h += 'Zusätzlicher Widerstand in Reihe zur Messleitung: <strong>' + fmtDE(cand, cand < 1 ? 3 : 2) + ' Ω</strong> (E12-Wert)<ul class="mt-2 mb-0">' +
+                '<li>Mindestwert für 25 %: <strong>' + fmtDE(R25, 3) + ' Ω</strong>, rechnerisch für ca. 40 %: ' + fmtDE(Rziel, 3) + ' Ω</li>' +
+                '<li>Damit: ' + fmtDE(sNeu, 2) + ' VA = <strong>' + fmtDE(pNeu, 1) + ' %</strong> von ' + sn + ' VA</li>' +
+                '<li>Verlustleistung im Widerstand: ' + fmtDE(pR, 2) + ' W, einen Typ mit mindestens <strong>' + fmtDE(Math.max(1, Math.ceil(pR * 2)), 0) + ' W</strong> Nennleistung wählen (doppelte Reserve)</li>' +
+                '<li>Gesamtwiderstand des Messkreises danach: ' + fmtDE(Rges + cand, 3) + ' Ω</li></ul>';
+        } else {
+            h += 'Mit einem Zusatzwiderstand ist die Bürde nicht sinnvoll einstellbar. Prüfe Nennbürde und Sekundärstrom.';
+        }
+        h += '<div class="vs-hint mt-2">Den Widerstand an Wandler- oder Zählerseite in die Stromschleife einbauen, niemals den Stromkreis dabei öffnen. Gemessenen Wert nach dem Einbau mit der Messung gegenprüfen.</div></div>';
+        if (sn > 5) h += '<div class="vs-box"><h6>Option 3: Wandler mit kleinerer Nennbürde</h6>Bei <strong>5 VA</strong> Nennbürde läge die Auslastung bei ' + fmtDE(sIst / 5 * 100, 1) + ' %.</div>';
+    }
+    box.innerHTML = h;
+    box.style.display = 'block';
 }
 
 updateInfo();

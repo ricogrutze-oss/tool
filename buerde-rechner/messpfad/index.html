@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Messpfad-Fehlerrechner</title>
+<title>Bürde Spannung</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   :root {
@@ -226,9 +226,9 @@
     margin-bottom: 14px;
   }
 
-  .status-ok     { background: #0d2e1e; border: 1px solid var(--ok);    color: var(--ok); }
-  .status-warn   { background: #2e2700; border: 1px solid var(--warn);  color: var(--warn); }
-  .status-danger { background: #2e0d0d; border: 1px solid var(--danger);color: var(--danger); }
+  .status-ok     { background: var(--tb-green-bg); border: 1px solid var(--ok);    color: var(--ok); }
+  .status-warn   { background: var(--tb-orange-bg); border: 1px solid var(--warn);  color: var(--warn); }
+  .status-danger { background: var(--tb-red-bg); border: 1px solid var(--danger);color: var(--danger); }
 
   .detail-row {
     display: flex;
@@ -269,9 +269,9 @@
     margin-left: 6px;
     vertical-align: middle;
   }
-  .badge-ok     { background: #0d2e1e; color: var(--ok); }
-  .badge-warn   { background: #2e2700; color: var(--warn); }
-  .badge-danger { background: #2e0d0d; color: var(--danger); }
+  .badge-ok     { background: var(--tb-green-bg); color: var(--ok); }
+  .badge-warn   { background: var(--tb-orange-bg); color: var(--warn); }
+  .badge-danger { background: var(--tb-red-bg); color: var(--danger); }
 
   #noResult {
     text-align: center;
@@ -325,7 +325,7 @@ button:not(:disabled):active{opacity:.85}
 <body>
 
 <header>
-  <h1>⚡ Messpfad-Fehlerrechner</h1>
+  <h1>⚡ Bürde Spannung</h1>
   <p>Spannungswandler · Sekundärleitung · Phasenfehler</p>
 </header>
 
@@ -841,13 +841,70 @@ function berechnen() {
   const fehler_05  = Math.abs(fehlerBei(0.5));
   const fehler_10  = Math.abs(fehlerBei(1.0));
 
-  lastResult = { U2, S_Z, C_ges, R, Z_ein, X_C, delta_U_deg, delta_U_ratio,
+  lastResult = { U2, S_Z, S_kap, rho, C_ges, R, Z_ein, X_C, delta_U_deg, delta_U_ratio, delta_U_rad,
                  buerde_pct, nennBu, fehler_025, fehler_05, fehler_10, grenze,
                  zaehKl, wandKl, L, A, C_pm, C_faktor, omega, fehlerBei };
 
   renderErgebnis(lastResult);
   renderCharts(lastResult);
   showTab('ergebnis');
+}
+
+
+// ---------- Spannungsfall-Grenze und Vorschläge ----------
+const SPF_GRENZE = 0.1;                       // % der Sekundärspannung
+const Q_ALLE = [1.5, 2.5, 4, 6, 10, 16, 25];
+const NENN_STD = [10, 15, 20, 25, 30, 50, 100];
+function fmtD(x, d) { return x.toLocaleString('de-DE', { minimumFractionDigits: d, maximumFractionDigits: d }); }
+
+function vorschlaegeSpannung(r) {
+  // Spannungsfall in % bei Last S (VA), Querschnitt A (mm²), Länge L (m)
+  const spf = (S, A, L) => S * r.rho * 2 * L / A / (r.U2 * r.U2) * 100;
+  const S_ges = r.S_Z + r.S_kap;
+  const spfOK = r.delta_U_ratio <= SPF_GRENZE;
+  const bu = r.buerde_pct;
+  if (spfOK && bu >= 25 && bu <= 100) return '';
+
+  let h = '<div class="section"><div class="section-title">Vorschläge</div>';
+
+  if (!spfOK) {
+    // 1) Querschnitt
+    let rows = '', best = null;
+    Q_ALLE.forEach(a => {
+      const e = spf(r.S_Z, a, r.L), ok = e <= SPF_GRENZE;
+      if (ok && !best) best = a;
+      rows += `<div class="detail-row"><span class="detail-key">${String(a).replace('.', ',')} mm²${a === r.A ? ' (aktuell)' : ''}</span><span class="detail-val ${ok ? 'ok' : 'danger'}">${ok ? '✓' : '✗'} ${fmtD(e, 4)} %</span></div>`;
+    });
+    const Lmax = SPF_GRENZE / 100 * r.U2 * r.U2 * r.A / (r.S_Z * r.rho * 2);
+    h += `<div style="font-size:13px;line-height:1.6;margin-bottom:6px"><b>Spannungsfall senken</b> (Grenze ${fmtD(SPF_GRENZE, 1)} %)</div>`;
+    h += `<div style="font-size:13px;line-height:1.6;margin-bottom:8px">`;
+    h += best ? `① <b>Querschnitt erhöhen</b> auf mindestens <b>${String(best).replace('.', ',')} mm²</b> bei ${r.L} m.<br>` : `① Auch 25 mm² reichen bei ${r.L} m nicht aus – Leitung kürzen.<br>`;
+    h += `② <b>Leitung kürzen</b>: bei ${String(r.A).replace('.', ',')} mm² höchstens <b>${fmtD(Lmax, 0)} m</b>.<br>`;
+    if (r.S_Z > 0.1) {
+      const e2 = spf(0.02, r.A, r.L);
+      h += `③ <b>Zähler mit Hilfsversorgung</b> (Ø 0,02 VA) verwenden: Spannungsfall nur noch <b>${fmtD(e2, 4)} %</b> bei gleichem Kabel.<br>`;
+    }
+    h += `</div>${rows}<div class="note" style="margin-top:8px">Bei anderem Querschnitt ändert sich die Kabelkapazität etwas: danach „Berechnen“ erneut tippen und den Phasenfehler prüfen.</div>`;
+  }
+
+  if (bu > 100) {
+    const n = NENN_STD.find(x => x > r.nennBu && S_ges / x * 100 <= 100);
+    h += `<div style="font-size:13px;line-height:1.6;margin:12px 0 4px"><b>Wandler überlastet</b> (${fmtD(bu, 1)} %)</div><div style="font-size:13px;line-height:1.6">` +
+      (n ? `Wandler mit <b>${n} VA</b> Nennbürde einsetzen: Auslastung dann ${fmtD(S_ges / n * 100, 1)} %.` : `Kein Standardwert reicht, Zähler mit geringerem Eigenverbrauch prüfen.`) + `</div>`;
+  } else if (bu < 25) {
+    // Zusatzbürde parallel zum Zähler (Wirkwiderstand) bis mindestens 25 %
+    const S_add = 0.25 * r.nennBu - S_ges;
+    const R_p = r.U2 * r.U2 / S_add;
+    const S_neu = r.S_Z + S_add;
+    const best2 = Q_ALLE.find(a => spf(S_neu, a, r.L) <= SPF_GRENZE);
+    const e_aktuell = spf(S_neu, r.A, r.L);
+    h += `<div style="font-size:13px;line-height:1.6;margin:12px 0 4px"><b>Wandlerbürde unter 25 %</b> (${fmtD(bu, 1)} %)</div><div style="font-size:13px;line-height:1.6">` +
+      `Zusatzbürde parallel zum Zähler: ca. <b>${fmtD(S_add, 2)} VA</b>, das entspricht einem Wirkwiderstand von rund <b>${fmtD(R_p, 0)} Ω</b> (U₂ = ${fmtD(r.U2, 2)} V, mind. ${fmtD(S_add, 1)} W belastbar).<br>` +
+      `Achtung: Der zusätzliche Strom erhöht den Spannungsfall auf <b>${fmtD(e_aktuell, 4)} %</b> bei ${String(r.A).replace('.', ',')} mm².` +
+      (best2 ? (e_aktuell <= SPF_GRENZE ? ' Das ist weiterhin eingehalten.' : ` Dafür reichen mindestens <b>${String(best2).replace('.', ',')} mm²</b> bei ${r.L} m.`) : ' Mit Standardquerschnitten nicht einzuhalten, Leitung kürzen.') +
+      `<br>Alternative: Wandler mit kleinerer Nennbürde wählen.</div>`;
+  }
+  return h + '</div>';
 }
 
 function renderErgebnis(r) {
@@ -889,8 +946,14 @@ function renderErgebnis(r) {
       </div>`;
   }).join('');
 
+  const spfOK = r.delta_U_ratio <= SPF_GRENZE;
+  const spfBar = spfOK
+    ? `<div class="status-bar status-ok">✓ Spannungsfall ${fmtD(r.delta_U_ratio, 4)} % – Grenze ${fmtD(SPF_GRENZE, 1)} % eingehalten</div>`
+    : `<div class="status-bar status-danger">✗ Spannungsfall ${fmtD(r.delta_U_ratio, 4)} % – Grenze ${fmtD(SPF_GRENZE, 1)} % überschritten!</div>`;
+
   el.innerHTML = `
     <div class="status-bar status-${statusKl}">${statusTxt}</div>
+    ${spfBar}
 
     <div class="result-grid">
       <div class="result-card">
@@ -899,9 +962,9 @@ function renderErgebnis(r) {
         <div class="result-unit">durch Kabelkapazität</div>
       </div>
       <div class="result-card">
-        <div class="result-label">Verhältnisfehler</div>
-        <div class="result-value">${r.delta_U_ratio.toFixed(4)}%</div>
-        <div class="result-unit">durch Leitungswiderstand</div>
+        <div class="result-label">Spannungsfall</div>
+        <div class="result-value ${spfOK ? 'ok' : 'danger'}">${r.delta_U_ratio.toFixed(4)}%</div>
+        <div class="result-unit">Grenze ${fmtD(SPF_GRENZE, 1)} % · ${((r.S_Z/r.U2)*r.R*1000).toFixed(1)} mV</div>
       </div>
       <div class="result-card full">
         <div class="result-label">Wandlerbürde-Auslastung</div>
@@ -909,6 +972,8 @@ function renderErgebnis(r) {
         <div class="result-unit">von ${r.nennBu} VA Nennbürde (Soll: 25–100%)</div>
       </div>
     </div>
+
+    ${vorschlaegeSpannung(r)}
 
     <div class="section">
       <div class="section-title">Kabelfehler je cos(φ) · Grenze: ${r.grenze}%</div>
