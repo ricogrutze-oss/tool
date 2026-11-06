@@ -1,23 +1,55 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Elektro Toolbox PRO - Full Calculation</title>
-    <style>
-        :root { --bg: var(--tb-bg); --card: var(--tb-panel); --accent: var(--tb-acc); --orange: var(--tb-orange); --text: var(--tb-text); }
-        body { font-family: sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; }
-        header { background: var(--tb-inset); padding: 20px; text-align: center; border-bottom: 3px solid var(--accent); }
-        .container { padding: 15px; max-width: 600px; margin: auto; }
-        .calc-card { background: var(--card); padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--tb-edge); }
-        h2 { color: var(--orange); margin-top: 0; font-size: 1.2em; border-bottom: 1px solid var(--tb-edge2); padding-bottom: 10px; }
-        label { display: block; margin: 12px 0 5px; font-size: 0.85em; color: #bbb; }
-        input, select { width: 100%; padding: 12px; border-radius: 5px; border: 1px solid var(--tb-edge2); background: var(--tb-panel2); color: var(--tb-text); box-sizing: border-box; font-size: 1em; }
-        button { width: 100%; padding: 15px; background: var(--accent); border: none; color: var(--tb-text); font-weight: bold; border-radius: 5px; margin-top: 20px; cursor: pointer; }
-        .result-box { margin-top: 20px; padding: 15px; background: var(--tb-inset); border-radius: 5px; border-left: 4px solid var(--orange); }
-        .vde-note { font-size: 0.75em; color: #f1c40f; margin-top: 5px; display: block; }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Leitungsberechnung</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:var(--tb-bg,#000);color:var(--tb-text,#f5f5f7);font:16px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,sans-serif;-webkit-font-smoothing:antialiased;padding-bottom:70px}
+header{padding:calc(14px + env(safe-area-inset-top)) 16px 8px;max-width:640px;margin:0 auto}
+h1{font-size:24px;margin:0;letter-spacing:-.02em}
+.sub{color:var(--tb-dim,#98989f);font-size:13px;margin-top:2px}
+main{max-width:640px;margin:0 auto;padding:0 14px}
+.seg{display:flex;background:var(--tb-panel,var(--tb-panel));border-radius:12px;padding:3px;gap:2px;margin:8px 0 14px}
+.seg button{flex:1;border:0;background:transparent;color:var(--tb-dim,#98989f);font:inherit;font-weight:600;font-size:14px;padding:10px 6px;border-radius:9px;cursor:pointer}
+.seg button.on{background:var(--tb-seg,var(--tb-seg));color:var(--tb-text,#f5f5f7);box-shadow:0 2px 6px rgba(0,0,0,.25)}
+.card{background:var(--tb-panel,var(--tb-panel));border-radius:14px;padding:16px;margin-bottom:12px}
+.card h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--tb-dim,#98989f);margin:0 0 6px;font-weight:600}
+label{display:block;font-size:13px;color:var(--tb-dim,#98989f);margin:10px 0 4px}
+input,select{width:100%;font:inherit;font-size:16px;color:var(--tb-text,#f5f5f7);background:var(--tb-panel2,var(--tb-panel2));border:0;border-radius:10px;padding:11px 12px;min-width:0}
+input:focus,select:focus{outline:2px solid var(--tb-acc,var(--tb-acc))}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hint{font-size:12px;color:var(--tb-dim,#98989f);margin-top:4px;line-height:1.35}
+.big{width:100%;border:0;border-radius:14px;background:var(--tb-acc,var(--tb-acc));color:var(--tb-on-acc,#0b1a02);font:inherit;font-weight:700;font-size:17px;padding:15px;margin:4px 0 14px;cursor:pointer}
+.big:active{transform:scale(.98);opacity:.9}
+.status{border-radius:14px;padding:14px 16px;font-weight:700;font-size:17px;margin-bottom:12px}
+.status.ok{background:color-mix(in srgb,var(--tb-green,var(--tb-green)) 18%,transparent);color:var(--tb-green,var(--tb-green))}
+.status.bad{background:color-mix(in srgb,var(--tb-red,var(--tb-red)) 18%,transparent);color:var(--tb-red,var(--tb-red))}
+.status small{display:block;font-weight:500;font-size:13px;margin-top:3px;opacity:.9}
+.chk{display:grid;grid-template-columns:26px 1fr auto;gap:8px;align-items:start;padding:10px 0;border-bottom:.5px solid var(--tb-edge,#38383a)}
+.chk:last-child{border-bottom:0}
+.chk .ic{font-weight:700;font-size:17px;line-height:1.2}
+.chk .ic.ok{color:var(--tb-green,var(--tb-green))}.chk .ic.bad{color:var(--tb-red,var(--tb-red))}.chk .ic.info{color:var(--tb-dim,#98989f)}
+.chk .t{font-weight:600;font-size:15px}
+.chk .d{font-size:12.5px;color:var(--tb-dim,#98989f);margin-top:2px}
+.chk .v{font-weight:700;font-size:15px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.chk .v.ok{color:var(--tb-green,var(--tb-green))}.chk .v.bad{color:var(--tb-red,var(--tb-red))}
+table{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
+th,td{padding:7px 5px;text-align:right;white-space:nowrap;border-bottom:.5px solid var(--tb-edge,#38383a)}
+th:first-child,td:first-child{text-align:left}
+th{font-size:11.5px;color:var(--tb-dim,#98989f);font-weight:600;text-transform:uppercase}
+tr.pass td{color:var(--tb-green,var(--tb-green));font-weight:600}
+tr.rec td{background:color-mix(in srgb,var(--tb-green,var(--tb-green)) 14%,transparent);font-weight:700}
+tr.cur td:first-child::after{content:" (gewählt)";font-weight:400;color:var(--tb-dim,#98989f);font-size:11px}
+.sug{font-size:14px;line-height:1.55}
+.sug li{margin-bottom:5px}
+details summary{cursor:pointer;font-weight:600;color:var(--tb-dim,#98989f);font-size:13px;text-transform:uppercase;letter-spacing:.05em;padding:2px 0}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:.5px solid var(--tb-edge,#38383a);font-size:13.5px}
+.kv span:last-child{font-variant-numeric:tabular-nums;text-align:right}
+.note{font-size:12px;color:var(--tb-dim,#98989f);line-height:1.45;margin:10px 2px}
+.hide{display:none}
+</style>
 <style id="tb-tokens">
 :root{--tb-bg:#000000;--tb-panel:#1c1c1e;--tb-panel2:#2c2c2e;--tb-inset:#121214;--tb-seg:#3a3a3c;--tb-toggle:#39393d;--tb-edge:#38383a;--tb-edge2:#48484a;--tb-acc:#8cc63f;--tb-acc-hi:#9fd652;--tb-acc-dim:#6f9c2e;--tb-on-acc:#0b1a02;--tb-text:#f5f5f7;--tb-dim:#98989f;--tb-green:#30d158;--tb-red:#ff453a;--tb-blue:#64a8ff;--tb-orange:#ff9f0a;--tb-purple:#bf8cff;--tb-cyan:#5ac8fa;color-scheme:dark;--tb-acc-bg:color-mix(in srgb,var(--tb-acc) 16%,var(--tb-panel));--tb-red-bg:color-mix(in srgb,var(--tb-red) 16%,var(--tb-panel));--tb-green-bg:color-mix(in srgb,var(--tb-green) 16%,var(--tb-panel));--tb-blue-bg:color-mix(in srgb,var(--tb-blue) 16%,var(--tb-panel));--tb-orange-bg:color-mix(in srgb,var(--tb-orange) 16%,var(--tb-panel));--tb-purple-bg:color-mix(in srgb,var(--tb-purple) 16%,var(--tb-panel));--tb-cyan-bg:color-mix(in srgb,var(--tb-cyan) 16%,var(--tb-panel));}
 :root[data-theme="light"]{--tb-bg:#f2f2f7;--tb-panel:#ffffff;--tb-panel2:#eeeef3;--tb-inset:#f2f2f7;--tb-seg:#ffffff;--tb-toggle:#e5e5ea;--tb-edge:#d8d8de;--tb-edge2:#c6c6cc;--tb-acc:#6ba31a;--tb-acc-hi:#5d9111;--tb-acc-dim:#4d7a12;--tb-on-acc:#ffffff;--tb-text:#1c1c1e;--tb-dim:#6c6c70;--tb-green:#1f9d46;--tb-red:#d70015;--tb-blue:#0a64d8;--tb-orange:#c76a00;--tb-purple:#7a3fd0;--tb-cyan:#0a7ea4;color-scheme:light}
@@ -61,118 +93,363 @@ button:not(:disabled):active{opacity:.85}
 </script>
 </head>
 <body>
+<header>
+  <h1>Leitungsberechnung</h1>
+  <div class="sub">Querschnitt prüfen oder berechnen · Überlast, Spannungsfall, Kurzschluss, Sicherung</div>
+</header>
+<main>
+  <div class="seg" role="tablist">
+    <button id="m-pruef" class="on" type="button">Querschnitt prüfen</button>
+    <button id="m-rechn" type="button">Querschnitt berechnen</button>
+  </div>
 
-<header><strong>ELEKTRO TOOLBOX PRO</strong></header>
-
-<div class="container">
-    <div class="calc-card">
-        <h2>Leitungsberechnung & Spannungsfall</h2>
-        <span class="vde-note">Gemäß DIN VDE 0100-520 / DIN 18015</span>
-        
-        <label>Stromkreis-Typ:</label>
-        <select id="sys">
-            <option value="230">Wechselstrom (230V / 1~)</option>
-            <option value="400">Drehstrom (400V / 3~)</option>
-        </select>
-
-        <label>Leistung (P) in Watt:</label>
-        <input type="number" id="power" value="11000" placeholder="z.B. 11000">
-
-        <div class="grid-2">
-            <div>
-                <label>cos φ:</label>
-                <input type="number" id="cos" value="1.0" step="0.01">
-            </div>
-            <div>
-                <label>Länge (m):</label>
-                <input type="number" id="length" value="25">
-            </div>
-        </div>
-
-        <label>Querschnitt (A) in mm²:</label>
-        <select id="area">
-            <option value="1.5">1,5</option>
-            <option value="2.5">2,5</option>
-            <option value="4">4,0</option>
-            <option value="6">6,0</option>
-            <option value="10">10,0</option>
-            <option value="16">16,0</option>
-            <option value="25">25,0</option>
-            <option value="35">35,0</option>
-            <option value="50">50,0</option>
-            <option value="70">70,0</option>
-            <option value="95">95,0</option>
-            <option value="120">120,0</option>
-            <option value="150">150,0</option>
-            <option value="185">185,0</option>
-            <option value="240">240,0</option>
-        </select>
-
-        <label>Material:</label>
-        <select id="mat">
-            <option value="56">Kupfer (Cu)</option>
-            <option value="35">Aluminium (Al)</option>
-        </select>
-
-        <button onclick="calculateAll()">BERECHNEN</button>
-
-        <div id="results" class="result-box" style="display:none;">
-            <strong>Ergebnisse:</strong>
-            <div id="out-i">Strom (Ib): -</div>
-            <div id="out-u">Spannungsfall (ΔU): -</div>
-            <div id="out-p">Prozent (%): -</div>
-            <div id="out-status" style="font-weight:bold; margin-top:10px;"></div>
-        </div>
+  <div class="card">
+    <h2>Last</h2>
+    <label>Stromkreis</label>
+    <select id="sys"><option value="230">Wechselstrom 230 V (1~)</option><option value="400" selected>Drehstrom 400 V (3~)</option></select>
+    <div class="row2">
+      <div><label>Leistung P (W)</label><input id="power" type="number" inputmode="decimal" value="11000" min="1"></div>
+      <div><label>cos φ</label><input id="cos" type="number" inputmode="decimal" value="1" step="0.01" min="0.1" max="1"></div>
     </div>
-</div>
+    <label>Leitungslänge (m, einfach)</label>
+    <input id="length" type="number" inputmode="decimal" value="25" min="1">
+  </div>
+
+  <div class="card">
+    <h2>Leitung</h2>
+    <div class="row2">
+      <div><label>Material</label><select id="mat"><option value="Cu">Kupfer (Cu)</option><option value="Al">Aluminium (Al)</option></select></div>
+      <div id="qs-wrap"><label>Querschnitt (mm²)</label><select id="area"></select></div>
+    </div>
+    <label>Verlegeart</label>
+    <select id="verl">
+      <option value="B1">B1 – Einzeladern im Rohr/Kanal auf der Wand</option>
+      <option value="B2" selected>B2 – Mehraderleitung im Rohr/Kanal, NYM in gedämmter Wand</option>
+      <option value="C">C – Mantelleitung/Kabel direkt auf Wand, Decke, unter Putz</option>
+      <option value="E">E – frei in Luft, Kabelpritsche, Kabelleiter</option>
+    </select>
+    <div class="row2">
+      <div><label>Umgebungstemperatur</label><select id="tamb"></select></div>
+      <div><label>Häufung (Stromkreise nebeneinander)</label><select id="nh"></select></div>
+    </div>
+    <label>Iz manuell (A, optional)</label>
+    <input id="izman" type="number" inputmode="decimal" placeholder="z. B. Wert aus Kabeltabelle (Erdkabel, &gt; 120 mm²)">
+    <div class="hint">Tabellenwerte: PVC-isoliert, 70 °C, DIN VDE 0298-4 (Cu). Für Erdverlegung oder andere Kabel den Grundwert Iz selbst eintragen, Temperatur- und Häufungsfaktor werden darauf angewendet. Aluminium wird als Näherung mit 0,78 × Cu gerechnet.</div>
+  </div>
+
+  <div class="card">
+    <h2>Schutzeinrichtung</h2>
+    <div class="row2">
+      <div><label>Typ</label>
+        <select id="ptype">
+          <option value="B">LS-Schalter B</option><option value="C" selected>LS-Schalter C</option><option value="D">LS-Schalter D</option>
+          <option value="G5">gG-Sicherung (5 s)</option><option value="G04">gG-Sicherung (0,4 s, Endstromkreis)</option>
+        </select></div>
+      <div><label>Nennstrom In (A)</label><select id="inom"></select></div>
+    </div>
+    <div class="row2">
+      <div><label>Schaltvermögen (kA)</label><input id="icn" type="number" inputmode="decimal" value="6" step="0.5" min="1"></div>
+      <div><label>Abschaltstrom Ia (A, optional)</label><input id="iaman" type="number" inputmode="decimal" placeholder="aus Kennlinie"></div>
+    </div>
+    <div class="hint" id="ia-hint"></div>
+  </div>
+
+  <div class="card">
+    <h2>Netz am Anfang der Leitung</h2>
+    <div class="row2">
+      <div><label>Ik max, 3-polig (kA)</label><input id="ik3" type="number" inputmode="decimal" value="6" step="0.5" min="0.1"></div>
+      <div><label>Ik min, 1-polig L–PE (kA)</label><input id="ik1" type="number" inputmode="decimal" value="1.5" step="0.1" min="0.05"></div>
+    </div>
+    <div class="hint">Werte vom Netzbetreiber oder vom Verteiler am Leitungsanfang (Ik 1-polig = U₀ / Schleifenimpedanz Zs).</div>
+    <label>Zulässiger Spannungsfall</label>
+    <select id="dulim"><option value="1.5">1,5 %</option><option value="2">2 %</option><option value="3" selected>3 %</option><option value="4">4 %</option><option value="5">5 %</option></select>
+    <label>Rechenwiderstand für Spannungsfall</label>
+    <select id="rtemp"><option value="70" selected>bei 70 °C Betriebstemperatur (konservativ)</option><option value="20">bei 20 °C</option></select>
+  </div>
+
+  <button class="big" id="go" type="button">BERECHNEN</button>
+  <div id="out"></div>
+  <div class="note">Grundlagen: DIN VDE 0100-430 (Überlast, Kurzschluss), -520 (Strombelastbarkeit), -410 (Abschaltung), DIN VDE 0298-4. Die Ergebnisse ersetzen keine Prüfung durch eine Elektrofachkraft; Herstellerkennlinien und Anschlussbedingungen des Netzbetreibers haben Vorrang.</div>
+</main>
 
 <script>
-function calculateAll() {
-    const P = parseFloat(document.getElementById('power').value);
-    const U = parseFloat(document.getElementById('sys').value);
-    const cosPhi = parseFloat(document.getElementById('cos').value);
-    const L = parseFloat(document.getElementById('length').value);
-    const A = parseFloat(document.getElementById('area').value);
-    const kappa = parseFloat(document.getElementById('mat').value);
-    
-    let Ib, deltaU, deltaU_pct;
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
 
-    // 1. Stromstärke berechnen (Ib)
-    if (U == 400) {
-        // Drehstrom: Ib = P / (U * sqrt(3) * cosPhi)
-        Ib = P / (U * Math.sqrt(3) * cosPhi);
-    } else {
-        // Wechselstrom: Ib = P / (U * cosPhi)
-        Ib = P / (U * cosPhi);
+  // ---------- Daten (Cu, PVC, 70 °C, 30 °C; DIN VDE 0298-4, Spalten je Querschnitt) ----------
+  var QS = [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120];
+  var QS_EXTRA = [150, 185, 240];
+  var IZ = {
+    B1: { 2: [17.5, 24, 32, 41, 57, 76, 101, 125, 151, 192, 232, 269], 3: [15.5, 21, 28, 36, 50, 68, 89, 110, 134, 171, 207, 239] },
+    B2: { 2: [16.5, 23, 30, 38, 52, 69, 90, 111, 133, 168, 201, 232], 3: [15, 20, 27, 34, 46, 62, 80, 99, 118, 149, 179, 206] },
+    C:  { 2: [19.5, 27, 36, 46, 63, 85, 112, 138, 168, 213, 258, 299], 3: [17.5, 24, 32, 41, 57, 76, 96, 119, 144, 184, 223, 259] },
+    E:  { 2: [22, 30, 40, 51, 70, 94, 119, 148, 180, 232, 282, 328], 3: [18.5, 25, 34, 43, 60, 80, 101, 126, 153, 196, 238, 276] }
+  };
+  var FT = { 10: 1.22, 15: 1.17, 20: 1.12, 25: 1.06, 30: 1, 35: 0.94, 40: 0.87, 45: 0.79, 50: 0.71, 55: 0.61, 60: 0.5 };
+  var FH = { 1: 1, 2: 0.8, 3: 0.7, 4: 0.65, 5: 0.6, 6: 0.57, 8: 0.52, 10: 0.48, 12: 0.45, 14: 0.43 };
+  var IN_LS = [6, 10, 13, 16, 20, 25, 32, 40, 50, 63, 80, 100, 125];
+  var IN_GG = [6, 10, 16, 20, 25, 32, 35, 40, 50, 63, 80, 100, 125, 160, 200, 250];
+  var K_PVC = { Cu: 115, Al: 76 };            // Kurzschlusskonstante, PVC 70 -> 160 °C
+  var X1 = 0.00008;                            // Reaktanz je Leiter, Ω/m
+  var AL_FAKTOR = 0.78;                        // Näherung Iz(Al) / Iz(Cu)
+
+  var PT = {
+    B: { name: 'LS B', ls: true, f: 5, icn: 6 }, C: { name: 'LS C', ls: true, f: 10, icn: 6 }, D: { name: 'LS D', ls: true, f: 20, icn: 6 },
+    G5: { name: 'gG (5 s)', ls: false, t: 5, icn: 50 }, G04: { name: 'gG (0,4 s)', ls: false, t: 0.4, icn: 50 }
+  };
+  function inList(type) { return PT[type].ls ? IN_LS : IN_GG; }
+  function iaDefault(type, In) {
+    var p = PT[type];
+    if (p.ls) return p.f * In;
+    if (p.t === 0.4) return 10 * In;
+    return In <= 25 ? 6 * In : (In <= 63 ? 8 * In : 9 * In);
+  }
+  function tAbschalt(type) { var p = PT[type]; return p.ls ? 0.1 : p.t; }
+
+  // ---------- Hilfen ----------
+  function de(x, d) { return x.toLocaleString('de-DE', { minimumFractionDigits: d, maximumFractionDigits: d }); }
+  function num(id) { var v = parseFloat(String($(id).value).replace(',', '.')); return isNaN(v) ? null : v; }
+  function qs(a) { return String(a).replace('.', ','); }
+
+  // ---------- Oberfläche vorbereiten ----------
+  var mode = 'pruef';
+  QS.concat(QS_EXTRA).forEach(function (a) { var o = document.createElement('option'); o.value = a; o.textContent = qs(a); if (a === 2.5) o.selected = true; $('area').appendChild(o); });
+  Object.keys(FT).forEach(function (t) { var o = document.createElement('option'); o.value = t; o.textContent = t + ' °C'; if (+t === 30) o.selected = true; $('tamb').appendChild(o); });
+  Object.keys(FH).forEach(function (n) { var o = document.createElement('option'); o.value = n; o.textContent = n === '1' ? '1 (einzeln)' : n + ' Stromkreise'; $('nh').appendChild(o); });
+
+  function fillIn() {
+    var cur = $('inom').value, list = inList($('ptype').value), h = '<option value="auto">automatisch (kleinster passender)</option>';
+    list.forEach(function (v) { h += '<option value="' + v + '">' + v + ' A</option>'; });
+    $('inom').innerHTML = h;
+    if (cur && $('inom').querySelector('option[value="' + cur + '"]')) $('inom').value = cur;
+  }
+  function onType() {
+    var t = $('ptype').value;
+    $('icn').value = PT[t].icn;
+    fillIn();
+    $('ia-hint').textContent = PT[t].ls
+      ? 'Ia = ' + PT[t].f + ' × In (oberer Wert des unverzögerten Auslösebereichs). Eigener Wert aus der Herstellerkennlinie möglich.'
+      : 'Ia für gG als vorsichtiger Richtwert (6 bis 9 × In bei 5 s, 10 × In bei 0,4 s). Für genaue Werte die Kennlinie des Herstellers als Ia eintragen.';
+  }
+  function setMode(m) {
+    mode = m;
+    $('m-pruef').classList.toggle('on', m === 'pruef');
+    $('m-rechn').classList.toggle('on', m === 'rechn');
+    $('qs-wrap').classList.toggle('hide', m === 'rechn');
+    $('go').textContent = m === 'pruef' ? 'PRÜFEN' : 'QUERSCHNITT BERECHNEN';
+    $('out').innerHTML = '';
+    save();
+  }
+  $('m-pruef').onclick = function () { setMode('pruef'); };
+  $('m-rechn').onclick = function () { setMode('rechn'); };
+  $('ptype').onchange = function () { onType(); save(); };
+
+  // ---------- Kern: alle Prüfungen für einen Querschnitt ----------
+  function readCtx() {
+    var c = {
+      U: +$('sys').value, P: num('power'), cos: num('cos'), L: num('length'), mat: $('mat').value, verl: $('verl').value,
+      tamb: +$('tamb').value, nh: +$('nh').value, izman: num('izman'), type: $('ptype').value, inSel: $('inom').value,
+      icn: num('icn'), iaman: num('iaman'), ik3: num('ik3'), ik1: num('ik1'), dulim: +$('dulim').value, rt: +$('rtemp').value
+    };
+    c.n = c.U === 400 ? 3 : 2;
+    return c;
+  }
+  function validate(c) {
+    if (!(c.P > 0)) return 'Bitte eine Leistung eingeben.';
+    if (!(c.cos > 0 && c.cos <= 1)) return 'cos φ muss zwischen 0,1 und 1 liegen.';
+    if (!(c.L > 0)) return 'Bitte eine Länge eingeben.';
+    if (!(c.ik3 > 0) || !(c.ik1 > 0)) return 'Bitte Ik max und Ik min am Leitungsanfang eingeben.';
+    if (!(c.icn > 0)) return 'Bitte das Schaltvermögen eingeben.';
+    return null;
+  }
+  function betrieb(c) { return c.U === 400 ? c.P / (Math.sqrt(3) * 400 * c.cos) : c.P / (230 * c.cos); }
+
+  function evaluate(c, A, Ib) {
+    var r = { A: A, checks: [], ok: true, err: null };
+    var rho20 = c.mat === 'Cu' ? 1 / 56 : 1 / 35;
+    var rhoU = rho20 * (c.rt === 70 ? 1.2 : 1);       // für Spannungsfall
+    var rhoK = rho20 * 1.24;                           // Leiter ca. 80 °C für Ik min
+    var sin = Math.sqrt(1 - c.cos * c.cos);
+
+    // Strombelastbarkeit
+    var idx = QS.indexOf(A), iz0 = null;
+    if (c.izman > 0) iz0 = c.izman;
+    else if (idx >= 0) iz0 = IZ[c.verl][c.n][idx] * (c.mat === 'Al' ? AL_FAKTOR : 1);
+    if (iz0 === null) { r.err = 'Für ' + qs(A) + ' mm² liegt keine Tabelle vor. Bitte Iz manuell eintragen.'; r.ok = false; return r; }
+    r.iz0 = iz0; r.fT = FT[c.tamb]; r.fH = FH[c.nh]; r.Iz = iz0 * r.fT * r.fH;
+
+    // Schutzeinrichtung wählen
+    var list = inList(c.type), In = null;
+    if (c.inSel === 'auto') { for (var i = 0; i < list.length; i++) if (list[i] >= Ib) { In = list[i]; break; } }
+    else In = +c.inSel;
+    if (In === null) { r.err = 'Betriebsstrom ' + de(Ib, 1) + ' A übersteigt die größte Nennstromstufe (' + list[list.length - 1] + ' A).'; r.ok = false; return r; }
+    r.In = In;
+    var gG = !PT[c.type].ls;
+    var izNeed = gG ? 1.1 * In : In;           // gG: I2 = 1,6 In  =>  In <= Iz / 1,1
+    var c1 = Ib <= In + 1e-9, c2 = r.Iz + 1e-9 >= izNeed;
+    r.checks.push({ id: 'ueber', ok: c1 && c2, title: 'Überlastschutz',
+      desc: 'Ib ≤ In ≤ Iz' + (gG ? ' (gG: Iz ≥ 1,1 × In)' : ''),
+      val: de(Ib, 1) + ' A ≤ ' + In + ' A ≤ ' + de(r.Iz, 1) + ' A', fix: !c1 ? 'In kleiner als Ib' : 'Iz zu klein' });
+    r.Ib = Ib;
+
+    // Spannungsfall
+    var Rl = rhoU / A, k = c.U === 400 ? Math.sqrt(3) : 2;
+    r.dU = k * c.L * Ib * (Rl * c.cos + X1 * sin);
+    r.dUp = r.dU / c.U * 100;
+    r.LmaxDU = c.L * c.dulim / r.dUp;
+    r.checks.push({ id: 'du', ok: r.dUp <= c.dulim + 1e-9, title: 'Spannungsfall',
+      desc: 'ΔU = ' + de(r.dU, 2) + ' V, Grenze ' + de(c.dulim, 1) + ' %', val: de(r.dUp, 2) + ' %', fix: 'Spannungsfall zu hoch' });
+
+    // Kurzschluss: Ik min am Leitungsende (Schleife L + PE)
+    var Ape = A <= 16 ? A : A / 2;
+    var Rloop = rhoK * c.L * (1 / A + 1 / Ape), Xloop = 2 * X1 * c.L;
+    var Zl = Math.sqrt(Rloop * Rloop + Xloop * Xloop);
+    var Zs0 = 230 / (c.ik1 * 1000);
+    r.Zs0 = Zs0; r.Zl = Zl; r.Ape = Ape;
+    r.IkMin = 0.95 * 230 / (Zs0 + Zl);
+    r.Ia = c.iaman > 0 ? c.iaman : iaDefault(c.type, In);
+    var zPerM = Zl / c.L;
+    r.LmaxIk = Math.max(0, (0.95 * 230 / r.Ia - Zs0) / zPerM);
+    r.checks.push({ id: 'ik', ok: r.IkMin >= r.Ia, title: 'Abschaltbedingung',
+      desc: 'Ik min Ende ≥ Ia (' + PT[c.type].name + ' ' + In + ' A: Ia ' + de(r.Ia, 0) + ' A)', val: de(r.IkMin, 0) + ' A', fix: 'Ik min am Ende zu klein' });
+
+    // Thermische Belastbarkeit bei Ik min: t = (k S / I)^2
+    var kk = K_PVC[c.mat];
+    r.tzul = Math.pow(kk * A / r.IkMin, 2);
+    var tA = tAbschalt(c.type);
+    r.checks.push({ id: 'th', ok: r.tzul >= tA, title: 'Kurzschlussfestigkeit (thermisch)',
+      desc: 'zul. Dauer (k·S / Ik)² ≥ Abschaltzeit ' + de(tA, tA < 1 ? 1 : 0) + ' s', val: de(r.tzul, r.tzul < 10 ? 2 : 0) + ' s', fix: 'thermisch zu schwach' });
+
+    // Ik max am Ende (Info) und Schaltvermögen am Anfang
+    var Zn = 400 / (Math.sqrt(3) * c.ik3 * 1000), Rn = 0.1 * Zn, Xn = 0.995 * Zn;
+    var Zk = Math.sqrt(Math.pow(Rn + rho20 * c.L / A, 2) + Math.pow(Xn + X1 * c.L, 2));
+    r.IkMaxEnd = 400 / (Math.sqrt(3) * Zk) / 1000;
+    r.tzulMax = Math.pow(kk * A / (c.ik3 * 1000), 2);
+    r.checks.push({ id: 'sw', ok: c.icn >= c.ik3, title: 'Schaltvermögen',
+      desc: 'Icn ≥ Ik max am Anfang (' + de(c.ik3, 1) + ' kA)', val: de(c.icn, 1) + ' kA', fix: 'Schaltvermögen zu klein' });
+
+    r.ok = r.checks.every(function (x) { return x.ok; });
+    r.okQ = r.checks.every(function (x) { return x.ok || x.id === 'sw'; });
+    r.swBad = !r.checks[r.checks.length - 1].ok;
+    return r;
+  }
+
+  // ---------- Anzeige ----------
+  function chkHtml(r) {
+    return r.checks.map(function (x) {
+      return '<div class="chk"><div class="ic ' + (x.ok ? 'ok' : 'bad') + '">' + (x.ok ? '✓' : '✗') + '</div><div><div class="t">' + x.title +
+        '</div><div class="d">' + x.desc + '</div></div><div class="v ' + (x.ok ? 'ok' : 'bad') + '">' + x.val + '</div></div>';
+    }).join('');
+  }
+  function detailHtml(c, r) {
+    var rows = [
+      ['Betriebsstrom Ib', de(r.Ib, 2) + ' A'], ['Grundwert Iz (Tabelle)', de(r.iz0, 1) + ' A'],
+      ['Faktor Temperatur / Häufung', de(r.fT, 2) + ' / ' + de(r.fH, 2)], ['Iz nach Umrechnung', de(r.Iz, 1) + ' A'],
+      ['Spannungsfall', de(r.dU, 2) + ' V = ' + de(r.dUp, 2) + ' %'],
+      ['Schleifenimpedanz Anfang Zs0', de(r.Zs0 * 1000, 0) + ' mΩ'], ['Leitungsschleife L+PE (PE ' + qs(r.Ape) + ' mm², ca. 80 °C)', de(r.Zl * 1000, 0) + ' mΩ'],
+      ['Ik min am Ende (c = 0,95)', de(r.IkMin, 0) + ' A'], ['Abschaltstrom Ia', de(r.Ia, 0) + ' A'],
+      ['Ik max am Ende (3-polig)', de(r.IkMaxEnd, 2) + ' kA'],
+      ['zul. Kurzschlussdauer bei Ik max Anfang', de(r.tzulMax * 1000, 1) + ' ms'],
+      ['max. Länge (Spannungsfall)', de(r.LmaxDU, 0) + ' m'], ['max. Länge (Abschaltbedingung)', de(r.LmaxIk, 0) + ' m']
+    ];
+    return '<div class="card"><details><summary>Rechenwerte</summary>' + rows.map(function (x) { return '<div class="kv"><span>' + x[0] + '</span><span>' + x[1] + '</span></div>'; }).join('') +
+      '<div class="hint" style="margin-top:8px">Bei Ik max am Anfang prüft die Schutzeinrichtung die Energiebegrenzung (I²t). Sie lässt sich ohne Gerätedaten nicht beurteilen: die zulässige Dauer oben mit dem Datenblatt vergleichen.</div></details></div>';
+  }
+  function suggestions(c, r, all) {
+    var s = [];
+    var bad = r.checks.filter(function (x) { return !x.ok; });
+    var rec = null;
+    for (var i = 0; i < all.length; i++) if (all[i].okQ && all[i].A > r.A) { rec = all[i]; break; }
+    if (r.ok) {
+      s.push('Alle Prüfpunkte erfüllt. Maximale Länge bei ' + qs(r.A) + ' mm²: <b>' + de(Math.min(r.LmaxDU, r.LmaxIk), 0) + ' m</b> (Spannungsfall ' + de(r.LmaxDU, 0) + ' m, Abschaltbedingung ' + de(r.LmaxIk, 0) + ' m).');
+      return s;
     }
+    bad.forEach(function (x) {
+      if (x.id === 'ueber') s.push('Überlast: <b>Querschnitt erhöhen</b>' + (rec ? ' auf mindestens ' + qs(rec.A) + ' mm²' : '') + ', oder Verlegeart / Häufung / Temperatur prüfen (Iz wird dadurch größer).');
+      if (x.id === 'du') s.push('Spannungsfall: <b>Querschnitt erhöhen</b> oder Leitung kürzen (höchstens <b>' + de(r.LmaxDU, 0) + ' m</b> bei ' + qs(r.A) + ' mm²).');
+      if (x.id === 'ik') {
+        var t = [];
+        t.push('Querschnitt erhöhen' + (rec ? ' (' + qs(rec.A) + ' mm²)' : ''));
+        t.push('Leitung kürzen (höchstens <b>' + de(r.LmaxIk, 0) + ' m</b>)');
+        if (PT[c.type].ls && c.type !== 'B') t.push('LS-Typ B statt ' + PT[c.type].name + ' (Ia = 5 × In)');
+        if (c.inSel !== 'auto') t.push('kleineren Nennstrom wählen, wenn Ib es zulässt');
+        if (!c.iaman) t.push('genaueren Ia-Wert aus der Herstellerkennlinie eintragen');
+        s.push('Abschaltbedingung: ' + t.join(', oder ') + '.');
+      }
+      if (x.id === 'th') s.push('Thermisch: <b>Querschnitt erhöhen</b> oder Schutzeinrichtung mit schnellerer Abschaltung wählen.');
+      if (x.id === 'sw') s.push('Schaltvermögen: Schutzeinrichtung mit höherem Schaltvermögen (z. B. 10 kA) einsetzen oder eine Vorsicherung nutzen.');
+    });
+    if (rec) s.unshift('Kleinster passender Querschnitt: <b>' + qs(rec.A) + ' mm²</b> mit ' + PT[c.type].name + ' ' + rec.In + ' A (ΔU ' + de(rec.dUp, 2) + ' %, Ik min ' + de(rec.IkMin, 0) + ' A).');
+    else s.unshift('Mit den Standardquerschnitten bis 120 mm² ist die Bedingung nicht erfüllbar. Länge, Schutzeinrichtung oder Netzwerte prüfen.');
+    return s;
+  }
+  function tableHtml(c, all, cur, recA) {
+    var rows = all.map(function (r) {
+      if (r.err) return '<tr><td>' + qs(r.A) + '</td><td colspan="5" style="text-align:left;color:var(--tb-dim)">' + r.err + '</td></tr>';
+      var cls = (r.A === recA ? 'rec ' : '') + (r.okQ ? 'pass ' : '') + (r.A === cur ? 'cur' : '');
+      var why = r.okQ ? '✓' : r.checks.filter(function (x) { return !x.ok && x.id !== 'sw'; }).map(function (x) { return x.id === 'ueber' ? 'Iz' : x.id === 'du' ? 'ΔU' : x.id === 'ik' ? 'Ik' : x.id === 'th' ? 'th.' : 'Icn'; }).join(' ');
+      return '<tr class="' + cls + '"><td>' + qs(r.A) + ' mm²</td><td>' + de(r.Iz, 1) + '</td><td>' + r.In + '</td><td>' + de(r.dUp, 2) + ' %</td><td>' + de(r.IkMin, 0) + '</td><td>' + why + '</td></tr>';
+    }).join('');
+    return '<table><thead><tr><th>Querschnitt</th><th>Iz (A)</th><th>In (A)</th><th>ΔU</th><th>Ik min (A)</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
+  }
 
-    // 2. Spannungsfall berechnen (dU)
-    if (U == 400) {
-        // Drehstrom dU = (sqrt(3) * L * Ib * cosPhi) / (kappa * A)
-        // Vereinfacht für ohmsche/induktive Lasten im Handwerk:
-        deltaU = (Math.sqrt(3) * L * Ib * cosPhi) / (kappa * A);
+  function run() {
+    var c = readCtx(), msg = validate(c);
+    if (msg) { $('out').innerHTML = '<div class="status bad">' + msg + '</div>'; return; }
+    var Ib = betrieb(c);
+    var all = QS.map(function (a) { return evaluate(c, a, Ib); });
+    var html = '';
+    if (mode === 'pruef') {
+      var A = +$('area').value, r = evaluate(c, A, Ib);
+      if (r.err) { $('out').innerHTML = '<div class="status bad">' + r.err + '</div>'; return; }
+      html += '<div class="status ' + (r.ok ? 'ok' : 'bad') + '">' + (r.ok ? '✓ Leitung ' + qs(A) + ' mm² passt' : '✗ Leitung ' + qs(A) + ' mm² passt nicht') +
+        '<small>' + de(c.P, 0) + ' W · Ib ' + de(Ib, 1) + ' A · ' + de(c.L, 0) + ' m · ' + PT[c.type].name + ' ' + r.In + ' A</small></div>';
+      html += '<div class="card"><h2>Prüfpunkte</h2>' + chkHtml(r) + '</div>';
+      var sug = suggestions(c, r, all);
+      html += '<div class="card"><h2>' + (r.ok ? 'Reserve' : 'Vorschläge') + '</h2><ul class="sug">' + sug.map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ul></div>';
+      var rec = null; for (var i = 0; i < all.length; i++) if (all[i].okQ) { rec = all[i]; break; }
+      html += '<div class="card"><h2>Alle Querschnitte im Vergleich</h2>' + tableHtml(c, all, A, rec ? rec.A : null) + '<div class="hint">Zeilen in Grün erfüllen alle Prüfpunkte. Kürzel: Iz = Überlast, ΔU = Spannungsfall, Ik = Abschaltbedingung, th. = thermisch, Icn = Schaltvermögen.</div></div>';
+      html += detailHtml(c, r);
     } else {
-        // Wechselstrom dU = (2 * L * Ib * cosPhi) / (kappa * A)
-        deltaU = (2 * L * Ib * cosPhi) / (kappa * A);
+      var rec2 = null; for (var j = 0; j < all.length; j++) if (all[j].okQ) { rec2 = all[j]; break; }
+      if (rec2) {
+        html += '<div class="status ok">Empfehlung: ' + qs(rec2.A) + ' mm² ' + c.mat + '<small>' + PT[c.type].name + ' ' + rec2.In + ' A · ΔU ' + de(rec2.dUp, 2) + ' % · Ik min ' + de(rec2.IkMin, 0) + ' A · Iz ' + de(rec2.Iz, 1) + ' A</small></div>';
+        if (rec2.swBad) html += '<div class="status bad">Schaltvermögen der Schutzeinrichtung (' + de(c.icn,1) + ' kA) kleiner als Ik max (' + de(c.ik3,1) + ' kA)<small>Gerät mit höherem Schaltvermögen wählen. Unabhängig vom Querschnitt.</small></div>';
+        html += '<div class="card"><h2>Prüfpunkte für ' + qs(rec2.A) + ' mm²</h2>' + chkHtml(rec2) + '</div>';
+      } else {
+        html += '<div class="status bad">Kein Standardquerschnitt bis 120 mm² erfüllt alle Bedingungen<small>Länge, Schutzeinrichtung, Netzwerte oder Verlegung anpassen.</small></div>';
+      }
+      html += '<div class="card"><h2>Alle Querschnitte im Vergleich</h2>' + tableHtml(c, all, null, rec2 ? rec2.A : null) + '<div class="hint">Gewählt wird jeweils der kleinste Nennstrom ab Ib. Kürzel: Iz = Überlast, ΔU = Spannungsfall, Ik = Abschaltbedingung, th. = thermisch, Icn = Schaltvermögen.</div></div>';
+      if (rec2) html += detailHtml(c, rec2);
     }
+    $('out').innerHTML = html;
+    save();
+    $('out').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  $('go').onclick = run;
 
-    deltaU_pct = (deltaU / U) * 100;
-
-    // Anzeige
-    document.getElementById('results').style.display = 'block';
-    document.getElementById('out-i').innerHTML = `Betriebsstrom (Ib): <strong>${Ib.toFixed(2)} A</strong>`;
-    document.getElementById('out-u').innerHTML = `Spannungsfall (ΔU): <strong>${deltaU.toFixed(2)} V</strong>`;
-    document.getElementById('out-p').innerHTML = `Verlust in %: <strong>${deltaU_pct.toFixed(2)} %</strong>`;
-
-    const status = document.getElementById('out-status');
-    if (deltaU_pct <= 3.0) {
-        status.innerHTML = "✅ VDE-KONFORM (≤ 3%)";
-        status.style.color = "#00ff00";
-    } else {
-        status.innerHTML = "❌ NICHT KONFORM (> 3%)";
-        status.style.color = "#ff4444";
-    }
-}
+  // ---------- Eingaben merken ----------
+  var IDS = ['sys', 'power', 'cos', 'length', 'mat', 'area', 'verl', 'tamb', 'nh', 'izman', 'ptype', 'inom', 'icn', 'iaman', 'ik3', 'ik1', 'dulim', 'rtemp'];
+  function save() {
+    try { var o = { mode: mode }; IDS.forEach(function (i) { o[i] = $(i).value; }); localStorage.setItem('leitungsberechnung', JSON.stringify(o)); } catch (e) {}
+  }
+  function load() {
+    try {
+      var o = JSON.parse(localStorage.getItem('leitungsberechnung') || 'null');
+      if (!o) return;
+      if (o.ptype) $('ptype').value = o.ptype;
+      onType();
+      IDS.forEach(function (i) { if (o[i] != null && i !== 'ptype') { $(i).value = o[i]; } });
+      if (o.mode) setMode(o.mode);
+    } catch (e) {}
+  }
+  IDS.forEach(function (i) { $(i).addEventListener('change', save); });
+  onType();
+  load();
+  setMode(mode);
+  window.__lb = { evaluate: evaluate, readCtx: readCtx, betrieb: betrieb, run: run };
+})();
 </script>
 </body>
 </html>
