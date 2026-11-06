@@ -629,10 +629,11 @@ class IEC{
   async handshake(to){
     for(let a=0;;a++){
       await this.reset300();this.l.clear();
-      await this.l.send(enc(`/?${$('#addr').value.trim()}!\r\n`));
+      /* zweiter Versuch mit Weckfolge (Nullbytes), falls der Zähler noch vom vorigen Vorgang (HDLC/Programmiermodus) benommen ist */
+      await this.l.send([...(a?new Array(40).fill(0):[]),...enc(`/?${$('#addr').value.trim()}!\r\n`)]);
       try{const id=await this.l.wait(findIdent,to||+S.hs||5000);
         this.ident=id.trim();log('INFO','Kennung: '+this.ident);this.onIdent?.(this.ident);return this.ident;}
-      catch(e){if(to||a>=1)throw e;log('INFO','Keine Kennung – zweiter Versuch (Zähler braucht nach der Auslesung kurz)');await sleep(2500);}
+      catch(e){if(to||a>=1)throw e;log('INFO','Keine Kennung – zweiter Versuch mit Weckfolge (Zähler braucht nach dem vorigen Vorgang kurz)');await sleep(2500);}
     }
   }
   pickBaud(){let z=BAUD[this.ident[4]]?this.ident[4]:'0';
@@ -683,7 +684,10 @@ class IEC{
     try{await this.l.wait(buf=>{const i=buf.findIndex(x=>(x&0x7f)===ACK);if(i<0||buf.length<i+4)return null;buf.splice(0,i+4);return 1;},1500);log('INFO','Zähler bestätigt Mode E');}
     catch{log('WARN','Keine Mode-E-Bestätigung vom Zähler – versuche trotzdem HDLC');}
     await sleep(demo?0:200);}
-  async endE(){const t=this.l.t;try{if(t instanceof BleT)await t.prep();else if(t instanceof SerialT)await t.setBaud(300,{dataBits:7,parity:'even',stopBits:1});}catch{}this.baud=300;this.l.strip=true;}
+  /* Mode E beenden: Kopf zurück auf 300 Baud 7E1 und – wie Q4 nach jeder HDLC-Sitzung – <SOH>B0<ETX>, damit der Zähler
+     sicher in den Ruhezustand geht und danach wieder auf /?! hört (sonst scheitern Uhrzeit/Auslesung nach einem Empfangsversuch) */
+  async endE(){const t=this.l.t;try{if(t instanceof BleT)await t.prep();else if(t instanceof SerialT)await t.setBaud(300,{dataBits:7,parity:'even',stopBits:1});}catch{}this.baud=300;this.l.strip=true;
+    if(!(t instanceof DemoT)){await sleep(150);this.l.clear();await this.bye();}}
 }
 
 /* ---------- DLMS/COSEM über HDLC (Mode E) – L+G mit „\2“ in der Kennung (ZMD/ZFD …) ----------
@@ -724,11 +728,20 @@ class DLMS{
   /* lim: max. Nutzdaten je Rahmen. Über den Bluetooth-Kopf kommen nur Rahmen ≤ 20 Byte (ein BLE-Paket) heil an
      (Feldtest 21.10.: 9-Byte-Rahmen beantwortet, 32-Byte-Rahmen nie) → 9 Byte Nutzdaten, Rest per HDLC-Segmentierung */
   constructor(link){this.l=link;this.maxTx=128;this.vaa=0xfa00;this.onBlock=null;this.ble=link.t instanceof BleT;}
-  async tx(ctrl,info=[],seg=false){const len=7+(info.length?2+info.length:0);
+  build(ctrl,info=[],seg=false){const len=7+(info.length?2+info.length:0);
     const f=[0xa0|(seg?8:0)|((len>>8)&7),len&255,this.da,this.ca,ctrl];
     if(info.length){const h=crcH(f);f.push(h&255,h>>8,...info);}
-    const c=crcH(f);f.push(c&255,c>>8);const out=[0x7e,...f,0x7e];log('TX',out,true);
+    const c=crcH(f);f.push(c&255,c>>8);return [0x7e,...f,0x7e];}
+  async tx(ctrl,info=[],seg=false){const out=this.build(ctrl,info,seg);log('TX',out,true);
     if(this.ble)await this.l.t.writeRaw(Uint8Array.from(out));else await this.l.t.write(new Uint8Array(out));}
+  /* Über Bluetooth: Segmentgröße so wählen, dass KEIN Rahmen das Byte 0x80 enthält. Feldtest/Mitschnitt: der DvBTIR-Kopf wertet 0x80 als
+     Befehlszeichen – Rahmen ohne 0x80 werden vom Zähler quittiert, gleich lange mit 0x80 (einfach oder verdoppelt) nie.
+     Geht das nicht (0x80 im Inhalt, z. B. beim Passwort-AARQ), bleibt es bei 9 Byte und der Verdopplung in writeRaw. */
+  chunkSize(pdu){const mx=Math.max(1,this.maxTx||128);if(!this.ble)return mx;const top=Math.min(mx,9);
+    for(let s=top;s>=3;s--){let ns=this.ns,ok=true;
+      for(let i=0;i<pdu.length&&ok;i+=s){const fr=this.build((this.nr<<5)|0x10|(ns<<1),pdu.slice(i,i+s),i+s<pdu.length);if(fr.slice(1,-1).includes(0x80))ok=false;ns=(ns+1)&7;}
+      if(ok){if(s<top)log('INFO',`Bluetooth: ${s} Byte Nutzdaten je Rahmen (kein 0x80 im Rahmen)`);return s;}}
+    log('INFO','Bluetooth: Inhalt enthält 0x80 – wird verdoppelt gesendet');return top;}
   /* nächsten gültigen HDLC-Rahmen aus dem Puffer holen (Länge aus dem Kopf, kein Stuffing) */
   rx(timeout=4000){return this.l.wait(b=>{
     for(;;){const s=b.indexOf(0x7e);if(s<0){b.length=0;return null;}if(s>0)b.splice(0,s);
@@ -747,10 +760,14 @@ class DLMS{
     if(!f){log('INFO',`HDLC: keine Antwort von Server-Adresse ${server}`);return false;}
     if(f.ctrl!==0x73)throw new Error(f.ctrl===0x1f?'Zähler lehnt HDLC-Verbindung ab (DM)':'HDLC: unerwartete Antwort auf SNRM (0x'+f.ctrl.toString(16)+')');
     this.maxTx=128;const p=f.info;for(let i=3;i+1<p.length;){const id=p[i],n=p[i+1];let v=0;for(let k=0;k<n;k++)v=v*256+p[i+2+k];if(id===6)this.maxTx=v;i+=2+n;}
-    this.ns=this.nr=0;this.server=server;this.client=client;log('INFO',`HDLC verbunden: Server ${server}, Client ${client}, max. ${this.maxTx} Byte je Rahmen`);return true;}
+    /* Über Bluetooth nur kleine Info-Segmente: ein Rahmen soll in ein BLE-Paket (20 Byte) passen (Feldtest 21.10.: 9 Byte Nutzdaten
+       = 20-Byte-Rahmen kommen an; ein 71-Byte-AARQ-Frame bleibt ohne Antwort). */
+    if(this.ble)this.maxTx=Math.min(this.maxTx,9);
+    this.ns=this.nr=0;this.server=server;this.client=client;log('INFO',`HDLC verbunden: Server ${server}, Client ${client}, max. ${this.maxTx} Byte Nutzdaten je Rahmen`);return true;}
   /* AARQ: pw=null → ohne Anmeldung (öffentlicher Client), sonst LLS mit Passwort */
-  async assoc(pw){const ini=[0xbe,0x0f,4,0x0d,1,0,0,0,6,0x5f,4,0,0x1c,pw==null?0x1b:0x13,0x20,0,0];
-    const b=[0x80,2,7,0x80,0xa1,9,6,7,0x60,0x85,0x74,5,8,1,2];
+  /* lean (nur öffentlich, Bluetooth): ohne das optionale Feld „Protokollversion“ (80 02 07 80) → AARQ ganz ohne 0x80-Byte */
+  async assoc(pw,lean){const ini=[0xbe,0x0f,4,0x0d,1,0,0,0,6,0x5f,4,0,0x1c,pw==null?0x1b:0x13,0x20,0,0];
+    const b=[...(lean&&pw==null?[]:[0x80,2,7,0x80]),0xa1,9,6,7,0x60,0x85,0x74,5,8,1,2];
     if(pw!=null){const p=enc(pw);b.push(0x8a,2,7,0x80,0x8b,7,0x60,0x85,0x74,5,8,2,1,0xac,p.length+2,0x80,p.length,...p);}
     b.push(...ini);const r=await this.xfer([0x60,b.length,...b]);
     if(r[0]!==0x61)throw new Error('DLMS: keine Antwort auf Anmeldung (AARE)');
@@ -762,7 +779,7 @@ class DLMS{
   /* APDU senden (bei Bedarf in Segmente zerlegt) und Antwort einsammeln (Segmente mit RR quittieren) */
   /* Über Bluetooth lernend: kommt auf ein Stück keine Antwort, dasselbe Stück (gleiche Folgenummer) kleiner nochmal senden.
      Feldtest 21.10.: 9-Byte-Rahmen kommen an, 20-Byte-Rahmen nicht. Funktionierende Größe wird gemerkt. */
-  async xfer(apdu){const pdu=[0xe6,0xe6,0,...apdu],mx=Math.max(1,this.maxTx||128);
+  async xfer(apdu){const pdu=[0xe6,0xe6,0,...apdu],mx=this.chunkSize(pdu);
     for(let i=0;i<pdu.length;i+=mx){const last=i+mx>=pdu.length;if(this.ble)await sleep(20);await this.tx((this.nr<<5)|0x10|(this.ns<<1),pdu.slice(i,i+mx),!last);this.ns=(this.ns+1)&7;
       if(!last){const f=await this.rx(5000);if((f.ctrl&0x0f)!==1)throw new Error('HDLC: Segment nicht bestätigt');}}
     const out=[];
@@ -1136,7 +1153,7 @@ async function readExtras(ex,pre,notes){
   await IECP.login($('#pw').value);loadNosup();
   try{
     if(ex.includes('inst')){if(!(await readInstant(pre)))notes.push('keine Momentanwerte');else saveNosup();}
-    if(ex.includes('clk')){status(pre+'Uhrzeit wird geprüft …');prog('ind');await clkCheck(meterTime,writeClock,true);}
+    if(ex.includes('clk')){status(pre+'Uhrzeit wird geprüft …');prog('ind');await clkCheck(meterTime,writeClockAny,true);}
     if(ex.includes('prof')){showTab('lastgang');
       const a=$('#lgFrom').value,b=$('#lgTo').value;const exp=Math.max(1,Math.round((new Date(b)-new Date(a))/9e5));
       status(pre+'Lastgang wird angefordert …');prog(0);
@@ -1186,10 +1203,25 @@ async function writeClock(){const n=new Date();
     log('INFO',`W2 C003 → ${r.type}${r.head?' '+r.head:''}${r.body?' '+r.body:''}`);
     if(r.type!=='ACK')throw new Error('Zähler hat das Stellen abgelehnt ('+(r.type==='NAK'?'NAK':(r.head||r.body||r.type))+')');log('INFO','Zeit gestellt: '+v);return;}
   const d=`${pad(n.getFullYear()%100)}${pad(n.getMonth()+1)}${pad(n.getDate())}`;
-  let used=null;for(const w of ['W5','W1']){const r=await IECP.cmdRW(w,`0.9.2(${d})`);if(r.type==='ACK'){used=w;break;}log('WARN',`${w} 0.9.2 → ${r.type==='NAK'?'NAK':(r.body||r.type)}`);}
-  if(!used)throw new Error('Zähler hat das Datum nicht angenommen (Passwort mit Schreibrecht nötig?)');
-  const t=new Date();const tv=`${pad(t.getHours())}${pad(t.getMinutes())}${pad(t.getSeconds())}`;const r=await IECP.cmdRW(used,`0.9.1(${tv})`);
-  if(r.type!=='ACK')throw new Error('Zähler hat die Uhrzeit nicht angenommen ('+(r.type==='NAK'?'NAK':(r.body||r.type))+')');log('INFO',`Zeit gestellt (${used}): ${d} ${tv}`);}
+  const rep=r=>r.type==='ACK'?'ACK':r.type==='NAK'?'NAK':(r.body||r.head||r.type);
+  let used=null;
+  const wr=async(k,v)=>{for(const w of used?[used]:['W5','W1']){const r=await IECP.cmdRW(w,`${k}(${v})`);
+    log('INFO',`${w} ${k}(${v}) → ${rep(r)}`);if(r.type==='ACK'){used=w;return true;}}return false;};
+  /* Datum nur schreiben, wenn es nicht schon stimmt (Metcom: ERROR02 beim Schreiben des gleichen Datums – das brach früher vor der Uhrzeit ab) */
+  let sameDate=false;try{const a=await IECP.read('0.9.2()',5000);sameDate=(a.match(/\((\d{6})/)||[])[1]===d;}catch{}
+  const dateOk=sameDate?true:await wr('0.9.2',d);
+  const t=new Date(),tv=`${pad(t.getHours())}${pad(t.getMinutes())}${pad(t.getSeconds())}`;
+  const timeOk=await wr('0.9.1',tv);
+  if(!timeOk)throw new Error('Zähler hat die Uhrzeit nicht angenommen – Passwort mit Schreibrecht nötig? (Antwort im Protokoll)');
+  if(!dateOk)throw new Error('Uhrzeit gestellt, aber das Datum wurde abgelehnt (Antwort im Protokoll)');
+  log('INFO',`Zeit gestellt (${used}): ${sameDate?'Datum unverändert':d} ${tv}`);}
+/* Stellen mit allen eingetragenen Passwörtern probieren: das erste, das den Login besteht, hat evtl. nur Leserecht */
+async function writeClockAny(){
+  try{await writeClock();}
+  catch(e){let ok=false;const tried=pwPref();
+    for(const p of pwList().filter(x=>x!==tried)){log('INFO','Stellen abgelehnt – nächstes Passwort wird versucht');await IECP.bye();
+      try{await IECP.login(p,false);await writeClock();ok=true;break;}catch(e2){log('WARN','Weiteres Passwort: '+e2.message);}}
+    if(!ok)throw e;}}
 const CLK_TOL=10;   /* Sekunden – darüber bietet Einbau das Stellen an */
 /* Uhrzeit beim Ein-/Ausbau: lesen, dokumentieren; beim Einbau bei mehr als CLK_TOL Abweichung Stellen anbieten */
 async function clkCheck(rd,wr,canSet){
@@ -1208,7 +1240,7 @@ async function clockOp(write){
     try{const df=await readClock();
       if(write){const who=isLG()?'':/^\/EMH/.test(IECP.ident)?'':`\n\nHinweis: Für ${IECP.ident.slice(1,4)} ist das Stellen noch nicht erprobt (Datum 0.9.2 / Zeit 0.9.1).`;
         if(!confirm(`Zählerzeit weicht ${fmtN(df,0)} s ab.\nJetzt auf Handyzeit ${new Date().toLocaleTimeString('de-DE')} stellen?${who}`)){status('Zeitstellen abgebrochen.');return;}
-        await writeClock();const d2=await readClock();status(`Uhrzeit gestellt – Abweichung jetzt ${fmtN(d2,0)} s.`,Math.abs(d2)>5?'warn':'ok');}
+        await writeClockAny();const d2=await readClock();status(`Uhrzeit gestellt – Abweichung jetzt ${fmtN(d2,0)} s.`,Math.abs(d2)>5?'warn':'ok');}
       else status(`Zählerzeit gelesen – Abweichung ${fmtN(df,0)} s.`,Math.abs(df)>CLK_TOL?'warn':'ok');}
     finally{await IECP.bye();}}
   catch(e){log('ERR',e.message);status(e.message,'err');}
@@ -1294,17 +1326,23 @@ async function dlmsRun(opt,fn){
        Wichtig: erst HDLC verbinden UND anmelden; scheitert die Anmeldung, zum nächsten Client (B40 nimmt HDLC auf
        Client 16 an, lehnt aber die öffentliche Anmeldung ab – dann muss Client 32 mit Passwort drankommen). */
     let cls=opt.clients||[opt.client];
-    if(cls.length>1&&pwList().length)cls=[32,...cls.filter(x=>x!==32)];   /* mit Passwort gleich Client 32 (der B40 beantwortet die öffentliche Anmeldung nicht) */
-    if(pr.cl&&cls.includes(pr.cl))cls=[pr.cl,...cls.filter(x=>x!==pr.cl)];
+    if(cls.length>1&&pwList().length&&!opt.keepOrder)cls=[32,...cls.filter(x=>x!==32)];   /* mit Passwort gleich Client 32 (der B40 beantwortet die öffentliche Anmeldung nicht) */
+    if(pr.cl&&cls.includes(pr.cl)&&!opt.keepOrder)cls=[pr.cl,...cls.filter(x=>x!==pr.cl)];   /* keepOrder (Modem): Reihenfolge wie die L+G-Software – erst öffentlich 16/Server 17 */
     for(let ci=0;ci<cls.length&&chosen==null;ci++){const cl=cls[ci];
       if(cl!==16&&!pwList().length){log('INFO',`DLMS: Client ${cl} übersprungen – kein Passwort eingetragen`);continue;}
       if(ci){await d.close();await IECP.endE();await IECP.handshake(opt.hs);await IECP.modeE();}   /* für den nächsten Client frisch */
       const key='s'+cl;let s2=null;
-      for(const s of [...new Set([pr[key],...(cl===16?opt.servers:[1,17])].filter(x=>x!=null))]){status(`DLMS: Verbindungsaufbau (Client ${cl}, Server-Adresse ${s}) …`);if(await d.connect(s,cl)){s2=s;break;}}
+      for(const s of [...new Set([pr[key],...(cl===16?opt.servers:(opt.servers32||[1,17]))].filter(x=>x!=null))]){status(`DLMS: Verbindungsaufbau (Client ${cl}, Server-Adresse ${s}) …`);if(await d.connect(s,cl)){s2=s;break;}}
       if(s2==null)continue;   /* HDLC nicht verbunden → nächster Client */
       hdlcOk=true;let ok=false;
       /* Anmeldung; bleibt sie ohne Antwort (Timeout) oder wird abgelehnt, zum nächsten Client statt hart abzubrechen */
-      if(cl===16){try{ok=await d.assoc(null);}catch(e){log('INFO',`DLMS: Client 16 ohne Antwort (${e.message})`);ok=false;}if(ok)log('INFO','DLMS: öffentliche Verbindung (Client 16)');}
+      if(cl===16){
+        /* Bluetooth: erst AARQ ohne 0x80-Byte (ohne optionale Protokollversion), danach der vollständige Q4-AARQ (0x80 verdoppelt) */
+        const vars=d.ble?[true,false]:[false];
+        for(let vi=0;vi<vars.length&&!ok;vi++){
+          if(vi){await d.close();await IECP.endE();await IECP.handshake(opt.hs);await IECP.modeE();if(!(await d.connect(s2,cl))){s2=null;break;}}
+          try{ok=await d.assoc(null,vars[vi]);}catch(e){log('INFO',`DLMS: Client 16 ohne Antwort (${e.message})${vi<vars.length-1?' – zweiter Versuch mit vollständigem AARQ':''}`);ok=false;}}
+        if(ok)log('INFO','DLMS: öffentliche Verbindung (Client 16)');}
       else{const list=pwList();
         for(let i=0;i<list.length&&!ok;i++){if(i){await d.close();await IECP.endE();await IECP.handshake(opt.hs);await IECP.modeE();if(!(await d.connect(s2,cl))){s2=null;break;}}
           status(`DLMS: Anmeldung${list.length>1?` (Passwort ${i+1}/${list.length})`:''} …`);
@@ -1313,7 +1351,7 @@ async function dlmsRun(opt,fn){
       else log('INFO',`DLMS: Client ${cl} verbindet, aber Anmeldung nicht möglich`+(ci<cls.length-1?' – nächster Client':''));}
     if(chosen==null){
       if(!hdlcOk)throw Object.assign(new Error(cls.length>1&&!pwList().length?'Zähler antwortet nicht auf die öffentliche Verbindung – bitte Zählerpasswort unter ⚙ eintragen und nochmal versuchen.':'Zähler antwortet nicht im HDLC-Modus (Mode E). Kopf richtig aufgesetzt? Details unter Mehr → Protokoll.'),{noHdlc:true});
-      throw new Error(pwList().length?'DLMS: Anmeldung von allen Clients abgelehnt – Passwort unter ⚙ prüfen':'DLMS: Zähler verlangt ein Passwort – unter ⚙ eintragen');}
+      throw new Error((pwList().length?'DLMS: Anmeldung von allen Clients abgelehnt/unbeantwortet – Passwort unter ⚙ prüfen':'DLMS: Zähler verlangt ein Passwort – unter ⚙ eintragen')+(d.ble?'. Über Bluetooth beantwortet der Kopf nicht jeden DLMS-Rahmen – Protokoll (Mehr → Protokoll) bitte schicken; am PC über USB/COM läuft es wie bei Q4.':''));}
     return await fn(d);
   }finally{await d.close();await IECP.endE();}}
 /* Objektliste (Association SN, Attribut 2) – einmal je Zählertyp lesen und merken */
@@ -1384,7 +1422,7 @@ function lgMdmDecode(q){const g=k=>q[k]?.ok?q[k].v:null,op=g(0),csq=g(1),scan=g(
 async function lgModem(count){let found=false;
   try{status('Zähler wird angesprochen …');prog('ind');const id=await IECP.handshake(2500);ST.ident=id;
     if(!isLGE(id))throw new Error(`Zähler ${id}: Modem-Empfang über den Zähler bisher nur bei L+G (Mode E)`);found=true;
-    return await dlmsRun({clients:[16,32],servers:[17,1],pre:true},async d=>{
+    return await dlmsRun({clients:[16,32],servers:[17,1],servers32:[17,1],keepOrder:true,pre:true},async d=>{
       try{const r=await d.read([0xfd08,0x3848]);if(r[0].ok)MDM.dev=dlStr(r[0].v);if(r[1].ok)MDM.fw=dlStr(r[1].v);}catch(e){log('WARN',e.message);}
       /* 0x7D08 = IP-Adresse des Modems (4 Byte, im Q4-Mitschnitt 0A 4A 4B 18 = 10.74.75.24) */
       try{const [ip]=await d.read([0x7d08]);if(ip.ok){const v=ip.v,x=typeof v==='number'?[v>>>24,(v>>16)&255,(v>>8)&255,v&255]:v?.os?.length===4?v.os:null;if(x)MDM.ip=x.join('.');}}catch(e){log('WARN','IP: '+e.message);}
