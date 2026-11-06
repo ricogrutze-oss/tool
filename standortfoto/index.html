@@ -1,48 +1,93 @@
 <!doctype html>
 <html lang="de">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#000000">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Standortfoto">
-<meta name="theme-color" content="#1f2a37">
-<title>Standortfoto</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Standort">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Standortfoto</title>
 <style>
-:root{--bg:#f4f5f7;--card:#ffffff;--text:#16181d;--muted:#5d6470;--accent:#1f2a37;--gelb:#ffc400;--border:#dde1e7;--ok:#1a8f3a;}
-@media (prefers-color-scheme: dark){:root{--bg:#0f1115;--card:#1a1d23;--text:#eef0f3;--muted:#9aa2ae;--border:#2a2f37;--accent:#ffc400;}}
+:root{
+  --bg:var(--tb-bg);--panel:var(--tb-panel);--panel2:var(--tb-panel2);--edge:var(--tb-edge);
+  --amber:var(--tb-acc);--text:var(--tb-text);--text-dim:var(--tb-dim);
+  --green:var(--tb-green);--red:var(--tb-red);
+}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif;
+body{margin:0;background:var(--bg);color:var(--text);
+  font:16px/1.4 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
   padding:16px;padding-top:max(16px,env(safe-area-inset-top));padding-bottom:max(16px,env(safe-area-inset-bottom))}
 main{max-width:560px;margin:0 auto}
 h1{font-size:22px;margin:4px 0 16px;display:flex;align-items:center;gap:10px}
-h1 img{width:30px;height:30px}
-.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px}
+h1 svg{width:26px;height:26px;flex:none}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:14px;padding:16px;margin-bottom:14px}
 button{font:inherit;cursor:pointer}
-.big{width:100%;padding:18px;font-size:19px;font-weight:600;border:0;border-radius:12px;background:#1f2a37;color:#fff}
-.big:disabled{opacity:.5}
-.big.save{background:var(--ok)}
-.big.sec{background:transparent;color:var(--text);border:1px solid var(--border);margin-top:10px;font-size:16px;padding:12px}
-.bar{height:8px;background:var(--border);border-radius:4px;overflow:hidden;margin-top:14px}
-.bar>div{height:100%;width:0;background:var(--gelb);transition:width .2s linear}
-#status{margin-top:10px;color:var(--muted);min-height:1.4em}
-#status.ok{color:var(--ok);font-weight:600}
-#preview{width:100%;border-radius:10px;border:1px solid var(--border);margin-top:12px;display:block}
-.hint{font-size:13px;color:var(--muted);margin-top:10px}
+.big{width:100%;padding:18px;font-size:19px;font-weight:600;border:0;border-radius:12px;background:var(--amber);color:var(--tb-on-acc)}
+.big:disabled{opacity:.5;cursor:default}
+.big.green{background:var(--green);color:#06210f}
+.bar{height:8px;background:var(--panel2);border-radius:4px;overflow:hidden;margin-top:14px;border:1px solid var(--edge)}
+.bar>div{height:100%;width:0;background:var(--amber);transition:width .2s linear}
+#status{margin-top:10px;color:var(--text-dim);min-height:1.4em;font-size:14px}
 .row{display:flex;gap:10px}
-label{flex:1;font-size:14px;color:var(--muted)}
-input[type=number],input[type=text]{width:100%;margin-top:4px;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:16px}
-.check{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:15px;color:var(--text)}
-.check input{width:22px;height:22px}
-details summary{color:var(--muted);font-size:14px;cursor:pointer}
+label{flex:1;font-size:13px;color:var(--text-dim)}
+input{width:100%;margin-top:4px;padding:10px;border-radius:8px;border:1px solid var(--edge);background:var(--panel2);color:var(--text);font-size:16px}
+input:focus{outline:1px solid var(--amber)}
+#results img{width:100%;border-radius:10px;border:1px solid var(--edge);margin-top:12px;display:block}
+.hint{font-size:13px;color:var(--text-dim);margin-top:10px}
+details summary{color:var(--text-dim);font-size:14px;cursor:pointer}
+details summary:hover{color:var(--amber)}
 </style>
+<style id="tb-tokens">
+:root{--tb-bg:#000000;--tb-panel:#1c1c1e;--tb-panel2:#2c2c2e;--tb-inset:#121214;--tb-seg:#3a3a3c;--tb-toggle:#39393d;--tb-edge:#38383a;--tb-edge2:#48484a;--tb-acc:#8cc63f;--tb-acc-hi:#9fd652;--tb-acc-dim:#6f9c2e;--tb-on-acc:#0b1a02;--tb-text:#f5f5f7;--tb-dim:#98989f;--tb-green:#30d158;--tb-red:#ff453a;--tb-blue:#64a8ff;--tb-orange:#ff9f0a;--tb-purple:#bf8cff;--tb-cyan:#5ac8fa;color-scheme:dark;--tb-acc-bg:color-mix(in srgb,var(--tb-acc) 16%,var(--tb-panel));--tb-red-bg:color-mix(in srgb,var(--tb-red) 16%,var(--tb-panel));--tb-green-bg:color-mix(in srgb,var(--tb-green) 16%,var(--tb-panel));--tb-blue-bg:color-mix(in srgb,var(--tb-blue) 16%,var(--tb-panel));--tb-orange-bg:color-mix(in srgb,var(--tb-orange) 16%,var(--tb-panel));--tb-purple-bg:color-mix(in srgb,var(--tb-purple) 16%,var(--tb-panel));--tb-cyan-bg:color-mix(in srgb,var(--tb-cyan) 16%,var(--tb-panel));}
+:root[data-theme="light"]{--tb-bg:#f2f2f7;--tb-panel:#ffffff;--tb-panel2:#eeeef3;--tb-inset:#f2f2f7;--tb-seg:#ffffff;--tb-toggle:#e5e5ea;--tb-edge:#d8d8de;--tb-edge2:#c6c6cc;--tb-acc:#6ba31a;--tb-acc-hi:#5d9111;--tb-acc-dim:#4d7a12;--tb-on-acc:#ffffff;--tb-text:#1c1c1e;--tb-dim:#6c6c70;--tb-green:#1f9d46;--tb-red:#d70015;--tb-blue:#0a64d8;--tb-orange:#c76a00;--tb-purple:#7a3fd0;--tb-cyan:#0a7ea4;color-scheme:light}
+body{-webkit-font-smoothing:antialiased}
+button:not(:disabled):active{opacity:.85}
+@media print{#tb-theme-btn{display:none!important}}
+</style>
+<script id="tb-theme-js">
+(function(){
+  var K='toolbox-theme', root=document.documentElement, mq=window.matchMedia?matchMedia('(prefers-color-scheme: light)'):null;
+  function mode(){try{var m=localStorage.getItem(K);return (m==='light'||m==='dark')?m:'auto'}catch(e){return 'auto'}}
+  function eff(m){return m==='auto'?((mq&&mq.matches)?'light':'dark'):m}
+  var ICON={auto:'◐',light:'☀︎',dark:'☾'}, NAME={auto:'Automatisch',light:'Hell',dark:'Dunkel'};
+  function apply(){
+    var m=mode(), e=eff(m);
+    root.setAttribute('data-theme',e);
+    if(root.hasAttribute('data-bs-theme')||window.bootstrap) root.setAttribute('data-bs-theme',e);
+    var t=document.querySelector('meta[name="theme-color"]'); if(!t){t=document.createElement('meta');t.name='theme-color';document.head.appendChild(t)}
+    t.content=e==='light'?'#f2f2f7':'#000000';
+    var b=document.getElementById('tb-theme-btn'); if(b){b.textContent=ICON[m];b.title='Darstellung: '+NAME[m]+' (tippen zum Wechseln)';b.setAttribute('aria-label',b.title)}
+    try{window.dispatchEvent(new CustomEvent('toolbox-theme',{detail:e}))}catch(x){}
+  }
+  function set(m){try{if(m==='auto')localStorage.removeItem(K);else localStorage.setItem(K,m)}catch(e){} apply()}
+  function cycle(){var m=mode();set(m==='auto'?'light':m==='light'?'dark':'auto')}
+  window.toolboxTheme={mode:mode,set:set,cycle:cycle,effective:function(){return eff(mode())}};
+  apply();
+  if(mq){(mq.addEventListener?mq.addEventListener('change',apply):mq.addListener(apply))}
+  window.addEventListener('storage',function(e){if(e.key===K||e.key===null)apply()});
+  function btn(){
+    if(window.top!==window.self||document.getElementById('tb-theme-btn')||!document.body)return;
+    var s=document.createElement('style');
+    s.textContent='#tb-theme-btn{position:fixed;left:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:2147483000;width:38px;height:38px;border-radius:50%;border:.5px solid var(--tb-edge);background:var(--tb-panel2);color:var(--tb-text);font:18px/1 -apple-system,system-ui,sans-serif;padding:0;cursor:pointer;opacity:.88;box-shadow:0 2px 10px rgba(0,0,0,.3);-webkit-tap-highlight-color:transparent}#tb-theme-btn:active{transform:scale(.94)}';
+    document.head.appendChild(s);
+    var b=document.createElement('button');b.id='tb-theme-btn';b.type='button';b.addEventListener('click',cycle);document.body.appendChild(b);apply();
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',btn);else btn();
+})();
+</script>
 </head>
 <body>
 <main>
-  <h1><img src="icon.svg" alt="">Standortfoto</h1>
+  <h1>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--amber)"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+    Standortfoto
+  </h1>
 
   <div class="card">
     <button id="start" class="big">Standort erfassen</button>
@@ -51,9 +96,9 @@ details summary{color:var(--muted);font-size:14px;cursor:pointer}
   </div>
 
   <div class="card" id="saveCard" hidden>
-    <button id="save" class="big save">Bild sichern</button>
-    <div class="hint" id="saveHint"></div>
-    <img id="preview" alt="Vorschau">
+    <button id="save" class="big green">Bilder sichern</button>
+    <div class="hint">Im Teilen-Menü „Bilder sichern" wählen – die Fotos landen als JPEG in der Galerie.</div>
+    <div id="results"></div>
   </div>
 
   <div class="card">
@@ -63,8 +108,6 @@ details summary{color:var(--muted);font-size:14px;cursor:pointer}
         <label>Messdauer (s)<input id="dauer" type="number" inputmode="numeric" min="3" max="60" value="10"></label>
         <label>Zoomstufen<input id="zooms" type="text" value="16,19"></label>
       </div>
-      <label class="check"><input type="checkbox" id="auto" checked> Beim Öffnen sofort messen</label>
-      <label class="check"><input type="checkbox" id="autosave" checked> Danach automatisch speichern</label>
       <div class="hint">Zoom 19 ist die höchste OSM-Stufe (Gebäude, Zäune, Hausnummern). Karte © OpenStreetMap-Mitwirkende, Adresse über Nominatim.</div>
     </details>
   </div>
@@ -72,41 +115,25 @@ details summary{color:var(--muted);font-size:14px;cursor:pointer}
 
 <script>
 const $ = id => document.getElementById(id);
+const W = 1080, MAP_H = 1080, INFO_H = 270;
+const FONT = '-apple-system,system-ui,"Segoe UI",sans-serif';
+let ergebnis = [];
 
-// ---------- Layout (wie Scriptable-Version) ----------
-const W = 1600, RAND = 40, MW = W - 2 * RAND, MH = 1140;
-const RAHMEN = 6, RAHMEN_FARBE = '#3a3f47', INFO_H = 400;
-const DUNKEL = '#1f2a37', GELB = '#ffc400';
-const FONT = '-apple-system,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif';
-
-const IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-let ergebnis = null;   // { blob, name, url }
-
-// ---------- Einstellungen merken ----------
-function ladeEinst() {
-  try {
-    const s = JSON.parse(localStorage.getItem('standortfoto') || '{}');
-    if (s.dauer) $('dauer').value = s.dauer;
-    if (s.zooms) $('zooms').value = s.zooms;
-    if (typeof s.auto === 'boolean') $('auto').checked = s.auto;
-    if (typeof s.autosave === 'boolean') $('autosave').checked = s.autosave;
-  } catch (e) {}
-}
+// Einstellungen merken
+try {
+  const s = JSON.parse(localStorage.getItem('standortfoto') || '{}');
+  if (s.dauer) $('dauer').value = s.dauer;
+  if (s.zooms) $('zooms').value = s.zooms;
+} catch (e) {}
 function merke() {
-  try {
-    localStorage.setItem('standortfoto', JSON.stringify({
-      dauer: $('dauer').value, zooms: $('zooms').value, auto: $('auto').checked, autosave: $('autosave').checked
-    }));
-  } catch (e) {}
+  try { localStorage.setItem('standortfoto', JSON.stringify({ dauer: $('dauer').value, zooms: $('zooms').value })); } catch (e) {}
 }
-['dauer', 'zooms', 'auto', 'autosave'].forEach(id => $(id).addEventListener('change', merke));
 
 function parseZooms(t) {
   const z = String(t).split(/[,; ]+/).map(s => parseInt(s)).filter(n => n >= 3 && n <= 19);
   return z.length ? z : [16, 19];
 }
 
-// ---------- Geo ----------
 const lon2px = (lon, z) => (lon + 180) / 360 * 256 * 2 ** z;
 function lat2px(lat, z) {
   const r = lat * Math.PI / 180;
@@ -129,15 +156,14 @@ function messen(sek) {
     if (!('geolocation' in navigator)) return reject(new Error('Kein Standort im Browser verfügbar'));
     let best = null;
     const start = Date.now();
-    let id = null, t = null;
-    const stop = () => { clearInterval(t); if (id !== null) navigator.geolocation.clearWatch(id); };
-    id = navigator.geolocation.watchPosition(p => {
+    const stop = () => { clearInterval(t); navigator.geolocation.clearWatch(id); };
+    const id = navigator.geolocation.watchPosition(p => {
       if (!best || p.coords.accuracy < best.coords.accuracy) best = p;
       $('status').textContent = `Aktuell ±${Math.round(p.coords.accuracy)} m · bester Wert ±${Math.round(best.coords.accuracy)} m`;
     }, err => {
-      if (err.code === 1) { stop(); reject(new Error('Standortzugriff verweigert – bitte in den Einstellungen erlauben')); }
+      if (err.code === 1) { stop(); reject(new Error('Standortzugriff verweigert')); }
     }, { enableHighAccuracy: true, maximumAge: 0, timeout: (sek + 15) * 1000 });
-    t = setInterval(() => {
+    const t = setInterval(() => {
       const el = (Date.now() - start) / 1000;
       $('fill').style.width = Math.min(100, el / sek * 100) + '%';
       if (el >= sek && (best || el >= sek + 15)) {
@@ -158,194 +184,74 @@ async function holeAdresse(lat, lon) {
   } catch (e) { return ''; }
 }
 
-// ---------- Zeichnen ----------
 const p2 = n => String(n).padStart(2, '0');
-const fmtDatum = d => `${p2(d.getDate())}.${p2(d.getMonth() + 1)}.${d.getFullYear()}   ${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`;
+const fmtDatum = d => `${p2(d.getDate())}.${p2(d.getMonth() + 1)}.${d.getFullYear()}  ${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`;
 const fmtDatei = d => `${d.getFullYear()}${p2(d.getMonth() + 1)}${p2(d.getDate())}_${p2(d.getHours())}${p2(d.getMinutes())}${p2(d.getSeconds())}`;
 
-function rundRechteck(ctx, x, y, w, h, r, farbe) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
-  ctx.fillStyle = farbe;
-  ctx.fill();
-}
-function linie(ctx, x1, y1, x2, y2, breite, farbe) {
-  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
-  ctx.lineWidth = breite; ctx.strokeStyle = farbe; ctx.lineCap = 'butt'; ctx.stroke();
-}
-function blitz(ctx, x, y, s, farbe) {
-  const pts = [[0.15, -1], [-0.55, 0.15], [-0.05, 0.15], [-0.25, 1], [0.55, -0.2], [0.05, -0.2], [0.3, -1]];
-  ctx.beginPath();
-  pts.forEach(([a, b], i) => i ? ctx.lineTo(x + a * s, y + b * s) : ctx.moveTo(x + a * s, y + b * s));
-  ctx.closePath(); ctx.fillStyle = farbe; ctx.fill();
-}
-// Zähler-Symbol: Gehäuse mit kWh-Display und Blitz (Mittelpunkt x/y, Breite s)
-function zaehlerSymbol(ctx, x, y, s) {
-  const w = s, h = 1.25 * s, rand = Math.max(3, s * 0.08);
-  rundRechteck(ctx, x - w / 2, y - h / 2, w, h, s * 0.14, DUNKEL);
-  rundRechteck(ctx, x - w / 2 + rand, y - h / 2 + rand, w - 2 * rand, h - 2 * rand, s * 0.1, '#ffffff');
-  ctx.fillStyle = DUNKEL;
-  ctx.fillRect(x - w * 0.34, y - h * 0.32, w * 0.68, h * 0.26);
-  ctx.fillStyle = GELB;
-  ctx.font = `bold ${Math.round(s * 0.2)}px ${FONT}`;
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText('kWh', x, y - h * 0.19);
-  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-  blitz(ctx, x, y + h * 0.22, s * 0.2, GELB);
-}
-// Maßstab: "schöne" Länge, höchstens ~260 px breit
-function massstab(mpp) {
-  const stufen = [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 5000, 10000];
-  let m = stufen[0];
-  for (const s of stufen) if (s / mpp <= 260) m = s;
-  return { px: m / mpp, text: m >= 1000 ? `${m / 1000} km` : `${m} m` };
-}
 function kuerze(ctx, text, max) {
   if (ctx.measureText(text).width <= max) return text;
   while (text.length > 1 && ctx.measureText(text + '…').width > max) text = text.slice(0, -1);
   return text + '…';
 }
 
-async function karte(lat, lon, acc, zoom) {
+async function zeichne(lat, lon, acc, zoom, adr, zeit) {
   const c = document.createElement('canvas');
-  c.width = MW; c.height = MH;
-  const k = c.getContext('2d');
-  k.fillStyle = '#f2efe9'; k.fillRect(0, 0, MW, MH);
+  c.width = W; c.height = MAP_H + INFO_H;
+  const ctx = c.getContext('2d');
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = '#e5e3df';
+  ctx.fillRect(0, 0, W, MAP_H);
 
   // Kacheln
   const cx = lon2px(lon, zoom), cy = lat2px(lat, zoom);
-  const left = cx - MW / 2, top = cy - MH / 2;
+  const left = cx - W / 2, top = cy - MAP_H / 2;
   const jobs = [];
-  for (let tx = Math.floor(left / 256); tx <= Math.floor((left + MW) / 256); tx++)
-    for (let ty = Math.floor(top / 256); ty <= Math.floor((top + MH) / 256); ty++)
+  for (let tx = Math.floor(left / 256); tx <= Math.floor((left + W) / 256); tx++)
+    for (let ty = Math.floor(top / 256); ty <= Math.floor((top + MAP_H) / 256); ty++)
       jobs.push(ladeKachel(zoom, tx, ty).then(img => ({ img, tx, ty })));
   let ok = true;
   for (const t of await Promise.all(jobs)) {
-    if (t.img) k.drawImage(t.img, Math.round(t.tx * 256 - left), Math.round(t.ty * 256 - top), 256, 256);
+    if (t.img) ctx.drawImage(t.img, Math.round(t.tx * 256 - left), Math.round(t.ty * 256 - top), 256, 256);
     else ok = false;
   }
 
   // Genauigkeitskreis
   const mpp = 156543.03392 * Math.cos(lat * Math.PI / 180) / 2 ** zoom;
-  const r = Math.max(acc / mpp, 8), mx = MW / 2, my = MH / 2;
-  k.beginPath(); k.arc(mx, my, r, 0, 2 * Math.PI);
-  k.fillStyle = 'rgba(30,120,255,.18)'; k.fill();
-  k.lineWidth = 4; k.strokeStyle = 'rgba(30,120,255,.85)'; k.stroke();
+  const r = Math.max(acc / mpp, 8), mx = W / 2, my = MAP_H / 2;
+  ctx.beginPath(); ctx.arc(mx, my, r, 0, 2 * Math.PI);
+  ctx.fillStyle = 'rgba(30,120,255,.18)'; ctx.fill();
+  ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(30,120,255,.85)'; ctx.stroke();
 
-  // Marker: Zählerschild auf Stiel, roter Punkt genau auf dem Messpunkt
-  linie(k, mx, my, mx, my - 46, 7, DUNKEL);
-  k.beginPath(); k.arc(mx, my, 12, 0, 2 * Math.PI); k.fillStyle = '#fff'; k.fill();
-  k.beginPath(); k.arc(mx, my, 8, 0, 2 * Math.PI); k.fillStyle = '#e8202a'; k.fill();
-  zaehlerSymbol(k, mx, my - 92, 70);
+  // Marker
+  ctx.beginPath(); ctx.arc(mx, my, 16, 0, 2 * Math.PI); ctx.fillStyle = '#fff'; ctx.fill();
+  ctx.beginPath(); ctx.arc(mx, my, 11, 0, 2 * Math.PI); ctx.fillStyle = '#e8202a'; ctx.fill();
 
-  // Maßstab unten links
-  const ms = massstab(mpp);
-  k.font = `bold 28px ${FONT}`;
-  const tw = k.measureText(ms.text).width;
-  rundRechteck(k, 24, MH - 80, ms.px + tw + 50, 56, 12, '#fff');
-  linie(k, 40, MH - 46, 40 + ms.px, MH - 46, 5, '#16181d');
-  linie(k, 40, MH - 58, 40, MH - 34, 5, '#16181d');
-  linie(k, 40 + ms.px, MH - 58, 40 + ms.px, MH - 34, 5, '#16181d');
-  k.fillStyle = '#16181d'; k.textBaseline = 'middle';
-  k.fillText(ms.text, 54 + ms.px, MH - 50);
+  // Attribution
+  ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.fillRect(W - 230, MAP_H - 32, 230, 32);
+  ctx.fillStyle = '#333'; ctx.font = `20px ${FONT}`; ctx.fillText('© OpenStreetMap', W - 218, MAP_H - 27);
 
-  // Attribution unten rechts
-  k.font = `22px ${FONT}`;
-  const aw = k.measureText('© OpenStreetMap').width;
-  k.fillStyle = '#fff'; k.fillRect(MW - aw - 24, MH - 38, aw + 24, 38);
-  k.fillStyle = '#444'; k.fillText('© OpenStreetMap', MW - aw - 12, MH - 19);
-  k.textBaseline = 'alphabetic';
-
-  return { canvas: c, ok };
-}
-
-async function erzeugeBild(lat, lon, acc, zooms, adr, zeit) {
-  const H = RAND + zooms.length * MH + (zooms.length - 1) * RAND + RAND + INFO_H;
-  const c = document.createElement('canvas');
-  c.width = W; c.height = H;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
-
-  let kartenOk = true, y0 = RAND;
-  for (const z of zooms) {
-    const k = await karte(lat, lon, acc, z);
-    if (!k.ok) kartenOk = false;
-    ctx.fillStyle = RAHMEN_FARBE;
-    ctx.fillRect(RAND - RAHMEN, y0 - RAHMEN, MW + 2 * RAHMEN, MH + 2 * RAHMEN);
-    ctx.drawImage(k.canvas, RAND, y0);
-    y0 += MH + RAND;
-  }
-
-  // Infoblock
-  let y = y0 + 6;
-  ctx.textBaseline = 'middle';
-  zaehlerSymbol(ctx, RAND + 22, y + 28, 40);
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = DUNKEL; ctx.font = `bold 44px ${FONT}`;
-  ctx.fillText('Zählerstandort', RAND + 70, y + 30);
-  y += 74;
-
-  ctx.fillStyle = '#000'; ctx.font = `bold 64px ${FONT}`;
-  ctx.fillText(`${lat.toFixed(6)}, ${lon.toFixed(6)}`, RAND, y + 40);
-  y += 92;
-
-  const stufe = acc <= 10 ? ['#1a8f3a', '#e3f4e7'] : acc <= 30 ? ['#b86e00', '#fdf0dc'] : ['#c0021b', '#fde3e6'];
-  const plText = `±${Math.round(acc)} m Genauigkeit`;
-  ctx.font = `bold 36px ${FONT}`;
-  const plW = ctx.measureText(plText).width + 44;
-  rundRechteck(ctx, RAND, y, plW, 60, 30, stufe[1]);
-  ctx.fillStyle = stufe[0];
-  ctx.fillText(plText, RAND + 22, y + 31);
-
-  ctx.font = `38px ${FONT}`; ctx.fillStyle = '#222';
-  const adrText = (adr || 'Adresse nicht verfügbar') + (kartenOk ? '' : '  (Karte unvollständig)');
-  ctx.fillText(kuerze(ctx, adrText, MW - plW - 36), RAND + plW + 36, y + 31);
-  y += 84;
-
-  ctx.font = `32px ${FONT}`; ctx.fillStyle = '#6b7280';
-  ctx.fillText(fmtDatum(zeit), RAND, y + 22);
+  // Infoleiste
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, MAP_H, W, INFO_H);
+  const pad = 36; let y = MAP_H + 24;
+  ctx.fillStyle = '#000'; ctx.font = `bold 48px ${FONT}`;
+  ctx.fillText(`${lat.toFixed(6)}, ${lon.toFixed(6)}`, pad, y); y += 66;
+  ctx.fillStyle = acc <= 10 ? '#1a8f3a' : acc <= 30 ? '#d98200' : '#d0021b';
+  ctx.font = `bold 40px ${FONT}`;
+  ctx.fillText(`Genauigkeit ±${Math.round(acc)} m` + (ok ? '' : '   (Karte offline)'), pad, y); y += 56;
+  ctx.fillStyle = '#222'; ctx.font = `34px ${FONT}`;
+  ctx.fillText(kuerze(ctx, adr || 'Adresse nicht verfügbar', W - 2 * pad), pad, y); y += 48;
+  ctx.fillStyle = '#666'; ctx.font = `30px ${FONT}`;
+  ctx.fillText(`${fmtDatum(zeit)}   ·   Zoom ${zoom}`, pad, y);
   return c;
 }
 
-// ---------- Speichern ----------
-function herunterladen() {
-  const a = document.createElement('a');
-  a.href = ergebnis.url; a.download = ergebnis.name;
-  document.body.appendChild(a); a.click(); a.remove();
-}
-async function teilen() {
-  const file = new File([ergebnis.blob], ergebnis.name, { type: 'image/jpeg' });
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    await navigator.share({ files: [file] });
-    return true;
-  }
-  return false;
-}
-
-$('save').onclick = async () => {
-  if (!ergebnis) return;
-  try {
-    if (IOS && await teilen()) return;
-  } catch (e) { if (e.name === 'AbortError') return; }
-  herunterladen();
-};
-
-// ---------- Ablauf ----------
-let laeuft = false;
-async function los() {
-  if (laeuft) return;
-  laeuft = true;
+$('start').onclick = async () => {
   merke();
   $('start').disabled = true;
   $('saveCard').hidden = true;
-  $('status').className = '';
-  if (ergebnis) URL.revokeObjectURL(ergebnis.url);
-  ergebnis = null;
+  $('results').innerHTML = '';
+  ergebnis.forEach(e => URL.revokeObjectURL(e.url));
+  ergebnis = [];
   $('fill').style.width = '0';
   try {
     const sek = Math.min(60, Math.max(3, parseInt($('dauer').value) || 10));
@@ -356,41 +262,40 @@ async function los() {
     const zeit = new Date();
     $('status').textContent = 'Lade Karte und Adresse …';
     const adr = await holeAdresse(lat, lon);
-    const c = await erzeugeBild(lat, lon, acc, zooms, adr, zeit);
-    const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92));
-    ergebnis = { blob, name: `standort_${fmtDatei(zeit)}.jpg`, url: URL.createObjectURL(blob) };
-    $('preview').src = ergebnis.url;
-    $('saveCard').hidden = false;
-
-    if ($('autosave').checked && !IOS) {
-      // Android / PC: direkt als Datei in "Downloads"
-      herunterladen();
-      $('status').textContent = `Gespeichert: ${ergebnis.name} (Downloads) · ±${Math.round(acc)} m`;
-      $('status').className = 'ok';
-      $('save').textContent = 'Nochmal speichern / teilen';
-      $('saveHint').textContent = 'Das Bild liegt im Ordner Downloads und in der Galerie unter „Downloads“.';
-    } else {
-      $('status').textContent = `Fertig · ±${Math.round(acc)} m`;
-      $('save').textContent = 'Bild sichern';
-      $('saveHint').textContent = IOS
-        ? 'Tippen, dann im Teilen-Menü „Bild sichern“ wählen. Ohne Zwischenschritt geht es am iPhone nur mit dem Scriptable-Kurzbefehl.'
-        : 'Tippen, um das Bild zu speichern.';
+    for (const z of zooms) {
+      const c = await zeichne(lat, lon, acc, z, adr, zeit);
+      const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92));
+      const name = `standort_${fmtDatei(zeit)}_z${z}.jpg`;
+      const url = URL.createObjectURL(blob);
+      ergebnis.push({ blob, name, url });
+      const img = document.createElement('img');
+      img.src = url; img.alt = name;
+      $('results').appendChild(img);
     }
+    $('status').textContent = `Fertig · ±${Math.round(acc)} m · ${ergebnis.length} Bilder`;
+    $('saveCard').hidden = false;
   } catch (e) {
     $('status').textContent = 'Fehler: ' + e.message;
   }
   $('start').disabled = false;
-  $('start').textContent = 'Nochmal messen';
-  laeuft = false;
-}
-$('start').onclick = los;
+};
 
-ladeEinst();
-if ($('auto').checked) los();
+$('save').onclick = async () => {
+  const files = ergebnis.map(e => new File([e.blob], e.name, { type: 'image/jpeg' }));
+  if (navigator.canShare && navigator.canShare({ files })) {
+    try { await navigator.share({ files }); } catch (e) {}
+  } else {
+    for (const e of ergebnis) {
+      const a = document.createElement('a');
+      a.href = e.url; a.download = e.name;
+      document.body.appendChild(a); a.click(); a.remove();
+    }
+  }
+};
 
 // Service Worker: macht die Seite einzeln als App installierbar
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(() => {});
+  navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(() => {});
 }
 </script>
 </body>
