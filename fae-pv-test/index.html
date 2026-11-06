@@ -1,0 +1,2862 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FRE-Test">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>FRE + NA-Schutz Test – PV Anlage</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0d1117;--card:#161b22;--border:#30363d;
+  --accent:#f0a500;--green:#3fb950;--red:#f85149;
+  --blue:#58a6ff;--muted:#7d8590;--text:#e6edf3;
+  --mono:'Share Tech Mono',monospace;--sans:'Barlow',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);}
+
+.screen{display:none;height:100dvh;overflow-y:auto;flex-direction:column;}
+.screen.active{display:flex;}
+
+/* ── SETUP ── */
+#setup{padding:1rem;gap:.85rem;align-items:center;}
+.s-inner{width:100%;max-width:430px;display:flex;flex-direction:column;gap:.85rem;}
+.s-title{text-align:center;}
+.s-title h1{font-size:1.4rem;font-weight:700;color:var(--accent);letter-spacing:.07em;text-transform:uppercase;}
+.s-title p{font-size:.75rem;color:var(--muted);margin-top:.2rem;}
+
+/* Tab nav */
+.tab-nav{display:flex;border:1px solid var(--border);border-radius:4px;overflow:hidden;flex-shrink:0;}
+.tab{
+  flex:1;background:var(--card);border:none;color:var(--muted);
+  font-family:var(--sans);font-size:.82rem;font-weight:600;
+  padding:.65rem .5rem;cursor:pointer;letter-spacing:.03em;
+  transition:background .15s,color .15s;
+}
+.tab:hover{color:var(--text);}
+.tab.active{background:rgba(240,165,0,.15);color:var(--accent);}
+
+/* Back link */
+.back-link{
+  display:flex;align-items:center;gap:.35rem;
+  font-family:var(--mono);font-size:.68rem;color:var(--muted);
+  text-decoration:none;padding:.3rem 0;
+  letter-spacing:.06em;
+}
+.back-link:hover{color:var(--text);}
+.back-link::before{content:'←';font-size:.8rem;}
+
+/* Section label */
+.sec-hdr{
+  font-family:var(--mono);font-size:.6rem;color:var(--accent);
+  letter-spacing:.15em;text-transform:uppercase;padding-bottom:.3rem;
+  border-bottom:1px solid var(--border);
+}
+.s-section{display:flex;flex-direction:column;gap:.6rem;}
+.s-row{display:flex;gap:.5rem;align-items:stretch;}
+.s-lbl{font-family:var(--mono);font-size:.62rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.25rem;}
+
+input[type=number],input[type=text],input[type=email],select{
+  background:var(--card);border:1px solid var(--border);color:var(--text);
+  font-family:var(--mono);font-size:.92rem;padding:.55rem .75rem;outline:none;width:100%;
+}
+input:focus,select:focus{border-color:var(--accent);}
+input::placeholder{color:var(--muted);}
+
+/* Radio */
+.radio-row{display:flex;gap:1.2rem;}
+.radio-lbl{display:flex;align-items:center;gap:.4rem;font-family:var(--mono);font-size:.8rem;color:var(--muted);cursor:pointer;}
+.radio-lbl input{width:auto;accent-color:var(--accent);}
+.radio-lbl:has(input:checked){color:var(--text);}
+
+/* Wandler fields */
+.wand-fields{
+  display:none;flex-direction:column;gap:.5rem;
+  padding:.65rem .75rem;background:color-mix(in srgb,var(--tb-text) 3%,transparent);border:1px solid var(--border);
+}
+.wand-fields.visible{display:flex;}
+.wand-row{display:flex;align-items:center;gap:.4rem;}
+.wand-row input{flex:1;min-width:60px;}
+.wand-sep{font-family:var(--mono);color:var(--muted);padding:0 .1rem;}
+.wand-factor{font-family:var(--mono);font-size:.72rem;color:var(--accent);margin-top:.1rem;}
+
+/* GPS */
+.gps-status{
+  font-family:var(--mono);font-size:.7rem;color:var(--muted);
+  padding:.5rem .75rem;background:color-mix(in srgb,var(--tb-text) 2.5%,transparent);border:1px solid var(--border);
+  line-height:1.65;
+}
+.gps-status.ok{color:var(--green);}
+.gps-status.err{color:var(--red);}
+
+/* Buttons */
+.btn{
+  display:block;width:100%;background:var(--accent);color:#000;border:none;
+  font-family:var(--sans);font-weight:700;font-size:.88rem;letter-spacing:.06em;
+  padding:.75rem;text-transform:uppercase;cursor:pointer;text-align:center;
+}
+.btn:hover{background:#ffb820;}
+.btn:disabled{opacity:.35;cursor:default;}
+.btn.sec{
+  background:transparent;border:1px solid var(--border);color:var(--muted);
+  font-size:.78rem;padding:.5rem .85rem;width:auto;
+}
+.btn.sec:hover{border-color:var(--text);color:var(--text);}
+.btn.grn{background:var(--green);color:#000;}
+.btn.grn:hover{background:#56d36e;}
+.btn.grn:disabled{opacity:.35;cursor:default;}
+
+/* ── QR MODAL ── */
+#qr-modal{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);
+  z-index:200;flex-direction:column;align-items:center;justify-content:center;
+  gap:.75rem;padding:1rem;
+}
+#qr-modal.open{display:flex;}
+.qr-frame{position:relative;width:100%;max-width:340px;background:#000;overflow:hidden;}
+#qr-video{width:100%;display:block;max-height:45vh;object-fit:cover;}
+.qr-scan-box{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:160px;height:160px;pointer-events:none;
+}
+.qr-scan-box::before,.qr-scan-box::after,
+.qr-c2::before,.qr-c2::after{
+  content:'';position:absolute;width:36px;height:36px;
+  border-color:var(--accent);border-style:solid;
+}
+.qr-scan-box::before{top:0;left:0;border-width:3px 0 0 3px;}
+.qr-scan-box::after{bottom:0;right:0;border-width:0 3px 3px 0;}
+.qr-c2::before{top:0;right:0;border-width:3px 3px 0 0;}
+.qr-c2::after{bottom:0;left:0;border-width:0 0 3px 3px;}
+#qr-status{
+  font-family:var(--mono);font-size:.78rem;color:var(--muted);
+  text-align:center;max-width:340px;line-height:1.5;
+}
+#qr-status.found{color:var(--green);}
+.qr-manual{display:flex;gap:.5rem;width:100%;max-width:340px;}
+.qr-actions{display:flex;gap:.5rem;width:100%;max-width:340px;}
+
+/* ── TEST ── */
+#test{padding:0;}
+.step-hdr{
+  background:var(--card);border-bottom:1px solid var(--border);
+  padding:.65rem 1rem;display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;position:sticky;top:0;z-index:20;
+}
+.step-n{font-family:var(--mono);font-size:.65rem;color:var(--muted);}
+.step-l{font-weight:700;font-size:1.15rem;color:var(--accent);}
+.pips{display:flex;gap:4px;}
+.pip{width:20px;height:4px;background:var(--border);border-radius:2px;}
+.pip.done{background:var(--green);}.pip.cur{background:var(--accent);}
+
+.cam-wrap{position:relative;background:#000;flex-shrink:0;overflow:hidden;}
+#tvid{width:100%;display:block;max-height:36vh;object-fit:cover;}
+#tovl{position:absolute;top:0;left:0;width:100%;height:100%;cursor:crosshair;}
+.cam-hint{
+  position:absolute;bottom:.35rem;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.75);color:var(--muted);font-size:.65rem;
+  padding:.2rem .55rem;font-family:var(--mono);white-space:nowrap;pointer-events:none;
+}
+
+.pwr-sec{padding:.75rem 1rem .4rem;flex-shrink:0;}
+.pwr-main{display:flex;align-items:baseline;gap:.3rem;}
+#pkw{font-family:var(--mono);font-size:2.6rem;font-weight:700;line-height:1;color:var(--text);}
+#pkw.dim{color:var(--muted);}
+.pwr-u{font-family:var(--mono);font-size:.85rem;color:var(--muted);}
+.pwr-sub{display:flex;gap:1rem;align-items:baseline;margin-top:.2rem;}
+#pamps{font-family:var(--mono);font-size:.78rem;color:var(--blue);}
+#pwfak{font-family:var(--mono);font-size:.68rem;color:var(--muted);}
+.badge{
+  display:inline-flex;align-items:center;gap:.3rem;
+  padding:.22rem .6rem;font-family:var(--mono);font-size:.68rem;letter-spacing:.07em;
+  margin-top:.45rem;border-radius:2px;
+}
+.badge.wait{background:rgba(125,133,144,.1);color:var(--muted);border:1px solid var(--border);}
+.badge.ok{background:rgba(63,185,80,.12);color:var(--green);border:1px solid rgba(63,185,80,.35);}
+.badge.fail{background:rgba(248,81,73,.12);color:var(--red);border:1px solid rgba(248,81,73,.35);}
+.badge.ref{background:rgba(240,165,0,.12);color:var(--accent);border:1px solid rgba(240,165,0,.35);}
+
+.tol-sec{padding:0 1rem .45rem;flex-shrink:0;}
+.tol-lbl{font-family:var(--mono);font-size:.58rem;color:var(--muted);letter-spacing:.1em;}
+.tol-bar{position:relative;height:6px;background:var(--border);border-radius:3px;margin:.3rem 0;}
+.tol-band{position:absolute;height:100%;background:rgba(63,185,80,.3);border-radius:3px;}
+.tol-needle{position:absolute;top:-3px;width:4px;height:12px;background:var(--blue);margin-left:-2px;border-radius:2px;transition:left .2s;}
+.tol-nums{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.62rem;color:var(--muted);}
+.tol-vals{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.65rem;color:var(--muted);margin-top:.3rem;}
+.tol-vals span{color:var(--text);}
+
+.instr{padding:0 1rem .4rem;font-size:.8rem;color:var(--muted);flex-shrink:0;line-height:1.5;}
+.actions{padding:.5rem 1rem .8rem;display:flex;flex-direction:column;gap:.4rem;flex-shrink:0;margin-top:auto;}
+
+/* ── PROTOCOL ── */
+#proto{padding:1rem;gap:.8rem;}
+.p-hdr{text-align:center;font-size:1rem;font-weight:700;color:var(--accent);letter-spacing:.07em;text-transform:uppercase;}
+.p-meta{
+  font-family:var(--mono);font-size:.7rem;
+  display:grid;grid-template-columns:1fr 1fr;gap:.4rem;
+}
+.p-meta-item{display:flex;flex-direction:column;gap:.1rem;}
+.p-meta-item .ml{color:var(--muted);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;}
+.p-meta-item .mv{color:var(--text);}
+.gps-box{
+  background:var(--card);border:1px solid var(--border);border-left:3px solid var(--green);
+  padding:.55rem .85rem;font-family:var(--mono);font-size:.7rem;line-height:1.7;
+}
+.gps-box .ga{color:var(--text);font-size:.75rem;}
+.gps-box .gc{color:var(--muted);}
+.rtable{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:.8rem;}
+.rtable th{
+  padding:.45rem .6rem;background:var(--card);border:1px solid var(--border);
+  color:var(--muted);font-weight:400;font-size:.6rem;letter-spacing:.1em;
+  text-align:left;line-height:1.35;
+}
+.rtable td{padding:.65rem .6rem;border:1px solid var(--border);vertical-align:middle;}
+.rtable td:nth-child(2),.rtable td:nth-child(3),.rtable td:nth-child(4){text-align:right;}
+.rtable tbody tr:hover{background:color-mix(in srgb,var(--tb-text) 2.5%,transparent);}
+.pi{color:var(--green);} .fi{color:var(--red);} .wi{color:var(--accent);}
+.pfields{display:grid;grid-template-columns:1fr 1fr;gap:.55rem;}
+.pfield{display:flex;flex-direction:column;gap:.22rem;}
+.pfield.full{grid-column:1/-1;}
+.pfield input{font-size:.82rem;padding:.48rem .65rem;}
+
+/* Detection controls */
+.det-ctrl{background:var(--tb-bg);border-bottom:1px solid var(--border);flex-shrink:0;}
+.det-rows{padding:.5rem .9rem .6rem;display:flex;flex-direction:column;gap:.4rem;}
+.det-row{display:flex;align-items:center;gap:.6rem;}
+.det-lbl{font-family:var(--mono);font-size:.62rem;color:var(--muted);white-space:nowrap;width:6.5rem;flex-shrink:0;}
+.det-row input[type=range]{flex:1;accent-color:var(--accent);height:3px;}
+.det-val{font-family:var(--mono);font-size:.68rem;color:var(--accent);width:3.5rem;text-align:right;flex-shrink:0;}
+.imp-chip{
+  background:var(--card);border:1px solid var(--border);color:var(--muted);
+  font-family:var(--mono);font-size:.65rem;padding:.2rem .5rem;
+  border-radius:10px;cursor:pointer;white-space:nowrap;
+}
+.imp-chip.active{background:rgba(240,165,0,.15);border-color:var(--accent);color:var(--accent);}
+.imp-chip:hover{border-color:var(--text);color:var(--text);}
+
+.ir-tog{
+  width:38px;height:20px;border-radius:12px;background:var(--border);
+  border:1px solid var(--border);cursor:pointer;position:relative;transition:.15s;flex-shrink:0;
+}
+.ir-tog::after{
+  content:'';position:absolute;width:15px;height:15px;border-radius:50%;
+  background:var(--muted);top:2px;left:2px;transition:.15s;
+}
+.ir-tog.on{background:rgba(240,165,0,.25);border-color:var(--accent);}
+.ir-tog.on::after{left:21px;background:var(--accent);}
+
+.imp-ctrl{
+  display:flex;align-items:center;gap:.5rem;
+  font-family:var(--mono);font-size:.72rem;color:var(--muted);
+  padding:.4rem 1rem;border-top:1px solid var(--border);
+}
+.imp-ctrl button{
+  background:var(--card);border:1px solid var(--border);color:var(--text);
+  width:1.8rem;height:1.8rem;font-size:.9rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.imp-ctrl button:hover{border-color:var(--accent);color:var(--accent);}
+#imp-n{color:var(--accent);font-size:.9rem;min-width:1.5rem;text-align:center;}
+
+/* Email button */
+.btn.email{background:#1a73e8;color:#fff;}
+.btn.email:hover{background:#1557b0;}
+
+/* Result icons */
+.pi{color:var(--green);font-size:1.1rem;}
+.fi{color:var(--red);font-size:1.1rem;}
+.wi{color:var(--accent);font-size:1.1rem;}
+
+/* Overall result banner */
+.gesamt{
+  padding:.6rem 1rem;text-align:center;font-weight:700;
+  font-family:var(--mono);font-size:.85rem;letter-spacing:.08em;border-radius:2px;
+}
+.gesamt.ok{background:rgba(63,185,80,.15);color:var(--green);border:1px solid rgba(63,185,80,.4);}
+.gesamt.warn{background:rgba(240,165,0,.15);color:var(--accent);border:1px solid rgba(240,165,0,.4);}
+.gesamt.fail{background:rgba(248,81,73,.15);color:var(--red);border:1px solid rgba(248,81,73,.4);}
+
+/* Photo grid */
+.photo-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:.3rem;}
+.photo-item{position:relative;aspect-ratio:4/3;background:var(--card);border:1px solid var(--border);overflow:hidden;border-radius:2px;}
+.photo-item img{width:100%;height:100%;object-fit:cover;display:block;}
+.photo-item .pdel{
+  position:absolute;top:.25rem;right:.25rem;background:rgba(0,0,0,.75);color:#fff;
+  border:none;border-radius:50%;width:1.6rem;height:1.6rem;font-size:.85rem;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;
+}
+.photo-item .pnum{
+  position:absolute;bottom:.25rem;left:.3rem;font-family:var(--mono);font-size:.6rem;
+  color:color-mix(in srgb,var(--tb-text) 70%,transparent);background:rgba(0,0,0,.5);padding:.1rem .3rem;border-radius:2px;
+}
+
+/* Camera toggle */
+.cam-toggle-row{padding:.5rem 1rem;flex-shrink:0;border-top:1px solid var(--border);}
+.cam-toggle-btn{
+  width:100%;background:var(--card);border:1px solid var(--border);color:var(--muted);
+  font-family:var(--mono);font-size:.75rem;padding:.5rem;cursor:pointer;
+  text-align:left;letter-spacing:.04em;display:flex;align-items:center;gap:.5rem;
+}
+.cam-toggle-btn:hover{border-color:var(--accent);color:var(--accent);}
+.cam-toggle-btn.open{color:var(--accent);border-color:var(--accent);background:rgba(240,165,0,.07);}
+.cam-toggle-btn::after{content:'▼';margin-left:auto;font-size:.65rem;}
+.cam-toggle-btn.open::after{content:'▲';}
+
+/* P+/P- Direction chips */
+.pdir-row{
+  display:flex;align-items:center;gap:.5rem;padding:.35rem 1rem;
+  background:color-mix(in srgb,var(--tb-text) 2.5%,transparent);border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.pdir-lbl{font-family:var(--mono);font-size:.62rem;color:var(--muted);flex-shrink:0;}
+.pdir-chip{
+  background:var(--card);border:1px solid var(--border);color:var(--muted);
+  font-family:var(--mono);font-size:.72rem;padding:.25rem .75rem;cursor:pointer;border-radius:10px;
+}
+.pdir-chip.active.plus{background:rgba(63,185,80,.15);border-color:var(--green);color:var(--green);}
+.pdir-chip.active.minus{background:rgba(88,166,255,.15);border-color:var(--blue);color:var(--blue);}
+/* Eigenverbrauch display */
+.ev-info{
+  font-family:var(--mono);font-size:.72rem;color:var(--accent);
+  padding:.2rem 1rem;flex-shrink:0;
+}
+
+/* ── HISTORY SCREEN ── */
+#history{padding:0;}
+.hist-item{
+  background:var(--card);border:1px solid var(--border);border-left:4px solid var(--border);
+  padding:.75rem 1rem;display:flex;align-items:center;gap:.75rem;cursor:pointer;
+  transition:background .15s;
+}
+.hist-item:hover{background:color-mix(in srgb,var(--tb-text) 4%,transparent);}
+.hist-item.ok{border-left-color:var(--green);}
+.hist-item.warn{border-left-color:var(--accent);}
+.hist-item.fail{border-left-color:var(--red);}
+.hist-icon{font-size:1.3rem;flex-shrink:0;}
+.hist-info{flex:1;min-width:0;}
+.hist-title{font-weight:600;font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hist-sub{font-family:var(--mono);font-size:.65rem;color:var(--muted);margin-top:.15rem;}
+.hist-date{font-family:var(--mono);font-size:.62rem;color:var(--muted);flex-shrink:0;text-align:right;}
+.hist-del{
+  background:transparent;border:none;color:var(--muted);font-size:1rem;
+  cursor:pointer;padding:.2rem .4rem;flex-shrink:0;
+}
+.hist-del:hover{color:var(--red);}
+.hist-empty{padding:2rem;text-align:center;color:var(--muted);font-family:var(--mono);font-size:.8rem;}
+
+/* ── SIGNATURE ── */
+.sig-wrap{display:flex;flex-direction:column;gap:.4rem;}
+#sig-pad{
+  width:100%;height:120px;background:#fff;border:1px solid var(--border);
+  border-radius:2px;touch-action:none;display:block;cursor:crosshair;
+}
+#sig-pad.has-sig{cursor:default;}
+.sig-actions{display:flex;gap:.5rem;}
+#sig-display{display:none;}
+#sig-display img{max-height:60px;border-bottom:1px solid #ccc;display:block;}
+#sig-display p{font-size:.65rem;color:var(--muted);font-family:var(--mono);margin-top:.2rem;}
+
+/* Manual power input */
+.manual-ctrl{
+  padding:.5rem 1rem .6rem;border-top:1px solid var(--border);
+  background:color-mix(in srgb,var(--tb-text) 2%,transparent);flex-shrink:0;
+}
+.manual-hdr{
+  font-family:var(--mono);font-size:.6rem;color:var(--muted);
+  letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem;
+  display:flex;align-items:center;gap:.5rem;
+}
+.manual-hdr::after{content:'';flex:1;height:1px;background:var(--border);}
+.manual-row{display:flex;gap:.4rem;align-items:center;margin-bottom:.4rem;flex-wrap:wrap;}
+.manual-row input{
+  background:var(--card);border:1px solid var(--border);color:var(--text);
+  font-family:var(--mono);font-size:.9rem;padding:.4rem .6rem;
+  width:5.5rem;flex-shrink:0;-moz-appearance:textfield;
+}
+.manual-row input::-webkit-inner-spin-button{-webkit-appearance:none;}
+.manual-row input:focus{border-color:var(--accent);outline:none;}
+.manual-row .mu{font-family:var(--mono);font-size:.72rem;color:var(--muted);}
+.manual-row .sep{font-family:var(--mono);font-size:.68rem;color:var(--border);padding:0 .2rem;}
+.man-kw-calc{font-family:var(--mono);font-size:.7rem;color:var(--accent);}
+.manual-active{background:rgba(240,165,0,.08);border-color:rgba(240,165,0,.3);}
+
+/* ── NA-SCHUTZ ── */
+#na{padding:0;}
+.na-body{padding:.8rem 1rem 1.2rem;display:flex;flex-direction:column;gap:.9rem;max-width:560px;width:100%;margin:0 auto;}
+.na-hint{font-family:var(--mono);font-size:.66rem;line-height:1.5;color:var(--muted);}
+.na-hint.warn{color:var(--accent);}
+.na-card{
+  background:var(--card);border:1px solid var(--border);border-left:3px solid var(--border);
+  padding:.6rem .7rem;display:flex;flex-direction:column;gap:.45rem;
+}
+.na-card.ok{border-left-color:var(--green);}
+.na-card.fail{border-left-color:var(--red);}
+.na-card.open{border-left-color:var(--accent);}
+.na-card.ng{opacity:.6;}
+.na-card-hdr{display:flex;align-items:baseline;gap:.5rem;}
+.na-k{font-family:var(--mono);color:var(--accent);font-size:.9rem;min-width:2.6rem;}
+.na-l{font-size:.8rem;font-weight:600;flex:1;}
+.na-st{font-family:var(--mono);font-size:.68rem;text-align:right;}
+.na-st.ok{color:var(--green);} .na-st.fail{color:var(--red);}
+.na-st.open{color:var(--accent);} .na-st.ng{color:var(--muted);}
+.na-grid{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;}
+.na-f{display:flex;flex-direction:column;gap:.15rem;}
+.na-f span{font-family:var(--mono);font-size:.58rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;}
+.na-f input,.na-f select{font-size:.85rem;padding:.42rem .55rem;}
+.na-win{font-family:var(--mono);font-size:.62rem;color:var(--muted);line-height:1.5;}
+.na-opts{display:flex;gap:1rem;flex-wrap:wrap;}
+.na-chk{display:flex;align-items:center;gap:.5rem;padding:.5rem 0;border-bottom:1px solid var(--border);}
+.na-chk-t{flex:1;font-size:.8rem;line-height:1.35;}
+.tri{display:flex;gap:.25rem;flex-shrink:0;}
+.tri-b{
+  background:var(--card);border:1px solid var(--border);color:var(--muted);
+  font-family:var(--mono);font-size:.66rem;padding:.3rem .5rem;cursor:pointer;border-radius:10px;
+}
+.tri-b.on.ok{background:rgba(63,185,80,.15);border-color:var(--green);color:var(--green);}
+.tri-b.on.fail{background:rgba(248,81,73,.15);border-color:var(--red);color:var(--red);}
+.tri-b.on.ng{background:rgba(125,133,144,.2);border-color:var(--muted);color:var(--text);}
+.na-rtable th,.na-rtable td{font-size:.68rem;padding:.4rem .35rem;}
+.na-rtable td:nth-child(5),.na-rtable td:nth-child(6){text-align:center;}
+.na-plist{font-family:var(--mono);font-size:.72rem;display:flex;flex-direction:column;gap:.3rem;}
+.na-plist .r{display:flex;gap:.5rem;}
+.na-plist .r b{min-width:4.5rem;font-weight:400;}
+
+/* ── PRINT ── */
+@media print{
+  .no-print{display:none!important;}
+  html,body{height:auto;overflow:visible;background:white;color:black;}
+  .screen{display:none!important;}
+  #proto{
+    display:flex!important;height:auto;overflow:visible;
+    background:white;color:#000;padding:.8cm 1cm;gap:.5rem;
+    font-family:Helvetica,Arial,sans-serif;font-size:9pt;
+  }
+  .p-hdr{color:#000;font-size:14pt;font-weight:bold;}
+  .p-meta{display:grid;grid-template-columns:1fr 1fr;gap:.15cm .4cm;}
+  .p-meta-item .ml{color:#555;font-size:7pt;text-transform:uppercase;letter-spacing:.03em;font-family:Helvetica,Arial,sans-serif;}
+  .p-meta-item .mv{color:#000;font-size:8.5pt;font-family:Helvetica,Arial,sans-serif;letter-spacing:0;word-break:break-word;}
+  .gps-box{background:#f8f8f8;border:1px solid #ccc;border-left:3px solid #2d6a4f;padding:4pt 8pt;}
+  .gps-box .ga,.gps-box .gc{color:#333;}
+  #proto *{font-family:Helvetica,Arial,sans-serif!important;letter-spacing:0!important;}
+  #proto .rtable{font-size:8.5pt;}
+  .rtable th{
+    background:#f0f0f0;color:#333;border-bottom:1.5pt solid #999;
+    padding:4pt 4pt;font-size:7.5pt;text-align:left;font-weight:bold;
+  }
+  .rtable td{padding:5pt 4pt;border-bottom:none;color:#000;}
+  .rtable td:nth-child(2),.rtable td:nth-child(3),.rtable td:nth-child(4){text-align:right;}
+  .pi{color:#2d6a4f;font-weight:bold;} .fi{color:#c00;font-weight:bold;} .wi{color:#c07800;font-weight:bold;}
+  .gesamt{border:1pt solid #ccc;padding:4pt 8pt;font-weight:bold;font-size:9pt;}
+  .gesamt.ok{color:#2d6a4f;border-color:#2d6a4f;}
+  .gesamt.warn{color:#c07800;border-color:#c07800;}
+  .gesamt.fail{color:#c00;border-color:#c00;}
+  .sec-hdr{color:#000;border-bottom:1pt solid #999;}
+  .pfields{display:grid;grid-template-columns:1fr 1fr;gap:.3cm .4cm;margin-top:.3cm;}
+  .pfield input{border-bottom:1pt solid #999;border-top:none;border-left:none;border-right:none;
+    color:#000;background:white;font-size:8.5pt;padding:1pt 0;width:100%;}
+  .pfield.full{grid-column:1/-1;}
+  .sig-wrap{display:none!important;}
+  #sig-display{display:block!important;margin-top:.4cm;}
+  #sig-display img{max-height:18mm;border-bottom:1pt solid #999;display:block;}
+  #sig-display p{font-size:7pt;color:#555;margin-top:2pt;}
+  .photo-section{page-break-before:always;margin-top:0;}
+  .photo-grid{display:grid;grid-template-columns:1fr 1fr;gap:.4cm;}
+  .photo-item{aspect-ratio:4/3;break-inside:avoid;}
+  .photo-item img{width:100%;height:100%;object-fit:cover;}
+  .pdel{display:none!important;}
+  #step-photos-proto{display:flex!important;flex-wrap:wrap;gap:.3cm;}
+  #step-photos-proto div img{width:4cm;height:4cm;object-fit:cover;}
+}
+</style>
+<style id="tb-tokens">
+:root{--tb-bg:#000000;--tb-panel:#1c1c1e;--tb-panel2:#2c2c2e;--tb-inset:#121214;--tb-seg:#3a3a3c;--tb-toggle:#39393d;--tb-edge:#38383a;--tb-edge2:#48484a;--tb-acc:#8cc63f;--tb-acc-hi:#9fd652;--tb-acc-dim:#6f9c2e;--tb-on-acc:#0b1a02;--tb-text:#f5f5f7;--tb-dim:#98989f;--tb-green:#30d158;--tb-red:#ff453a;--tb-blue:#64a8ff;--tb-orange:#ff9f0a;--tb-purple:#bf8cff;--tb-cyan:#5ac8fa;color-scheme:dark;--tb-acc-bg:color-mix(in srgb,var(--tb-acc) 16%,var(--tb-panel));--tb-red-bg:color-mix(in srgb,var(--tb-red) 16%,var(--tb-panel));--tb-green-bg:color-mix(in srgb,var(--tb-green) 16%,var(--tb-panel));--tb-blue-bg:color-mix(in srgb,var(--tb-blue) 16%,var(--tb-panel));--tb-orange-bg:color-mix(in srgb,var(--tb-orange) 16%,var(--tb-panel));--tb-purple-bg:color-mix(in srgb,var(--tb-purple) 16%,var(--tb-panel));--tb-cyan-bg:color-mix(in srgb,var(--tb-cyan) 16%,var(--tb-panel));}
+:root[data-theme="light"]{--tb-bg:#f2f2f7;--tb-panel:#ffffff;--tb-panel2:#eeeef3;--tb-inset:#f2f2f7;--tb-seg:#ffffff;--tb-toggle:#e5e5ea;--tb-edge:#d8d8de;--tb-edge2:#c6c6cc;--tb-acc:#6ba31a;--tb-acc-hi:#5d9111;--tb-acc-dim:#4d7a12;--tb-on-acc:#ffffff;--tb-text:#1c1c1e;--tb-dim:#6c6c70;--tb-green:#1f9d46;--tb-red:#d70015;--tb-blue:#0a64d8;--tb-orange:#c76a00;--tb-purple:#7a3fd0;--tb-cyan:#0a7ea4;color-scheme:light}
+body{-webkit-font-smoothing:antialiased}
+button:not(:disabled):active{opacity:.85}
+@media print{#tb-theme-btn{display:none!important}}
+</style>
+<style id="toolbox-design">
+:root{--bg:var(--tb-bg);--card:var(--tb-panel);--border:var(--tb-edge);--accent:var(--tb-acc);--green:var(--tb-green);--red:var(--tb-red);--blue:var(--tb-blue);--muted:var(--tb-dim);--text:var(--tb-text);--mono:'SF Mono',ui-monospace,Consolas,monospace;--sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+</style>
+<script id="tb-theme-js">
+(function(){
+  var K='toolbox-theme', root=document.documentElement, mq=window.matchMedia?matchMedia('(prefers-color-scheme: light)'):null;
+  function mode(){try{var m=localStorage.getItem(K);return (m==='light'||m==='dark')?m:'auto'}catch(e){return 'auto'}}
+  function eff(m){return m==='auto'?((mq&&mq.matches)?'light':'dark'):m}
+  var ICON={auto:'◐',light:'☀︎',dark:'☾'}, NAME={auto:'Automatisch',light:'Hell',dark:'Dunkel'};
+  function apply(){
+    var m=mode(), e=eff(m);
+    root.setAttribute('data-theme',e);
+    if(root.hasAttribute('data-bs-theme')||window.bootstrap) root.setAttribute('data-bs-theme',e);
+    var t=document.querySelector('meta[name="theme-color"]'); if(!t){t=document.createElement('meta');t.name='theme-color';document.head.appendChild(t)}
+    t.content=e==='light'?'#f2f2f7':'#000000';
+    var b=document.getElementById('tb-theme-btn'); if(b){b.textContent=ICON[m];b.title='Darstellung: '+NAME[m]+' (tippen zum Wechseln)';b.setAttribute('aria-label',b.title)}
+    try{window.dispatchEvent(new CustomEvent('toolbox-theme',{detail:e}))}catch(x){}
+  }
+  function set(m){try{if(m==='auto')localStorage.removeItem(K);else localStorage.setItem(K,m)}catch(e){} apply()}
+  function cycle(){var m=mode();set(m==='auto'?'light':m==='light'?'dark':'auto')}
+  window.toolboxTheme={mode:mode,set:set,cycle:cycle,effective:function(){return eff(mode())}};
+  apply();
+  if(mq){(mq.addEventListener?mq.addEventListener('change',apply):mq.addListener(apply))}
+  window.addEventListener('storage',function(e){if(e.key===K||e.key===null)apply()});
+  function btn(){
+    if(window.top!==window.self||document.getElementById('tb-theme-btn')||!document.body)return;
+    var s=document.createElement('style');
+    s.textContent='#tb-theme-btn{position:fixed;left:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:2147483000;width:38px;height:38px;border-radius:50%;border:.5px solid var(--tb-edge);background:var(--tb-panel2);color:var(--tb-text);font:18px/1 -apple-system,system-ui,sans-serif;padding:0;cursor:pointer;opacity:.88;box-shadow:0 2px 10px rgba(0,0,0,.3);-webkit-tap-highlight-color:transparent}#tb-theme-btn:active{transform:scale(.94)}';
+    document.head.appendChild(s);
+    var b=document.createElement('button');b.id='tb-theme-btn';b.type='button';b.addEventListener('click',cycle);document.body.appendChild(b);apply();
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',btn);else btn();
+})();
+</script>
+</head>
+<body>
+
+<!-- ═══ SETUP ═══ -->
+<div id="setup" class="screen active">
+<div class="s-inner">
+
+  <!-- Tab Nav -->
+  <div class="tab-nav" style="width:100%;max-width:430px;">
+    <button class="tab active" id="tab-new" onclick="switchTab('new')">＋ Neuer Test</button>
+    <button class="tab" id="tab-hist" onclick="switchTab('hist')">📋 Historie</button>
+    <button class="tab" id="tab-cfg" onclick="switchTab('cfg')">⚙ Einstellungen</button>
+  </div>
+
+  <!-- TAB: Neuer Test -->
+  <div id="tab-content-new" style="width:100%;max-width:430px;display:flex;flex-direction:column;gap:.85rem;">
+
+  <div class="s-title">
+    <h1>Funk-Rundsteuer&shy;empfänger-Test</h1>
+    <p>PV-Anlage · Einspeisemanagement gem. § 9 EEG 2023 · NA-Schutz gem. VDE-AR-N 4105</p>
+  </div>
+
+  <!-- ANLAGE -->
+  <div class="s-section">
+    <div class="sec-hdr">Anlage</div>
+
+    <div>
+      <div class="s-lbl">Generatorleistung</div>
+      <div class="s-row">
+        <input type="number" id="anlage-kw" placeholder="z.B. 29.7" min="0" step="0.1" style="flex:1;" oninput="onAnlageKwChange()"/>
+        <span style="font-family:var(--mono);font-size:.8rem;color:var(--muted);padding:.55rem .3rem;align-self:center;">kWp ×</span>
+        <input type="number" id="anlage-fak" value="1.00" min="0.01" max="1" step="0.01" style="width:4.5rem;flex:0 0 auto;" oninput="onFaktorChange()"/>
+        <span style="font-family:var(--mono);font-size:.72rem;color:var(--accent);padding:.55rem .3rem;align-self:center;white-space:nowrap;" id="anlage-eff">= — kW</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="s-lbl">Harness-ID <span style="color:var(--muted);font-size:.6rem;">(Anlagen-Nr., manuell)</span></div>
+      <input type="text" id="anlage-nr" placeholder="Harness-ID"/>
+    </div>
+
+    <div>
+      <div class="s-lbl">Zählernummer</div>
+      <div class="s-row">
+        <input type="text" id="zaehler-nr" placeholder="Zählernummer eingeben" style="flex:1;"/>
+        <button class="btn sec" onclick="openQR('zaehler-nr')">📷 QR</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="s-lbl">FRE-Seriennummer</div>
+      <div class="s-row">
+        <input type="text" id="fhe-nr" placeholder="FRE-Seriennummer eingeben" style="flex:1;"/>
+        <button class="btn sec" onclick="openQR('fhe-nr')">📷 QR</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="s-lbl">FRE-Code</div>
+      <div class="s-row">
+        <input type="text" id="fae-code" placeholder="FRE-Code eingeben" style="flex:1;"/>
+        <button class="btn sec" onclick="openQR('fae-code')">📷 QR</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRÜFUMFANG -->
+  <div class="s-section">
+    <div class="sec-hdr">Prüfumfang</div>
+    <select id="pruef-umfang" onchange="onUmfang(true)">
+      <option value="fre">Nur FRE-Test</option>
+      <option value="fre_na">FRE-Test + NA-Schutz</option>
+      <option value="na">Nur NA-Schutz</option>
+    </select>
+    <div class="na-hint" id="na-hint"></div>
+  </div>
+
+  <!-- MESSUNG -->
+  <div class="s-section" id="sec-messung">
+    <div class="sec-hdr">Messung</div>
+
+    <div>
+      <div class="s-lbl">Impulskonstante</div>
+      <div class="s-row">
+        <select id="imp-sel" style="flex:0 0 auto;width:auto;" onchange="onImpChange()">
+          <option value="1000">1.000 imp/kWh</option>
+          <option value="5000">5.000 imp/kWh</option>
+          <option value="10000" selected>10.000 imp/kWh</option>
+          <option value="100000">100.000 imp/kWh</option>
+          <option value="custom">Manuell</option>
+        </select>
+        <input type="number" id="imp-custom" placeholder="imp/kWh" min="1" style="display:none;flex:1;"/>
+      </div>
+    </div>
+
+    <div>
+      <div class="s-lbl">Wandler</div>
+      <div class="radio-row">
+        <label class="radio-lbl">
+          <input type="radio" name="mtyp" value="direkt" checked onchange="onMessart()"> Direktmessung
+        </label>
+        <label class="radio-lbl">
+          <input type="radio" name="mtyp" value="wandler" onchange="onMessart()"> Wandlermessung
+        </label>
+      </div>
+      <div class="wand-fields" id="wand-fields">
+        <div class="s-lbl" style="margin-bottom:0;">Stromwandler I<sub>N</sub> / I<sub>S</sub></div>
+        <div class="wand-row">
+          <input type="number" id="ct-prim" placeholder="I_N (z.B. 100)" min="1" oninput="calcWandler()"/>
+          <span class="wand-sep">/</span>
+          <input type="number" id="ct-sec" placeholder="I_S (z.B. 5)" min="0.01" step="0.01" oninput="calcWandler()"/>
+          <span class="wand-sep">A</span>
+        </div>
+        <div class="wand-factor" id="wfak-display">Wandlerfaktor: —</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="s-lbl">Einspeisemodus</div>
+      <div class="radio-row">
+        <label class="radio-lbl">
+          <input type="radio" name="emodus" value="voll" checked onchange="onEmodus()"> Volleinspeisung
+        </label>
+        <label class="radio-lbl">
+          <input type="radio" name="emodus" value="ueberschuss" onchange="onEmodus()"> Überschusseinspeisung
+        </label>
+      </div>
+      <div id="ev-hint" style="display:none;font-family:var(--mono);font-size:.68rem;color:var(--accent);margin-top:.3rem;line-height:1.5;">
+        ⚡ Reihenfolge: 0 % (Eigenverbrauch P−) → 100 % → 60 % → 30 %<br>
+        Korrektur: PV-Leistung = Messwert + Eigenverbrauch
+      </div>
+    </div>
+  </div>
+
+  <!-- STANDORT -->
+  <div class="s-section">
+    <div class="sec-hdr">Standort</div>
+    <button class="btn sec" id="gps-btn" onclick="captureGPS()" style="width:100%;text-align:center;">
+      📍 GPS erfassen
+    </button>
+    <div class="gps-status" id="gps-st">Noch kein Standort erfasst</div>
+  </div>
+
+  <button class="btn" onclick="startTest()" style="margin-top:.25rem;">▶ Test starten</button>
+
+  </div><!-- end tab-content-new -->
+
+  <!-- TAB: Historie -->
+  <div id="tab-content-hist" style="width:100%;max-width:430px;display:none;flex-direction:column;gap:.6rem;">
+    <div id="hist-list-inline" style="display:flex;flex-direction:column;gap:.5rem;"></div>
+    <button class="btn sec" style="width:100%;color:var(--red);border-color:var(--red);" onclick="clearAll()">
+      ⚠ Alles löschen (Historie, Unterschrift, Name)
+    </button>
+  </div>
+
+  <!-- TAB: Einstellungen -->
+  <div id="tab-content-cfg" style="width:100%;max-width:430px;display:none;flex-direction:column;gap:1rem;">
+
+    <div class="s-section">
+      <div class="sec-hdr">Prüfer</div>
+      <div class="s-lbl">Name (dauerhaft gespeichert)</div>
+      <div class="s-row">
+        <input type="text" id="cfg-pruefer" placeholder="Vor- und Nachname" style="flex:1;"/>
+        <button class="btn sec" onclick="savePrueferFromCfg()">✓</button>
+      </div>
+    </div>
+
+    <div class="s-section">
+      <div class="sec-hdr">Unterschrift</div>
+      <div class="s-lbl">Einmal zeichnen – wird auf jedem Protokoll verwendet</div>
+      <canvas id="cfg-sig-pad" width="800" height="220"
+        style="width:100%;background:#fff;border:1px solid var(--border);border-radius:2px;touch-action:none;display:block;cursor:crosshair;margin-top:.3rem;"></canvas>
+      <div style="display:flex;gap:.5rem;margin-top:.5rem;">
+        <button class="btn sec" onclick="clearCfgSig()" style="flex:1;">Neu</button>
+        <button class="btn" onclick="saveCfgSig()" style="flex:2;background:var(--accent);color:#000;">✓ Speichern</button>
+      </div>
+      <div id="cfg-sig-preview" style="display:none;margin-top:.75rem;">
+        <div class="s-lbl">Gespeicherte Unterschrift:</div>
+        <img id="cfg-sig-img" style="max-height:65px;background:#fff;padding:4px;border-bottom:1px solid var(--border);display:block;margin-top:.3rem;"/>
+      </div>
+    </div>
+
+    <div class="s-section">
+      <div class="sec-hdr">E-Mail Empfänger (Protokoll)</div>
+      <input type="email" id="email-1" placeholder="E-Mail 1"/>
+      <input type="email" id="email-2" placeholder="E-Mail 2 (optional)" style="margin-top:.4rem;"/>
+      <input type="email" id="email-3" placeholder="E-Mail 3 (optional)" style="margin-top:.4rem;"/>
+      <button class="btn sec" onclick="saveSetup()" style="width:100%;margin-top:.5rem;">✓ Speichern</button>
+    </div>
+
+  </div><!-- end tab-content-cfg -->
+
+</div>
+</div>
+
+<!-- ═══ QR MODAL ═══ -->
+<div id="qr-modal">
+  <div class="qr-frame">
+    <video id="qr-video" autoplay playsinline muted></video>
+    <div class="qr-scan-box"><div class="qr-c2"></div></div>
+  </div>
+  <div id="qr-status">Kamera auf QR-Code richten …</div>
+  <div class="qr-manual">
+    <input type="text" id="qr-inp" placeholder="Oder hier manuell eingeben"/>
+    <button class="btn sec" onclick="applyQRManual()">OK</button>
+  </div>
+  <div class="qr-actions">
+    <button class="btn sec" onclick="closeQR()" style="flex:1;">Abbrechen</button>
+  </div>
+</div>
+
+<!-- ═══ TEST ═══ -->
+<div id="test" class="screen">
+  <div class="step-hdr">
+    <div>
+      <div class="step-n" id="step-n">Schritt 1 / 4</div>
+      <div class="step-l" id="step-l">Stufe 100 %</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.3rem;">
+      <div class="pips" id="pips"></div>
+      <a href="../" class="back-link no-print" style="font-size:.58rem;">Übersicht</a>
+    </div>
+  </div>
+
+  <!-- P+/P- + EV info (always visible) -->
+  <div class="pdir-row no-print">
+    <span class="pdir-lbl">Richtung:</span>
+    <button class="pdir-chip plus active" id="pdir-plus" onclick="setPDir(1)">P+ Bezug</button>
+    <button class="pdir-chip minus" id="pdir-minus" onclick="setPDir(-1)">P− Einspeisung</button>
+  </div>
+  <div class="ev-info" id="ev-info" style="display:none;"></div>
+
+  <!-- PRIMÄR: Manuelle Eingabe -->
+  <div class="manual-ctrl" id="manual-ctrl">
+    <div class="manual-hdr">Leistung eingeben</div>
+    <div class="manual-row">
+      <input type="number" id="man-kw" placeholder="kW" step="0.001" min="-9999" oninput="onManKw()"/>
+      <span class="mu">kW</span>
+      <span class="sep">oder</span>
+      <input type="number" id="man-a" placeholder="A (L1)" step="0.01" min="0" oninput="onManA()"/>
+      <span class="mu">A</span>
+      <span class="man-kw-calc" id="man-a-kw">→ — kW</span>
+    </div>
+    <div style="display:flex;gap:.4rem;">
+      <button class="btn grn" onclick="useManual()" style="flex:2;font-size:.78rem;padding:.5rem;">✓ Verwenden</button>
+      <button class="btn sec" id="btn-clr-man" onclick="clearManual()" style="flex:1;font-size:.78rem;padding:.5rem;display:none;">× Aufheben</button>
+      <button class="btn sec" onclick="takeStepPhoto()" style="flex:0 0 auto;font-size:.78rem;padding:.5rem;" title="Foto vom Messgerät">📷</button>
+    </div>
+    <div id="step-photo-preview" style="display:none;margin-top:.4rem;align-items:center;gap:.5rem;">
+      <img id="step-photo-img" style="height:52px;border:1px solid var(--border);border-radius:2px;object-fit:cover;"/>
+      <span style="font-family:var(--mono);font-size:.65rem;color:var(--muted);flex:1;">Messgerät-Foto</span>
+      <button class="btn sec" onclick="removeStepPhoto()" style="width:auto;padding:.25rem .5rem;font-size:.8rem;">×</button>
+    </div>
+    <input type="file" id="step-photo-inp" accept="image/*" capture="environment" style="display:none" onchange="onStepPhoto(this)">
+  </div>
+
+  <!-- Leistungsanzeige -->
+  <div class="pwr-sec">
+    <div class="pwr-main">
+      <div id="pkw" class="dim">---</div>
+      <div class="pwr-u">kW</div>
+    </div>
+    <div class="pwr-sub">
+      <div id="pamps">--- A @ 400V/√3</div>
+      <div id="pwfak"></div>
+    </div>
+    <div id="badge" class="badge wait">⏳ Warte auf Impuls …</div>
+    <div id="range-info" style="font-family:var(--mono);font-size:.68rem;color:var(--muted);margin-top:.25rem;line-height:1.5;"></div>
+  </div>
+
+  <div class="tol-sec" id="tol-sec">
+    <div class="tol-lbl">TOLERANZBAND ± 5 %</div>
+    <div class="tol-bar">
+      <div class="tol-band" id="tol-band"></div>
+      <div class="tol-needle" id="tol-ndl" style="display:none;"></div>
+    </div>
+    <div class="tol-nums">
+      <span id="tn-min">---</span><span id="tn-max">---</span>
+    </div>
+    <div class="tol-vals">
+      MIN: <span id="tv-min">---</span> &nbsp; MAX: <span id="tv-max">---</span>
+    </div>
+  </div>
+
+  <div class="instr" id="instr"></div>
+
+  <!-- Kamera-Impulse: einklappbar -->
+  <div class="cam-toggle-row no-print">
+    <button class="cam-toggle-btn" id="cam-toggle-btn" onclick="toggleCam()">
+      📷 Kamera-Impulse einblenden
+    </button>
+  </div>
+  <div id="cam-section" style="display:none;">
+    <div class="cam-wrap" style="max-height:28vh;">
+      <video id="tvid" autoplay playsinline muted></video>
+      <canvas id="tovl"></canvas>
+      <div class="cam-hint" id="cam-hint">Antippen zum Positionieren</div>
+    </div>
+    <div class="det-ctrl">
+      <canvas id="scope-cv" height="36" style="width:100%;height:36px;display:block;background:var(--tb-bg);"></canvas>
+      <div class="det-rows">
+        <div class="det-row" style="flex-wrap:wrap;gap:.3rem;">
+          <span class="det-lbl" style="width:auto;">imp/kWh</span>
+          <button class="imp-chip" onclick="setImpLive(1000)">1.000</button>
+          <button class="imp-chip" onclick="setImpLive(5000)">5.000</button>
+          <button class="imp-chip" onclick="setImpLive(10000)">10.000</button>
+          <button class="imp-chip" onclick="setImpLive(100000)">100.000</button>
+          <span id="imp-live-val" style="font-family:var(--mono);font-size:.65rem;color:var(--accent);"></span>
+        </div>
+        <div class="det-row">
+          <span class="det-lbl">Empfindlichkeit</span>
+          <input type="range" id="sens-sl" min="10" max="90" value="50" oninput="onSens(this)">
+          <span class="det-val" id="sens-val">50 %</span>
+        </div>
+        <div class="det-row">
+          <span class="det-lbl">Sperrzeit</span>
+          <input type="range" id="refr-sl" min="10" max="300" value="40" oninput="onRefr(this)">
+          <span class="det-val" id="refr-val">40 ms</span>
+        </div>
+        <div class="det-row" style="justify-content:space-between;">
+          <span class="det-lbl">IR-Modus</span>
+          <div class="ir-tog" id="ir-tog" onclick="toggleIR()"></div>
+        </div>
+        <div class="det-row" style="justify-content:space-between;">
+          <span class="det-lbl">Mittelung</span>
+          <div class="imp-ctrl" style="border:none;padding:0;">
+            <button onclick="adjImp(-1)">−</button>
+            <span id="imp-n">10</span>
+            <button onclick="adjImp(+1)">+</button>
+            <span style="font-family:var(--mono);font-size:.65rem;color:var(--muted);">Impulse</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn grn" id="btn-ok" onclick="confirmStep()" disabled>✓ Bestätigen</button>
+    <button class="btn sec" id="btn-zero" onclick="confirmZero()" style="display:none;">
+      Kein Impuls – 0 W bestätigen
+    </button>
+  </div>
+</div>
+
+<!-- ═══ NA-SCHUTZ ═══ -->
+<div id="na" class="screen">
+  <div class="step-hdr">
+    <div>
+      <div class="step-n" id="na-step-n">NA-Schutz · VDE-AR-N 4105</div>
+      <div class="step-l">NA-Schutz</div>
+    </div>
+    <button class="btn sec" onclick="naCancel()" style="width:auto;padding:.4rem .9rem;">Abbrechen</button>
+  </div>
+  <div class="na-body">
+
+    <div class="s-section">
+      <div class="sec-hdr">Foto NA-Schutz</div>
+      <div id="na-foto-box" style="display:none;" class="photo-item">
+        <img id="na-foto-img" alt="NA-Schutz"/>
+        <button class="pdel" onclick="naFotoDel()">×</button>
+      </div>
+      <button class="btn sec" id="na-foto-btn" onclick="naFotoTake()" style="width:100%;text-align:center;">📷 Foto NA-Schutz aufnehmen</button>
+      <input type="file" id="na-foto-inp" accept="image/*" capture="environment" style="display:none" onchange="naFotoTaken(this)">
+    </div>
+
+    <div class="s-section">
+      <div class="sec-hdr">Ausführung NA-Schutz</div>
+      <div class="na-hint" id="na-art-hint"></div>
+      <div class="radio-row" style="flex-direction:column;gap:.6rem;">
+        <label class="radio-lbl" id="na-art-int-lbl">
+          <input type="radio" name="na-art" value="integriert" onchange="naSet('art',this.value)"> Integriert im Wechselrichter
+        </label>
+        <label class="radio-lbl">
+          <input type="radio" name="na-art" value="extern" onchange="naSet('art',this.value)"> Externes Schaltgerät (zentraler NA-Schutz + Kuppelschalter)
+        </label>
+      </div>
+    </div>
+
+    <div class="s-section">
+      <div class="sec-hdr">Funktionsprüfung</div>
+      <div class="na-chk" style="border-bottom:none;">
+        <div class="na-chk-t">NA-Schutz löst aus / Anlage trennt vom Netz</div>
+        <div class="tri">
+          <button class="tri-b" id="na-f-ok" onclick="naSet('func','ok')">i.O.</button>
+          <button class="tri-b" id="na-f-fail" onclick="naSet('func','fail')">Mangel</button>
+        </div>
+      </div>
+      <label class="na-f"><span>Ausschaltzeit (ms) – optional</span>
+        <input type="number" inputmode="decimal" id="na-taus" step="1" placeholder="z.B. 120" oninput="naSet('tAus',this.value)"></label>
+      <label class="na-f"><span>Bemerkung – optional</span>
+        <input type="text" id="na-bemerk" oninput="naSet('bemerk',this.value)"></label>
+    </div>
+
+    <div id="na-sum" class="gesamt"></div>
+    <button class="btn grn" onclick="naFinish()">✓ NA-Prüfung abschließen → Protokoll</button>
+  </div>
+</div>
+
+<!-- ═══ PROTOCOL ═══ -->
+<div id="proto" class="screen">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:.2rem;">
+    <a href="../" class="back-link no-print">Übersicht</a>
+    <div class="p-hdr" id="p-title" style="flex:1;">FRE Prüfprotokoll</div>
+    <div style="width:5rem;"></div>
+  </div>
+
+  <div id="gesamt-banner" class="gesamt" style="display:none;"></div>
+
+  <div class="p-meta" id="p-meta"></div>
+
+  <div class="gps-box" id="gps-proto" style="display:none;">
+    <div class="ga" id="gps-pa">—</div>
+    <div class="gc" id="gps-pc">—</div>
+  </div>
+
+  <div id="fre-proto">
+    <table class="rtable">
+      <thead><tr>
+        <th>Stufe</th><th>Soll (kW)</th><th>Ist (kW)</th><th>% Basis</th><th>Ergebnis</th>
+      </tr></thead>
+      <tbody id="rtbody"></tbody>
+    </table>
+  </div>
+
+  <div id="na-proto" style="display:none;flex-direction:column;gap:.6rem;"></div>
+
+  <div class="pfields">
+    <div class="pfield full">
+      <div class="s-lbl">Harness-ID</div>
+      <input type="text" id="p-nr"/>
+    </div>
+    <div class="pfield">
+      <div class="s-lbl">Zählernummer</div>
+      <input type="text" id="p-zaehler"/>
+    </div>
+    <div class="pfield">
+      <div class="s-lbl">FRE-Seriennummer</div>
+      <input type="text" id="p-fhe"/>
+    </div>
+    <div class="pfield">
+      <div class="s-lbl">FRE-Code</div>
+      <input type="text" id="p-fae"/>
+    </div>
+    <div class="pfield">
+      <div class="s-lbl">Prüfer</div>
+      <input type="text" id="p-pruefer"/>
+    </div>
+    <div class="pfield full">
+      <div class="s-lbl">Adresse</div>
+      <input type="text" id="p-adr" placeholder="Aus GPS oder manuell"/>
+    </div>
+    <div class="pfield">
+      <div class="s-lbl">Datum</div>
+      <input type="text" id="p-datum"/>
+    </div>
+    <div class="pfield full">
+      <div class="s-lbl">Bemerkungen</div>
+      <input type="text" id="p-bemerk" placeholder="Notizen, Besonderheiten …"/>
+    </div>
+
+    <!-- Unterschrift Prüfer: immer die in den Einstellungen gespeicherte -->
+    <div id="sig-display" class="pfield full" style="display:block;">
+      <div class="s-lbl no-print">Unterschrift Prüfer <span style="color:var(--muted);font-size:.6rem;">(aus Einstellungen)</span></div>
+      <img id="sig-img" alt="Unterschrift" style="display:none;max-height:70px;background:#fff;padding:4px;border-radius:2px;"/>
+      <p id="sig-missing" class="no-print" style="display:none;font-family:var(--mono);font-size:.7rem;color:var(--accent);">
+        Keine Unterschrift gespeichert – bitte unter ⚙ Einstellungen hinterlegen.</p>
+      <p id="sig-name-print" style="font-family:var(--mono);font-size:.65rem;color:var(--muted);margin-top:.2rem;"></p>
+    </div>
+
+    <!-- Fotos – eigene Seite beim Drucken -->
+    <div class="pfield full photo-section">
+      <div class="s-lbl">Fotos (max. 4)</div>
+      <div id="photo-grid" class="photo-grid"></div>
+      <button class="btn sec no-print" id="photo-btn" onclick="takePhoto()"
+        style="width:100%;margin-top:.5rem;display:flex;align-items:center;justify-content:center;gap:.5rem;">
+        📷 Foto aufnehmen
+      </button>
+      <input type="file" id="photo-inp" accept="image/*" capture="environment"
+        style="display:none" onchange="onPhotoTaken(this)">
+    </div>
+  </div>
+
+  <button class="btn no-print" onclick="printPDF()">🖨 Protokoll drucken (PDF)</button>
+  <button class="btn email no-print" onclick="sendEmail()">✉ PDF teilen (Outlook) – Empfänger in Zwischenablage</button>
+  <button class="btn email no-print" onclick="sendEmailOutlook()" style="background:#0f4c9e;">✉ Outlook mit Empfänger öffnen – PDF selbst anhängen</button>
+  <button class="btn sec no-print" onclick="showHistory()" style="width:100%;">📋 Prüfhistorie ansehen</button>
+  <div style="display:flex;gap:.5rem;" class="no-print">
+    <button class="btn sec" style="flex:1;color:var(--accent);border-color:var(--accent);" onclick="deleteTest()">🗑 Test löschen</button>
+    <button class="btn sec" style="flex:1;color:var(--red);border-color:var(--red);" onclick="clearAll()">⚠ Alles löschen</button>
+  </div>
+</div>
+
+<!-- ═══ HISTORY ═══ -->
+<div id="history" class="screen">
+  <div class="step-hdr" style="flex-shrink:0;">
+    <div>
+      <div class="step-n">Prüfhistorie</div>
+      <div class="step-l">Letzte 10 Tests</div>
+    </div>
+    <button class="btn sec" onclick="show('setup')" style="width:auto;padding:.4rem .9rem;">← Zurück</button>
+  </div>
+  <div id="hist-list" style="flex:1;overflow-y:auto;padding:.75rem;display:flex;flex-direction:column;gap:.5rem;"></div>
+  <div style="padding:.6rem .75rem;flex-shrink:0;border-top:1px solid var(--border);">
+    <button class="btn sec" style="width:100%;color:var(--red);border-color:var(--red);" onclick="clearAll()">
+      ⚠ Gesamte Historie + Alles löschen
+    </button>
+  </div>
+</div>
+
+<script>
+'use strict';
+const LS='fre-test-';
+const U=400,S3=Math.sqrt(3);
+const toA=kw=>kw*1000/(U*S3);
+const f=(v,d)=>v.toFixed(d);
+const $=id=>document.getElementById(id);
+
+const ST={
+  impConst:1000, wandler:1, numImpulse:10,
+  einspeisemodus:'voll',   // 'voll' | 'ueberschuss'
+  pDir:1,                  // +1=P+ (Einspeisung/Import positiv), -1=P- (Export positiv)
+  eigenverbrauch:null,     // kW, from 0%-EV step
+  anlageKw:null, anlageFak:1, anlageBase:null,
+  anlageNr:'', zaehlerNr:'', fheNr:'', faeCode:'',
+  gpsCoords:null, gpsAddr:'',
+  step:0, refPower:null, results:[], photos:[], stepPhotos:{},
+  stream:null, raf:null,
+  roi:null, pulses:[], brightHist:[], inPulse:false,
+  stable:false, curPwr:null, lastPulseMs:0, manualPwr:null,
+  sensitivity:50, refractory:40, useIR:false,
+  qrStream:null, qrRaf:null, qrRunning:false, bdector:null, qrTarget:'anlage-nr',
+  umfang:'fre',            // 'fre' | 'fre_na' | 'na'
+  na:null,                 // NA-Schutz-Prüfdaten
+};
+
+function switchTab(tab){
+  ['new','hist','cfg'].forEach(t=>{
+    $('tab-'+t).classList.toggle('active',t===tab);
+    const c=$('tab-content-'+t);
+    if(c) c.style.display=t===tab?'flex':'none';
+  });
+  if(tab==='new') clearForNewTest();
+  if(tab==='hist') renderHistoryInline();
+  if(tab==='cfg') initCfgSigPad();
+}
+
+function clearForNewTest(){
+  const fields=['anlage-nr','zaehler-nr','fhe-nr','fae-code'];
+  fields.forEach(id=>{const el=$(id);if(el)el.value='';});
+}
+
+// ── CFG SIGNATURE PAD ────────────────────────────────────────
+let cfgSigCtx=null, cfgDrawing=false, cfgLastX=0, cfgLastY=0, cfgHasData=false;
+
+function initCfgSigPad(){
+  const c=$('cfg-sig-pad');
+  if(!c||cfgSigCtx)return;
+  cfgSigCtx=c.getContext('2d');
+  cfgSigCtx.strokeStyle='#000';cfgSigCtx.lineWidth=2.5;
+  cfgSigCtx.lineCap='round';cfgSigCtx.lineJoin='round';
+  function getPos(e){
+    const r=c.getBoundingClientRect();
+    const src=e.touches?e.touches[0]:e;
+    return{x:(src.clientX-r.left)*(c.width/r.width),y:(src.clientY-r.top)*(c.height/r.height)};
+  }
+  c.addEventListener('mousedown',e=>{cfgDrawing=true;const p=getPos(e);cfgLastX=p.x;cfgLastY=p.y;});
+  c.addEventListener('mousemove',e=>{
+    if(!cfgDrawing)return;
+    const p=getPos(e);
+    cfgSigCtx.beginPath();cfgSigCtx.moveTo(cfgLastX,cfgLastY);cfgSigCtx.lineTo(p.x,p.y);cfgSigCtx.stroke();
+    cfgLastX=p.x;cfgLastY=p.y;cfgHasData=true;
+  });
+  c.addEventListener('mouseup',()=>cfgDrawing=false);
+  c.addEventListener('touchstart',e=>{e.preventDefault();cfgDrawing=true;const p=getPos(e);cfgLastX=p.x;cfgLastY=p.y;},{passive:false});
+  c.addEventListener('touchmove',e=>{
+    e.preventDefault();if(!cfgDrawing)return;
+    const p=getPos(e);
+    cfgSigCtx.beginPath();cfgSigCtx.moveTo(cfgLastX,cfgLastY);cfgSigCtx.lineTo(p.x,p.y);cfgSigCtx.stroke();
+    cfgLastX=p.x;cfgLastY=p.y;cfgHasData=true;
+  },{passive:false});
+  c.addEventListener('touchend',()=>cfgDrawing=false);
+  loadCfgSigPreview();
+  try{const v=localStorage.getItem(LS+'pruefer');if(v)$('cfg-pruefer').value=v;}catch(e){}
+}
+
+async function getSignature(){
+  let d=null;
+  try{d=localStorage.getItem(LS+'signature');}catch(e){}
+  if(!d){try{d=await dbGet('signature');}catch(e){}}
+  return d||null;
+}
+// Unterschrift auf weißen Hintergrund, auf Tinte zuschneiden, als JPEG (zuverlässig in jsPDF)
+async function sigForPdf(){
+  const src=await getSignature();
+  if(!src) return null;
+  return new Promise(res=>{
+    const img=new Image();
+    img.onload=()=>{
+      const c=document.createElement('canvas');c.width=img.width;c.height=img.height;
+      const x=c.getContext('2d');x.drawImage(img,0,0);
+      const d=x.getImageData(0,0,c.width,c.height).data;
+      let x0=c.width,y0=c.height,x1=-1,y1=-1;
+      for(let yy=0;yy<c.height;yy++)for(let xx=0;xx<c.width;xx++){
+        const i=(yy*c.width+xx)*4;
+        if(d[i+3]>40&&d[i]<200){if(xx<x0)x0=xx;if(xx>x1)x1=xx;if(yy<y0)y0=yy;if(yy>y1)y1=yy;}
+      }
+      if(x1<0){res(null);return;}
+      const pad=10;x0=Math.max(0,x0-pad);y0=Math.max(0,y0-pad);
+      x1=Math.min(c.width-1,x1+pad);y1=Math.min(c.height-1,y1+pad);
+      const w=x1-x0+1,h=y1-y0+1;
+      const o=document.createElement('canvas');o.width=w;o.height=h;
+      const ox=o.getContext('2d');ox.fillStyle='#fff';ox.fillRect(0,0,w,h);
+      ox.drawImage(c,x0,y0,w,h,0,0,w,h);
+      res({url:o.toDataURL('image/jpeg',0.92),w,h});
+    };
+    img.onerror=()=>res(null);
+    img.src=src;
+  });
+}
+
+function clearCfgSig(){
+  if(!cfgSigCtx)return;
+  cfgSigCtx.clearRect(0,0,$('cfg-sig-pad').width,$('cfg-sig-pad').height);
+  cfgHasData=false;
+}
+
+async function saveCfgSig(){
+  if(!cfgSigCtx||!cfgHasData){alert('Bitte zuerst unterschreiben.');return;}
+  const dataUrl=$('cfg-sig-pad').toDataURL('image/png');
+  try{localStorage.setItem(LS+'signature',dataUrl);}catch(e){}
+  try{await dbSet('signature',dataUrl);}catch(e){}
+  loadCfgSigPreview();
+  alert('Unterschrift gespeichert ✓');
+}
+
+async function loadCfgSigPreview(){
+  try{
+    const d=await getSignature();
+    const preview=$('cfg-sig-preview'), img=$('cfg-sig-img');
+    if(d&&preview&&img){img.src=d;preview.style.display='block';}
+  }catch(e){}
+}
+
+async function savePrueferFromCfg(){
+  const v=$('cfg-pruefer').value.trim();
+  try{localStorage.setItem(LS+'pruefer',v);}catch(e){}
+  alert('Name gespeichert: '+v);
+}
+
+async function renderHistoryInline(){
+  const list=$('hist-list-inline');
+  if(!list)return;
+  let hist=[];
+  try{hist=await dbHistGetAll();}catch(e){}
+  hist.sort((a,b)=>a.ts-b.ts);
+  list.innerHTML='';
+  if(hist.length===0){
+    list.innerHTML='<div class="hist-empty">Noch keine Tests gespeichert.</div>';
+    return;
+  }
+  [...hist].reverse().forEach(e=>{
+    const icon=e.overall==='ok'?'✓':e.overall==='warn'?'⚠':'✗';
+    const scope=e.umfang==='na'?'NA':e.umfang==='fre_na'?'FRE+NA':'FRE';
+    const item=document.createElement('div');
+    item.className='hist-item '+e.overall;
+    item.innerHTML=`
+      <div class="hist-icon">${icon}</div>
+      <div class="hist-info">
+        <div class="hist-title">${e.harnessId||e.zaehlerNr||'Anlage'}</div>
+        <div class="hist-sub">${scope} · ${e.anlageKw?e.anlageKw+' kWp':'—'} · ${e.datum||'—'} · ${e.gpsAddr||e.prAdresse||''}</div>
+      </div>
+      <button class="hist-del" onclick="event.stopPropagation();deleteHistEntry(${e.ts})">×</button>
+    `;
+    item.addEventListener('click',()=>loadHistoryEntry(e));
+    list.appendChild(item);
+  });
+}
+
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$(id).classList.add('active');$(id).scrollTop=0;}
+// ══════════════════════════════════════════════════════════════
+// IndexedDB Storage
+// ══════════════════════════════════════════════════════════════
+const DB_NAME='fre-test-v1', DB_VER=1;
+let _db=null;
+
+async function openDB(){
+  if(_db)return _db;
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open(DB_NAME,DB_VER);
+    r.onupgradeneeded=e=>{
+      const d=e.target.result;
+      if(!d.objectStoreNames.contains('kv'))    d.createObjectStore('kv');
+      if(!d.objectStoreNames.contains('history'))d.createObjectStore('history',{keyPath:'ts'});
+    };
+    r.onsuccess=e=>{_db=e.target.result;res(_db);};
+    r.onerror  =e=>rej(e.target.error);
+  });
+}
+async function dbGet(key){
+  const d=await openDB();
+  return new Promise((res,rej)=>{
+    const r=d.transaction('kv','readonly').objectStore('kv').get(key);
+    r.onsuccess=()=>res(r.result??null);
+    r.onerror  =()=>rej(r.error);
+  });
+}
+async function dbSet(key,val){
+  const d=await openDB();
+  return new Promise((res,rej)=>{
+    const r=d.transaction('kv','readwrite').objectStore('kv').put(val,key);
+    r.onsuccess=()=>res();r.onerror=()=>rej(r.error);
+  });
+}
+async function dbDel(key){
+  const d=await openDB();
+  return new Promise((res,rej)=>{
+    const r=d.transaction('kv','readwrite').objectStore('kv').delete(key);
+    r.onsuccess=()=>res();r.onerror=()=>rej(r.error);
+  });
+}
+async function dbHistGetAll(){
+  const d=await openDB();
+  return new Promise((res,rej)=>{
+    const r=d.transaction('history','readonly').objectStore('history').getAll();
+    r.onsuccess=()=>res(r.result??[]);r.onerror=()=>rej(r.error);
+  });
+}
+async function dbHistPut(entry){
+  const d=await openDB();
+  return new Promise((res,rej)=>{
+    const r=d.transaction('history','readwrite').objectStore('history').put(entry);
+    r.onsuccess=()=>res();r.onerror=()=>rej(r.error);
+  });
+}
+async function dbHistDel(ts){
+  const d=await openDB();
+  return new Promise((res,rej)=>{
+    const r=d.transaction('history','readwrite').objectStore('history').delete(ts);
+    r.onsuccess=()=>res();r.onerror=()=>rej(r.error);
+  });
+}
+async function dbHistClear(){
+  const d=await openDB();
+  return new Promise((res,rej)=>{
+    const t=d.transaction('history','readwrite');
+    t.objectStore('history').clear();
+    t.oncomplete=()=>res();t.onerror=()=>rej(t.error);
+  });
+}
+
+function showHistory(){show('setup');switchTab('hist');}
+
+// ── STEPS DEFINITIONS ────────────────────────────────────────
+const STEPS_VOLL=[
+  {pct:100,lbl:'Stufe 100 %',          isRef:true, tol:null,isZero:false,isEV:false,pDirDef:-1,
+   instr:'Wechselrichter auf Vollleistung.<br>Volleinspeisung → <b>P− Einspeisung</b>.'},
+  {pct:60, lbl:'Stufe 60 %',           isRef:false,tol:5,   isZero:false,isEV:false,pDirDef:-1,
+   instr:'FRE-Signal 60 % senden.<br>Weiter P− Einspeisung. Auf stabile Anzeige warten.'},
+  {pct:30, lbl:'Stufe 30 %',           isRef:false,tol:5,   isZero:false,isEV:false,pDirDef:-1,
+   instr:'FRE-Signal 30 % senden.<br>Weiter P− Einspeisung. Auf stabile Anzeige warten.'},
+  {pct:0,  lbl:'Stufe 0 %',            isRef:false,tol:null,isZero:true, isEV:false,pDirDef:-1,
+   instr:'Einspeisung sperren.<br>Kein Impuls erwartet — LED bleibt still.'},
+];
+const STEPS_UEBERSCHUSS=[
+  {pct:0,  lbl:'0 % — Eigenverbrauch', isRef:false,tol:null,isZero:true, isEV:true, pDirDef:1,
+   instr:'FRE 0 % — Einspeisung gesperrt.<br><b>P+ wählen</b>: Zähler zeigt Bezug (Kunde nimmt aus Netz).<br>Messwert = +Pe (Eigenverbrauch).'},
+  {pct:100,lbl:'Stufe 100 % (Referenz)',isRef:true, tol:null,isZero:false,isEV:false,pDirDef:-1,
+   instr:'Wechselrichter auf Vollleistung.<br>PV speist ein → <b>P− Einspeisung</b> wählen.<br>PV-Leistung = Pe − P.'},
+  {pct:60, lbl:'Stufe 60 %',           isRef:false,tol:5,   isZero:false,isEV:false,pDirDef:-1,
+   instr:'FRE-Signal 60 % senden.<br>Speist noch ein → P− / Bezieht → P+.<br>PV-Leistung = Pe − P.'},
+  {pct:30, lbl:'Stufe 30 %',           isRef:false,tol:5,   isZero:false,isEV:false,pDirDef:-1,
+   instr:'FRE-Signal 30 % senden.<br>Speist noch ein → P− / Bezieht → P+.<br>PV-Leistung = Pe − P.'},
+];
+let STEPS=STEPS_VOLL;
+
+// ══════════════════════════════════════════════════════════════
+// NA-SCHUTZ (VDE-AR-N 4105) – Kurzprüfung
+// ══════════════════════════════════════════════════════════════
+const NA_THRESHOLD_KW=30;      // ab > 30 kW NA-Prüfung vorschlagen
+const NA_EXTERN_KW=135;        // > 135 kW: externes Schaltgerät Pflicht
+const NA_ART_TXT={integriert:'Integriert im Wechselrichter',extern:'Externes Schaltgerät'};
+
+function naExternPflicht(){return ST.anlageKw!=null&&ST.anlageKw>NA_EXTERN_KW;}
+
+function naInit(){
+  ST.na={art:naExternPflicht()?'extern':null,func:null,tAus:'',bemerk:'',foto:null};
+}
+
+function naOverall(){
+  if(!ST.na) return null;
+  const n=ST.na;
+  if(n.func==='fail') return {cls:'fail',txt:'✗ NA-Schutz NICHT BESTANDEN',pdf:'NICHT BESTANDEN'};
+  if(n.art==='integriert'&&naExternPflicht())
+    return {cls:'fail',txt:`✗ NA-Schutz: > ${NA_EXTERN_KW} kW externes Schaltgerät erforderlich`,pdf:`MANGEL - > ${NA_EXTERN_KW} kW externes Schaltgeraet erforderlich`};
+  if(n.func!=='ok'||!n.art) return {cls:'warn',txt:'⚠ NA-Schutz nicht vollständig geprüft',pdf:'nicht vollstaendig geprueft'};
+  return {cls:'ok',txt:'✓ NA-Schutz BESTANDEN',pdf:'BESTANDEN'};
+}
+
+function renderNAScreen(){
+  const n=ST.na, pflicht=naExternPflicht();
+  const kw=ST.anlageKw;
+  $('na-art-hint').className='na-hint'+(pflicht?' warn':'');
+  $('na-art-hint').textContent=pflicht
+    ?`Anlage ${kw} kW > ${NA_EXTERN_KW} kW → externes Schaltgerät vorgeschrieben.`
+    :`${NA_THRESHOLD_KW}–${NA_EXTERN_KW} kW: im Wechselrichter integriert oder externes Schaltgerät zulässig.`;
+  document.querySelectorAll('input[name=na-art]').forEach(r=>{
+    r.checked=r.value===n.art;
+    if(r.value==='integriert') r.disabled=pflicht;
+  });
+  $('na-art-int-lbl').style.opacity=pflicht?'.4':'1';
+  $('na-taus').value=n.tAus; $('na-bemerk').value=n.bemerk;
+  renderNAFoto(); renderNAFunc(); updateNASummary();
+}
+function renderNAFunc(){
+  $('na-f-ok').className='tri-b'+(ST.na.func==='ok'?' on ok':'');
+  $('na-f-fail').className='tri-b'+(ST.na.func==='fail'?' on fail':'');
+}
+function naSet(k,v){
+  if(k==='func') v=ST.na.func===v?null:v;
+  ST.na[k]=v;
+  if(k==='func') renderNAFunc();
+  updateNASummary();
+}
+function updateNASummary(){
+  const o=naOverall(), el=$('na-sum');
+  if(!o||!el) return;
+  el.className='gesamt '+o.cls; el.textContent=o.txt;
+}
+
+function naFotoTake(){$('na-foto-inp').value='';$('na-foto-inp').click();}
+function naFotoTaken(inp){
+  const file=inp.files[0];if(!file)return;
+  compressPhoto(file,800,0.70).then(d=>{if(d){ST.na.foto=d;renderNAFoto();}});
+}
+function naFotoDel(){ST.na.foto=null;renderNAFoto();}
+function renderNAFoto(){
+  const has=!!ST.na.foto;
+  $('na-foto-box').style.display=has?'block':'none';
+  if(has) $('na-foto-img').src=ST.na.foto;
+  $('na-foto-btn').textContent=has?'📷 Foto ersetzen':'📷 Foto NA-Schutz aufnehmen';
+}
+
+function openNA(){
+  if(ST.stream){ST.stream.getTracks().forEach(t=>t.stop());ST.stream=null;}
+  cancelAnimationFrame(ST.raf);
+  renderNAScreen();
+  $('na-step-n').textContent=(ST.umfang==='fre_na'?'Teil 2 · ':'')+'NA-Schutz · '+(ST.anlageKw?ST.anlageKw+' kW':'');
+  show('na');
+}
+
+function naFinish(){
+  const n=ST.na;
+  if(!n.art){alert('Bitte Ausführung des NA-Schutzes wählen.');return;}
+  if(!n.func&&!confirm('Funktionsprüfung nicht bewertet.\nTrotzdem abschließen?'))return;
+  showProto();
+}
+
+function naCancel(){
+  if(!confirm('NA-Prüfung abbrechen und zurück zum Start?\n(Eingaben dieser Prüfung gehen verloren)'))return;
+  show('setup');
+}
+
+function renderNAProto(){
+  const box=$('na-proto');
+  if(!ST.na){box.style.display='none';box.innerHTML='';return;}
+  const n=ST.na, o=naOverall();
+  const fTxt=n.func==='ok'?'<span class="pi" style="font-size:.85rem;">✓ i.O.</span>'
+    :n.func==='fail'?'<span class="fi" style="font-size:.85rem;">✗ Mangel</span>'
+    :'<span class="wi" style="font-size:.85rem;">nicht bewertet</span>';
+  const esc=t=>String(t).replace(/</g,'&lt;');
+  const meta=[
+    ['Ausführung', n.art?NA_ART_TXT[n.art]:'—'],
+    ['Funktion', fTxt],
+    ['Ausschaltzeit', n.tAus!==''&&n.tAus!=null?esc(n.tAus)+' ms':'—'],
+  ];
+  if(n.bemerk) meta.push(['Bemerkung NA', esc(n.bemerk)]);
+  let h=`<div class="sec-hdr">NA-Schutz (VDE-AR-N 4105)</div>
+    <div class="p-meta">${meta.map(([l,v])=>`<div class="p-meta-item"><span class="ml">${l}</span><span class="mv">${v}</span></div>`).join('')}</div>`;
+  if(n.foto) h+=`<img src="${n.foto}" alt="NA-Schutz" style="width:100%;max-width:260px;border:1px solid var(--border);border-radius:2px;">`;
+  box.innerHTML=h;
+  box.style.display='flex';
+}
+
+// ── HISTORY ──────────────────────────────────────────────────
+const MAX_HISTORY=10;
+const RANK={ok:0,warn:1,fail:2};
+
+function freOverall(){
+  if(!ST.results||ST.results.length===0) return null;
+  let anyOverFail=false, anyUnderFail=false, anyWarn=false;
+  ST.results.forEach(r=>{
+    if(!r.pass){ if(r.overLimit) anyOverFail=true; else anyUnderFail=true; }
+    else if(r.sunLimited) anyWarn=true;
+  });
+  if(anyOverFail)  return {cls:'fail',txt:'✗ FRE NICHT BESTANDEN – Übereinspeisung erkannt'};
+  if(anyUnderFail) return {cls:'warn',txt:'⚠ FRE NICHT BESTANDEN – Mindereinspeisung'};
+  if(anyWarn)      return {cls:'warn',txt:'⚠ FRE BESTANDEN – Sonnen-limitiert (nicht vollst. prüfbar)'};
+  return {cls:'ok',txt:'✓ FRE VOLLSTÄNDIG BESTANDEN'};
+}
+function combinedOverall(){
+  const parts=[freOverall(),naOverall()].filter(Boolean);
+  if(!parts.length) return null;
+  const cls=parts.reduce((a,p)=>RANK[p.cls]>RANK[a]?p.cls:a,'ok');
+  return {cls,parts};
+}
+
+async function saveToHistory(){
+  const ov=combinedOverall();
+  if(!ov)return;
+  try{
+    const hist=await dbHistGetAll();
+    const entry={
+      ts:Date.now(),
+      datum:new Date().toLocaleDateString('de-DE'),
+      umfang:ST.umfang,
+      harnessId:ST.anlageNr,
+      zaehlerNr:ST.zaehlerNr,
+      fheNr:ST.fheNr,
+      faeCode:ST.faeCode,
+      anlageKw:ST.anlageKw,
+      anlageFak:ST.anlageFak,
+      anlageBase:ST.anlageBase,
+      refPower:ST.refPower,
+      wandler:ST.wandler,
+      impConst:ST.impConst,
+      numImpulse:ST.numImpulse,
+      gpsCoords:ST.gpsCoords,
+      gpsAddr:ST.gpsAddr,
+      results:ST.results.map(r=>({...r,stepPhoto:null})),
+      na:ST.na?JSON.parse(JSON.stringify(ST.na)):null,
+      overall:ov.cls,
+      prAdresse:$('p-adr').value,
+      prPruefer:$('p-pruefer').value||localStorage.getItem(LS+'pruefer')||'',
+      prZaehler:$('p-zaehler').value,
+      prBemerk:$('p-bemerk').value,
+      prFhe:$('p-fhe').value,
+      prFae:$('p-fae').value,
+    };
+    let pdfBlob=null;
+    try{const doc=await buildPDF();pdfBlob=doc.output('blob');}catch(e){}
+    entry.pdfBlob=pdfBlob;
+    if(hist.length>=MAX_HISTORY){
+      const oldest=hist.sort((a,b)=>a.ts-b.ts)[0];
+      if(oldest)await dbHistDel(oldest.ts);
+    }
+    await dbHistPut(entry);
+  }catch(e){console.warn('History save:',e);}
+}
+
+function renderHistoryList(){/* kept for compat */renderHistoryInline();}
+
+async function loadHistoryEntry(e){
+  if(e.pdfBlob){
+    const url=URL.createObjectURL(e.pdfBlob);
+    window.open(url,'_blank');
+    setTimeout(()=>URL.revokeObjectURL(url),15000);
+  } else {
+    alert('Kein PDF gespeichert für diesen Eintrag.');
+  }
+}
+
+async function deleteHistEntry(ts){
+  if(!confirm('Diesen Eintrag löschen?'))return;
+  try{await dbHistDel(ts);}catch(e){}
+  await renderHistoryInline();
+}
+
+async function clearAll(){
+  if(!confirm('Wirklich ALLES löschen?\n(Historie, Unterschrift, Prüfername, aktuelle Testdaten)'))return;
+  [LS+'signature',LS+'pruefer'].forEach(k=>{try{localStorage.removeItem(k);}catch(e){}});
+  try{await dbDel('test');await dbDel('photos');await dbDel('stepPhotos');await dbHistClear();}catch(e){}
+  ST.results=[];ST.photos=[];ST.refPower=null;ST.na=null;
+  try{await dbDel('signature');}catch(e){}
+  try{$('sig-img').style.display='none';}catch(e){}
+  const pv=$('cfg-sig-preview');if(pv)pv.style.display='none';
+  alert('Alles gelöscht.');
+  show('setup');
+  renderHistoryInline();
+}
+
+// ── PRÜFER NAME (persistent) ──────────────────────────────────
+function savePruefer(){
+  try{localStorage.setItem(LS+'pruefer',$('p-pruefer').value);}catch(e){}
+}
+function loadPruefer(){
+  try{
+    const v=localStorage.getItem(LS+'pruefer');
+    if(v)$('p-pruefer').value=v;
+  }catch(e){}
+}
+
+// ── SIGNATURE PAD ─────────────────────────────────────────────
+let sigDrawing=false, sigCtx=null, sigLastX=0, sigLastY=0, sigHasData=false;
+
+function initSigPad(){
+  const c=$('sig-pad');
+  if(!c||sigCtx)return;
+  sigCtx=c.getContext('2d');
+  sigCtx.strokeStyle='#000';
+  sigCtx.lineWidth=2.5;
+  sigCtx.lineCap='round';
+  sigCtx.lineJoin='round';
+
+  function getPos(e){
+    const r=c.getBoundingClientRect();
+    const src=e.touches?e.touches[0]:e;
+    return{
+      x:(src.clientX-r.left)*(c.width/r.width),
+      y:(src.clientY-r.top)*(c.height/r.height)
+    };
+  }
+  function start(e){e.preventDefault();sigDrawing=true;const p=getPos(e);sigLastX=p.x;sigLastY=p.y;}
+  function move(e){
+    e.preventDefault();
+    if(!sigDrawing)return;
+    const p=getPos(e);
+    sigCtx.beginPath();sigCtx.moveTo(sigLastX,sigLastY);sigCtx.lineTo(p.x,p.y);sigCtx.stroke();
+    sigLastX=p.x;sigLastY=p.y;
+    sigHasData=true;
+  }
+  function end(){sigDrawing=false;}
+  c.addEventListener('mousedown',start);c.addEventListener('mousemove',move);c.addEventListener('mouseup',end);
+  c.addEventListener('touchstart',start,{passive:false});
+  c.addEventListener('touchmove',move,{passive:false});
+  c.addEventListener('touchend',end);
+}
+
+function clearSig(){
+  if(!sigCtx)return;
+  sigCtx.clearRect(0,0,$('sig-pad').width,$('sig-pad').height);
+  sigHasData=false;
+}
+function clearSigPad(){clearSig();}
+
+async function saveSig(){
+  if(!sigCtx||!sigHasData){alert('Bitte zuerst unterschreiben.');return;}
+  const dataUrl=$('sig-pad').toDataURL('image/png');
+  try{localStorage.setItem(LS+'signature',dataUrl);}catch(e){}
+  showSigDisplay(dataUrl);
+  alert('Unterschrift gespeichert.');
+}
+
+async function loadSig(){
+  const d=await getSignature();
+  $('sig-img').style.display=d?'block':'none';
+  $('sig-missing').style.display=d?'none':'block';
+  if(d) showSigDisplay(d);
+}
+
+function showSigDisplay(dataUrl){
+  const img=$('sig-img'), disp=$('sig-display');
+  if(!img||!disp)return;
+  img.src=dataUrl;
+  disp.style.display='block';
+  const name=$('p-pruefer').value;
+  const np=$('sig-name-print');
+  if(np)np.textContent=name;
+}
+function takePhoto(){
+  if(ST.photos.length>=4){alert('Maximal 4 Fotos möglich.');return;}
+  $('photo-inp').value='';
+  $('photo-inp').click();
+}
+
+function onPhotoTaken(input){
+  const file=input.files[0];
+  if(!file)return;
+  compressPhoto(file,800,0.70).then(dataUrl=>{
+    ST.photos.push(dataUrl);
+    renderPhotos();
+    saveTest();
+  });
+}
+
+function compressPhoto(file,maxW,quality){
+  return new Promise(res=>{
+    const img=new Image();
+    const url=URL.createObjectURL(file);
+    img.onload=()=>{
+      const scale=Math.min(1,maxW/img.width);
+      const w=Math.round(img.width*scale), h=Math.round(img.height*scale);
+      const c=document.createElement('canvas');
+      c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(url);
+      res(c.toDataURL('image/jpeg',quality));
+    };
+    img.onerror=()=>{URL.revokeObjectURL(url);res(null);};
+    img.src=url;
+  });
+}
+
+function removePhoto(i){
+  ST.photos.splice(i,1);
+  renderPhotos();
+  saveTest();
+}
+
+function renderPhotos(){
+  const grid=$('photo-grid');
+  if(!grid)return;
+  grid.innerHTML='';
+  ST.photos.forEach((src,i)=>{
+    const item=document.createElement('div');
+    item.className='photo-item';
+    item.innerHTML=`<img src="${src}" loading="lazy">`
+      +`<span class="pnum">Foto ${i+1}</span>`
+      +`<button class="pdel no-print" onclick="removePhoto(${i})">×</button>`;
+    grid.appendChild(item);
+  });
+  const btn=$('photo-btn');
+  if(btn) btn.style.display=ST.photos.length>=4?'none':'flex';
+}
+
+async function saveSetup(){
+  try{
+    await dbSet('setup',{
+      impSel:$('imp-sel').value,
+      impCustom:$('imp-custom').value,
+      anlageKw:$('anlage-kw').value,
+      anlageFak:$('anlage-fak').value,
+      messart:document.querySelector('input[name=mtyp]:checked')?.value||'direkt',
+      ctPrim:$('ct-prim').value,
+      ctSec:$('ct-sec').value,
+      numImpulse:ST.numImpulse,
+      email1:$('email-1').value,
+      email2:$('email-2').value,
+      email3:$('email-3').value,
+      anlageNr:$('anlage-nr').value,
+      zaehlerNr:$('zaehler-nr').value,
+      fheNr:$('fhe-nr').value,
+      faeCode:$('fae-code').value,
+    });
+  }catch(e){console.warn('saveSetup',e);}
+}
+async function loadSetup(){
+  $('email-1').value='rico.grzenner@avacon.de';
+  try{
+    const d=await dbGet('setup');
+    if(!d)return;
+    if(d.impSel){$('imp-sel').value=d.impSel;onImpChange();}
+    if(d.impCustom)$('imp-custom').value=d.impCustom;
+    if(d.anlageKw)$('anlage-kw').value=d.anlageKw;
+    if(d.anlageFak)$('anlage-fak').value=d.anlageFak;
+    if(d.messart){
+      document.querySelectorAll('input[name=mtyp]').forEach(r=>r.checked=r.value===d.messart);
+      onMessart();
+    }
+    if(d.ctPrim)$('ct-prim').value=d.ctPrim;
+    if(d.ctSec){$('ct-sec').value=d.ctSec;calcWandler();}
+    if(d.numImpulse){ST.numImpulse=d.numImpulse;$('imp-n').textContent=d.numImpulse;}
+    if(d.email1)$('email-1').value=d.email1;
+    if(d.email2)$('email-2').value=d.email2;
+    if(d.email3)$('email-3').value=d.email3;
+    if(d.anlageNr)$('anlage-nr').value=d.anlageNr;
+    if(d.zaehlerNr)$('zaehler-nr').value=d.zaehlerNr;
+    if(d.fheNr)$('fhe-nr').value=d.fheNr;
+    if(d.faeCode)$('fae-code').value=d.faeCode;
+    onFaktorChange();
+  }catch(e){}
+}
+window.addEventListener('DOMContentLoaded', async ()=>{
+  await loadSetup();
+  onUmfang(false);
+  loadPruefer();
+  initCfgSigPad();
+  loadCfgSigPreview();
+  try{
+    const d=await dbGet('test');
+    if(d){
+      const btn=document.createElement('button');
+      btn.className='btn sec';
+      btn.style.cssText='width:100%;max-width:430px;text-align:center;';
+      btn.textContent=`📋 Letzten Test laden (${d.datum||'?'})`;
+      btn.onclick=loadSavedTest;
+      $('setup').querySelector('.s-inner').appendChild(btn);
+    }
+  }catch(e){}
+});
+
+async function saveTest(){
+  try{
+    const payload={
+      results:ST.results, refPower:ST.refPower,
+      anlageKw:ST.anlageKw, anlageFak:ST.anlageFak, anlageBase:ST.anlageBase,
+      wandler:ST.wandler, impConst:ST.impConst, numImpulse:ST.numImpulse,
+      einspeisemodus:ST.einspeisemodus, eigenverbrauch:ST.eigenverbrauch,
+      gpsCoords:ST.gpsCoords, gpsAddr:ST.gpsAddr,
+      anlageNr:ST.anlageNr, zaehlerNr:ST.zaehlerNr,
+      fheNr:ST.fheNr, faeCode:ST.faeCode,
+      umfang:ST.umfang, na:ST.na,
+      prAdresse:$('p-adr').value,
+      prPruefer:$('p-pruefer').value,
+      prZaehler:$('p-zaehler').value,
+      prBemerk:$('p-bemerk').value,
+      datum:$('p-datum').value,
+    };
+    await dbSet('test', payload);
+    try{await dbSet('stepPhotos', ST.stepPhotos);}catch(e){}
+    try{await dbSet('photos', ST.photos);}catch(e){}
+  }catch(e){}
+}
+
+async function loadSavedTest(){
+  try{
+    const d=await dbGet('test');
+    if(!d){alert('Keine gespeicherten Daten gefunden.');return;}
+    ST.results=d.results||[];
+    ST.refPower=d.refPower||null;
+    ST.anlageKw=d.anlageKw||null; ST.anlageFak=d.anlageFak||1; ST.anlageBase=d.anlageBase||null;
+    ST.wandler=d.wandler||1; ST.impConst=d.impConst||1000; ST.numImpulse=d.numImpulse||10;
+    ST.einspeisemodus=d.einspeisemodus||'voll'; ST.eigenverbrauch=d.eigenverbrauch??null;
+    ST.gpsCoords=d.gpsCoords||null; ST.gpsAddr=d.gpsAddr||'';
+    ST.anlageNr=d.anlageNr||''; ST.zaehlerNr=d.zaehlerNr||'';
+    ST.fheNr=d.fheNr||''; ST.faeCode=d.faeCode||'';
+    ST.umfang=d.umfang||'fre'; ST.na=d.na||null;
+    try{ST.stepPhotos=await dbGet('stepPhotos')||{};}catch(e){ST.stepPhotos={};}
+    try{ST.photos=await dbGet('photos')||[];}catch(e){ST.photos=[];}
+    renderProto();
+    renderPhotos();
+    if(d.prAdresse)$('p-adr').value=d.prAdresse;
+    if(d.prPruefer)$('p-pruefer').value=d.prPruefer;
+    if(d.prZaehler)$('p-zaehler').value=d.prZaehler;
+    if(d.prBemerk)$('p-bemerk').value=d.prBemerk;
+    if(d.datum)$('p-datum').value=d.datum;
+    initSigPad();
+    loadSig();
+    show('proto');
+  }catch(e){alert('Fehler beim Laden: '+e.message);}
+}
+
+async function deleteTest(){
+  if(!confirm('Aktuellen Testdaten und Fotos löschen?\n(Historie und Unterschrift bleiben erhalten)'))return;
+  try{await dbDel('test');await dbDel('photos');await dbDel('stepPhotos');}catch(e){}
+  ST.photos=[];
+  renderPhotos();
+  alert('Testdaten gelöscht.');
+  show('setup');
+}
+
+// Render protocol from ST
+function renderProto(){
+  const hasFRE=ST.results.length>0;
+  $('p-title').textContent=hasFRE&&ST.na?'FRE + NA-Schutz Prüfprotokoll':ST.na?'NA-Schutz Prüfprotokoll':'FRE Prüfprotokoll';
+  const meta=$('p-meta');meta.innerHTML='';
+  const mdata=hasFRE?[
+    ['Einspeisemodus', ST.einspeisemodus==='ueberschuss'?'Überschusseinspeisung':'Volleinspeisung'],
+    ['Generatorleistung', ST.anlageKw?ST.anlageKw.toFixed(1)+' kWp':'—'],
+    ['Ertragsfaktor',   ST.anlageFak?(ST.anlageFak.toFixed(2)+' → '+(ST.anlageBase||0).toFixed(1)+' kW'):'—'],
+    ['Impulskonstante', ST.impConst+' imp/kWh'],
+    ['Wandlerfaktor',   ST.wandler>1?ST.wandler.toFixed(2):'Direkt'],
+    ['Ref. 100 % (PV)', ST.refPower!=null?f(Math.abs(ST.refPower),3)+' kW':'—'],
+    ['Eigenverbrauch Pe',ST.eigenverbrauch!=null?f(ST.eigenverbrauch,3)+' kW':'—'],
+    ['Basis Teststufen', ST.anlageBase?ST.anlageBase.toFixed(1)+' kW':'—'],
+  ]:[
+    ['Generatorleistung', ST.anlageKw?ST.anlageKw.toFixed(1)+' kWp':'—'],
+  ];
+  mdata.forEach(([l,v])=>{
+    const d=document.createElement('div');d.className='p-meta-item';
+    d.innerHTML=`<span class="ml">${l}</span><span class="mv">${v}</span>`;
+    meta.appendChild(d);
+  });
+  if(ST.gpsCoords){
+    const{lat,lng,acc}=ST.gpsCoords;
+    $('gps-pa').textContent=ST.gpsAddr||'Adresse nicht ermittelbar';
+    $('gps-pc').textContent=`${lat.toFixed(6)}° N, ${lng.toFixed(6)}° E · ±${Math.round(acc)} m`;
+    $('gps-proto').style.display='block';
+    $('p-adr').value=ST.gpsAddr;
+  }else{
+    $('gps-proto').style.display='none';
+  }
+  $('fre-proto').style.display=hasFRE?'block':'none';
+  const tb=$('rtbody');tb.innerHTML='';
+  const isVoll=ST.einspeisemodus!=='ueberschuss';
+  ST.results.forEach(r=>{
+    const dispPwr = (isVoll && !r.isEVStep) ? Math.abs(r.pwr) : r.pwr;
+    const dispPct = r.pctOfBase!==null ? Math.abs(r.pctOfBase) : null;
+    const tr=document.createElement('tr');
+    const sollStr=f(r.tgt,3);
+    const pctStr=dispPct!=null?f(dispPct,1)+' %':'—';
+    let icon, rowStyle='';
+    if(!r.pass){
+      if(r.overLimit){icon='<span class="fi" style="font-size:1.25rem;">✗</span>';rowStyle='background:rgba(248,81,73,.06);';}
+      else{icon='<span class="wi" style="font-size:1.25rem;">⚠</span>';rowStyle='background:rgba(240,165,0,.06);';}
+    }else if(r.sunLimited){icon='<span class="wi" style="font-size:1.25rem;">⚠</span>';}
+    else{icon='<span class="pi" style="font-size:1.25rem;">✓</span>';}
+    tr.style.cssText=rowStyle;
+    tr.innerHTML=
+      `<td style="font-weight:600;">${r.lbl}</td>`+
+      `<td><span style="color:var(--muted)">${sollStr}</span></td>`+
+      `<td><strong>${f(dispPwr,3)}</strong></td>`+
+      `<td style="text-align:right;">${pctStr}</td>`+
+      `<td style="text-align:center">${icon}</td>`;
+    tb.appendChild(tr);
+  });
+  // Overall result banner (FRE + NA kombiniert)
+  const banner=$('gesamt-banner');
+  const ov=combinedOverall();
+  if(ov){
+    banner.style.display='block';
+    banner.className='gesamt '+ov.cls;
+    banner.innerHTML=ov.parts.map(p=>p.txt).join('<br>');
+  }else{banner.style.display='none';}
+  $('p-nr').value=ST.anlageNr;
+  $('p-zaehler').value=ST.zaehlerNr||'';
+  $('p-fhe').value=ST.fheNr||'';
+  $('p-fae').value=ST.faeCode;
+
+  // Step photos below table
+  let spContainer=$('step-photos-proto');
+  if(!spContainer){
+    spContainer=document.createElement('div');
+    spContainer.id='step-photos-proto';
+    spContainer.style.cssText='display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.5rem;';
+    tb.parentElement.after(spContainer);
+  }
+  spContainer.innerHTML='';
+  ST.results.filter(r=>r.stepPhoto).forEach(r=>{
+    const div=document.createElement('div');
+    div.style.cssText='display:flex;flex-direction:column;align-items:center;gap:.15rem;';
+    div.innerHTML=`<img src="${r.stepPhoto}" style="width:80px;height:80px;object-fit:cover;border:1px solid var(--border);border-radius:2px;"/>`+
+      `<span style="font-family:var(--mono);font-size:.55rem;color:var(--muted);">${r.lbl}</span>`;
+    spContainer.appendChild(div);
+  });
+
+  renderNAProto();
+}
+
+// ── SETUP LOGIC ──────────────────────────────────────────────
+let umfangUserSet=false;
+function onUmfang(byUser){
+  if(byUser) umfangUserSet=true;
+  else if(!umfangUserSet){
+    const kw=parseFloat($('anlage-kw').value);
+    $('pruef-umfang').value=(!isNaN(kw)&&kw>NA_THRESHOLD_KW)?'fre_na':'fre';
+  }
+  const v=$('pruef-umfang').value;
+  const kw=parseFloat($('anlage-kw').value);
+  const hint=$('na-hint');
+  if(v==='fre'&&!isNaN(kw)&&kw>NA_THRESHOLD_KW){
+    hint.className='na-hint warn';
+    hint.textContent=`⚠ Anlage > ${NA_THRESHOLD_KW} kW – NA-Schutz-Prüfung erforderlich. Nicht vergessen.`;
+  }else if(v!=='fre'){
+    hint.className='na-hint';
+    hint.textContent='NA-Schutz: Foto, Ausführung (integriert / extern), Funktion und Ausschaltzeit'+(v==='fre_na'?' – im Anschluss an den FRE-Test.':'.');
+  }else{
+    hint.className='na-hint';
+    hint.textContent=`NA-Schutz-Prüfung wird ab ${NA_THRESHOLD_KW} kW automatisch vorgeschlagen.`;
+  }
+  $('sec-messung').style.display=v==='na'?'none':'flex';
+}
+function onAnlageKwChange(){
+  const kw=parseFloat($('anlage-kw').value);
+  onUmfang(false);
+  if(isNaN(kw)||kw<=0){$('anlage-eff').textContent='= — kW';return;}
+  if(kw<100){
+    if(parseFloat($('anlage-fak').value)===1.00||parseFloat($('anlage-fak').value)===1){
+      $('anlage-fak').value='0.60';
+    }
+  } else {
+    if(parseFloat($('anlage-fak').value)===0.60){
+      $('anlage-fak').value='1.00';
+    }
+  }
+  onFaktorChange();
+}
+function onFaktorChange(){
+  const kw=parseFloat($('anlage-kw').value);
+  const fak=parseFloat($('anlage-fak').value)||1;
+  if(!isNaN(kw)&&kw>0){
+    $('anlage-eff').textContent='= '+(kw*fak).toFixed(1)+' kW';
+  }
+}
+function onImpChange(){
+  const v=$('imp-sel').value;
+  $('imp-custom').style.display=v==='custom'?'flex':'none';
+}
+function onMessart(){
+  const v=document.querySelector('input[name=mtyp]:checked').value;
+  $('wand-fields').classList.toggle('visible',v==='wandler');
+  if(v==='direkt'){ST.wandler=1;$('wfak-display').textContent='Wandlerfaktor: —';}
+}
+function calcWandler(){
+  const prim=parseFloat($('ct-prim').value);
+  const sec=parseFloat($('ct-sec').value);
+  if(!isNaN(prim)&&!isNaN(sec)&&sec>0){
+    ST.wandler=prim/sec;
+    $('wfak-display').textContent=`Wandlerfaktor: ${ST.wandler.toFixed(2)}`;
+  } else {
+    ST.wandler=1;
+    $('wfak-display').textContent='Wandlerfaktor: —';
+  }
+}
+
+function onEmodus(){
+  const v=document.querySelector('input[name=emodus]:checked').value;
+  $('ev-hint').style.display=v==='ueberschuss'?'block':'none';
+}
+
+async function startTest(){
+  saveSetup();
+  const impSel=$('imp-sel').value;
+  ST.impConst=impSel==='custom'?parseInt($('imp-custom').value)||1000:parseInt(impSel);
+  $('imp-n').textContent=ST.numImpulse;
+  setTimeout(()=>setImpLive(ST.impConst),100);
+  if(document.querySelector('input[name=mtyp]:checked').value==='direkt') ST.wandler=1;
+  ST.anlageKw=parseFloat($('anlage-kw').value)||null;
+  ST.anlageFak=parseFloat($('anlage-fak').value)||1;
+  ST.anlageBase=ST.anlageKw?ST.anlageKw*ST.anlageFak:null;
+  ST.anlageNr=$('anlage-nr').value.trim();
+  ST.zaehlerNr=$('zaehler-nr').value.trim();
+  ST.fheNr=$('fhe-nr').value.trim();
+  ST.faeCode=$('fae-code').value.trim();
+  ST.einspeisemodus=document.querySelector('input[name=emodus]:checked').value;
+  ST.umfang=$('pruef-umfang').value;
+  STEPS = ST.einspeisemodus==='ueberschuss' ? STEPS_UEBERSCHUSS : STEPS_VOLL;
+  ST.eigenverbrauch=null;
+  ST.pDir=1;
+  ST.step=0;ST.refPower=null;ST.results=[];ST.stepPhotos={};ST.photos=[];
+  ST.na=null;
+  if(ST.umfang!=='fre') naInit();
+  if(ST.umfang==='na'){openNA();return;}
+  initTestCam();
+  show('test');
+}
+
+// ── GPS ──────────────────────────────────────────────────────
+async function captureGPS(){
+  const btn=$('gps-btn'),st=$('gps-st');
+  btn.textContent='⏳ Ortung …';btn.disabled=true;
+  st.className='gps-status';st.textContent='GPS-Signal wird gesucht …';
+  try{
+    const pos=await new Promise((ok,err)=>
+      navigator.geolocation.getCurrentPosition(ok,err,{enableHighAccuracy:true,timeout:20000,maximumAge:0})
+    );
+    const{latitude:lat,longitude:lng,accuracy:acc}=pos.coords;
+    ST.gpsCoords={lat,lng,acc};
+    st.textContent='📍 Adresse wird ermittelt …';
+    try{
+      const r=await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=de`,
+        {headers:{'User-Agent':'FRE-Test-App/1.0'}}
+      );
+      const d=await r.json();
+      const a=d.address||{};
+      const road=a.road?(a.road+(a.house_number?' '+a.house_number:'')):'' ;
+      const city=a.city||a.town||a.village||'';
+      const plz=a.postcode||'';
+      ST.gpsAddr=[road,plz&&city?plz+' '+city:''].filter(Boolean).join(', ')||d.display_name||'';
+    }catch(e){ST.gpsAddr='';}
+    const aline=ST.gpsAddr||'Adresse nicht ermittelbar';
+    st.className='gps-status ok';
+    st.innerHTML=`✓ ${aline}<br><small style="color:var(--muted)">${lat.toFixed(6)}° N, ${lng.toFixed(6)}° E · ±${Math.round(acc)} m</small>`;
+    btn.textContent='📍 Erneut erfassen';
+  }catch(e){
+    st.className='gps-status err';
+    st.textContent='Fehler: '+(e.message||'Standort nicht verfügbar. HTTPS erforderlich.');
+    btn.textContent='📍 GPS erfassen';
+  }
+  btn.disabled=false;
+}
+
+// ── QR SCANNER ───────────────────────────────────────────────
+async function openQR(targetId){
+  ST.qrTarget=targetId||'anlage-nr';
+  $('qr-modal').classList.add('open');
+  $('qr-status').className='';$('qr-inp').value='';
+  $('qr-status').textContent='Kamera wird gestartet …';
+  try{
+    ST.qrStream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:{ideal:'environment'},width:{ideal:1280}}
+    });
+    const v=$('qr-video');v.srcObject=ST.qrStream;await v.play();
+    if('BarcodeDetector' in window){
+      try{
+        ST.bdector=new BarcodeDetector({
+          formats:['qr_code','code_128','code_39','ean_13','ean_8','data_matrix','upc_a','upc_e']
+        });
+        $('qr-status').textContent='QR / Barcode in den Rahmen halten …';
+        ST.qrRunning=true;
+        qrLoopNative();
+      }catch(e){
+        $('qr-status').textContent='Kamera aktiv — BarcodeDetector nicht verfügbar. Manuell eingeben.';
+      }
+    } else {
+      $('qr-status').textContent='Kamera aktiv — Automatische Erkennung nicht unterstützt. Bitte manuell eingeben.';
+    }
+  }catch(e){
+    $('qr-status').textContent='Kamera nicht verfügbar: '+(e.message||'Fehler')+' – bitte manuell eingeben.';
+  }
+}
+async function qrLoopNative(){
+  if(!ST.qrRunning) return;
+  try{
+    const v=$('qr-video');
+    if(v.readyState>=2&&ST.bdector){
+      const codes=await ST.bdector.detect(v);
+      if(codes&&codes.length>0){applyQR(codes[0].rawValue);return;}
+    }
+  }catch(e){}
+  ST.qrRaf=requestAnimationFrame(qrLoopNative);
+}
+function applyQR(val){
+  ST.qrRunning=false;cancelAnimationFrame(ST.qrRaf);
+  $('qr-status').className='found';$('qr-status').textContent='✓ '+val;
+  const target=$(ST.qrTarget||'anlage-nr');
+  if(target) target.value=val;
+  if(navigator.vibrate)navigator.vibrate(80);
+  setTimeout(closeQR,700);
+}
+function applyQRManual(){const v=$('qr-inp').value.trim();if(v)applyQR(v);}
+function closeQR(){
+  ST.qrRunning=false;cancelAnimationFrame(ST.qrRaf);
+  if(ST.qrStream){ST.qrStream.getTracks().forEach(t=>t.stop());ST.qrStream=null;}
+  $('qr-modal').classList.remove('open');
+}
+
+// ── TEST CAMERA ──────────────────────────────────────────────
+function initTestCam(){
+  camOpen=false;
+  const cs=$('cam-section');if(cs)cs.style.display='none';
+  const tb=$('cam-toggle-btn');
+  if(tb){tb.classList.remove('open');tb.textContent='📷 Kamera-Impulse einblenden';}
+  if(ST.stream){ST.stream.getTracks().forEach(t=>t.stop());ST.stream=null;}
+  cancelAnimationFrame(ST.raf);
+  resetPulse();
+  updateStepUI();
+}
+
+let camOpen=false;
+function toggleCam(){
+  camOpen=!camOpen;
+  $('cam-section').style.display=camOpen?'block':'none';
+  $('cam-toggle-btn').classList.toggle('open',camOpen);
+  $('cam-toggle-btn').textContent=camOpen?'📷 Kamera-Impulse ausblenden':'📷 Kamera-Impulse einblenden';
+  if(camOpen&&!ST.stream){
+    startCam();
+  }else if(!camOpen&&ST.stream){
+    cancelAnimationFrame(ST.raf);
+    ST.stream.getTracks().forEach(t=>t.stop());
+    ST.stream=null;
+    ST.pulses=[];ST.brightHist=[];
+  }
+}
+
+async function startCam(){
+  try{
+    ST.stream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:{ideal:'environment'}}
+    });
+    const v=$('tvid');v.srcObject=ST.stream;
+    v.play().catch(()=>{});
+    startDetection();
+    $('cam-hint').textContent='Antippen zum Positionieren';
+  }catch(e){
+    $('cam-hint').textContent='Kamera: '+(e.message||'Nicht verfügbar');
+  }
+}
+
+// Tap overlay → reposition ROI
+const ovl=$('tovl');
+ovl.addEventListener('click',e=>{
+  const vid=$('tvid');
+  const rc=ovl.getBoundingClientRect();
+  const vw=vid.videoWidth||640, vh=vid.videoHeight||360;
+  const dw=rc.width, dh=rc.height;
+  const s=Math.max(dw/vw, dh/vh);
+  const offX=(dw-vw*s)/2, offY=(dh-vh*s)/2;
+  const tx=Math.round((e.clientX-rc.left-offX)/s);
+  const ty=Math.round((e.clientY-rc.top-offY)/s);
+  const rw=Math.round(vw*0.22), rh=Math.round(vh*0.22);
+  ST.roi={x:Math.max(0,Math.min(vw-rw,tx-rw/2|0)),
+          y:Math.max(0,Math.min(vh-rh,ty-rh/2|0)), w:rw, h:rh};
+  ST.brightHist=[]; ST.inPulse=false; ST.lastPulseMs=0;
+  $('cam-hint').textContent='ROI verschoben – Messung läuft';
+  resetPulseData();
+});
+
+function onSens(el){ST.sensitivity=+el.value;$('sens-val').textContent=el.value+' %';}
+function onRefr(el){ST.refractory=+el.value;$('refr-val').textContent=el.value+' ms';}
+function toggleIR(){
+  ST.useIR=!ST.useIR;
+  $('ir-tog').classList.toggle('on',ST.useIR);
+}
+
+function drawScope(lum, minL, maxL){
+  const sc=$('scope-cv');
+  if(!sc) return;
+  const ctx=sc.getContext('2d');
+  const w=sc.offsetWidth||300, h=40;
+  if(sc.width!==w) sc.width=w;
+  const img=ctx.getImageData(1,0,w-1,h);
+  ctx.putImageData(img,0,0);
+  ctx.clearRect(w-1,0,1,h);
+  const range=maxL-minL||1;
+  const y=h-1-Math.round(((lum-minL)/range)*(h-2));
+  ctx.fillStyle=ST.inPulse?'#f0a500':'#3fb950';
+  ctx.fillRect(w-1,Math.max(0,Math.min(h-1,y)),1,2);
+  const thr=minL+range*(ST.sensitivity/100);
+  const ty=h-1-Math.round(((thr-minL)/range)*(h-2));
+  ctx.fillStyle='rgba(88,166,255,0.6)';
+  ctx.fillRect(w-1,Math.max(0,Math.min(h-1,ty)),1,1);
+}
+
+function startDetection(){
+  const vid=$('tvid');
+  const fbuf=document.createElement('canvas');
+  const fctx=fbuf.getContext('2d');
+  const ovlc=$('tovl'), oc=ovlc.getContext('2d');
+  let lastW=0, lastH=0;
+
+  function getLum(data){
+    let s=0;
+    if(ST.useIR){
+      for(let i=0;i<data.length;i+=4) s+=data[i];
+    } else {
+      for(let i=0;i<data.length;i+=4) s+=0.299*data[i]+0.587*data[i+1]+0.114*data[i+2];
+    }
+    return s/(data.length/4);
+  }
+
+  function loop(){
+    if(!ST.stream) return;
+    if(vid.readyState<2){ST.raf=requestAnimationFrame(loop);return;}
+
+    const vw=vid.videoWidth, vh=vid.videoHeight;
+    if(vw!==lastW||vh!==lastH){
+      fbuf.width=vw; fbuf.height=vh;
+      ovlc.width=vw; ovlc.height=vh;
+      lastW=vw; lastH=vh;
+      if(!ST.roi){
+        const rw=Math.round(vw*0.22), rh=Math.round(vh*0.22);
+        ST.roi={x:Math.round((vw-rw)/2), y:Math.round((vh-rh)/2), w:rw, h:rh};
+      }
+    }
+
+    fctx.drawImage(vid,0,0);
+    oc.clearRect(0,0,vw,vh);
+
+    if(ST.roi){
+      const{x,y,w,h}=ST.roi;
+      const cm=10;
+      oc.lineWidth=1.5;
+      oc.strokeStyle=ST.inPulse?'#f0a500':'rgba(255,255,255,.55)';
+      oc.strokeRect(x,y,w,h);
+      [[x,y,1,1],[x+w,y,-1,1],[x,y+h,1,-1],[x+w,y+h,-1,-1]].forEach(([cx,cy,dx,dy])=>{
+        oc.strokeStyle='#f0a500'; oc.lineWidth=2;
+        oc.beginPath();oc.moveTo(cx+dx*cm,cy);oc.lineTo(cx,cy);oc.lineTo(cx,cy+dy*cm);oc.stroke();
+      });
+
+      const x0=Math.max(0,x), y0=Math.max(0,y);
+      const sw=Math.min(vw-x0,w), sh=Math.min(vh-y0,h);
+      if(sw>0&&sh>0){
+        const lum=getLum(fctx.getImageData(x0,y0,sw,sh).data);
+        ST.brightHist.push(lum);
+        if(ST.brightHist.length>90) ST.brightHist.shift();
+        const minL=Math.min(...ST.brightHist);
+        const maxL=Math.max(...ST.brightHist);
+        const range=maxL-minL;
+        drawScope(lum, minL, maxL);
+        if(range>5){
+          const thr=minL+range*(ST.sensitivity/100);
+          const now=Date.now();
+          if(!ST.inPulse && lum>thr && (now-ST.lastPulseMs)>ST.refractory){
+            ST.inPulse=true;
+            ST.lastPulseMs=now;
+            ST.pulses.push(now);
+            if(ST.pulses.length>35) ST.pulses.shift();
+          } else if(ST.inPulse && lum < thr - range*0.12){
+            ST.inPulse=false;
+          }
+        }
+      }
+    }
+
+    updatePwrDisplay();
+    ST.raf=requestAnimationFrame(loop);
+  }
+  ST.raf=requestAnimationFrame(loop);
+}
+
+function setImpLive(val){
+  ST.impConst=val;
+  document.querySelectorAll('.imp-chip').forEach(c=>{
+    c.classList.toggle('active', parseInt(c.textContent.replace(/\./g,''))===val);
+  });
+  const lv=$('imp-live-val');
+  if(lv) lv.textContent='→ '+val.toLocaleString('de-DE')+' imp/kWh aktiv';
+  ST.pulses=[];ST.brightHist=[];ST.stable=false;ST.curPwr=null;
+}
+
+// ── STEP PHOTOS (per measurement step) ───────────────────────
+function takeStepPhoto(){
+  $('step-photo-inp').value='';
+  $('step-photo-inp').click();
+}
+function onStepPhoto(inp){
+  const file=inp.files[0];if(!file)return;
+  compressPhoto(file,600,0.72).then(dataUrl=>{
+    if(!dataUrl)return;
+    ST.stepPhotos[ST.step]=dataUrl;
+    showStepPhotoPreview(dataUrl);
+  });
+}
+function showStepPhotoPreview(src){
+  const p=$('step-photo-preview'),img=$('step-photo-img');
+  if(p&&img){img.src=src;p.style.display='flex';}
+}
+function removeStepPhoto(){
+  delete ST.stepPhotos[ST.step];
+  const p=$('step-photo-preview');if(p)p.style.display='none';
+}
+function clearStepPhotoUI(){
+  const p=$('step-photo-preview');if(p)p.style.display='none';
+  if(ST.stepPhotos[ST.step]) showStepPhotoPreview(ST.stepPhotos[ST.step]);
+}
+function onManKw(){
+  const kw=parseFloat($('man-kw').value);
+  if(!isNaN(kw)){
+    const a=(Math.abs(kw)*1000)/(400*S3);
+    $('man-a').value=f(a,2);
+    $('man-a-kw').textContent=`→ ${f(kw,3)} kW`;
+  } else {
+    $('man-a-kw').textContent='→ — kW';
+  }
+}
+function onManA(){
+  const a=parseFloat($('man-a').value);
+  if(!isNaN(a)){
+    const kw=a*400*S3/1000;
+    $('man-kw').value=f(kw,3);
+    $('man-a-kw').textContent=`→ ${f(kw,3)} kW`;
+  } else {
+    $('man-a-kw').textContent='→ — kW';
+  }
+}
+function useManual(){
+  const kw=parseFloat($('man-kw').value);
+  if(isNaN(kw)){alert('Bitte kW oder A eingeben.');return;}
+  const directed=kw*ST.pDir;
+  ST.manualPwr=directed;
+  ST.curPwr=directed;
+  ST.stable=true;
+  $('btn-clr-man').style.display='block';
+  $('manual-ctrl').classList.add('manual-active');
+  updatePwrDisplay();
+}
+function clearManual(){
+  ST.manualPwr=null;
+  $('man-kw').value='';$('man-a').value='';
+  $('man-a-kw').textContent='→ — kW';
+  $('btn-clr-man').style.display='none';
+  $('manual-ctrl').classList.remove('manual-active');
+  ST.stable=false; ST.curPwr=null;
+  updatePwrDisplay();
+}
+function resetManual(){
+  ST.manualPwr=null;
+  try{$('man-kw').value='';$('man-a').value='';$('man-a-kw').textContent='→ — kW';
+      $('btn-clr-man').style.display='none';
+      $('manual-ctrl').classList.remove('manual-active');}catch(e){}
+}
+
+function setPDir(dir){
+  ST.pDir=dir;
+  $('pdir-plus').classList.toggle('active',dir===1);
+  $('pdir-minus').classList.toggle('active',dir===-1);
+  ST.pulses=[];ST.brightHist=[];ST.stable=false;ST.curPwr=null;
+}
+
+function adjImp(d){
+  ST.numImpulse=Math.max(2,Math.min(30,ST.numImpulse+d));
+  $('imp-n').textContent=ST.numImpulse;
+}
+function calcPwr(){
+  const n=ST.numImpulse;
+  if(ST.pulses.length<2)return null;
+  const rec=ST.pulses.slice(-Math.min(n,ST.pulses.length));
+  if(rec.length<2)return null;
+  let tot=0;for(let i=1;i<rec.length;i++)tot+=rec[i]-rec[i-1];
+  const avgMs=tot/(rec.length-1);
+  return (3600000/(avgMs*ST.impConst))*ST.wandler*ST.pDir;
+}
+// PV = Pe − directed_P (Überschusseinspeisung)
+function getPVPower(directedPwr){
+  if(ST.einspeisemodus==='ueberschuss'&&ST.eigenverbrauch!==null){
+    return ST.eigenverbrauch - directedPwr;
+  }
+  return directedPwr;
+}
+function isStable(){
+  const n=ST.numImpulse;
+  if(ST.pulses.length<Math.min(n,3))return false;
+  const arr=ST.pulses.slice(-Math.min(n,ST.pulses.length)),ints=[];
+  for(let i=1;i<arr.length;i++)ints.push(arr[i]-arr[i-1]);
+  if(ints.length<1)return false;
+  const mean=ints.reduce((a,b)=>a+b,0)/ints.length;
+  const cv=Math.sqrt(ints.reduce((s,x)=>s+(x-mean)**2,0)/ints.length)/mean;
+  return cv<0.13;
+}
+
+function updatePwrDisplay(){
+  const step=STEPS[ST.step];
+  if(!step) return;
+  const isManual=ST.manualPwr!==null;
+  const isUE=ST.einspeisemodus==='ueberschuss';
+  let rawPwr=isManual?ST.manualPwr:calcPwr();
+  const pwr = (rawPwr!==null && !isUE && !step.isEV) ? Math.abs(rawPwr) : rawPwr;
+  ST.curPwr=pwr;
+  if(!isManual) ST.stable=isStable();
+
+  $('pwfak').textContent=ST.wandler>1?`× ${ST.wandler.toFixed(2)} (Wandler)`:
+    (isUE&&ST.eigenverbrauch!==null?`E = ${ST.eigenverbrauch.toFixed(3)} kW`:'');
+
+  const evInfo=$('ev-info');
+  if(isUE&&ST.eigenverbrauch!==null&&evInfo){
+    evInfo.style.display='block';
+    const pe=ST.eigenverbrauch;
+    evInfo.textContent=`⚡ Pe = ${f(pe,3)} kW | PV = Pe − P`;
+  } else if(evInfo){
+    evInfo.style.display='none';
+  }
+
+  if(pwr===null){
+    $('pkw').className='dim';$('pkw').textContent='---';
+    $('pamps').textContent=step.isEV?'P+ messen — Zähler zeigt Bezug':'--- A @ 400V/√3';
+    if(!step.isZero||step.isEV) setBadge('wait','⏳ Warte auf Impuls …');
+    $('btn-ok').disabled=true;return;
+  }
+
+  $('pkw').className='';
+  $('pkw').textContent=f(pwr,3);
+  const manTag=isManual?' 🖊':'';
+  $('pamps').textContent=step.isEV
+    ?`Pe = ${f(Math.abs(pwr),3)} kW${manTag}`
+    :(isUE&&ST.eigenverbrauch!==null
+      ?`P=${f(pwr,3)} kW → PV = ${f(getPVPower(pwr),3)} kW${manTag}`
+      :`${f(toA(Math.abs(pwr)),2)} A @ 400V/√3${manTag}`);
+
+  const effectivePwr = isUE ? getPVPower(pwr) : pwr;
+
+  if(step.isEV){
+    if(ST.stable){
+      const peOk=pwr>=0;
+      setBadge(peOk?'ref':'fail',
+        peOk?`⚡ Pe = ${f(pwr,3)} kW — bereit`:`⚠ P negativ — FRE prüfen! Pe = ${f(pwr,3)} kW`);
+      $('btn-ok').disabled=false;
+    } else {
+      setBadge('wait','⌛ Stabilisierung …');$('btn-ok').disabled=true;
+    }
+    $('pamps').textContent=`Eigenverbrauch Pe = ${f(pwr,3)} kW (P = ${pwr>=0?'+':''} ${f(pwr,3)})`;
+    return;
+  }
+
+  if(step.isRef){
+    const base=ST.anlageBase;
+    const over=base&&effectivePwr>base;
+    const ri=$('range-info');
+    if(ri&&base) ri.textContent=`Max. erlaubt: ${f(base,3)} kW (= 100 % von ${f(base,1)} kW Basis)`;
+    if(ST.stable){
+      if(over){setBadge('fail','✗ ÜBERINSTALLATION – PV-Leistung > Basis');$('btn-ok').disabled=false;}
+      else{setBadge('ref','✓ Referenz stabil – bereit');$('btn-ok').disabled=false;}
+    }else{setBadge('wait','⌛ Stabilisierung …');$('btn-ok').disabled=true;}
+  }else if(!step.isZero){
+    const base=ST.anlageBase||ST.refPower;
+    const pNom=base*step.pct/100;
+    const pMax=base*(step.pct+step.tol)/100;
+    const pMinNom=base*(step.pct-step.tol)/100;
+    const overLimit=effectivePwr>pMax;
+    const underNom=effectivePwr<pMinNom;
+    updateTolBar(effectivePwr,pMinNom,pMax,pNom);
+    const ri=$('range-info');
+    if(ri&&base) ri.textContent=
+      `Soll: ${f(pNom,3)} kW | Erlaubt: ${f(pMinNom,3)} – ${f(pMax,3)} kW`+
+      ` (${step.pct-step.tol}–${step.pct+step.tol} % von ${f(base,1)} kW)`;
+    if(!ST.stable){setBadge('wait','⌛ Stabilisierung …');$('btn-ok').disabled=true;}
+    else if(overLimit){setBadge('fail',`✗ > ${step.pct+step.tol} % – MANGEL`);$('btn-ok').disabled=false;}
+    else if(underNom){setBadge('ok','⚠ SONNEN-LIMITIERT – BESTANDEN');$('btn-ok').disabled=false;}
+    else{setBadge('ok',`✓ IN BEREICH (${step.pct-step.tol}–${step.pct+step.tol} %)`);$('btn-ok').disabled=false;}
+  }else{
+    const base=ST.anlageBase||ST.refPower;
+    const pMax5=base*0.05;
+    const over5=Math.abs(effectivePwr)>pMax5;
+    if(base){updateTolBar(Math.abs(effectivePwr),0,pMax5,0);}
+    const ri=$('range-info');
+    if(ri&&base) ri.textContent=`Max. erlaubt: ${f(pMax5,3)} kW (= 5 % von ${f(base,1)} kW Basis)`;
+    if(!ST.stable&&pwr===null){setBadge('wait','⌛ Warte …');$('btn-ok').disabled=true;}
+    else if(over5){setBadge('fail','✗ > 5 % – MANGEL');$('btn-ok').disabled=false;}
+    else if(pwr!==null){setBadge('ok','✓ ≤ 5 % – BESTANDEN');$('btn-ok').disabled=false;}
+  }
+}
+
+function updateTolBar(pwr,pMin,pMax,pNom){
+  const range=pMax*1.4;
+  $('tol-band').style.left=(pMin/range*100)+'%';
+  $('tol-band').style.width=((pMax-pMin)/range*100)+'%';
+  $('tol-ndl').style.display='block';
+  $('tol-ndl').style.left=Math.min(100,pwr/range*100)+'%';
+  $('tn-min').textContent=f(pMin,2)+' kW';
+  $('tn-max').textContent=f(pMax,2)+' kW (Soll: '+f(pNom,2)+')';
+  $('tv-min').textContent=f(pMin,3)+' kW / '+f(toA(pMin),2)+' A';
+  $('tv-max').textContent=f(pMax,3)+' kW / '+f(toA(pMax),2)+' A';
+}
+
+function setBadge(type,txt){const el=$('badge');el.className='badge '+type;el.textContent=txt;}
+
+// ── TEST FLOW ────────────────────────────────────────────────
+function updateStepUI(){
+  const s=STEPS[ST.step];
+  const total=STEPS.length+(ST.na?1:0);
+  $('step-n').textContent=`Schritt ${ST.step+1} / ${total}`+(ST.na?' (inkl. NA-Schutz)':'');
+  $('step-l').textContent=s.lbl;
+  $('instr').innerHTML=s.instr;
+  const pips=$('pips');pips.innerHTML='';
+  for(let i=0;i<total;i++){
+    const p=document.createElement('div');
+    p.className='pip'+(i<ST.step?' done':i===ST.step?' cur':'');
+    pips.appendChild(p);
+  }
+  $('tol-sec').style.display=(!s.isRef&&!s.isZero)?'block':'none';
+  $('btn-zero').style.display=(s.isZero&&!s.isEV)?'block':'none';
+  $('btn-ok').disabled=true;
+  $('btn-ok').textContent=s.isEV?'⚡ Eigenverbrauch bestätigen':
+    s.isZero?`✓ Stufe 0 % bestätigen`:`✓ Stufe ${s.pct} % bestätigen`;
+  $('cam-hint').textContent=s.isEV?'P− messen — Zähler zeigt Bezug (Eigenverbrauch)':
+    s.isZero?'Kein Impuls erwartet – LED still':'ROI auf LED — antippen zum Positionieren';
+  setPDir(s.pDirDef);
+  const pdirRow=document.querySelector('.pdir-row');
+  if(pdirRow) pdirRow.style.display=ST.einspeisemodus==='ueberschuss'?'flex':'none';
+  if(s.isZero&&!s.isEV) setBadge('wait','👁 Einspeisung gesperrt – kein Impuls erwartet');
+  if(s.isEV) setBadge('wait','⚡ P− messen – Eigenverbrauch');
+}
+function resetPulse(){
+  resetPulseData();
+  setBadge('wait','⏳ Warte auf Impuls …');
+  $('pkw').className='dim';$('pkw').textContent='---';
+  $('pamps').textContent='--- A @ 400V/√3';
+  const ri=$('range-info');if(ri)ri.textContent='';
+  $('btn-ok').disabled=true;
+}
+function resetPulseData(){ST.pulses=[];ST.brightHist=[];ST.inPulse=false;ST.stable=false;ST.curPwr=null;ST.lastPulseMs=0;}
+
+function confirmStep(){
+  const s=STEPS[ST.step],pwr=ST.curPwr||0;
+  const isUE=ST.einspeisemodus==='ueberschuss';
+  if(s.isEV){
+    ST.eigenverbrauch = pwr;
+    addResult(pwr,true,true);
+    advance();return;
+  }
+  const rawCur=ST.curPwr||0;
+  const effectivePwr=isUE?getPVPower(rawCur):(s.isEV?rawCur:Math.abs(rawCur));
+  if(s.isRef){
+    ST.refPower=effectivePwr;
+    const base=ST.anlageBase;
+    const pass=!base||effectivePwr<=base;
+    addResult(effectivePwr,pass);
+  }else if(!s.isZero){
+    const base=ST.anlageBase||ST.refPower;
+    const pMax=base*(s.pct+s.tol)/100;
+    addResult(effectivePwr,effectivePwr<=pMax);
+  }else{
+    const base=ST.anlageBase||ST.refPower;
+    addResult(effectivePwr,!ST.curPwr||Math.abs(effectivePwr)<=base*0.05);
+  }
+  advance();
+}
+function confirmZero(){addResult(0,true);advance();}
+function addResult(pwr,pass,isEVStep=false){
+  const s=STEPS[ST.step];
+  const base=ST.anlageBase||ST.refPower;
+  const tgt=s.isEV?pwr:(s.isZero?0:(base?base*s.pct/100:pwr));
+  const pMinNom=base&&s.tol?base*(s.pct-s.tol)/100:0;
+  const pMaxNom=base?base*(s.pct+(s.tol||0))/100:Infinity;
+  const overLimit=!isEVStep&&(s.isRef?(base&&pwr>base):(s.isZero?Math.abs(pwr)>(base||0)*0.05:pwr>pMaxNom));
+  const sunLimited=!s.isRef&&!s.isZero&&!isEVStep&&pwr<pMinNom&&!overLimit;
+  const pctOfBase=base?(pwr/base*100):null;
+  ST.results.push({lbl:s.lbl,pct:s.pct,tgt,pwr,pctOfBase,pass,sunLimited,overLimit,isEVStep,
+    stepPhoto:ST.stepPhotos[ST.step]||null});
+}
+function advance(){
+  ST.step++;
+  resetManual();
+  clearStepPhotoUI();
+  if(ST.step>=STEPS.length){
+    if(ST.na) openNA();
+    else showProto();
+  }
+  else{resetPulse();updateStepUI();}
+}
+
+// ── PROTOCOL ────────────────────────────────────────────────
+async function showProto(){
+  if(ST.stream){ST.stream.getTracks().forEach(t=>t.stop());ST.stream=null;}
+  cancelAnimationFrame(ST.raf);
+  camOpen=false;
+  renderProto();
+  renderPhotos();
+  $('p-datum').value=new Date().toLocaleDateString('de-DE');
+  loadPruefer();
+  initSigPad();
+  loadSig();
+  $('p-pruefer').onblur=savePruefer;
+  show('proto');
+  await saveTest();
+  await saveToHistory();
+}
+
+// ── PRINT via PDF ────────────────────────────────────────────
+async function printPDF(){
+  let doc;
+  try{doc=await buildPDF();}
+  catch(e){alert('PDF-Fehler: '+e.message);return;}
+  const blob=doc.output('blob');
+  const url=URL.createObjectURL(blob);
+  const win=window.open(url,'_blank');
+  if(!win) doc.save(`Pruefprotokoll-${$('p-nr').value||'Anlage'}.pdf`);
+  setTimeout(()=>URL.revokeObjectURL(url),10000);
+}
+
+async function getEmails(){
+  let e1=$('email-1')?.value||'';
+  let e2=$('email-2')?.value||'';
+  let e3=$('email-3')?.value||'';
+  if(!e1&&!e2&&!e3){
+    try{
+      const d=await dbGet('setup')||{};
+      e1=d.email1||'';e2=d.email2||'';e3=d.email3||'';
+    }catch{}
+  }
+  return [e1,e2,e3].filter(Boolean);
+}
+
+function protoTitle(){
+  const hasFRE=ST.results.length>0;
+  if(hasFRE&&ST.na) return 'FRE + NA-Schutz Pruefprotokoll';
+  if(ST.na) return 'NA-Schutz Pruefprotokoll';
+  return 'FRE Pruefprotokoll';
+}
+
+async function buildPDF(){
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'mm',format:'a4'});
+  const pw=210,lm=15,rw=pw-lm*2;
+  let y=15;
+  const need=h=>{if(y+h>285){doc.addPage();y=15;}};
+
+  const fDE=(v,d)=>v.toFixed(d).replace('.',',');
+  // jsPDF Helvetica: nur Latin-1
+  const pdfTxt=(s)=>String(s)
+    .replace(/§/g,'Par.')
+    .replace(/≤/g,'<=')
+    .replace(/≥/g,'>=')
+    .replace(/[–—]/g,'-')
+    .replace(/→/g,'->')
+    .replace(/[„“]/g,'"')
+    .replace(/\u00AD/g,'')
+    .replace(/[^\x00-\xFF]/g,'?');
+
+  // Header
+  doc.setFontSize(14);doc.setFont('helvetica','bold');
+  doc.text(protoTitle().replace('Pruef','Prüf')+' - PV Anlage',lm,y);y+=7;
+  const pruefer=$('p-pruefer').value||(()=>{try{return localStorage.getItem(LS+'pruefer')||''}catch(e){return ''}})();
+  doc.setFontSize(9);doc.setFont('helvetica','normal');
+  doc.setTextColor(100);
+  doc.text(pdfTxt(`Datum: ${$('p-datum').value}   Prüfer: ${pruefer||'-'}`),lm,y);
+  y+=5;doc.setTextColor(0);
+  doc.line(lm,y,lm+rw,y);y+=5;
+
+  // Anlage info
+  doc.setFontSize(9);doc.setFont('helvetica','bold');doc.text('Anlage',lm,y);y+=4;
+  doc.setFont('helvetica','normal');
+  const adresseDisplay = ST.gpsAddr || $('p-adr').value || '-';
+  const gpsCoordsLine = ST.gpsCoords
+    ?`${ST.gpsCoords.lat.toFixed(6)}° N, ${ST.gpsCoords.lng.toFixed(6)}° E ±${Math.round(ST.gpsCoords.acc)}m`
+    :null;
+  let genLeistungStr;
+  if(ST.anlageKw){
+    const baseKw=ST.anlageBase||0;
+    const fak=ST.anlageFak||1;
+    if(Math.abs(fak-1.0)<0.01){
+      genLeistungStr=fDE(ST.anlageKw,1)+' kW';
+    } else {
+      const pct=Math.round(fak*100);
+      genLeistungStr=`${fDE(ST.anlageKw,1)} kWp -> ${fDE(baseKw,1)} kW (${pct}%-Begrenzung gem. Par. 9 EEG 2023)`;
+    }
+  } else { genLeistungStr='-'; }
+
+  const hasFRE=ST.results.length>0;
+  const info=[
+    ['Harness-ID', $('p-nr').value||'-'],
+    ['Zählernummer', $('p-zaehler').value||'-'],
+  ];
+  if(hasFRE){
+    info.push(['FRE-Seriennummer', $('p-fhe').value||'-']);
+    info.push(['FRE-Code', $('p-fae').value||'-']);
+  }
+  info.push(['Adresse', adresseDisplay]);
+  info.push(['Generatorleistung', genLeistungStr]);
+  if(hasFRE) info.push(['Wandlerfaktor', ST.wandler>1?Math.round(ST.wandler).toString():'Direktmessung']);
+  if(gpsCoordsLine) info.push(['GPS-Koordinaten', gpsCoordsLine]);
+  if($('p-bemerk').value) info.push(['Bemerkungen', $('p-bemerk').value]);
+  info.forEach(([l,v])=>{
+    doc.setFont('helvetica','bold');doc.text(pdfTxt(l)+': ',lm,y);
+    doc.setFont('helvetica','normal');
+    const lines=doc.splitTextToSize(pdfTxt(String(v)),rw-42);
+    doc.text(lines,lm+42,y);
+    y+=4.5*lines.length;
+  });
+  y+=3;doc.line(lm,y,lm+rw,y);y+=5;
+
+  // ── FRE Results table ──
+  if(hasFRE){
+    doc.setFontSize(9);doc.setFont('helvetica','bold');doc.text('FRE-Test - Einspeisemanagement',lm,y);y+=5;
+    const cols=[40,28,28,22,22];
+    const hdrs=['Stufe','Soll (kW)','Ist (kW)','% Basis','Ergebnis'];
+    const hasFail=ST.results.some(r=>!r.pass);
+    const hasWarn=ST.results.some(r=>r.sunLimited&&r.pass);
+    const gesamtTxt=hasFail?'NICHT BESTANDEN':hasWarn?'BESTANDEN - sonnen-limitiert':'VOLLSTÄNDIG BESTANDEN';
+    doc.setFontSize(10);doc.setFont('helvetica','bold');
+    doc.setTextColor(hasFail?200:0, hasFail?0:(hasWarn?165:150), 0);
+    doc.text('Ergebnis FRE: '+gesamtTxt, lm, y);
+    doc.setTextColor(0); y+=6;
+    doc.setFillColor(240,240,240);doc.rect(lm,y-4,rw,6,'F');
+    doc.setFontSize(8);doc.setFont('helvetica','bold');
+    let x=lm;
+    hdrs.forEach((h,i)=>{doc.text(h,x+1,y);x+=cols[i];});
+    y+=3;doc.line(lm,y,lm+rw,y);y+=4;
+    doc.setFont('helvetica','normal');
+    const isVollPDF=ST.einspeisemodus!=='ueberschuss';
+    ST.results.forEach(r=>{
+      const dispPwr=(isVollPDF&&!r.isEVStep)?Math.abs(r.pwr):r.pwr;
+      const dispPct=r.pctOfBase!=null?Math.abs(r.pctOfBase):null;
+      const sollStr=fDE(r.tgt,3);
+      const pctStr=dispPct!=null?fDE(dispPct,1)+' %':'-';
+      const resultTxt=!r.pass?(r.overLimit?'ÜBEREINSP.':'UNTEREINSP.'):r.sunLimited?'OK (Sonne)':'OK';
+      const row=[pdfTxt(r.lbl),sollStr,fDE(dispPwr,3),pctStr,resultTxt];
+      x=lm;
+      row.forEach((v,i)=>{
+        if(i===4){
+          if(!r.pass&&r.overLimit) doc.setTextColor(200,0,0);
+          else if(!r.pass||r.sunLimited) doc.setTextColor(200,120,0);
+          else doc.setTextColor(0,150,0);
+        }
+        doc.text(String(v),x+1,y);
+        doc.setTextColor(0);
+        x+=cols[i];
+      });
+      y+=7;
+    });
+    y+=4;
+  }
+
+  // ── NA-Schutz ──
+  if(ST.na){
+    const n=ST.na, ov=naOverall();
+    need(40);
+    doc.line(lm,y,lm+rw,y);y+=5;
+    doc.setFontSize(9);doc.setFont('helvetica','bold');
+    doc.text('NA-Schutz (VDE-AR-N 4105)',lm,y);y+=5;
+    doc.setFontSize(10);
+    if(ov.cls==='fail') doc.setTextColor(200,0,0);
+    else if(ov.cls==='warn') doc.setTextColor(200,120,0);
+    else doc.setTextColor(0,150,0);
+    doc.text(pdfTxt('Ergebnis NA-Schutz: '+ov.pdf),lm,y);
+    doc.setTextColor(0);y+=6;
+    doc.setFontSize(9);
+    const ninfo=[
+      ['Ausführung', n.art?NA_ART_TXT[n.art]:'-'],
+      ['Funktion', n.func==='ok'?'i.O.':n.func==='fail'?'MANGEL':'nicht bewertet'],
+      ['Ausschaltzeit', n.tAus!==''&&n.tAus!=null?n.tAus+' ms':'-'],
+    ];
+    if(n.bemerk) ninfo.push(['Bemerkung', n.bemerk]);
+    const infoTop=y;
+    ninfo.forEach(([l,v])=>{
+      doc.setFont('helvetica','bold');doc.text(pdfTxt(l)+':',lm,y);
+      doc.setFont('helvetica','normal');
+      const lines=doc.splitTextToSize(pdfTxt(v),n.foto?70:rw-42);
+      doc.text(lines,lm+42,y);
+      y+=4.5*lines.length;
+    });
+    if(n.foto){
+      const fw=45,fh=45;
+      try{doc.addImage(n.foto,'JPEG',lm+rw-fw,infoTop-4,fw,fh,'','FAST');doc.rect(lm+rw-fw,infoTop-4,fw,fh);}catch(e){}
+      y=Math.max(y,infoTop-4+fh+2);
+    }
+    y+=4;
+  }
+
+  // ── Step photos (Messgerät-Fotos) ──
+  const stepWithPhotos=ST.results.filter(r=>r.stepPhoto);
+  if(stepWithPhotos.length>0){
+    const photoSize=40, photoGap=2;
+    need(photoSize+16);
+    y+=4;
+    doc.setFontSize(8);doc.setFont('helvetica','bold');
+    doc.text('Messgerät-Fotos',lm,y);y+=4;
+    stepWithPhotos.forEach((r,i)=>{
+      const px=lm+i*(photoSize+photoGap);
+      const py=y;
+      if(px+photoSize>lm+rw){return;}
+      try{
+        doc.addImage(r.stepPhoto,'JPEG',px,py,photoSize,photoSize,'','FAST');
+      }catch(e){
+        doc.setFillColor(240,240,240);doc.rect(px,py,photoSize,photoSize,'F');
+      }
+      doc.rect(px,py,photoSize,photoSize);
+      doc.setFontSize(6);doc.setTextColor(80);
+      doc.text(pdfTxt(r.lbl),px+1,py+photoSize+3);
+      doc.text(f(r.pwr,3)+' kW',px+1,py+photoSize+7);
+      doc.setTextColor(0);
+    });
+    y+=photoSize+10;
+  }
+
+  // Signature
+  need(28);
+  let sigData=null;
+  const sigJ=await sigForPdf();
+  if(sigJ){
+    try{
+      const h=18, w=Math.min(70, h*sigJ.w/sigJ.h);
+      doc.addImage(sigJ.url,'JPEG',lm,y,w,h);
+      doc.line(lm,y+20,lm+70,y+20);
+      doc.setFontSize(7);doc.text(pdfTxt(pruefer||'Prüfer'),lm,y+24);
+      sigData=true;
+    }catch(e){console.warn('Signatur PDF:',e);}
+  }
+  if(!sigData){
+    doc.line(lm,y+10,lm+60,y+10);
+    doc.setFontSize(8);doc.text('Unterschrift Prüfer',lm,y+14);
+  }
+
+  // ── PHOTOS page ──
+  const photos=ST.photos.filter(Boolean);
+  if(photos.length>0){
+    doc.addPage();
+    doc.setFontSize(12);doc.setFont('helvetica','bold');doc.setTextColor(0);
+    doc.text('Fotodokumentation',lm,14);
+    doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(100);
+    doc.text(pdfTxt(`${$('p-nr').value||'-'} · ${$('p-datum').value}`),lm,19);
+    doc.setTextColor(0);
+    doc.line(lm,21,lm+rw,21);
+    const cellW=85,cellH=110,gap=10;
+    const positions=[
+      [lm,26],[lm+cellW+gap,26],
+      [lm,26+cellH+gap],[lm+cellW+gap,26+cellH+gap],
+    ];
+    photos.slice(0,4).forEach((src,i)=>{
+      const[px,py]=positions[i];
+      try{
+        doc.setDrawColor(180);doc.rect(px,py,cellW,cellH);
+        doc.addImage(src,'JPEG',px,py,cellW,cellH,'','FAST');
+      }catch(e){
+        doc.setFillColor(240,240,240);doc.rect(px,py,cellW,cellH,'F');
+        doc.setFontSize(9);doc.text('Foto '+(i+1),px+cellW/2,py+cellH/2,{align:'center'});
+      }
+      doc.setFontSize(7);doc.setTextColor(80);
+      doc.text(`Foto ${i+1}`,px+1,py+cellH+4);
+      doc.setTextColor(0);
+    });
+  }
+
+  return doc;
+}
+
+function toast(msg,ms=5000){
+  let t=$('toast');
+  if(!t){t=document.createElement('div');t.id='toast';t.className='no-print';
+    t.style.cssText='position:fixed;left:50%;bottom:1.2rem;transform:translateX(-50%);z-index:300;max-width:92vw;'+
+      'background:#1a73e8;color:#fff;font-family:var(--sans);font-size:.85rem;padding:.7rem 1rem;border-radius:4px;'+
+      'box-shadow:0 4px 16px rgba(0,0,0,.5);text-align:center;line-height:1.4;';
+    document.body.appendChild(t);}
+  t.innerHTML=msg;t.style.display='block';
+  clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',ms);
+}
+
+function mailSubject(){return `${protoTitle().replace('Pruef','Prüf')} – ${$('p-nr').value||'Anlage'} – ${$('p-datum').value}`;}
+function mailBody(){return `Guten Tag,\n\nim Anhang das Prüfprotokoll für Anlage ${$('p-nr').value||'—'}.\n\nMit freundlichen Grüßen\n${$('p-pruefer').value||''}`;}
+function pdfName(){return `Pruefprotokoll-${($('p-nr').value||'Anlage').replace(/\s/g,'_')}.pdf`;}
+
+// Variante 1: PDF über Teilen-Menü (z.B. Outlook) – Empfänger liegen in der Zwischenablage
+async function sendEmail(){
+  // Sofort (noch mit Nutzer-Klick) Empfänger in die Zwischenablage legen
+  const emails=await getEmails();
+  let copied=false;
+  if(emails.length&&navigator.clipboard){
+    try{await navigator.clipboard.writeText(emails.join('; '));copied=true;}catch(e){}
+  }
+
+  let doc;
+  try{ doc=await buildPDF(); }
+  catch(e){alert('PDF-Erzeugung fehlgeschlagen: '+e.message+'\nBitte jsPDF-Skript laden (HTTPS erforderlich).');return;}
+  const blob=doc.output('blob');
+  const file=new File([blob],pdfName(),{type:'application/pdf'});
+
+  if(navigator.canShare&&navigator.canShare({files:[file]})){
+    if(copied) toast('📋 Empfänger kopiert – in Outlook im Feld „An“ lange drücken → Einfügen',8000);
+    try{
+      await navigator.share({title:mailSubject(),text:mailBody(),files:[file]});
+      return;
+    }catch(e){
+      if(e.name==='AbortError')return;
+    }
+  }
+  // Teilen nicht möglich (z.B. PC) → Outlook mit Empfängern öffnen, PDF herunterladen
+  openMailWithRecipients(blob,emails);
+}
+
+// Variante 2: Outlook direkt mit Empfänger/Betreff/Text öffnen, PDF wird heruntergeladen
+async function sendEmailOutlook(){
+  const emails=await getEmails();
+  if(!emails.length){alert('Bitte zuerst unter ⚙ Einstellungen eine E-Mail-Adresse eintragen.');return;}
+  let doc;
+  try{ doc=await buildPDF(); }
+  catch(e){alert('PDF-Erzeugung fehlgeschlagen: '+e.message);return;}
+  openMailWithRecipients(doc.output('blob'),emails);
+}
+
+function openMailWithRecipients(blob,emails){
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=pdfName();document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),15000);
+  toast('📎 PDF wurde heruntergeladen („'+pdfName()+'“) – bitte in der E-Mail anhängen',9000);
+  const mailto=`mailto:${emails.join(',')}?subject=${encodeURIComponent(mailSubject())}&body=${encodeURIComponent(mailBody())}`;
+  setTimeout(()=>{window.location.href=mailto;},600);
+}
+
+function restart(){
+  Object.assign(ST,{step:0,refPower:null,anlageBase:null,results:[],photos:[],stepPhotos:{},
+    eigenverbrauch:null,pDir:1,manualPwr:null,na:null,
+    pulses:[],brightHist:[],inPulse:false,stable:false,curPwr:null,
+    roi:null,stream:null,lastPulseMs:0});
+  STEPS=STEPS_VOLL;
+  show('setup');
+}
+</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(function(){});});}</script>
+</body>
+</html>

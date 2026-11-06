@@ -1,0 +1,5 @@
+{
+  "title": "Leistung Zähler über LED",
+  "description": "Erfasst die Blink-LED eines Zählers per Kamera und berechnet die Leistung.",
+  "icon": "icon.svg"
+}

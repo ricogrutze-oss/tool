@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Toolbox</title>
+<style>
+  :root{
+    --bg:var(--tb-bg); --panel:var(--tb-panel); --edge:var(--tb-edge); --amber:var(--tb-acc); --text:var(--tb-text); --text-dim:var(--tb-dim);
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%; margin:0; overflow:hidden;}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    display:flex; flex-direction:column;
+  }
+  .bar{
+    display:flex; align-items:center; gap:10px;
+    padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;
+    background:linear-gradient(180deg,var(--tb-bg),var(--tb-bg));
+    border-bottom:1px solid var(--edge);
+    flex-shrink:0;
+  }
+  .back{
+    display:flex; align-items:center; gap:5px;
+    background:var(--panel); border:1px solid var(--edge); color:var(--amber);
+    border-radius:20px; padding:7px 13px; font-size:13px; font-weight:600;
+    text-decoration:none; flex-shrink:0;
+  }
+  .title{
+    font-size:13px; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    flex:1;
+  }
+  .newtab{
+    color:var(--text-dim); text-decoration:none; font-size:18px; padding:4px 6px; flex-shrink:0;
+  }
+  iframe{ flex:1; width:100%; border:0; background:#fff; }
+  .fallback{
+    display:none; flex:1; align-items:center; justify-content:center; flex-direction:column; gap:14px;
+    padding:24px; text-align:center; color:var(--text-dim); font-size:14px;
+  }
+  .fallback a{
+    background:var(--amber); color:var(--tb-on-acc); font-weight:700; text-decoration:none;
+    padding:10px 20px; border-radius:10px;
+  }
+</style>
+<style id="tb-tokens">
+:root{--tb-bg:#000000;--tb-panel:#1c1c1e;--tb-panel2:#2c2c2e;--tb-inset:#121214;--tb-seg:#3a3a3c;--tb-toggle:#39393d;--tb-edge:#38383a;--tb-edge2:#48484a;--tb-acc:#8cc63f;--tb-acc-hi:#9fd652;--tb-acc-dim:#6f9c2e;--tb-on-acc:#0b1a02;--tb-text:#f5f5f7;--tb-dim:#98989f;--tb-green:#30d158;--tb-red:#ff453a;--tb-blue:#64a8ff;--tb-orange:#ff9f0a;--tb-purple:#bf8cff;--tb-cyan:#5ac8fa;color-scheme:dark;--tb-acc-bg:color-mix(in srgb,var(--tb-acc) 16%,var(--tb-panel));--tb-red-bg:color-mix(in srgb,var(--tb-red) 16%,var(--tb-panel));--tb-green-bg:color-mix(in srgb,var(--tb-green) 16%,var(--tb-panel));--tb-blue-bg:color-mix(in srgb,var(--tb-blue) 16%,var(--tb-panel));--tb-orange-bg:color-mix(in srgb,var(--tb-orange) 16%,var(--tb-panel));--tb-purple-bg:color-mix(in srgb,var(--tb-purple) 16%,var(--tb-panel));--tb-cyan-bg:color-mix(in srgb,var(--tb-cyan) 16%,var(--tb-panel));}
+:root[data-theme="light"]{--tb-bg:#f2f2f7;--tb-panel:#ffffff;--tb-panel2:#eeeef3;--tb-inset:#f2f2f7;--tb-seg:#ffffff;--tb-toggle:#e5e5ea;--tb-edge:#d8d8de;--tb-edge2:#c6c6cc;--tb-acc:#6ba31a;--tb-acc-hi:#5d9111;--tb-acc-dim:#4d7a12;--tb-on-acc:#ffffff;--tb-text:#1c1c1e;--tb-dim:#6c6c70;--tb-green:#1f9d46;--tb-red:#d70015;--tb-blue:#0a64d8;--tb-orange:#c76a00;--tb-purple:#7a3fd0;--tb-cyan:#0a7ea4;color-scheme:light}
+body{-webkit-font-smoothing:antialiased}
+button:not(:disabled):active{opacity:.85}
+@media print{#tb-theme-btn{display:none!important}}
+</style>
+<script id="tb-theme-js">
+(function(){
+  var K='toolbox-theme', root=document.documentElement, mq=window.matchMedia?matchMedia('(prefers-color-scheme: light)'):null;
+  function mode(){try{var m=localStorage.getItem(K);return (m==='light'||m==='dark')?m:'auto'}catch(e){return 'auto'}}
+  function eff(m){return m==='auto'?((mq&&mq.matches)?'light':'dark'):m}
+  var ICON={auto:'◐',light:'☀︎',dark:'☾'}, NAME={auto:'Automatisch',light:'Hell',dark:'Dunkel'};
+  function apply(){
+    var m=mode(), e=eff(m);
+    root.setAttribute('data-theme',e);
+    if(root.hasAttribute('data-bs-theme')||window.bootstrap) root.setAttribute('data-bs-theme',e);
+    var t=document.querySelector('meta[name="theme-color"]'); if(!t){t=document.createElement('meta');t.name='theme-color';document.head.appendChild(t)}
+    t.content=e==='light'?'#f2f2f7':'#000000';
+    var b=document.getElementById('tb-theme-btn'); if(b){b.textContent=ICON[m];b.title='Darstellung: '+NAME[m]+' (tippen zum Wechseln)';b.setAttribute('aria-label',b.title)}
+    try{window.dispatchEvent(new CustomEvent('toolbox-theme',{detail:e}))}catch(x){}
+  }
+  function set(m){try{if(m==='auto')localStorage.removeItem(K);else localStorage.setItem(K,m)}catch(e){} apply()}
+  function cycle(){var m=mode();set(m==='auto'?'light':m==='light'?'dark':'auto')}
+  window.toolboxTheme={mode:mode,set:set,cycle:cycle,effective:function(){return eff(mode())}};
+  apply();
+  if(mq){(mq.addEventListener?mq.addEventListener('change',apply):mq.addListener(apply))}
+  window.addEventListener('storage',function(e){if(e.key===K||e.key===null)apply()});
+  function btn(){
+    if(window.top!==window.self||document.getElementById('tb-theme-btn')||!document.body)return;
+    var s=document.createElement('style');
+    s.textContent='#tb-theme-btn{position:fixed;left:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:2147483000;width:38px;height:38px;border-radius:50%;border:.5px solid var(--tb-edge);background:var(--tb-panel2);color:var(--tb-text);font:18px/1 -apple-system,system-ui,sans-serif;padding:0;cursor:pointer;opacity:.88;box-shadow:0 2px 10px rgba(0,0,0,.3);-webkit-tap-highlight-color:transparent}#tb-theme-btn:active{transform:scale(.94)}';
+    document.head.appendChild(s);
+    var b=document.createElement('button');b.id='tb-theme-btn';b.type='button';b.addEventListener('click',cycle);document.body.appendChild(b);apply();
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',btn);else btn();
+})();
+</script>
+</head>
+<body>
+
+<div class="bar">
+  <a href="./" class="back">← Toolbox</a>
+  <span class="title" id="titleLabel">lädt …</span>
+  <a href="#" id="newTabLink" class="newtab" target="_blank" title="In neuem Tab öffnen">↗</a>
+</div>
+
+<iframe id="frame" allow="camera; microphone; geolocation" allowfullscreen></iframe>
+
+<div class="fallback" id="fallback">
+  <div>Diese App lässt sich nicht eingebettet anzeigen.</div>
+  <a id="fallbackLink" href="#" target="_blank">In neuem Tab öffnen</a>
+</div>
+
+<script>
+(() => {
+  const params = new URLSearchParams(location.search);
+  const url = params.get('url');
+  const title = params.get('title') || url || 'Tool';
+
+  document.getElementById('titleLabel').textContent = title;
+  document.title = title + ' · Toolbox';
+
+  if(!url){
+    document.getElementById('titleLabel').textContent = 'Kein Tool angegeben';
+    return;
+  }
+
+  const frame = document.getElementById('frame');
+  const newTabLink = document.getElementById('newTabLink');
+  const fallback = document.getElementById('fallback');
+  const fallbackLink = document.getElementById('fallbackLink');
+
+  newTabLink.href = url;
+  fallbackLink.href = url;
+
+  frame.src = url;
+
+  // Falls das Framing durch die Zielseite blockiert wird (z.B. X-Frame-Options),
+  // bleibt das Iframe leer -> nach kurzer Zeit Fallback anzeigen, falls kein Inhalt kam.
+  let loaded = false;
+  frame.addEventListener('load', () => { loaded = true; });
+  setTimeout(() => {
+    try{
+      // Zugriffsversuch auf contentWindow löst bei erfolgreichem Laden i.d.R. keinen Fehler aus (same-origin)
+      if(!loaded){
+        fallback.style.display = 'flex';
+        frame.style.display = 'none';
+      }
+    }catch(e){
+      fallback.style.display = 'flex';
+      frame.style.display = 'none';
+    }
+  }, 4000);
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Netzberechnung Pro - Kaskadiert & Verluste</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        :root{ --bg:var(--tb-bg); --panel:var(--tb-panel); --panel2:var(--tb-panel2); --edge:var(--tb-edge); --amber:var(--tb-acc); --text:var(--tb-text); --text-dim:var(--tb-dim); }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; color: var(--text); }
+        .container { max-width: 1550px; background: var(--panel); padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); margin: auto; border: 1px solid var(--edge); }
+        h2 { color: var(--amber); border-bottom: 3px solid var(--amber); padding-bottom: 10px; margin-bottom: 20px; }
+        .config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; background: var(--panel2); padding: 15px; border-radius: 8px; border: 1px solid var(--edge); }
+        .config-grid label { color: var(--text-dim); }
+        .schematic-container { background: var(--panel2); border: 1px solid var(--edge); padding: 15px; overflow-x: auto; margin-bottom: 20px; border-radius: 8px; text-align: center; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { background: var(--amber); color: var(--tb-on-acc); padding: 10px; }
+        td { border: 1px solid var(--edge); padding: 6px; text-align: center; color: var(--text); }
+        input, select { width: 92%; padding: 4px; border: 1px solid var(--edge); border-radius: 4px; text-align: center; background: var(--tb-inset); color: var(--text); }
+        .warning { background: var(--tb-red-bg) !important; color: var(--tb-red); font-weight: bold; }
+        .summary-box { display: grid; grid-template-columns: repeat(4, 1fr); background: var(--tb-inset); color: var(--text); padding: 25px; border-radius: 8px; gap: 10px; margin-top: 20px; border: 1px solid var(--edge); }
+        .summary-item { text-align: center; border-right: 1px solid var(--edge); }
+        .summary-item span { display: block; font-size: 1.5em; font-weight: bold; margin-top: 5px; color: var(--amber); }
+        .controls { margin-top: 20px; display: flex; gap: 12px; }
+        button { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .btn-add { background: var(--panel2); color: var(--text); border: 1px solid var(--edge); }
+        .btn-pdf { background: var(--amber); color: var(--tb-on-acc); }
+        @media print {
+            body{ background:#fff; color:#000; }
+            .no-print, .controls { display:none !important; }
+            .container{ background:#fff; box-shadow:none; border:0; }
+            th{ background:#eee; color:#000; }
+            td{ color:#000; border-color:#ccc; }
+            .summary-box{ background:#f5f5f5; color:#000; border-color:#ccc; }
+            .summary-item span{ color:#000; }
+        }
+    </style>
+<style id="tb-tokens">
+:root{--tb-bg:#000000;--tb-panel:#1c1c1e;--tb-panel2:#2c2c2e;--tb-inset:#121214;--tb-seg:#3a3a3c;--tb-toggle:#39393d;--tb-edge:#38383a;--tb-edge2:#48484a;--tb-acc:#8cc63f;--tb-acc-hi:#9fd652;--tb-acc-dim:#6f9c2e;--tb-on-acc:#0b1a02;--tb-text:#f5f5f7;--tb-dim:#98989f;--tb-green:#30d158;--tb-red:#ff453a;--tb-blue:#64a8ff;--tb-orange:#ff9f0a;--tb-purple:#bf8cff;--tb-cyan:#5ac8fa;color-scheme:dark;--tb-acc-bg:color-mix(in srgb,var(--tb-acc) 16%,var(--tb-panel));--tb-red-bg:color-mix(in srgb,var(--tb-red) 16%,var(--tb-panel));--tb-green-bg:color-mix(in srgb,var(--tb-green) 16%,var(--tb-panel));--tb-blue-bg:color-mix(in srgb,var(--tb-blue) 16%,var(--tb-panel));--tb-orange-bg:color-mix(in srgb,var(--tb-orange) 16%,var(--tb-panel));--tb-purple-bg:color-mix(in srgb,var(--tb-purple) 16%,var(--tb-panel));--tb-cyan-bg:color-mix(in srgb,var(--tb-cyan) 16%,var(--tb-panel));}
+:root[data-theme="light"]{--tb-bg:#f2f2f7;--tb-panel:#ffffff;--tb-panel2:#eeeef3;--tb-inset:#f2f2f7;--tb-seg:#ffffff;--tb-toggle:#e5e5ea;--tb-edge:#d8d8de;--tb-edge2:#c6c6cc;--tb-acc:#6ba31a;--tb-acc-hi:#5d9111;--tb-acc-dim:#4d7a12;--tb-on-acc:#ffffff;--tb-text:#1c1c1e;--tb-dim:#6c6c70;--tb-green:#1f9d46;--tb-red:#d70015;--tb-blue:#0a64d8;--tb-orange:#c76a00;--tb-purple:#7a3fd0;--tb-cyan:#0a7ea4;color-scheme:light}
+body{-webkit-font-smoothing:antialiased}
+button:not(:disabled):active{opacity:.85}
+@media print{#tb-theme-btn{display:none!important}}
+</style>
+<script id="tb-theme-js">
+(function(){
+  var K='toolbox-theme', root=document.documentElement, mq=window.matchMedia?matchMedia('(prefers-color-scheme: light)'):null;
+  function mode(){try{var m=localStorage.getItem(K);return (m==='light'||m==='dark')?m:'auto'}catch(e){return 'auto'}}
+  function eff(m){return m==='auto'?((mq&&mq.matches)?'light':'dark'):m}
+  var ICON={auto:'◐',light:'☀︎',dark:'☾'}, NAME={auto:'Automatisch',light:'Hell',dark:'Dunkel'};
+  function apply(){
+    var m=mode(), e=eff(m);
+    root.setAttribute('data-theme',e);
+    if(root.hasAttribute('data-bs-theme')||window.bootstrap) root.setAttribute('data-bs-theme',e);
+    var t=document.querySelector('meta[name="theme-color"]'); if(!t){t=document.createElement('meta');t.name='theme-color';document.head.appendChild(t)}
+    t.content=e==='light'?'#f2f2f7':'#000000';
+    var b=document.getElementById('tb-theme-btn'); if(b){b.textContent=ICON[m];b.title='Darstellung: '+NAME[m]+' (tippen zum Wechseln)';b.setAttribute('aria-label',b.title)}
+    try{window.dispatchEvent(new CustomEvent('toolbox-theme',{detail:e}))}catch(x){}
+  }
+  function set(m){try{if(m==='auto')localStorage.removeItem(K);else localStorage.setItem(K,m)}catch(e){} apply()}
+  function cycle(){var m=mode();set(m==='auto'?'light':m==='light'?'dark':'auto')}
+  window.toolboxTheme={mode:mode,set:set,cycle:cycle,effective:function(){return eff(mode())}};
+  apply();
+  if(mq){(mq.addEventListener?mq.addEventListener('change',apply):mq.addListener(apply))}
+  window.addEventListener('storage',function(e){if(e.key===K||e.key===null)apply()});
+  function btn(){
+    if(window.top!==window.self||document.getElementById('tb-theme-btn')||!document.body)return;
+    var s=document.createElement('style');
+    s.textContent='#tb-theme-btn{position:fixed;left:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:2147483000;width:38px;height:38px;border-radius:50%;border:.5px solid var(--tb-edge);background:var(--tb-panel2);color:var(--tb-text);font:18px/1 -apple-system,system-ui,sans-serif;padding:0;cursor:pointer;opacity:.88;box-shadow:0 2px 10px rgba(0,0,0,.3);-webkit-tap-highlight-color:transparent}#tb-theme-btn:active{transform:scale(.94)}';
+    document.head.appendChild(s);
+    var b=document.createElement('button');b.id='tb-theme-btn';b.type='button';b.addEventListener('click',cycle);document.body.appendChild(b);apply();
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',btn);else btn();
+})();
+</script>
+</head>
+<body>
+
+<div class="container">
+    <h2>Netzberechnung Master: Kaskadierung & Effizienz</h2>
+
+    <div class="config-grid">
+        <div><label><b>Kabel Hauptleitung:</b></label>
+            <select id="kabel_stamm" onchange="calc()">
+                <option value="34,150">4x150 NAYY (Al)</option>
+                <option value="34,240">4x240 NAYY (Al)</option>
+                <option value="56,150">4x150 NYY (Cu)</option>
+                <option value="56,240">4x240 NYY (Cu)</option>
+            </select>
+        </div>
+        <div><label><b>U-Einspeisung (V):</b></label><input type="number" id="u_e" value="400" oninput="calc()"></div>
+        <div><label><b>Toleranz ±(%):</b></label><input type="number" id="tol" value="3.0" step="0.1" oninput="calc()"></div>
+        <div><label><b>Gleichzeitigkeit (g):</b></label><input type="number" id="gf" value="0.4" step="0.1" oninput="calc()"></div>
+    </div>
+
+    <div class="schematic-container" id="svg_wrapper"></div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>HA</th>
+                <th>Abst. Muffe (m)</th>
+                <th>Kabel HA</th>
+                <th>Stich (m)</th>
+                <th>Bezug (kW)</th>
+                <th>PV (kW)</th>
+                <th>Verbrauch (kWh/a)</th>
+                <th>U-Min (V)</th>
+                <th>U-Max (V)</th>
+                <th class="no-print">Aktion</th>
+            </tr>
+        </thead>
+        <tbody id="table_body"></tbody>
+    </table>
+
+    <div class="controls no-print">
+        <button class="btn-add" onclick="addRow()">+ Hausanschluss hinzufügen</button>
+        <button class="btn-pdf" onclick="exportPDF()">Als PDF speichern</button>
+    </div>
+
+    <div class="summary-box">
+        <div class="summary-item">Verlustarbeit <span id="res_w" style="color: #0f9d58;">0 kWh</span></div>
+        <div class="summary-item">Verlustquote <span id="res_quote" style="color: #ff6d00;">0.00 %</span></div>
+        <div class="summary-item">Max. ΔU Bezug <span id="res_f">0 %</span></div>
+        <div class="summary-item">Max. ΔU PV <span id="res_r">0 %</span></div>
+    </div>
+</div>
+
+<script>
+    const kabelOptions = `<option value="56,16">4x16 NYY (Cu)</option><option value="56,35">4x35 NYY (Cu)</option><option value="34,35">4x35 NAYY (Al)</option><option value="34,150">4x150 NAYY (Al)</option>`;
+    let rowCount = 0;
+
+    function addRow() {
+        rowCount++;
+        const tb = document.getElementById('table_body');
+        const tr = document.createElement('tr');
+        tr.className = "calc-row";
+        tr.innerHTML = `
+            <td>${rowCount}</td>
+            <td><input type="number" class="l_m" value="20" oninput="calc()"></td>
+            <td><select class="k_h" onchange="calc()">${kabelOptions}</select></td>
+            <td><input type="number" class="l_h" value="15" oninput="calc()"></td>
+            <td><input type="number" class="p_b" value="0" oninput="calc()"></td>
+            <td><input type="number" class="p_p" value="0" oninput="calc()"></td>
+            <td><input type="number" class="w_h" value="0" oninput="calc()"></td>
+            <td class="out_min">-</td><td class="out_max">-</td>
+            <td class="no-print"><button onclick="this.parentElement.parentElement.remove();calc();" style="background:red; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">X</button></td>
+        `;
+        tb.appendChild(tr);
+        calc();
+    }
+
+    function calc() {
+        const uE = parseFloat(document.getElementById('u_e').value);
+        const tol = parseFloat(document.getElementById('tol').value);
+        const gf = parseFloat(document.getElementById('gf').value);
+        const sVal = document.getElementById('kabel_stamm').value.split(',');
+        const ks = parseFloat(sVal[0]), qs = parseFloat(sVal[1]);
+
+        const rows = document.querySelectorAll('.calc-row');
+        let totalWv = 0, totalWh = 0, maxF = 0, maxR = 0;
+        let cumDuF = 0, cumDuR = 0, results = [];
+
+        rows.forEach((row, i) => {
+            let lM = parseFloat(row.querySelector('.l_m').value) || 0;
+            let lH = parseFloat(row.querySelector('.l_h').value) || 0;
+            let pB = parseFloat(row.querySelector('.p_b').value) || 0;
+            let pP = parseFloat(row.querySelector('.p_p').value) || 0;
+            let wH = parseFloat(row.querySelector('.w_h').value) || 0;
+            let hVal = row.querySelector('.k_h').value.split(',');
+            let kh = parseFloat(hVal[0]), qh = parseFloat(hVal[1]);
+
+            // Summenströme für das aktuelle Hauptkabel-Segment (ALLE folgenden Häuser)
+            let sumIB = 0, sumIP = 0;
+            for (let j = i; j < rows.length; j++) {
+                sumIB += (parseFloat(rows[j].querySelector('.p_b').value) || 0) * 1000 / (Math.sqrt(3) * 400 * 0.9);
+                sumIP += (parseFloat(rows[j].querySelector('.p_p').value) || 0) * 1000 / (Math.sqrt(3) * 400 * 0.9);
+            }
+
+            // Spannungsfall Stamm (mit Gleichzeitigkeit)
+            let duSegF = (Math.sqrt(3) * lM * sumIB * gf * 0.9) / (ks * qs);
+            let duSegR = (Math.sqrt(3) * lM * sumIP * gf * 0.9) / (ks * qs);
+            cumDuF += duSegF;
+            cumDuR += duSegR;
+
+            // Spannungsfall Stich (100% Einzellast)
+            let iHaB = (pB * 1000) / (Math.sqrt(3) * 400 * 0.9);
+            let iHaP = (pP * 1000) / (Math.sqrt(3) * 400 * 0.9);
+            let duStichF = (Math.sqrt(3) * lH * iHaB * 0.9) / (kh * qh);
+            let duStichR = (Math.sqrt(3) * lH * iHaP * 0.9) / (kh * qh);
+
+            let uMin = uE - (cumDuF + duStichF);
+            let uMax = uE + (cumDuR + duStichR);
+            let dUF_perc = ((cumDuF + duStichF)/400)*100;
+            let dUR_perc = ((cumDuR + duStichR)/400)*100;
+
+            row.querySelector('.out_min').innerText = uMin.toFixed(1) + " V";
+            row.querySelector('.out_max').innerText = uMax.toFixed(1) + " V";
+            row.querySelector('.out_min').classList.toggle('warning', dUF_perc > tol);
+            row.querySelector('.out_max').classList.toggle('warning', dUR_perc > tol);
+
+            // Verlustarbeit (Näherung für Stamm + Stich)
+            let pvSeg = 3 * Math.pow(sumIB*gf, 2) * (lM/(ks*qs));
+            let pvStich = 3 * Math.pow(iHaB, 2) * (lH/(kh*qh));
+            let v_std = pB > 0 ? (wH/pB) * (0.2 + 0.8 * (wH/pB/8760)) : 1500;
+            let wv = ((pvSeg + pvStich) * v_std) / 1000;
+            
+            totalWv += wv;
+            totalWh += wH;
+            if(dUF_perc > maxF) maxF = dUF_perc;
+            if(dUR_perc > maxR) maxR = dUR_perc;
+            results.push({ uMin, uMax, lM });
+        });
+
+        document.getElementById('res_w').innerText = Math.round(totalWv) + " kWh";
+        document.getElementById('res_quote').innerText = (totalWh > 0 ? (totalWv/totalWh)*100 : 0).toFixed(2) + " %";
+        document.getElementById('res_f').innerText = maxF.toFixed(2) + " %";
+        document.getElementById('res_r').innerText = maxR.toFixed(2) + " %";
+        
+        renderSVG(results, uE);
+    }
+
+    function renderSVG(res, uE) {
+        let svg = `<svg width="${150 + res.length*130}" height="200">`;
+        svg += `<rect x="10" y="70" width="50" height="40" fill="#f1c40f"/><text x="12" y="95" font-size="10" font-weight="bold">TRAFO</text>`;
+        let cx = 60;
+        res.forEach((r, i) => {
+            svg += `<line x1="${cx}" y1="90" x2="${cx+130}" y2="90" stroke="#333" stroke-width="3"/>`;
+            cx += 130;
+            svg += `<circle cx="${cx}" cy="90" r="5" fill="red"/>`;
+            svg += `<rect x="${cx-35}" y="130" width="70" height="50" fill="#eee" stroke="#333"/>`;
+            svg += `<text x="${cx-30}" y="145" font-size="9" font-weight="bold">HA ${i+1}</text>`;
+            svg += `<text x="${cx-30}" y="160" font-size="8" fill="blue">Min:${r.uMin.toFixed(1)}V</text>`;
+            svg += `<text x="${cx-30}" y="172" font-size="8" fill="orange">Max:${r.uMax.toFixed(1)}V</text>`;
+        });
+        svg += `</svg>`;
+        document.getElementById('svg_wrapper').innerHTML = svg;
+    }
+    window.onload = () => { addRow(); };
+
+    function exportPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('l', 'mm', 'a4');
+        doc.setFontSize(14);
+        doc.text('Netzberechnung Pro - Kaskadiert & Verluste', 14, 15);
+        doc.setFontSize(9);
+        doc.setTextColor(100);
+        const uE = document.getElementById('u_e').value;
+        const tol = document.getElementById('tol').value;
+        const gf = document.getElementById('gf').value;
+        doc.text(`U-Einspeisung: ${uE} V   Toleranz: ±${tol}%   Gleichzeitigkeit: ${gf}`, 14, 22);
+
+        const head = [['HA','Abst. Muffe (m)','Kabel HA','Stich (m)','Bezug (kW)','PV (kW)','Verbrauch (kWh/a)','U-Min (V)','U-Max (V)']];
+        const body = [];
+        document.querySelectorAll('.calc-row').forEach((row, i) => {
+            body.push([
+                i+1,
+                row.querySelector('.l_m').value,
+                row.querySelector('.k_h').selectedOptions[0].textContent,
+                row.querySelector('.l_h').value,
+                row.querySelector('.p_b').value,
+                row.querySelector('.p_p').value,
+                row.querySelector('.w_h').value,
+                row.querySelector('.out_min').textContent,
+                row.querySelector('.out_max').textContent
+            ]);
+        });
+
+        doc.autoTable({
+            head, body, startY: 28,
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [255, 176, 32], textColor: [26, 19, 0] }
+        });
+
+        const finalY = doc.lastAutoTable.finalY + 10;
+        doc.setFontSize(10);
+        doc.setTextColor(0);
+        doc.text(`Verlustarbeit: ${document.getElementById('res_w').textContent}`, 14, finalY);
+        doc.text(`Verlustquote: ${document.getElementById('res_quote').textContent}`, 14, finalY + 6);
+        doc.text(`Max. ΔU Bezug: ${document.getElementById('res_f').textContent}`, 14, finalY + 12);
+        doc.text(`Max. ΔU PV: ${document.getElementById('res_r').textContent}`, 14, finalY + 18);
+
+        doc.save('netzberechnung.pdf');
+    }
+</script>
+</body>
+</html>
