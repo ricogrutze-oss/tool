@@ -7,7 +7,7 @@
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <title>Zählerauslesung</title>
 <style>
-:root{--bg:#0b0f14;--card:#121821;--fg:#e6e8eb;--mut:#8b96a3;--line:#243040;--acc:#8cc63f;--acc2:#18240f;--ok:#3fb950;--warn:#ffb020;--err:#ff6b6b;--l1:#d2884a;--l2:#e6e8eb;--l3:#7d8590;--grid:#1d2733;color-scheme:dark}
+:root{--bg:#0b0f14;--card:#121821;--fg:#e6e8eb;--mut:#8b96a3;--line:#243040;--acc:#8cc63f;--acc2:#18240f;--ok:#3fb950;--warn:#ffb020;--err:#ff6b6b;--l1:#ffd60a;--l2:#30d158;--l3:#bf5af2;--grid:#1d2733;color-scheme:dark}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
 header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;align-items:center;gap:10px}
@@ -54,7 +54,8 @@ canvas{width:100%;display:block;touch-action:manipulation}
 .scroll{overflow-x:auto}
 .ph input{padding:6px;text-align:right}
 details summary{cursor:pointer;color:var(--acc);margin:6px 0}
-.actGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.actGrid button{width:100%;margin:0}.actGrid .wide{grid-column:1/-1}.actGrid .io{font-weight:700;border:1px solid var(--acc);color:var(--acc)}.actGrid .io2{font-weight:600}
+dialog#wfDlg{border:1px solid var(--line);border-radius:16px;background:var(--card);color:var(--fg);padding:18px;width:min(92vw,400px)}dialog#wfDlg::backdrop{background:rgba(0,0,0,.6)}dialog#wfDlg .wandler .wfrow input{flex:0 0 100px;width:100px}dialog#wfDlg h3{margin:0 0 6px;font-size:18px}
+.actGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.actGrid button{width:100%;margin:0}.actGrid .wide{grid-column:1/-1}.actGrid .io{font-weight:700;border:1px solid var(--acc);color:var(--acc)}.actGrid .io2{font-weight:600}.actGrid .loopRow{grid-column:1/-1;justify-content:center;margin:-2px 0 2px}
 .menu{margin:10px 0 0;padding:12px;background:var(--bg);border:1px solid var(--acc);border-radius:12px}.menuSep{margin:14px 0 6px;font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}.menu .wandler{margin-left:0}
 header .icon{padding:4px 10px}
 #directLink{font-size:12px;color:var(--acc);text-decoration:none;border:1px solid var(--acc);border-radius:99px;padding:3px 9px;white-space:nowrap}
@@ -90,7 +91,6 @@ tr.new td{color:var(--acc)}
 #wfInfo{padding-bottom:9px;color:var(--acc)}
 .wfrow{display:flex;align-items:center;gap:6px}.wfrow input{width:auto;flex:1;min-width:60px}.wfrow select{width:auto}
 .sek{display:block;font-size:11px;color:var(--mut);font-weight:400}
-#btnQuick,#btnPow{padding:11px 13px}
 .quick button.stop{border-color:var(--err);color:var(--err)}
 .pow{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
 .pow div{background:var(--bg);border-radius:10px;padding:10px}
@@ -147,6 +147,31 @@ th,td{border-bottom:.5px solid var(--line)}
 .saveBar{display:grid;gap:6px;margin-top:10px}.saveBar .pri{width:100%}.lnk{background:none;color:var(--acc);padding:4px;font-size:14px}
 .quick button.stop{background:rgba(255,69,58,.16);color:var(--err)}
 #logbox{background:#121214;border:0;border-radius:12px}
+
+/* ---- Hell/Dunkel + Zeiger-Vollbild ---- */
+html[data-theme=light]{--bg:#f2f2f7;--card:#fff;--fill:#ececf1;--fg:#000;--mut:rgba(60,60,67,.65);--line:rgba(60,60,67,.2);--acc:#4f8a14;--accT:rgba(79,138,20,.12);--acc2:rgba(79,138,20,.12);--ok:#1e9e3e;--warn:#a86f00;--err:#d93025;--grid:#d8d8de;--l1:#e3a800;--l2:#1e9e3e;--l3:#8e3fd1;color-scheme:light}
+html[data-theme=light] header{background:rgba(255,255,255,.82)}
+html[data-theme=light] .ctl .menu,html[data-theme=light] .cfg,html[data-theme=light] .wfMain,html[data-theme=light] #logbox{background:#f2f2f7}
+html[data-theme=light] .chk input[type=checkbox]{background:#d1d1d6}
+html[data-theme=light] .tabs button.act{background:#ececf1;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+html[data-theme=light] button.pri{color:#fff}
+html[data-theme=light] .pill.on{background:rgba(30,158,62,.14)}
+html[data-theme=light] .chkList .ic{color:#fff}
+html[data-theme=light] dialog#wfDlg::backdrop{background:rgba(0,0,0,.35)}
+.phBar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.phBar button{padding:9px 14px}
+.phBar button.act{background:var(--accT);color:var(--acc)}
+.phBar button.stop{background:rgba(255,69,58,.16);color:var(--err)}
+.phBar .icon{width:38px;height:38px;padding:0;font-size:18px}
+.phBar #phStatus{flex-basis:100%;margin:0}
+body:not(.phFull) #phStatus{display:none}
+#phTable tr.m>th,#phTable tr.m>td{border-bottom:0;padding-bottom:1px}#phTable tr.q>td{padding-top:0;font-size:12px}#phTable .phiN{display:none}#phTable th.num{text-align:right}
+@media(max-width:560px){#phTable{font-size:12px}#phTable th,#phTable td{padding-left:3px;padding-right:3px}#phTable .cPhi{display:none}#phTable .phiN{display:inline}}
+body.phFull header,body.phFull main>*:not(#tab-zeiger){display:none!important}
+body.phFull #tab-zeiger{display:block!important}
+body.phFull main{max-width:1100px;padding-top:8px;padding-bottom:24px}
+body.phFull .phBar{position:sticky;top:0;z-index:6;background:var(--bg);padding:8px 0;margin:0 0 8px}
+@media(min-width:800px){body.phFull #tab-zeiger{display:grid!important;grid-template-columns:minmax(380px,1fr) minmax(380px,1fr);gap:12px;align-items:start}body.phFull #tab-zeiger .phBar{grid-column:1/-1}body.phFull #tab-zeiger .card{margin-bottom:0}}
 </style>
 </head>
 <body>
@@ -154,6 +179,7 @@ th,td{border-bottom:.5px solid var(--line)}
   <h1>Zählerauslesung</h1>
   <a id="directLink" href="#" target="_blank" rel="noopener" hidden title="Tool außerhalb der Toolbox öffnen (z. B. für Bluefy am iPhone/iPad)">↗ direkt</a>
   <span id="connPill" class="pill">getrennt</span>
+  <button id="btnTheme" class="icon themeBtn" title="Ansicht wechseln">☾</button>
   <button id="btnCfg" class="icon" title="Verbindung einstellen">⚙</button>
 </header>
 <main>
@@ -180,6 +206,9 @@ th,td{border-bottom:.5px solid var(--line)}
   <div class="actGrid">
     <button id="btnEin" class="op2 big io" title="Zähler auslesen und Einbau-Datei (.RAW) speichern">Einbau</button>
     <button id="btnAus" class="op2 big io" title="Zähler mit Lastgang und Logbuch auslesen und Ausbau-Dateien (.txt, .VL, .LP) speichern">Ausbau</button>
+    <button id="btnPow" class="big io2" title="Nur Wirk- und Blindleistung – am schnellsten">⚡ Leistung</button>
+    <button id="btnQuick" class="big io2" title="U, I und P/Q je Phase für das Zeigerdiagramm">◷ Zeiger</button>
+    <label class="chk loopRow"><input type="checkbox" id="oLoop"> Leistung/Zeiger laufend wiederholen</label>
     <button id="btnGo" class="pri big wide">Auslesen ▾</button>
     <button id="btnClk" class="op2 big io2" title="Datum/Uhrzeit des Zählers prüfen und auf Handyzeit stellen">🕓 Uhrzeit stellen</button>
     <button id="btnModem" class="op2 big io2" title="Empfang des Modems messen – danach Bericht als Bild mit Standort">📶 Modem-Empfang</button>
@@ -207,8 +236,6 @@ th,td{border-bottom:.5px solid var(--line)}
       </div>
     </div>
     <button id="btnStart" class="op2 pri big" style="width:100%;margin-top:8px">Auslesen starten</button>
-    <div class="menuSep">Schnell – nur Momentanwerte</div>
-    <div class="quick" id="quickBox"><button id="btnPow" title="Nur Wirk- und Blindleistung – am schnellsten">⚡ Leistung</button><button id="btnQuick" title="U, I und P/Q je Phase für das Zeigerdiagramm">◷ Zeiger</button><label class="chk"><input type="checkbox" id="oLoop"> laufend</label></div>
   </div>
   <div id="prog" class="prog"><div id="progBar"></div></div>
   <div id="status" class="status mut"></div>
@@ -253,6 +280,14 @@ th,td{border-bottom:.5px solid var(--line)}
 
 <!-- ZEIGER -->
 <section class="tab" id="tab-zeiger">
+  <div class="phBar" id="phBar">
+    <button id="phFs" title="Nur Zeigerdiagramm, Prüfung und Werte anzeigen">⛶ Vollbild</button>
+    <button id="phMeasure" title="Zeigerwerte neu messen">↻ Messen</button>
+    <button id="phLoop" title="Laufend wiederholen">∞ laufend</button>
+    <button id="phImg" title="Zeigerbild mit Werten und Prüfung als PNG speichern">🖼 Bild</button>
+    <button class="icon themeBtn" title="Ansicht wechseln">☾</button>
+    <div id="phStatus" class="status mut"></div>
+  </div>
   <div class="card">
     <h2>Zeigerdiagramm</h2>
     <canvas id="phCanvas" height="360"></canvas>
@@ -263,7 +298,7 @@ th,td{border-bottom:.5px solid var(--line)}
     <h2>Prüfung</h2>
     <ul id="phChecks" class="checks" style="padding-left:18px;margin:0"></ul>
     <div class="kpi" id="phKpi"></div>
-    <div class="scroll"><table id="phTable"><thead><tr><th></th><th class="num">U</th><th class="num">I</th><th class="num">φ</th><th class="num">cos φ</th><th class="num">P</th><th class="num">Q</th><th>Quadrant</th></tr></thead><tbody></tbody></table></div>
+    <div class="scroll"><table id="phTable"><thead><tr><th></th><th class="num">U</th><th class="num">I</th><th class="num cPhi">φ</th><th class="num">cos φ</th><th class="num">P</th><th class="num">Q</th></tr></thead><tbody></tbody></table></div>
   </div>
   <div class="card" hidden>
     <h2>Werte</h2>
@@ -403,6 +438,19 @@ th,td{border-bottom:.5px solid var(--line)}
 </section>
 
 </main>
+<dialog id="wfDlg">
+  <form method="dialog">
+    <h3>Wandlerfaktoren prüfen</h3>
+    <div id="wfdAge" class="mut" style="margin-bottom:10px"></div>
+    <div class="wandler" style="margin-left:0">
+      <label>Stromwandler<span class="wfrow"><input id="wfdCtP" type="number" inputmode="decimal" placeholder="—"><span>/</span><select id="wfdCtS"><option value="5">5 A</option><option value="1">1 A</option></select></span></label>
+      <label>Spannungswandler<span class="wfrow"><input id="wfdVtP" type="number" inputmode="decimal" placeholder="—"><span>/ 100 V</span></span></label>
+    </div>
+    <div id="wfdInfo" style="margin:10px 0 14px;font-weight:600"></div>
+    <div class="mut" style="margin-bottom:12px">Leer lassen = direkt messender Zähler (Faktor 1). Die Leistung wird sonst nur sekundär angezeigt.</div>
+    <div class="row" style="justify-content:flex-end;gap:8px"><button value="cancel">Abbrechen</button><button value="ok" class="pri">Übernehmen &amp; messen</button></div>
+  </form>
+</dialog>
 <script>
 'use strict';
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -430,6 +478,20 @@ const saveS=()=>{try{localStorage.setItem(SKEY,JSON.stringify(S))}catch{}};
 for(const [k,sel] of bindS){const el=$(sel);if(el.type==='checkbox')el.checked=!!S[k];else el.value=S[k];
   el.addEventListener('change',()=>{S[k]=el.type==='checkbox'?el.checked:(el.type==='number'?+el.value:el.value.trim());saveS();if(k==='cw')updatePhasor();if(/^(ctP|ctS|vtP)$/.test(k))wfChanged();updCtl();if(k==='transport'&&T){try{T.close()}catch{}setConn(false);}});}
 
+
+/* ---------- Ansicht: Hell / Dunkel / Automatisch ---------- */
+const THEMES=['dark','light','auto'],TH_ICON={dark:'☾',light:'☀︎',auto:'◐'},TH_NAME={dark:'Dunkel',light:'Hell',auto:'Automatisch (wie das Gerät)'};
+function themeEff(){const t=S.theme||'dark';return t==='auto'?(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'):t;}
+function applyTheme(redraw){const e=themeEff(),t=S.theme||'dark';document.documentElement.dataset.theme=e;
+  const m=document.querySelector('meta[name=theme-color]');if(m)m.content=e==='light'?'#f2f2f7':'#000000';
+  document.querySelectorAll('.themeBtn').forEach(b=>{b.textContent=TH_ICON[t];b.title=`Ansicht: ${TH_NAME[t]} – tippen zum Wechseln`;});
+  if(redraw){try{updatePhasor();}catch{}try{drawProfile();}catch{}}}
+function cycleTheme(){const i=THEMES.indexOf(S.theme||'dark');S.theme=THEMES[(i+1)%THEMES.length];saveS();applyTheme(true);
+  try{status('Ansicht: '+TH_NAME[S.theme],'mut');}catch{}}
+try{matchMedia('(prefers-color-scheme: light)').addEventListener('change',()=>{if(S.theme==='auto')applyTheme(true);});}catch{}
+applyTheme(false);
+document.querySelectorAll('.themeBtn').forEach(b=>b.onclick=cycleTheme);
+
 /* ---------- Protokoll-Log ---------- */
 const LOG=[];let logT=null;
 const CTRL={1:'<SOH>',2:'<STX>',3:'<ETX>',4:'<EOT>',6:'<ACK>',21:'<NAK>',13:'',10:'⏎\n'};
@@ -438,7 +500,7 @@ function log(dir,data,hex){const t=new Date().toLocaleTimeString('de-DE');LOG.pu
   clearTimeout(logT);logT=setTimeout(()=>{const b=$('#logbox');const atEnd=b.scrollTop+b.clientHeight>=b.scrollHeight-20;b.textContent=LOG.join('\n');if(atEnd)b.scrollTop=b.scrollHeight;},150);}
 $('#btnLogClear').onclick=()=>{LOG.length=0;$('#logbox').textContent='';};
 $('#btnLogCopy').onclick=()=>navigator.clipboard?.writeText(LOG.join('\n'));
-function status(msg,cls='mut'){const s=$('#status');s.className='status '+cls;s.textContent=msg;}
+function status(msg,cls='mut'){const s=$('#status');s.className='status '+cls;s.textContent=msg;const p=$('#phStatus');if(p){p.className='status '+cls;p.textContent=msg;}}
 
 /* ---------- Transporte ---------- */
 class SerialT{
@@ -940,24 +1002,90 @@ function drawPh(c,w,h,col,d){
   if(!d.some(x=>isFinite(x.U)||isFinite(x.I))){c.fillStyle=col('--mut');c.font='15px -apple-system,system-ui';c.fillText('Noch keine Werte',cx,cy);}
   const Um=Math.max(...d.map(x=>x.U).filter(isFinite),1),Im=Math.max(...d.map(x=>x.I).filter(isFinite),1e-9);
   const cols=[col('--l1'),col('--l2'),col('--l3')];
+  const hl=col('--card');
   const arrow=(ang,len,color,lw,label,head)=>{const r=ang*Math.PI/180,x=cx+len*Math.cos(r),y=cy-len*Math.sin(r);c.strokeStyle=c.fillStyle=color;c.lineWidth=lw;c.beginPath();c.moveTo(cx,cy);c.lineTo(x,y);c.stroke();
     if(head){const hs=9;c.beginPath();c.moveTo(x,y);c.lineTo(x-hs*Math.cos(r-.4),y+hs*Math.sin(r-.4));c.lineTo(x-hs*Math.cos(r+.4),y+hs*Math.sin(r+.4));c.fill();}
-    c.font='bold 12px system-ui';const lx=cx+len*.82*Math.cos(r)-11*Math.sin(r),ly=cy-len*.82*Math.sin(r)-11*Math.cos(r);c.fillText(label,lx,ly);};
-  d.forEach((x,i)=>{if(isFinite(x.U)&&isFinite(x.au))arrow(x.au,R*.95*x.U/Um,cols[i],4,'U'+(i+1),false);});
-  d.forEach((x,i)=>{if(isFinite(x.I)&&isFinite(x.au)&&isFinite(x.ai)&&x.I>0)arrow(x.au+x.ai,R*.62*Math.max(x.I/Im,.04),cols[i],2,'I'+(i+1),true);});}
+    c.font='bold 12px system-ui';const lx=cx+len*.82*Math.cos(r)-11*Math.sin(r),ly=cy-len*.82*Math.sin(r)-11*Math.cos(r);
+    if(hl){c.lineJoin='round';c.lineWidth=4;c.strokeStyle=hl;c.strokeText(label,lx,ly);}c.fillStyle=color;c.fillText(label,lx,ly);};
+  /* Beschriftung mit Messwert: „U1 231,2 V“ / „I1 5,12 A“ */
+  d.forEach((x,i)=>{if(isFinite(x.U)&&isFinite(x.au))arrow(x.au,R*.95*x.U/Um,cols[i],4,`U${i+1} ${fmtN(x.U,1)} V`,false);});
+  d.forEach((x,i)=>{if(isFinite(x.I)&&isFinite(x.au)&&isFinite(x.ai)&&x.I>0)arrow(x.au+x.ai,R*.62*Math.max(x.I/Im,.04),cols[i],2,`I${i+1} ${fmtN(x.I,x.I<10?2:1)} A`,true);});}
 function analyse(d){
   const rows=[],checks=[];let Pt=0,Qt=0;
   d.forEach(x=>{const th=x.ai*Math.PI/180;const P=isFinite(x.Pm)?x.Pm:x.U*x.I*Math.cos(th),Q=isFinite(x.Qm)?x.Qm:-x.U*x.I*Math.sin(th);const phi=nAng(-x.ai);
     let q='–';if(isFinite(P)&&isFinite(Q)&&x.I>0)q=P>=0?(Q>=0?'QI Bezug induktiv':'QIV Bezug kapazitiv'):(Q>=0?'QII Lieferung kapazitiv':'QIII Lieferung induktiv');
-    if(isFinite(P))Pt+=P;if(isFinite(Q))Qt+=Q;x.P=P;x.Q=Q;x.phi=phi;
+    if(isFinite(P))Pt+=P;if(isFinite(Q))Qt+=Q;x.P=P;x.Q=Q;x.phi=phi;x.q=q;
     const w=WF(),pr=w.kP!==1,two=(sec,k,u,d)=>pr?`${fmtP(sec*k,u)}<span class="sek">sek. ${fmtN(sec,d)} ${u}</span>`:`${fmtN(sec,d)} ${u}`;
-    rows.push(`<tr><th>${x.p}</th><td class="num">${two(x.U,w.kU,'V',1)}</td><td class="num">${two(x.I,w.kI,'A',3)}</td><td class="num">${fmtN(phi,1)}°</td><td class="num">${fmtN(Math.cos(phi*Math.PI/180),3)}</td><td class="num">${two(P/1000,w.kP,'kW',3)}</td><td class="num">${two(Q/1000,w.kP,'kvar',3)}</td><td>${q}</td></tr>`);});
+    rows.push(`<tr class="m"><th>${x.p}</th><td class="num">${two(x.U,w.kU,'V',1)}</td><td class="num">${two(x.I,w.kI,'A',3)}</td><td class="num cPhi">${fmtN(phi,1)}°</td><td class="num">${fmtN(Math.cos(phi*Math.PI/180),3)}</td><td class="num">${two(P/1000,w.kP,'kW',3)}</td><td class="num">${two(Q/1000,w.kP,'kvar',3)}</td></tr><tr class="q"><td></td><td colspan="6" class="mut">${q!=='–'?q:''}<span class="phiN"> · φ ${fmtN(phi,1)}°</span></td></tr>`);});
   $('#phTable tbody').innerHTML=rows.join('');
   const S_=Math.hypot(Pt,Qt);
   const wk=WF().kP,kp=(v,u)=>wk!==1?`<b>${fmtP(v*wk,u)}</b><span class="sek">sek. ${fmtN(v,3)} ${u} · WF ${fmtN(wk,wk%1?2:0)}</span>`:`<b>${fmtN(v,3)} ${u}</b>`;
   $('#phKpi').innerHTML=`<div><span class="mut">P gesamt${wk!==1?' primär':''}</span>${kp(Pt/1000,'kW')}</div><div><span class="mut">Q gesamt${wk!==1?' primär':''}</span>${kp(Qt/1000,'kvar')}</div><div><span class="mut">S gesamt${wk!==1?' primär':''}</span>${kp(S_/1000,'kVA')}</div><div><span class="mut">cos φ gesamt</span><b>${S_?fmtN(Pt/S_,3):'–'}</b></div>`;
   const it=connCheck(d);ST.conn={items:it,lvl:worst(it)};
   $('#phChecks').innerHTML=it.map(x=>`<li class="${x.l==='info'?'mut':x.l}">${CK[x.l]} ${esc(x.t)}</li>`).join('')||'<li class="mut">Keine Werte</li>';}
+
+/* ---------- Zeiger: Vollbild und Bildexport ---------- */
+function phFull(on){document.body.classList.toggle('phFull',on);$('#phFs').textContent=on?'✕ Schließen':'⛶ Vollbild';
+  if(on){showTab('zeiger');window.scrollTo(0,0);}setTimeout(()=>{try{updatePhasor();}catch{}},60);}
+function syncPhLoop(){$('#phLoop').classList.toggle('act',!!S.oLoop);}
+$('#phFs').onclick=()=>phFull(!document.body.classList.contains('phFull'));
+$('#phMeasure').onclick=()=>$('#btnQuick').click();
+$('#phLoop').onclick=()=>{S.oLoop=!S.oLoop;$('#oLoop').checked=!!S.oLoop;saveS();syncPhLoop();};
+$('#oLoop').addEventListener('change',syncPhLoop);syncPhLoop();
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.body.classList.contains('phFull'))phFull(false);});
+/* Zeigerbild (PNG) in der aktuellen Ansicht: Diagramm, Kennwerte, Prüfung */
+async function phImage(){
+  const d=getPh();if(!d.some(x=>isFinite(x.U)||isFinite(x.I))){status('Noch keine Zeigerwerte – erst „Messen“.','warn');return null;}
+  analyse(d);
+  const css=getComputedStyle(document.documentElement),col=v=>css.getPropertyValue(v).trim();
+  const W=900,dpr=2,HMAX=3600,F='-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif';
+  const BG=col('--bg')||'#000',CARD=col('--card')||'#1c1c1e',FG=col('--fg')||'#fff',MUT=col('--mut')||'#999',LN=col('--line')||'#444',FILL=col('--fill')||'#2c2c2e';
+  const COL={ok:col('--ok'),warn:col('--warn'),err:col('--err'),info:MUT};
+  const cv=document.createElement('canvas');cv.width=W*dpr;cv.height=HMAX*dpr;const c=cv.getContext('2d');c.scale(dpr,dpr);
+  c.fillStyle=BG;c.fillRect(0,0,W,HMAX);c.fillStyle=col('--acc');c.fillRect(0,0,W,8);
+  c.fillStyle=FG;c.font=`700 34px ${F}`;c.fillText('Zeigerdiagramm',40,62);
+  c.fillStyle=MUT;c.font=`17px ${F}`;c.fillText([new Date().toLocaleString('de-DE'),meterNo()?`Zähler ${meterNo()}`:'',ST.ident||''].filter(Boolean).join('  ·  '),40,92);
+  const wf=WF(),pr=wf.kP!==1;let y=100;
+  if(pr){y+=24;c.fillText(`Wandler ${S.ctP||'–'}/${S.ctS} A${+S.vtP?` · ${S.vtP}/100 V`:''} · Faktor ${fmtN(wf.kP,wf.kP%1?2:0)} · Werte primär, darunter sekundär`,40,y);}
+  y+=24;
+  /* Diagramm */
+  const DS=600;c.fillStyle=CARD;c.beginPath();c.roundRect(30,y,W-60,DS+24,18);c.fill();
+  const L=420,pc=document.createElement('canvas');pc.width=pc.height=L*3;const pg=pc.getContext('2d');pg.scale(3,3);drawPh(pg,L,L,col,d);
+  c.drawImage(pc,(W-DS)/2,y+12,DS,DS);y+=DS+24+24;
+  /* Gesamtwerte */
+  const Pt=d.reduce((a,x)=>a+(isFinite(x.P)?x.P:0),0),Qt=d.reduce((a,x)=>a+(isFinite(x.Q)?x.Q:0),0),St=Math.hypot(Pt,Qt);
+  const kp=[['P gesamt',fmtP(Pt/1000*wf.kP,'kW')],['Q gesamt',fmtP(Qt/1000*wf.kP,'kvar')],['S gesamt',fmtP(St/1000*wf.kP,'kVA')],['cos φ gesamt',St?fmtN(Pt/St,3):'–']];
+  const bw=(W-60-3*12)/4;kp.forEach(([k,v],i)=>{const x=30+i*(bw+12);c.fillStyle=CARD;c.beginPath();c.roundRect(x,y,bw,78,14);c.fill();
+    c.fillStyle=MUT;c.font=`14px ${F}`;c.fillText(k,x+14,y+26);c.fillStyle=FG;c.font=`700 22px ${F}`;c.fillText(v,x+14,y+58);});y+=78+24;
+  /* Tabelle L1–L3 */
+  const rowH=pr?92:64,cols=[44,100,235,385,470,570,715];
+  c.fillStyle=CARD;c.beginPath();c.roundRect(30,y,W-60,48+3*rowH+12,18);c.fill();
+  c.fillStyle=MUT;c.font=`600 14px ${F}`;['','U','I','φ','cos φ','P','Q'].forEach((h,i)=>c.fillText(h,cols[i],y+32));
+  let ty=y+48;const cc=[col('--l1'),col('--l2'),col('--l3')];
+  d.forEach((x,i)=>{c.strokeStyle=LN;c.lineWidth=1;c.beginPath();c.moveTo(40,ty-4);c.lineTo(W-40,ty-4);c.stroke();
+    c.fillStyle=cc[i];c.font=`700 20px ${F}`;c.fillText(x.p,cols[0],ty+26);
+    c.fillStyle=FG;c.font=`600 17px ${F}`;
+    [isFinite(x.U)?fmtN(x.U*wf.kU,1)+' V':'–',isFinite(x.I)?fmtN(x.I*wf.kI,pr?1:3)+' A':'–',isFinite(x.phi)?fmtN(x.phi,1)+'°':'–',isFinite(x.phi)?fmtN(Math.cos(x.phi*Math.PI/180),3):'–',isFinite(x.P)?fmtP(x.P/1000*wf.kP,'kW'):'–',isFinite(x.Q)?fmtP(x.Q/1000*wf.kP,'kvar'):'–'].forEach((v,k)=>c.fillText(v,cols[k+1],ty+26));
+    let ly=ty+26;
+    if(pr){ly+=22;c.fillStyle=MUT;c.font=`13px ${F}`;
+      [isFinite(x.U)?'sek. '+fmtN(x.U,1)+' V':'',isFinite(x.I)?'sek. '+fmtN(x.I,3)+' A':'','','',isFinite(x.P)?'sek. '+fmtN(x.P/1000,3)+' kW':'',isFinite(x.Q)?'sek. '+fmtN(x.Q/1000,3)+' kvar':''].forEach((v,k)=>{if(v)c.fillText(v,cols[k+1],ly);});}
+    if(x.q&&x.q!=='–'){ly+=22;c.fillStyle=MUT;c.font=`14px ${F}`;c.fillText(x.q,cols[1],ly);}
+    ty+=rowH;});
+  y+=48+3*rowH+12+24;
+  /* Prüfung */
+  const items=ST.conn?.items||[];
+  if(items.length){c.fillStyle=FG;c.font=`700 22px ${F}`;c.fillText('Prüfung',40,y+6);y+=24;
+    const wrap=(t,maxW)=>{const out=[];let line='';for(const w of String(t).split(' ')){const tt=line?line+' '+w:w;if(c.measureText(tt).width>maxW&&line){out.push(line);line=w;}else line=tt;}if(line)out.push(line);return out;};
+    for(const it of items){c.font=`600 17px ${F}`;const ls=wrap(it.t,W-150);
+      c.fillStyle=COL[it.l]||MUT;c.beginPath();c.arc(56,y+19,12,0,7);c.fill();c.fillStyle=BG;c.font=`700 15px ${F}`;c.textAlign='center';c.fillText(CK[it.l]||'',56,y+24);c.textAlign='left';
+      c.fillStyle=FG;c.font=`600 17px ${F}`;ls.forEach((l,i)=>c.fillText(l,84,y+25+i*22));
+      y+=14+Math.max(1,ls.length)*22+10;c.strokeStyle=LN;c.lineWidth=1;c.beginPath();c.moveTo(40,y);c.lineTo(W-40,y);c.stroke();y+=4;}}
+  y+=26;c.fillStyle=MUT;c.font=`13px ${F}`;c.fillText(`Zählerauslesung · Zeigerdiagramm · erstellt ${new Date().toLocaleString('de-DE')}`,40,y);y+=24;
+  const H=Math.min(HMAX,Math.ceil(y)),o=document.createElement('canvas');o.width=W*dpr;o.height=H*dpr;o.getContext('2d').drawImage(cv,0,0,W*dpr,H*dpr,0,0,W*dpr,H*dpr);
+  const blob=await new Promise(r=>o.toBlob(r,'image/png'));return [...new Uint8Array(await blob.arrayBuffer())];}
+$('#phImg').onclick=async()=>{try{status('Bild wird erstellt …');const png=await phImage();if(!png)return;
+  await saveFiles([[`zeiger_${(meterNo()||'zaehler').replace(/[^\w-]/g,'')}_${stamp()}.png`,png]],true);}catch(e){log('ERR','Zeigerbild: '+e.message);status('Bild: '+e.message,'err');}};
+
 const CK={ok:'✓',warn:'⚠',err:'✗',info:'ℹ'};
 const worst=L=>L.some(x=>x.l==='err')?'err':L.some(x=>x.l==='warn')?'warn':'ok';
 /* Anschlusscheck: Drehfeld, Spannungen, Ströme, Energierichtung, Zuordnung I↔U, cos φ, Wandler */
@@ -1042,10 +1170,15 @@ const TNAME={ble:'Bluetooth',serial:'COM-Port',demo:'Demo'};
 const cutLines=t=>t.slice(0,t.lastIndexOf('\n')+1);
 const goLabel=()=>'Auslesen';
 let HEAD=null;
-function setConn(on){$('#connPill').textContent=on?'verbunden · '+(TNAME[S.transport]||'')+(on&&HEAD?.mv&&S.transport==='ble'?` · 🔋${fmtN(HEAD.mv/1000,2)} V`:''):'getrennt';if(!on)HEAD=null;$('#connPill').classList.toggle('on',on);
+/* Akkustand des Lesekopfs: Spannung (mV) → Prozent über die typische Entladekurve einer Li-Ion-Zelle (Schätzwert) */
+function battPct(mv){const T=[[4200,100],[4150,95],[4110,90],[4080,85],[4020,80],[3980,75],[3950,70],[3910,65],[3870,60],[3850,55],[3840,50],[3820,45],[3800,40],[3790,35],[3770,30],[3750,25],[3730,20],[3710,15],[3690,10],[3610,5],[3270,0]];
+  if(!(mv>0))return NaN;if(mv>=T[0][0])return 100;if(mv<=T[T.length-1][0])return 0;
+  for(let i=1;i<T.length;i++)if(mv>=T[i][0]){const [v1,p1]=T[i-1],[v0,p0]=T[i];return Math.round(p0+(p1-p0)*(mv-v0)/(v1-v0));}return NaN;}
+function setConn(on){const bp=on&&HEAD?.mv&&S.transport==='ble'?battPct(HEAD.mv):NaN;$('#connPill').textContent=on?'verbunden · '+(TNAME[S.transport]||'')+(isFinite(bp)?` · 🔋 ${bp} %`:''):'getrennt';$('#connPill').title=isFinite(bp)?`Akku des Lesekopfs: ${bp} % (${fmtN(HEAD.mv/1000,2)} V, geschätzt)`:'';if(!on)HEAD=null;$('#connPill').classList.toggle('on',on);
   $('#btnDisconnect').disabled=!on;if(!on){T=null;LINK=null;IECP=null;}}
 function setBusy(b){busy=b;setTimeout(()=>{if(mdmRun)$('#btnModem').disabled=false;});$('#btnGo').disabled=b;$$('.op,.op2').forEach(x=>x.disabled=b);$('#btnGo').textContent=b?'Liest …':'Auslesen ▾';$('#extraBox').hidden=!S.oProf;$('#elecOpts').style.pointerEvents=b?'none':'';
-  [['#btnPow','pow','⚡ Leistung'],['#btnQuick','ph','◷ Zeiger']].forEach(([id,m,t])=>{const q=$(id),me=b&&quickRun===m;q.disabled=b&&!me;q.classList.toggle('stop',me);q.textContent=me?'■ Stopp':t;});}
+  [['#btnPow','pow','⚡ Leistung'],['#btnQuick','ph','◷ Zeiger']].forEach(([id,m,t])=>{const q=$(id),me=b&&quickRun===m;q.disabled=b&&!me;q.classList.toggle('stop',me);q.textContent=me?'■ Stopp':t;});
+  const pm=$('#phMeasure');if(pm){const qb=$('#btnQuick');pm.disabled=qb.disabled&&qb.textContent!=='■ Stopp';const st=qb.textContent==='■ Stopp'||qb.textContent==='stoppt …';pm.textContent=st?'■ Stopp':'↻ Messen';pm.classList.toggle('stop',st);}}
 function prog(v){const p=$('#prog');p.style.visibility=v==null?'hidden':'visible';p.classList.toggle('ind',v==='ind');
   $('#progBar').style.width=typeof v==='number'?Math.max(2,Math.min(100,v))+'%':(v==='ind'?'':'0');}
 let connecting=false;
@@ -1062,7 +1195,7 @@ async function connect(){
     if(kind==='ble')window._lastBle=T;
     NOSUP=new Set();IECP=new IEC(LINK);IECP.onIdent=id=>status('Zähler antwortet: '+id);setConn(true);
     if(T instanceof BleT){const inf=await T.info(LINK);HEAD=inf;if(inf.fw||inf.mv){log('INFO',`Kopf ${inf.sn} · FW ${inf.fw} · Akku ${inf.mv} mV`);setConn(true);
-      if(inf.mv&&inf.mv<3450)status(`⚠ Akku des Lesekopfs schwach (${fmtN(inf.mv/1000,2)} V) – bald laden.`,'warn');}}
+      if(inf.mv&&battPct(inf.mv)<=15)status(`⚠ Akku des Lesekopfs schwach (${battPct(inf.mv)} % · ${fmtN(inf.mv/1000,2)} V) – bald laden.`,'warn');}}
     if(IECP)log('INFO','Verbindung bereit');
     return !!IECP;
   }catch(e){log('ERR',e.name+': '+e.message);status(e.name==='NotFoundError'?'Kein Gerät ausgewählt.':e.message,'err');try{await T?.close()}catch{}setConn(false);return false;}
@@ -1204,16 +1337,16 @@ async function writeClock(){const n=new Date();
     if(r.type!=='ACK')throw new Error('Zähler hat das Stellen abgelehnt ('+(r.type==='NAK'?'NAK':(r.head||r.body||r.type))+')');log('INFO','Zeit gestellt: '+v);return;}
   const d=`${pad(n.getFullYear()%100)}${pad(n.getMonth()+1)}${pad(n.getDate())}`;
   const rep=r=>r.type==='ACK'?'ACK':r.type==='NAK'?'NAK':(r.body||r.head||r.type);
-  let used=null;
+  let used=null,last='';
   const wr=async(k,v)=>{for(const w of used?[used]:['W5','W1']){const r=await IECP.cmdRW(w,`${k}(${v})`);
-    log('INFO',`${w} ${k}(${v}) → ${rep(r)}`);if(r.type==='ACK'){used=w;return true;}}return false;};
+    last=`${w} ${k} → ${rep(r)}`;log('INFO',`${w} ${k}(${v}) → ${rep(r)}`);if(r.type==='ACK'){used=w;return true;}}return false;};
   /* Datum nur schreiben, wenn es nicht schon stimmt (Metcom: ERROR02 beim Schreiben des gleichen Datums – das brach früher vor der Uhrzeit ab) */
   let sameDate=false;try{const a=await IECP.read('0.9.2()',5000);sameDate=(a.match(/\((\d{6})/)||[])[1]===d;}catch{}
   const dateOk=sameDate?true:await wr('0.9.2',d);
   const t=new Date(),tv=`${pad(t.getHours())}${pad(t.getMinutes())}${pad(t.getSeconds())}`;
   const timeOk=await wr('0.9.1',tv);
-  if(!timeOk)throw new Error('Zähler hat die Uhrzeit nicht angenommen – Passwort mit Schreibrecht nötig? (Antwort im Protokoll)');
-  if(!dateOk)throw new Error('Uhrzeit gestellt, aber das Datum wurde abgelehnt (Antwort im Protokoll)');
+  if(!timeOk)throw new Error(`Zähler hat die Uhrzeit nicht angenommen (${last}) – Passwort mit Schreibrecht nötig?`);
+  if(!dateOk)throw new Error(`Uhrzeit gestellt, aber das Datum wurde abgelehnt (${last})`);
   log('INFO',`Zeit gestellt (${used}): ${sameDate?'Datum unverändert':d} ${tv}`);}
 /* Stellen mit allen eingetragenen Passwörtern probieren: das erste, das den Login besteht, hat evtl. nur Leserecht */
 async function writeClockAny(){
@@ -1266,7 +1399,7 @@ const OPS_AUTO=async()=>{
 const OPS={
   auto:()=>OPS_AUTO(),
   async quick(){return quickLoop('ph');},
-  async power(){return quickLoop('pow');},
+  async power(){const r=await quickLoop('pow');if(!/^⚠/.test(r)){S.lastPow=Date.now();saveS();}return r;},
   async all(idPre){
     const ex=FORCE?FORCE.ex.slice():[S.oInst&&'inst',S.oProf&&'prof',S.oLog&&'log'].filter(Boolean);const n=ex.length?2:1;const pre=i=>n>1?`${i}/${n} · `:'';
     ST.chk=null;SAVEST=null;ST.conn=null;ST.clk=null;renderChk();
@@ -1303,8 +1436,23 @@ const OPS={
     ST.mode='elec';ST.ident='SML';setVals(vals,true);showTab('werte');autoSave();return `Fertig: ${vals.length} SML-Werte`;}
 };
 $$('.op').forEach(b=>b.onclick=()=>run(b.textContent,OPS[b.dataset.op]));
-$('#btnQuick').onclick=()=>{if(quickRun){stopReq=true;$('#btnQuick').textContent='stoppt …';return;}run('Zeiger',OPS.quick);};
-$('#btnPow').onclick=()=>{if(quickRun){stopReq=true;$('#btnPow').textContent='stoppt …';return;}run('Leistung',OPS.power);};
+$('#btnQuick').onclick=()=>{if(quickRun){stopReq=true;$('#btnQuick').textContent='stoppt …';return;}if(busy)return;phFull(true);run('Zeiger',OPS.quick);};
+/* Vor der Leistungsmessung: war die letzte Messung länger als WF_ASK_MIN Minuten her (oder gab es noch keine), Wandlerfaktoren abfragen */
+const WF_ASK_MIN=10;
+function wfAsk(){const last=S.lastPow||0,age=(Date.now()-last)/60000;
+  if(last&&age<WF_ASK_MIN)return Promise.resolve(true);
+  return new Promise(res=>{const dlg=$('#wfDlg');
+    $('#wfdCtP').value=+S.ctP>0?S.ctP:'';$('#wfdCtS').value=String(S.ctS||5);$('#wfdVtP').value=+S.vtP>0?S.vtP:'';
+    $('#wfdAge').textContent=last?`Letzte Leistungsmessung vor ${age<90?Math.round(age)+' min':fmtN(age/60,1)+' h'}. Stimmen die Wandler noch?`:'Noch keine Leistungsmessung gemerkt. Welche Wandler sind verbaut?';
+    const upd=()=>{const ci=+$('#wfdCtP').value>0?+$('#wfdCtP').value/(+$('#wfdCtS').value||5):1,cu=+$('#wfdVtP').value>0?+$('#wfdVtP').value/100:1,k=ci*cu;
+      $('#wfdInfo').textContent=k===1?'Faktor 1 – direkt messend':`Faktor ${fmtN(k,k%1?2:0)}  (Strom ${fmtN(ci,ci%1?2:0)} × Spannung ${fmtN(cu,cu%1?2:0)})`;};
+    ['#wfdCtP','#wfdCtS','#wfdVtP'].forEach(x=>$(x).oninput=upd);upd();
+    dlg.onclose=()=>{const ok=dlg.returnValue==='ok';
+      if(ok){S.ctP=+$('#wfdCtP').value||0;S.ctS=$('#wfdCtS').value;S.vtP=+$('#wfdVtP').value||0;S.lastPow=Date.now();
+        $('#ctP').value=$('#wfdCtP').value;$('#ctS').value=S.ctS;$('#vtP').value=$('#wfdVtP').value;saveS();wfChanged();}
+      res(ok);};
+    dlg.returnValue='cancel';dlg.showModal();});}
+$('#btnPow').onclick=async()=>{if(quickRun){stopReq=true;$('#btnPow').textContent='stoppt …';return;}if(busy)return;if(!(await wfAsk()))return;run('Leistung',OPS.power);};
 $('#btnBleForget').onclick=async()=>{try{await T?.close()}catch{}window._lastBle=null;S.bleId='';S.bleName='';saveS();setConn(false);$('#bleInfo').textContent='';status('Kopf vergessen – beim nächsten Auslesen neu auswählen.');};
 $('#btnNosupReset').onclick=()=>{try{localStorage.removeItem(NKEY)}catch{}NOSUP=new Set();nosupInfo();status('Register-Erkennung zurückgesetzt.');};
 $('#btnGo').onclick=()=>{$('#readMenu').hidden=!$('#readMenu').hidden;};
@@ -1548,7 +1696,7 @@ async function opModem(count){showTab('werte');for(const k in MDM)delete MDM[k];
   const order=isLGE(ST.ident)||S.mdmKind==='lg'?[lgModem,extModem]:[extModem,lgModem];
   try{for(const f of order){try{const r=await f(count);const k=f===lgModem?'lg':'ext';if(S.mdmKind!==k){S.mdmKind=k;saveS();}return r;}
       catch(e){if(e.final||stopReq)throw e;log('WARN',e.message);for(const k in MDM)delete MDM[k];renderMdm();}}
-    throw new Error('Kein Modem gefunden – weder externes Modem noch L+G-Zähler antworten. Kopf richtig aufgesetzt? Protokoll (Mehr → Protokoll) bitte schicken.');}
+    throw new Error(`Kein Modem gefunden. Externe Modems (EMH, ProLAN …) antworten nur, wenn der Kopf am Modem selbst sitzt, nicht am Zähler. Den Empfang über den Zähler gibt es bisher nur bei L+G${ST.ident?` (hier: ${ST.ident.slice(0,12)})`:''}; Metcom und EMH-intern folgen. Protokoll (Mehr → Protokoll) bitte schicken.`);}
   finally{stopReq=false;}}
 async function extModem(count){
   const t=LINK.t;let cfg=null;const pref=S.mdmCfg?[S.mdmCfg,...MDM_CFG.filter(c=>c.b!==S.mdmCfg.b||c.p!==S.mdmCfg.p)]:MDM_CFG;
@@ -1762,7 +1910,7 @@ async function protoPng(kind,items,files,geo){const aus=kind==='aus',W=900,dpr=2
   const d=getPh();
   if(!aus&&d.some(x=>isFinite(x.U)||isFinite(x.I))){analyse(d);sec('Anschlusscheck');y+=6;
     const pc=document.createElement('canvas');pc.width=pc.height=680;const pg=pc.getContext('2d');pg.scale(2,2);pg.fillStyle='#fff';pg.fillRect(0,0,340,340);
-    const pal={'--grid':'#e5e7eb','--mut':'#6b7280','--l1':'#a0522d','--l2':'#111111','--l3':'#9ca3af'};drawPh(pg,340,340,v=>pal[v],d);
+    const pal={'--grid':'#e5e7eb','--mut':'#6b7280','--card':'#ffffff','--l1':'#e3a800','--l2':'#1e9e3e','--l3':'#8e3fd1'};drawPh(pg,340,340,v=>pal[v],d);
     c.drawImage(pc,40,y,340,340);
     let ty=y+20;const x0=400,cx=[0,45,150,250,330];c.font=`600 14px ${F}`;c.fillStyle=GRAY;['','U','I','φ','P'].forEach((h,i)=>c.fillText(h,x0+cx[i],ty));ty+=12;
     d.forEach(p=>{ty+=28;c.fillStyle='#111';c.font=`600 15px ${F}`;c.fillText(p.p,x0,ty);c.font=`15px ${F}`;
