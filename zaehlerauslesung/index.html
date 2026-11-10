@@ -592,7 +592,26 @@ class DemoT{
   constructor(){this.onData=()=>{};this.fixedBaud=false;this.in=[];}
   async open(){log('INFO','Demo-Zähler bereit');}
   async setBaud(){} async close(){}
-  async write(u8){if(u8.length===7&&u8[0]===0x52&&u8[1]===3&&crcX([...u8.slice(0,5)])===((u8[5]<<8)|u8[6])){this.modem(u8);return;}for(const b of u8)this.in.push(b&0x7f);this.process();}
+  /* Test (window.__STRICT_MDM): EMH-XC-Zähler mit Variomod-Modem wie im Mitschnitt – antwortet auf 52 03 … erst nach
+     300 Bd: Weckfolge, „/?!“ → Kennung, ACK 059 → 9600 Bd 8N1: „EMH“ → „EMH configuration mode …“ (window.__MDM_NEEDE: zusätzlich E-Rahmen nötig) */
+  mdmStrict(u){const s=this.ms||(this.ms={st:'iec',b:[],e:false});const b=s.b;b.push(...u);
+    for(let g=0;g<60&&b.length;g++){
+      if(this.bd===9600){
+        if(b[0]===0){b.shift();continue;}
+        if(b[0]===0x45){if(b.length<3)return;
+          if(b[1]===0x4d&&b[2]===0x48){b.splice(0,3);if(s.st==='ack'){s.st='cfg';this.emit(enc('\r\nEMH configuration mode 0D050104C3F4DB8F975FFEFB\r'),80);}continue;}
+          if(b[1]===0x13){if(b.length<23)return;b.splice(0,23);s.e=true;continue;}}
+        if(b[0]===0x52){if(b.length<7)return;const q=b.splice(0,7);
+          if(crcX(q.slice(0,5))===((q[5]<<8)|q[6])&&s.st==='cfg'&&(!window.__MDM_NEEDE||s.e))this.modem(Uint8Array.from(q));continue;}
+      }else if(this.bd===300){
+        if(b.length>=7&&b[0]===1&&b[1]===2&&b[2]===4){b.splice(0,7);continue;}
+        if(b[0]===0x2f){const e=dec(b).indexOf('!\r\n');if(e<0)return;b.splice(0,e+3);this.emit(enc('/EMH5\\@01LZQJL0013A\r'),120);s.st='ident';continue;}
+        if(b[0]===6){if(b.length<6)return;b.splice(0,6);if(s.st==='ident')s.st='ack';continue;}
+        if(b[0]===1&&b[1]===0x42){if(b.length<5)return;b.splice(0,5);s.st='iec';continue;}}
+      b.shift();}}
+  async write(u8){if(window.__STRICT_MDM){this.mdmStrict(u8);return;}
+    if(u8.length===7&&u8[0]===1&&u8[1]===2&&u8[2]===4&&u8[6]===64)return;   /* Weckfolge des EMH-Modems */
+    if(u8.length===7&&u8[0]===0x52&&u8[1]===3&&crcX([...u8.slice(0,5)])===((u8[5]<<8)|u8[6])){this.modem(u8);return;}for(const b of u8)this.in.push(b&0x7f);this.process();}
   modem(q){const k=q[2]+'.'+q[4];let d;const z=n=>new Array(n).fill(0);
     if(k==='23.1'){const r=95+Math.round(Math.random()*12);d=[7,r,1,5,1,0xc3,0xc1,0,0,8,0x27,0x3a,0,0x5a,0x66,0,0,3,...z(10),7+Math.round(Math.random()*2),0,0,0];}
     else if(k==='7.1')d=[0,...enc('351080657669963'),0,10,74,25,241,2,0x63,0xaf,0xa0,0x68,0x32,0,0,0,0,0,0,0x89,0x88,0x23,0x90,0,0x11,0x44,0x60,0x58,0x97,0xff,0xff,0xff,0,0];
@@ -615,7 +634,9 @@ class DemoT{
       else if(cmd==='R2'&&data.startsWith('C003'))this.emit(this.blk(`C003(${lgTime(new Date(Date.now()+(this.clkOff??17000)))})`),100);
       else if(cmd==='W2'&&data.startsWith('C003')){const t=parseLg(data.slice(5));this.clkOff=t?t-Date.now():0;this.emit([ACK]);}
       else if(cmd[0]==='R'&&/^0\.9\.[12]/.test(data)){const d=new Date(Date.now()+(this.clkOff??-23000));this.emit(this.blk(data[4]==='1'?`0.9.1(${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())})`:`0.9.2(${pad(d.getFullYear()%100)}${pad(d.getMonth()+1)}${pad(d.getDate())})`),100);}
-      else if(cmd==='W5'&&/^0\.9\.[12]/.test(data)){if(data[4]==='1'){const v=data.slice(6,12);const n=new Date();const t=new Date(n);t.setHours(+v.slice(0,2),+v.slice(2,4),+v.slice(4,6));this.clkOff=t-n;}this.emit([ACK]);}
+      else if(cmd==='E2'&&data.startsWith('F101')){this.e2=true;this.emit([ACK]);}
+      else if(cmd==='W5'&&/^0\.9\.[12]/.test(data)){if(window.__EMH_STRICT&&!(this.e2&&/^0\.9\.[12]\(\d{6}\)\(\w+\)$/.test(data))){this.emit([NAK]);return this.process();}
+        if(data[4]==='1'){const v=data.slice(6,12);const n=new Date();const t=new Date(n);t.setHours(+v.slice(0,2),+v.slice(2,4),+v.slice(4,6));this.clkOff=t-n;}this.emit([ACK]);}
       else if(cmd[0]==='R')this.emit(this.blk(this.reply(data)),200);
       return this.process();}
     b.shift();this.process();
@@ -1337,11 +1358,16 @@ async function writeClock(){const n=new Date();
     if(r.type!=='ACK')throw new Error('Zähler hat das Stellen abgelehnt ('+(r.type==='NAK'?'NAK':(r.head||r.body||r.type))+')');log('INFO','Zeit gestellt: '+v);return;}
   const d=`${pad(n.getFullYear()%100)}${pad(n.getMonth()+1)}${pad(n.getDate())}`;
   const rep=r=>r.type==='ACK'?'ACK':r.type==='NAK'?'NAK':(r.body||r.head||r.type);
-  let used=null,last='';
-  const wr=async(k,v)=>{for(const w of used?[used]:['W5','W1']){const r=await IECP.cmdRW(w,`${k}(${v})`);
-    last=`${w} ${k} → ${rep(r)}`;log('INFO',`${w} ${k}(${v}) → ${rep(r)}`);if(r.type==='ACK'){used=w;return true;}}return false;};
+  /* EMH-Software (Mitschnitt 10.11.): nach dem Login „E2 F101()“, dann „W5 0.9.2(JJMMTT)(Passwort)“ und „W5 0.9.1(hhmmss)(Passwort)“, je mit ACK.
+     Das Passwort steht also in JEDEM Schreibbefehl noch einmal in Klammern. Bei anderen Zählern zuerst ohne, dann mit Passwort probieren. */
+  const emh=/^\/EMH/.test(IECP.ident),pw=pwPref()||pwList()[0]||'',pf=pw?`(${pw})`:'';
+  const forms=emh?(pf?[pf,'']:['']):(pf?['',pf]:['']);
+  let used=null,usedF=null,last='';
+  const wr=async(k,v)=>{for(const w of used?[used]:['W5','W1'])for(const f of usedF!=null?[usedF]:forms){const r=await IECP.cmdRW(w,`${k}(${v})${f}`);
+    last=`${w} ${k} → ${rep(r)}`;log('INFO',`${w} ${k}(${v})${f?'(Passwort)':''} → ${rep(r)}`);if(r.type==='ACK'){used=w;usedF=f;return true;}}return false;};
   /* Datum nur schreiben, wenn es nicht schon stimmt (Metcom: ERROR02 beim Schreiben des gleichen Datums – das brach früher vor der Uhrzeit ab) */
   let sameDate=false;try{const a=await IECP.read('0.9.2()',5000);sameDate=(a.match(/\((\d{6})/)||[])[1]===d;}catch{}
+  if(emh){try{const r=await IECP.cmdRW('E2','F101()');log('INFO',`E2 F101() → ${rep(r)}`);}catch(e){log('WARN','E2 F101(): '+e.message);}}
   const dateOk=sameDate?true:await wr('0.9.2',d);
   const t=new Date(),tv=`${pad(t.getHours())}${pad(t.getMinutes())}${pad(t.getSeconds())}`;
   const timeOk=await wr('0.9.1',tv);
@@ -1562,25 +1588,34 @@ async function dlmsClockOp(write){const pw=pwList();
     log('INFO','Zeit gestellt (DLMS): '+n.toLocaleString('de-DE'));
     const [t2]=await d.read([c.b+8]);const m2=t2.ok?dtDec(t2.v):null;
     if(m2){const d2=clkShow(m2);status(`Uhrzeit gestellt – Abweichung jetzt ${fmtN(d2,0)} s.`,Math.abs(d2)>5?'warn':'ok');}else status('Uhrzeit gestellt (Kontrolle nicht lesbar).','ok');});}
-/* Modem im L+G-Zähler (Q4-Mitschnitt): 0x3C38 Netzbetreiber, 0x3C40 Signal (CSQ 0–31), 0x3C48 Netzscan „CSQ+MCCMNC“ je Eintrag, 0x3C50 Registrierung */
-function lgMdmDecode(q){const g=k=>q[k]?.ok?q[k].v:null,op=g(0),csq=g(1),scan=g(2),reg=g(3);
+/* Modem im L+G-Zähler (Q4-/dMAP-Mitschnitt): 0x3C38 Netzbetreiber, 0x3C40 Signal (CSQ 0–31), 0x3C48 Netzscan „CSQ+MCCMNC“ je Eintrag (CSQ 2-stellig, MCCMNC 5-stellig, durch 00 getrennt),
+   0x3C50 = Zahl (im Mitschnitt 3 bei 3 Nachbarzellen, Zähler eingebucht) – Bedeutung nicht gesichert, daher NICHT als Registrierungsstatus (EMH-Codes) gedeutet */
+function lgMdmDecode(q){const g=k=>q[k]?.ok?q[k].v:null,op=g(0),csq=g(1),scan=g(2),x50=g(3);
   const sc=dlStr(scan),list=[...sc.matchAll(/(\d\d)(\d{5})/g)].map(m=>({csq:+m[1],plmn:m[2]}));
-  Object.assign(MDM,{sigT:'RSSI',csq:typeof csq==='number'?csq:null,rsrp:typeof csq==='number'&&csq<=31?-113+2*csq:null,plmn:dlStr(op),reg:typeof reg==='number'?reg:null,scan:list,t:new Date()});
+  Object.assign(MDM,{sigT:'RSSI',csq:typeof csq==='number'?csq:null,rsrp:typeof csq==='number'&&csq<=31?-113+2*csq:null,plmn:dlStr(op),reg:null,x50:typeof x50==='number'?x50:null,scan:list,t:new Date()});
   if(MDM.rsrp!=null)(MDM.hist=MDM.hist||[]).push([Date.now(),MDM.rsrp,null]);}
 async function lgModem(count){let found=false;
   try{status('Zähler wird angesprochen …');prog('ind');const id=await IECP.handshake(2500);ST.ident=id;
     if(!isLGE(id))throw new Error(`Zähler ${id}: Modem-Empfang über den Zähler bisher nur bei L+G (Mode E)`);found=true;
-    return await dlmsRun({clients:[16,32],servers:[17,1],servers32:[17,1],keepOrder:true,pre:true},async d=>{
+    const opt={clients:[16,32],servers:[17,1],servers32:[17,1],keepOrder:true,pre:true};
+    /* 0x7D08 = IP-Adresse des Modems: u32 (dMAP-Mitschnitt: 00 06 0A 4A 4B 1B = 10.74.75.27; dMAP liest sie mit Client 32 + Passwort) */
+    const ipOf=v=>{const x=typeof v==='number'?[v>>>24,(v>>16)&255,(v>>8)&255,v&255]:v?.os?.length===4?v.os:null;return x?x.join('.'):null;};
+    const res=await dlmsRun(opt,async d=>{
       try{const r=await d.read([0xfd08,0x3848]);if(r[0].ok)MDM.dev=dlStr(r[0].v);if(r[1].ok)MDM.fw=dlStr(r[1].v);}catch(e){log('WARN',e.message);}
-      /* 0x7D08 = IP-Adresse des Modems (4 Byte, im Q4-Mitschnitt 0A 4A 4B 18 = 10.74.75.24) */
-      try{const [ip]=await d.read([0x7d08]);if(ip.ok){const v=ip.v,x=typeof v==='number'?[v>>>24,(v>>16)&255,(v>>8)&255,v&255]:v?.os?.length===4?v.os:null;if(x)MDM.ip=x.join('.');}}catch(e){log('WARN','IP: '+e.message);}
+      try{const [ip]=await d.read([0x7d08]);const a=ip.ok?ipOf(ip.v):null;if(a)MDM.ip=a;else log('INFO',`IP (0x7D08) mit Client ${opt.client} nicht lesbar (Fehler ${ip.err??'?'})`);}catch(e){log('WARN','IP: '+e.message);}
       const rd=async()=>{const q=await d.read([0x3c38,0x3c40,0x3c48,0x3c50]);if(!q[1].ok&&!q[0].ok)throw new Error('Zähler liefert keine Modemwerte (0x3C38 …) – anderer Typ? Protokoll (Mehr → Protokoll) bitte schicken.');lgMdmDecode(q);renderMdm();};
       await rd();if(MDM.rsrp==null)throw new Error('Zähler meldet keinen Empfangswert (Modem aus/ohne Netz?)');
       prog(null);let n=1;if(!count){mdmRun=true;$('#btnModem').textContent='■ Stopp';$('#btnModem').disabled=false;}
       try{while(count?n<count&&!stopReq:(mdmRun&&!stopReq)){await sleep(1500);await rd();n++;
           status(`${count?'Empfangstest':'Modem-Empfang'}: ${MDM.rsrp} dBm (CSQ ${MDM.csq}) · Messung ${n}${count?'/'+count:' – „Stopp“ zum Beenden'}`,'ok');}}
       finally{mdmRun=false;$('#btnModem').textContent='📶 Modem-Empfang';}
-      return `Modem-Empfang (L+G): ${MDM.rsrp} dBm (${rateSig(MDM.rsrp)[0]}), ${n} Messungen`;});}
+      return `Modem-Empfang (L+G): ${MDM.rsrp} dBm (${rateSig(MDM.rsrp)[0]}), ${n} Messungen`;});
+    /* IP über den öffentlichen Client nicht lesbar → kurz mit Client 32 + Passwort nachholen (nach dem Ende der Messung) */
+    if(!MDM.ip&&opt.client===16&&pwList().length){
+      try{status('IP-Adresse wird mit Passwort-Anmeldung gelesen …');
+        await dlmsRun({clients:[32],servers:[17,1],servers32:[17,1],hs:2500},async d=>{const [ip]=await d.read([0x7d08]);const a=ip.ok?ipOf(ip.v):null;if(a){MDM.ip=a;renderMdm();log('INFO','IP über Client 32: '+a);}else log('INFO',`IP (0x7D08) auch mit Client 32 nicht lesbar (Fehler ${ip.err??'?'})`);});}
+      catch(e){log('WARN','IP über Client 32: '+e.message);}}
+    return res;}
   catch(e){if(found)e.final=true;throw e;}}
 /* ---------- Modem-Empfang (EMH-Modem, Protokoll aus Mitschnitt) ----------
    Anfrage: 52 03 <a> <b> <c> CRC16-XMODEM (high, low); Antwort: 06 <Länge> <a b c> <Daten> CRC.
@@ -1696,12 +1731,45 @@ async function opModem(count){showTab('werte');for(const k in MDM)delete MDM[k];
   const order=isLGE(ST.ident)||S.mdmKind==='lg'?[lgModem,extModem]:[extModem,lgModem];
   try{for(const f of order){try{const r=await f(count);const k=f===lgModem?'lg':'ext';if(S.mdmKind!==k){S.mdmKind=k;saveS();}return r;}
       catch(e){if(e.final||stopReq)throw e;log('WARN',e.message);for(const k in MDM)delete MDM[k];renderMdm();}}
-    throw new Error(`Kein Modem gefunden. Externe Modems (EMH, ProLAN …) antworten nur, wenn der Kopf am Modem selbst sitzt, nicht am Zähler. Den Empfang über den Zähler gibt es bisher nur bei L+G${ST.ident?` (hier: ${ST.ident.slice(0,12)})`:''}; Metcom und EMH-intern folgen. Protokoll (Mehr → Protokoll) bitte schicken.`);}
+    throw new Error(`Kein Modem gefunden. Den Empfang über den Zähler gibt es bisher bei EMH (XC mit Variomod-Modem) und L+G${ST.ident?` (hier: ${ST.ident.slice(0,18)})`:''}; ein eigenständiges Modem antwortet nur, wenn der Kopf direkt am Modem sitzt. Metcom folgt. Protokoll (Mehr → Protokoll) bitte schicken.`);}
   finally{stopReq=false;}}
+/* EMH-XC-Zähler mit Variomod-Modem (Mitschnitt Variomod Manager, COM8): das Modem hängt am Zähler und antwortet erst im „Konfigurationsmodus“:
+   300 Bd 7E1: Weckfolge 01 02 04 08 10 20 40, „/?!“ → Kennung „/EMH5\@01LZQJ…“ · ACK 0 5 9 (Modus 9) → 9600 Bd 8N1: „EMH“ → „EMH configuration mode …“
+   danach Anfragen 52 03 … wie bisher. Variomod schickt zusätzlich 00-Bytes (Haltesignal) und einen E-Rahmen 45 13 0B 00…00 + CRC; hier nur, wenn ohne nichts antwortet. */
+const MDM_E=(()=>{const f=[0x45,0x13,0x0b,...new Array(18).fill(0)],c=crcX(f);return [...f,c>>8,c&255];})();
+async function mdmLine(b,bits,par){const t=LINK.t;
+  if(t instanceof BleT){for(const c of [Object.keys(BAUD).find(k=>BAUD[k]===b),bits===7?'C':'D',par,'A'])await t.cmd(c);}
+  else if(t instanceof SerialT)await t.setBaud(b,{dataBits:bits,parity:par==='E'?'even':'none',stopBits:1});
+  else if(t instanceof DemoT)t.bd=b;
+  LINK.strip=bits===7;LINK.clear();await sleep(t instanceof DemoT?0:200);}
+async function mdmEnter(){const t=LINK.t,w=ms=>sleep(t instanceof DemoT?0:ms);
+  status('Modem: Verbindung über die Schnittstelle des Zählers …');
+  await mdmLine(300,7,'E');
+  await LINK.send([1,2,4,8,16,32,64]);await w(900);
+  await LINK.send(enc('/?!\r\n'));
+  let id=null;try{id=await LINK.wait(b=>{const i=b.indexOf(0x2f);if(i<0)return null;const j=b.indexOf(13,i);if(j<0)return null;const r=dec(b.slice(i,j));b.splice(0,j+1);if(b[0]===10)b.shift();return r;},3500);}catch{}
+  const bye=async()=>{try{await mdmLine(300,7,'E');await LINK.send([1,0x42,0x30,3,0x71]);await w(300);}catch{}};
+  if(!id){log('INFO','Modem: keine Kennung auf „/?!“ – Modem spricht evtl. direkt');return {ok:false,ident:null};}
+  ST.ident=id;log('INFO','Modem: Kennung '+id);
+  if(!/^\/EMH/.test(id)){await bye();return {ok:false,ident:id};}
+  await LINK.send([6,0x30,0x35,0x39,13,10]);await w(700);              /* ACK 0 5 9: Modus 9, 9600 Bd */
+  await mdmLine(9600,8,'N');await w(300);LINK.clear();
+  await LINK.send(enc('EMH'));
+  try{await LINK.wait(b=>asc(b).includes('configuration mode')?true:null,3500);}
+  catch{log('WARN','Modem: kein „EMH configuration mode“ – kein Modem im Zähler?');await bye();return {ok:false,ident:id,noCfg:true};}
+  await w(300);log('INFO','Modem: '+asc(LINK.buf).trim());LINK.clear();return {ok:true,ident:id};}
 async function extModem(count){
   const t=LINK.t;let cfg=null;const pref=S.mdmCfg?[S.mdmCfg,...MDM_CFG.filter(c=>c.b!==S.mdmCfg.b||c.p!==S.mdmCfg.p)]:MDM_CFG;
   try{
-    for(const [i,c] of pref.entries()){status(`Modem wird gesucht … (${c.b} Baud 8${c.p}1)`);prog((i+.5)/pref.length*100);await mdmSet(c);
+    /* 1) Modem am EMH-Zähler: Einstieg wie Variomod Manager */
+    let ent=null;try{ent=await mdmEnter();}catch(e){log('WARN','Modem-Einstieg: '+e.message);}
+    if(ent?.ok){let r=await mdmTxn(0x17,0,1,1500);
+      if(!r){log('INFO','Modem: keine Antwort – sende wie Variomod 00 und E-Rahmen');await LINK.send([0]);await sleep(t instanceof DemoT?0:300);await LINK.send(MDM_E);await sleep(t instanceof DemoT?0:300);r=await mdmTxn(0x17,0,1,1500);}
+      if(r){cfg={b:9600,p:'N'};mdmDecode(r);renderMdm();log('INFO','Modem: Konfigurationsmodus über den Zähler');}}
+    else if(ent?.noCfg)throw Object.assign(new Error(`Zähler ${ent.ident.slice(0,18)} meldet keinen Modem-Konfigurationsmodus – ist ein Modem eingebaut?`),{final:true});
+    else if(ent?.ident)throw new Error(`Zähler ${ent.ident.slice(0,14)}: Modem-Empfang über den Zähler bisher nur bei EMH (XC) und L+G.`);
+    /* 2) sonst direkt (eigenständiges Modem am Kopf) */
+    if(!cfg)for(const [i,c] of pref.entries()){status(`Modem wird gesucht … (${c.b} Baud 8${c.p}1)`);prog((i+.5)/pref.length*100);await mdmSet(c);
       const r=await mdmTxn(0x17,0,1,1200);if(r){cfg=c;mdmDecode(r);renderMdm();break;}}
     if(!cfg)throw new Error('Externes Modem antwortet nicht.');
     S.mdmCfg=cfg;saveS();log('INFO',`Modem antwortet (${cfg.b} Baud 8${cfg.p}1)`);
