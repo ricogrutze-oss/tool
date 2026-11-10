@@ -289,7 +289,8 @@ hr.sep{border:none;border-top:1px solid var(--panel-border);margin:16px 0;}
 .align-ctrl button:hover{ background:var(--accent-soft); }
 .node text{font-family:'IBM Plex Mono',monospace;fill:var(--line);user-select:none;pointer-events:none;}
 .node .lbl-type{font-size:12px;font-weight:600;}
-.node .lbl-sub{font-size:10.5px;fill:var(--ink-soft);}
+.node .lbl-sub,.node .lbl-type{paint-order:stroke;stroke:#f7f8fa;stroke-width:4px;stroke-linejoin:round;}
+.node .lbl-sub{font-size:11px;fill:#2f3b47;}
 .node .zaehler-header{fill:var(--line);stroke:none;}
 .node .zaehler-header-text{font-size:10.5px;font-weight:600;fill:#eef2f6;}
 .node{touch-action:none;}
@@ -305,8 +306,7 @@ hr.sep{border:none;border-top:1px solid var(--panel-border);margin:16px 0;}
 .conn-line{stroke:var(--line);stroke-width:2;fill:none;}
 .conn-line.selected{stroke:var(--accent);stroke-width:3;}
 .conn-line.ctrl{stroke:var(--accent-dark);stroke-dasharray:6,4;}
-.conn-label{font-family:'IBM Plex Mono',monospace;font-size:10.5px;fill:var(--ink-soft);cursor:text;}
-.conn-label-bg{fill:var(--bp-bg);}
+.conn-label{font-family:'IBM Plex Mono',monospace;font-size:11px;fill:#2f3b47;cursor:text;}
 .temp-line{stroke:var(--accent);stroke-width:2;stroke-dasharray:5,4;fill:none;}
 
 .mobile-toggle{display:none;}
@@ -393,6 +393,58 @@ hr.sep{border:none;border-top:1px solid var(--panel-border);margin:16px 0;}
   .del-btn, .btn{padding:11px 14px;}
 }
 </style>
+<style id="apple-chrome">
+/* ===== Apple-/iOS-Look mit Avacon-Grün (nur Bedienoberfläche; das Diagramm bleibt hell/druckbar) ===== */
+:root{
+  --accent:#8cc640; --accent-dark:#6ba31a; --accent-soft:#e6f2cf;
+  --bp-bg:#f7f8fa; --bp-grid:#e6e9ee; --bp-grid-major:#d3d8df;
+  --panel:#f2f2f7; --panel-border:#e0e0e6; --ink:#1d1d1f; --ink-soft:#6e6e73;
+  --line:#1c2733; --ok:#6ba31a;
+  --ui:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,sans-serif;
+}
+body,.btn,.pdf-setting,.symbol-btn,.tmpl-select,.align-ctrl button{font-family:var(--ui);}
+header.topbar{background:rgba(255,255,255,.86);backdrop-filter:saturate(180%) blur(14px);-webkit-backdrop-filter:saturate(180%) blur(14px);color:var(--ink);border-bottom:1px solid var(--panel-border);padding:10px 16px;gap:10px;}
+header.topbar h1{font-family:var(--ui);font-size:17px;font-weight:700;letter-spacing:-.01em;color:var(--ink);}
+header.topbar h1::first-letter{color:var(--accent-dark);}
+header.topbar input{background:#eeeef3;border:1px solid transparent;color:var(--ink);border-radius:9px;padding:7px 10px;font-family:var(--ui);font-size:13px;width:124px;}
+header.topbar input:focus{outline:2px solid var(--accent);background:#fff;}
+header.topbar input::placeholder{color:#9a9aa0;}
+.btn,.pdf-setting{background:#eeeef3;border:1px solid transparent;color:var(--ink);border-radius:9px;padding:7px 13px;font-size:13px;font-weight:500;}
+.pdf-setting{padding:7px 8px;}
+.btn:hover{background:#e3e3ea;}
+.btn.primary{background:var(--accent);border-color:transparent;color:#0b1a02;font-weight:700;}
+.btn.primary:hover{background:#9ad24d;color:#0b1a02;}
+.btn.danger{background:#fdecea;border-color:transparent;color:#c0392b;}
+.btn.danger:hover{background:#fbd9d4;}
+.sidebar{background:var(--panel);padding:16px 14px;border-color:var(--panel-border);}
+.sidebar h2{font-size:12px;letter-spacing:.06em;color:var(--ink-soft);margin:2px 2px 10px;}
+.symbol-btn{background:#fff;border:none;border-radius:12px;padding:10px 12px;margin-bottom:8px;box-shadow:0 1px 2px rgba(0,0,0,.06);font-size:14px;}
+.symbol-btn:hover{background:#fff;box-shadow:0 0 0 2px var(--accent);}
+.symbol-btn:active{transform:scale(.98);}
+.symbol-btn{line-height:1.25;overflow-wrap:anywhere;min-width:0;}
+.sidebar{overflow-x:hidden;}
+.tmpl-select,.field select,.field input[type=text],.field input[type=number]{background:#fff;border:1px solid transparent;border-radius:10px;padding:9px 11px;font-family:var(--ui);font-size:14px;box-shadow:0 1px 2px rgba(0,0,0,.06);}
+.field select:focus,.field input:focus,.tmpl-select:focus{outline:2px solid var(--accent);}
+.field label{font-size:12px;letter-spacing:.03em;text-transform:none;font-weight:600;margin-bottom:5px;}
+.tmpl-note{background:var(--accent-soft);border:none;border-radius:10px;color:#3b4a22;}
+hr.sep{border-top-color:var(--panel-border);}
+.del-btn{border:none;border-radius:10px;background:#fdecea;color:#c0392b;padding:10px;}
+.zoom-ctrl,.align-ctrl{border:none;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.14);background:rgba(255,255,255,.95);}
+.zoom-ctrl button{font-family:var(--ui);}
+.align-ctrl button:hover,.zoom-ctrl button:active{background:var(--accent-soft);}
+.hint{border:none;border-radius:10px;box-shadow:0 1px 6px rgba(0,0,0,.1);font-family:var(--ui);}
+.check-box{border-radius:16px;}
+.check-header,.sidebar-header{background:#fff;color:var(--ink);font-family:var(--ui);border-bottom:1px solid var(--panel-border);}
+.check-header button,.sidebar-header button{color:var(--ink-soft);}
+.connector{opacity:.55;}
+@keyframes flashProps{0%{box-shadow:inset 0 0 0 3px var(--accent)}100%{box-shadow:inset 0 0 0 3px transparent}}
+.props.flash{animation:flashProps .9s ease-out;border-radius:12px;}
+.connector:hover,.connector.pending{fill:var(--accent);stroke:var(--accent-dark);}
+.node.selected .node-shape{stroke:var(--accent-dark);stroke-width:3;}
+.conn-line.selected{stroke:var(--accent-dark);}
+.conn-line.ctrl{stroke:#c26f16;}
+.canvas-wrap{background-size:20px 20px,20px 20px,100px 100px,100px 100px;}
+</style>
 <style id="tb-tokens">
 :root{--tb-bg:#000000;--tb-panel:#1c1c1e;--tb-panel2:#2c2c2e;--tb-inset:#121214;--tb-seg:#3a3a3c;--tb-toggle:#39393d;--tb-edge:#38383a;--tb-edge2:#48484a;--tb-acc:#8cc63f;--tb-acc-hi:#9fd652;--tb-acc-dim:#6f9c2e;--tb-on-acc:#0b1a02;--tb-text:#f5f5f7;--tb-dim:#98989f;--tb-green:#30d158;--tb-red:#ff453a;--tb-blue:#64a8ff;--tb-orange:#ff9f0a;--tb-purple:#bf8cff;--tb-cyan:#5ac8fa;color-scheme:dark;--tb-acc-bg:color-mix(in srgb,var(--tb-acc) 16%,var(--tb-panel));--tb-red-bg:color-mix(in srgb,var(--tb-red) 16%,var(--tb-panel));--tb-green-bg:color-mix(in srgb,var(--tb-green) 16%,var(--tb-panel));--tb-blue-bg:color-mix(in srgb,var(--tb-blue) 16%,var(--tb-panel));--tb-orange-bg:color-mix(in srgb,var(--tb-orange) 16%,var(--tb-panel));--tb-purple-bg:color-mix(in srgb,var(--tb-purple) 16%,var(--tb-panel));--tb-cyan-bg:color-mix(in srgb,var(--tb-cyan) 16%,var(--tb-panel));}
 :root[data-theme="light"]{--tb-bg:#f2f2f7;--tb-panel:#ffffff;--tb-panel2:#eeeef3;--tb-inset:#f2f2f7;--tb-seg:#ffffff;--tb-toggle:#e5e5ea;--tb-edge:#d8d8de;--tb-edge2:#c6c6cc;--tb-acc:#6ba31a;--tb-acc-hi:#5d9111;--tb-acc-dim:#4d7a12;--tb-on-acc:#ffffff;--tb-text:#1c1c1e;--tb-dim:#6c6c70;--tb-green:#1f9d46;--tb-red:#d70015;--tb-blue:#0a64d8;--tb-orange:#c76a00;--tb-purple:#7a3fd0;--tb-cyan:#0a7ea4;color-scheme:light}
@@ -465,7 +517,7 @@ header.topbar input,.btn,.pdf-setting{background:var(--tb-panel2);border-color:v
     <button class="btn mobile-toggle" id="btnOpenLeft">☰ Symbole</button>
     <button class="btn mobile-toggle" id="btnOpenRight">⚙ Eigenschaften</button>
     <button class="btn" id="btnLoad">Öffnen…</button>
-    <input type="file" id="fileLoad" accept=".json" style="display:none">
+    <input type="file" id="fileLoad" accept=".json,.pdf,application/pdf,application/json" style="display:none">
     <button class="btn" id="btnSave">Speichern (.json)</button>
     <button class="btn" id="btnPng">PNG</button>
     <select class="pdf-setting" id="pdfFormat" title="Papierformat">
@@ -492,6 +544,7 @@ header.topbar input,.btn,.pdf-setting{background:var(--tb-panel2);border-color:v
     <button class="btn primary" id="btnPdf">PDF exportieren</button>
     <button class="btn" id="btnUndo" title="Rückgängig (Strg+Z)" disabled>↶</button>
     <button class="btn" id="btnRedo" title="Wiederholen (Strg+Y)" disabled>↷</button>
+    <button class="btn" id="btnAlign" title="Alles automatisch ausrichten: Ebenen, Unterzähler, gerade Verbindungen">⇅ Ausrichtung</button>
     <button class="btn" id="btnCheck">✓ Prüfen</button>
     <button class="btn danger" id="btnClear">Leeren</button>
   </header>
@@ -597,6 +650,7 @@ header.topbar input,.btn,.pdf-setting{background:var(--tb-panel2);border-color:v
       <button id="zoomOut">−</button>
       <button id="zoomReset">100%</button>
       <button id="zoomIn">+</button>
+      <button id="btnAlign2" title="Alles automatisch ausrichten">⇅</button>
     </div>
     <svg id="svgCanvas" width="2200" height="1500"></svg>
   </div>
@@ -615,7 +669,6 @@ header.topbar input,.btn,.pdf-setting{background:var(--tb-panel2);border-color:v
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 (function(){
 'use strict';
@@ -665,13 +718,13 @@ function updateUndoButtons(){
 }
 
 const TYPE_DEFS = {
-  netz:        { w:90,  h:90,  shape:'circle' },
-  zaehler:     { w:190, h:132, shape:'rect' },
-  anlage:      { w:90,  h:90,  shape:'circle' },
-  steuerung:   { w:64,  h:64,  shape:'circle' },
-  fae:         { w:56,  h:56,  shape:'circle' },
-  trafo:       { w:90,  h:90,  shape:'circle' },
-  sammelschiene: { w:260, h:34, shape:'busbar' },
+  netz:        { w:80,  h:80,  shape:'circle' },
+  zaehler:     { w:180, h:140, shape:'rect' },
+  anlage:      { w:80,  h:80,  shape:'circle' },
+  steuerung:   { w:60,  h:60,  shape:'circle' },
+  fae:         { w:60,  h:60,  shape:'circle' },
+  trafo:       { w:80,  h:80,  shape:'circle' },
+  sammelschiene: { w:280, h:40, shape:'busbar' },
   notiz:       { w:170, h:90,  shape:'note' },
   text:        { w:140, h:34,  shape:'text' }
 };
@@ -782,6 +835,7 @@ function screenToSvg(evt){
 // ---------- Rendering ----------
 function render(){
   svg.innerHTML = '';
+  nodes.forEach(n=>{ if(n.type==='zaehler') n.h = zaehlerHeight(n.props); });
 
   // connections first (under nodes)
   conns.forEach(c=>{
@@ -799,16 +853,10 @@ function render(){
     svg.appendChild(line);
 
     if(c.label){
-      const mx = (pa.x+pb.x)/2, my=(pa.y+pb.y)/2;
-      const bg = document.createElementNS(SVGNS,'rect');
-      const approxW = Math.max(30, c.label.length*6.2);
-      bg.setAttribute('x', mx-approxW/2); bg.setAttribute('y', my-9);
-      bg.setAttribute('width', approxW); bg.setAttribute('height', 15);
-      bg.setAttribute('class','conn-label-bg');
-      svg.appendChild(bg);
+      const lp = connLabelPos(pa, pb);
       const t = document.createElementNS(SVGNS,'text');
-      t.setAttribute('x', mx); t.setAttribute('y', my+3);
-      t.setAttribute('text-anchor','middle');
+      t.setAttribute('x', lp.x); t.setAttribute('y', lp.y);
+      t.setAttribute('text-anchor', lp.anchor);
       t.setAttribute('class','conn-label');
       t.textContent = c.label;
       t.addEventListener('pointerdown',(e)=>{ e.stopPropagation(); selectConn(c.id); });
@@ -873,10 +921,16 @@ const ZAEHLER_PAD_LEFT = 10;
 const ZAEHLER_LH = 13.5;
 const ZAEHLER_TYP_SHORT = { [ZAEHLERTYPEN[0]]:'Direkt', [ZAEHLERTYPEN[1]]:'Halbindirekt', [ZAEHLERTYPEN[2]]:'Indirekt' };
 
+function fmtDatumDe(iso){
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso||'');
+  return m ? `${m[3]}.${m[2]}.${m[1]}` : (iso||'');
+}
+function zaehlerHeight(props){
+  const lines = zaehlerBodyLines(props).length;
+  return Math.max(80, Math.ceil((ZAEHLER_HEADER_H + ZAEHLER_PAD_TOP + lines*ZAEHLER_LH + 14)/20)*20);
+}
 function zaehlerBodyLines(props){
   const lines = [];
-  if(ZAEHLER_TYP_SHORT[props.zaehlertyp]) lines.push({text:`Typ: ${ZAEHLER_TYP_SHORT[props.zaehlertyp]}`, field:null});
-  lines.push({text: `Abrechnung: ${effectiveSlpRlm(props)}`, field:null});
   if(props.zaehlertyp !== ZAEHLERTYPEN[0]){
     const k = computeWandlerkonstante(props);
     lines.push({text: k ? `Wandlerkonstante: ${k}` : 'ohne Wandler', field:null});
@@ -885,9 +939,13 @@ function zaehlerBodyLines(props){
   if(props.zaehlertyp === ZAEHLERTYPEN[2]){
     lines.push({text:`U: ${props.spannungPrimaer||'–'}/${props.spannungSekundaer||'–'} V`, field:null});
   }
-  if(props.zaehlernummer){
-    lines.push({text:`Nr: ${props.zaehlernummer}`, field:'zaehlernummer', prefix:'Nr: ', value:props.zaehlernummer});
+  const hist = props.nummerHistorie||[];
+  if(props.zaehlernummer || hist.length){
+    lines.push({text:`Nr: ${props.zaehlernummer||'–'}`, field:'zaehlernummer', prefix:'Nr: ', value:props.zaehlernummer||''});
   }
+  hist.slice(-2).reverse().forEach(h=>{
+    lines.push({text:`alt: ${h.nummer} (bis ${fmtDatumDe(h.datum)})`, field:null});
+  });
   return lines;
 }
 
@@ -943,7 +1001,7 @@ function drawShape(g, n){
     header.setAttribute('width', w); header.setAttribute('height', ZAEHLER_HEADER_H);
     header.setAttribute('class','zaehler-header');
     g.appendChild(header);
-    const headerText = `${n.props.messlokation||'Zähler'} · kWh` + (n.props.status==='geplant' ? ' · geplant' : '');
+    const headerText = `${n.props.messlokation||'Zähler'} · ${effectiveSlpRlm(n.props)}` + (n.props.status==='geplant' ? ' · geplant' : '');
     addLabel(g, headerText, -h/2+15, 'zaehler-header-text');
 
     const lines = zaehlerBodyLines(n.props);
@@ -1203,7 +1261,7 @@ function onNodeDown(e){
 
 let tempLine = null;
 const TAP_THRESHOLD = 10; // px of screen movement below which a connector press counts as a "tap"
-const GRID_SIZE = 100; // coarser grid: symbols land touching (2 steps) or with a half-gap (3 steps)
+const GRID_SIZE = 20; // = sichtbares Raster (20 px) und Raster aller Vorlagen
 
 // Shared connection creation: validates FAE (nur an PV-Anlagen) and auto-marks/labels
 // Steuerungseinrichtung/FAE ↔ Anlage links as "Steuerleitung" so they render distinctly.
@@ -1302,7 +1360,7 @@ function onPointerMove(e){
 // Shared elbow routing: bend close to the SOURCE point rather than at the midpoint.
 // This keeps multiple lines leaving the same connector visually parallel/"combed"
 // instead of each bending at a different point and crossing other symbols.
-const CONN_STUB = 28;
+const CONN_STUB = 64; // Knick unterhalb der Beschriftung (bis 3 Zeilen)
 function computeConnPath(pa, pb){
   if(Math.abs(pa.x-pb.x)<4 || Math.abs(pa.y-pb.y)<4){
     return `M ${pa.x} ${pa.y} L ${pb.x} ${pb.y}`;
@@ -1312,6 +1370,25 @@ function computeConnPath(pa, pb){
   if(dir>0 && bendY > pb.y) bendY = pa.y + (pb.y-pa.y)/2;
   if(dir<0 && bendY < pb.y) bendY = pa.y + (pb.y-pa.y)/2;
   return `M ${pa.x} ${pa.y} L ${pa.x} ${bendY} L ${pb.x} ${bendY} L ${pb.x} ${pb.y}`;
+}
+
+// Beschriftung neben der Leitung statt mittig darüber (Linie bleibt durchgehend sichtbar)
+function connLabelPos(pa, pb){
+  if(Math.abs(pa.x-pb.x)<4){ // senkrecht: rechts neben die Linie
+    return { x: pa.x+8, y: (pa.y+pb.y)/2+4, anchor:'start' };
+  }
+  if(Math.abs(pa.y-pb.y)<4){ // waagerecht: oberhalb der Linie
+    return { x: (pa.x+pb.x)/2, y: pa.y-6, anchor:'middle' };
+  }
+  const dir = pb.y >= pa.y ? 1 : -1;
+  let bendY = pa.y + dir*CONN_STUB;
+  if(dir>0 && bendY > pb.y) bendY = pa.y + (pb.y-pa.y)/2;
+  if(dir<0 && bendY < pb.y) bendY = pa.y + (pb.y-pa.y)/2;
+  if(Math.abs(pb.y-bendY) >= 22){ // letztes senkrechtes Stück ist lang genug – Text auf der Außenseite
+    return pb.x < pa.x ? { x: pb.x-8, y: (bendY+pb.y)/2+4, anchor:'end' }
+                       : { x: pb.x+8, y: (bendY+pb.y)/2+4, anchor:'start' };
+  }
+  return { x: (pa.x+pb.x)/2, y: bendY-6, anchor:'middle' };
 }
 
 // Cheap in-place update while dragging: move just the one <g> and reflow only its connected lines,
@@ -1331,6 +1408,197 @@ function updateNodePositionLive(n){
     const lineEl = svg.querySelector(`.conn-line[data-conn-id="${c.id}"]`);
     const d = connLinePath(c);
     if(lineEl && d) lineEl.setAttribute('d', d);
+  });
+}
+
+// ---------- Ausrichten: alles in Reihen (Ebenen) und Verbindungen gerade ----------
+const FREE_TYPES = ['notiz','text']; // freie Elemente bleiben, wo sie sind
+function snapToNeighbors(n){
+  const others = nodes.filter(o=>o.id!==n.id && !FREE_TYPES.includes(o.type));
+  let best=null;
+  others.forEach(o=>{ const d=Math.abs(o.y-n.y); if(d<=40 && (!best || d<best.d)) best={d,v:o.y}; });
+  if(best) n.y = best.v;
+  let bx=null;
+  conns.forEach(c=>{
+    const oid = c.a.node===n.id ? c.b.node : c.b.node===n.id ? c.a.node : null;
+    const o = oid && getNode(oid); if(!o) return;
+    const d=Math.abs(o.x-n.x); if(d<=40 && (bx===null || d<bx.d)) bx={d,v:o.x};
+  });
+  if(bx) n.x = bx.v;
+}
+function alignLevels(){
+  const list = nodes.filter(n=>!FREE_TYPES.includes(n.type)).sort((a,b)=>a.y-b.y);
+  // 1) Ebenen bilden und auf gleiche Höhe setzen
+  let cluster=[];
+  const flush=()=>{
+    if(!cluster.length) return;
+    const y = Math.round(cluster.reduce((s,n)=>s+n.y,0)/cluster.length/GRID_SIZE)*GRID_SIZE;
+    cluster.forEach(n=>{ n.y=y; });
+    cluster=[];
+  };
+  list.forEach(n=>{
+    if(cluster.length && n.y-cluster[0].y>50) flush();
+    cluster.push(n);
+  });
+  flush();
+  // 2) Von oben nach unten: Knoten mit genau einer Verbindung nach oben senkrecht unter den Vorgänger setzen
+  list.sort((a,b)=>a.y-b.y).forEach(n=>{
+    const ups = [];
+    conns.forEach(c=>{
+      const oid = c.a.node===n.id ? c.b.node : c.b.node===n.id ? c.a.node : null;
+      const o = oid && getNode(oid); if(o && o.y < n.y-10) ups.push(o);
+    });
+    if(ups.length!==1) return;
+    const nx = ups[0].x;
+    if(Math.abs(nx-n.x)>80 || nx===n.x) return;
+    const clash = list.some(o=>o!==n && o.y===n.y && Math.abs(o.x-nx) < (o.w+n.w)/2+20);
+    if(!clash) n.x = nx;
+  });
+}
+
+// Automatische Ausrichtung: Ebenen von oben nach unten (Unterzähler liegen automatisch eine Ebene tiefer),
+// Eltern mittig über ihren Abgängen, Steuer-Einrichtungen waagerecht neben ihrer Anlage.
+function autoLayout(){
+  const FREE = n=>FREE_TYPES.includes(n.type);
+  const items = nodes.filter(n=>!FREE(n));
+  if(!items.length) return;
+  const byId = {}; items.forEach(n=>byId[n.id]=n);
+  const oldPos = {}; nodes.forEach(n=>oldPos[n.id]={x:n.x,y:n.y});
+  const parents = {}, kids = {}, sides = [];
+  items.forEach(n=>{ parents[n.id]=[]; kids[n.id]=[]; });
+  conns.forEach(c=>{
+    const A=byId[c.a.node], B=byId[c.b.node]; if(!A||!B||A===B) return;
+    const pa=c.a.pt, pb=c.b.pt;
+    if((pa==='e'||pa==='w') && (pb==='e'||pb==='w')){
+      if(pa==='e'&&pb==='w') sides.push({left:A,right:B}); else if(pa==='w'&&pb==='e') sides.push({left:B,right:A});
+      return;
+    }
+    let up, down;
+    if(pa==='s'||pb==='n'){ up=A; down=B; }
+    else if(pb==='s'||pa==='n'){ up=B; down=A; }
+    else if(A.y<=B.y){ up=A; down=B; } else { up=B; down=A; }
+    if(!parents[down.id].includes(up.id)){ parents[down.id].push(up.id); kids[up.id].push(down.id); }
+  });
+  // Satelliten: Knoten, die nur über eine Seitenleitung hängen (z.B. Steuerung links der Anlage)
+  const sat = {};
+  sides.forEach(sd=>{
+    const l=sd.left;
+    if(!parents[l.id].length && !kids[l.id].length && !sat[l.id] && sd.right!==l) sat[l.id]=sd.right;
+  });
+  const isolated = items.filter(n=>!parents[n.id].length && !kids[n.id].length && !sat[n.id] && !sides.some(sd=>sd.left===n||sd.right===n));
+  const core = items.filter(n=>!isolated.includes(n) && !sat[n.id]);
+  // Ebenen (längster Weg von oben)
+  const layer = {}, visiting = new Set();
+  const lay = id=>{
+    if(layer[id]!==undefined) return layer[id];
+    if(visiting.has(id)) return 0; visiting.add(id);
+    let L = 0; parents[id].forEach(p=>{ L = Math.max(L, lay(p)+1); });
+    visiting.delete(id); return layer[id]=L;
+  };
+  core.forEach(n=>lay(n.id));
+  const satList = Object.keys(sat).map(id=>byId[id]);
+  satList.forEach(sn=>{ layer[sn.id] = lay(sat[sn.id].id); });
+  const slot = n=>{ const lab=(n.props&&n.props.label)||''; return Math.max(n.w, Math.min(300, lab.length*6.4))+40; };
+  // Reihenfolge: bisherige x-Lage bleibt erhalten
+  const primary = {}; const order = {};
+  core.forEach(n=>{
+    if(parents[n.id].length){
+      primary[n.id] = parents[n.id].slice().sort((a,b)=>layer[b]-layer[a] || byId[a].x-byId[b].x)[0];
+    }
+  });
+  const childrenOf = id=>{
+    const ks = core.filter(n=>primary[n.id]===id).sort((a,b)=>a.x-b.x);
+    satList.forEach(sn=>{ const r=sat[sn.id]; const i=ks.indexOf(r); if(i>=0 && primary[r.id]===id) ks.splice(i,0,sn); });
+    return ks;
+  };
+  const roots = core.filter(n=>!primary[n.id]).sort((a,b)=>a.x-b.x);
+  satList.forEach(sn=>{ const r=sat[sn.id]; if(!primary[r.id]){ const i=roots.indexOf(r); if(i>=0) roots.splice(i,0,sn); } });
+  const sw = {};
+  const width = n=>{
+    if(sw[n.id]!==undefined) return sw[n.id];
+    const ks = childrenOf(n.id); let tot=0; ks.forEach(k=>{ tot += width(k); });
+    return sw[n.id] = Math.max(slot(n), tot);
+  };
+  const place = (n,left)=>{
+    const ks = childrenOf(n.id), w=width(n);
+    if(!ks.length){ n.x = left + w/2; return; }
+    let tot=0; ks.forEach(k=>{ tot+=width(k); });
+    let cur = left + (w-tot)/2;
+    ks.forEach(k=>{ place(k,cur); cur += width(k); });
+    n.x = (ks[0].x + ks[ks.length-1].x)/2;
+  };
+  let cursor = 0;
+  roots.forEach(r=>{ place(r,cursor); cursor += width(r); });
+  const all = core.concat(satList);
+  const layers = {}; all.forEach(n=>{ (layers[layer[n.id]] = layers[layer[n.id]] || []).push(n); });
+  const resolve = ()=>{
+    Object.values(layers).forEach(arr=>{
+      arr.sort((a,b)=>a.x-b.x);
+      const want = arr.map(n=>n.x);
+      for(let i=1;i<arr.length;i++){ const d=(slot(arr[i-1])+slot(arr[i]))/2; if(arr[i].x < arr[i-1].x+d) arr[i].x = arr[i-1].x+d; }
+      const shift = (want.reduce((a,b)=>a+b,0) - arr.reduce((a,n)=>a+n.x,0))/arr.length;
+      arr.forEach(n=>{ n.x += shift; });
+    });
+  };
+  const mean = a=>a.reduce((s,v)=>s+v,0)/a.length;
+  for(let it=0; it<4; it++){
+    // abwärts: Knoten mit mehreren Eltern mittig unter alle Eltern
+    all.slice().sort((a,b)=>layer[a.id]-layer[b.id]).forEach(n=>{ if(parents[n.id].length>1 && !sat[n.id]) n.x = mean(parents[n.id].map(p=>byId[p].x)); });
+    resolve();
+    // aufwärts: Eltern mittig über ihre Abgänge
+    all.slice().sort((a,b)=>layer[b.id]-layer[a.id]).forEach(n=>{ const ks=kids[n.id].filter(k=>byId[k]&&!isolated.includes(byId[k])); if(ks.length) n.x = mean(ks.map(k=>byId[k].x)); });
+    resolve();
+  }
+  // Ketten (ein Vorgänger, der nur diesen einen Abgang hat) senkrecht untereinander
+  const byLayer = all.slice().sort((a,b)=>layer[a.id]-layer[b.id]);
+  byLayer.forEach(n=>{
+    if(sat[n.id] || parents[n.id].length!==1) return;
+    const pr = byId[parents[n.id][0]];
+    if(kids[pr.id].filter(k=>byId[k]).length===1) n.x = pr.x;
+  });
+  byLayer.forEach(n=>{ if(parents[n.id].length>1 && !sat[n.id]) n.x = mean(parents[n.id].map(p=>byId[p].x)); });
+  resolve();
+  // Blätter senkrecht unter den Vorgänger, wo Platz ist
+  all.slice().sort((a,b)=>layer[a.id]-layer[b.id]).forEach(n=>{
+    if(!kids[n.id].length && parents[n.id].length===1 && !sat[n.id]) n.x = byId[parents[n.id][0]].x;
+  });
+  resolve();
+  // Feinschliff: Ketten und einzelne Blätter exakt senkrecht unter den Vorgänger, wenn kein Symbol im Weg ist
+  for(let pass=0; pass<2; pass++){
+    byLayer.forEach(n=>{
+      if(sat[n.id] || parents[n.id].length!==1) return;
+      const pr = byId[parents[n.id][0]];
+      if(kids[pr.id].filter(k=>byId[k]).length!==1 && kids[n.id].length) return;
+      const nx = pr.x;
+      if(!all.some(o=>o!==n && layer[o.id]===layer[n.id] && Math.abs(o.x-nx) < (slot(o)+slot(n))/2)) n.x = nx;
+    });
+  }
+  // Satelliten waagerecht neben ihre Anlage (gleiche Höhe wird unten über die Ebene erzwungen)
+  // Zeilenhöhen
+  const GAP = 120;
+  const Ls = Object.keys(layers).map(Number).sort((a,b)=>a-b);
+  let y = 120, prevH = 0;
+  Ls.forEach((L,i)=>{
+    const h = Math.max.apply(null, layers[L].map(n=>n.h));
+    y = i===0 ? 120 : y + prevH/2 + GAP + h/2;
+    y = Math.round(y/GRID_SIZE)*GRID_SIZE;
+    layers[L].forEach(n=>{ n.y=y; });
+    prevH = h;
+  });
+  // Einzelne, unverbundene Symbole in eine Reihe darunter
+  if(isolated.length){
+    y = Math.round((y + prevH/2 + GAP + 60)/GRID_SIZE)*GRID_SIZE;
+    let ix = 0; isolated.sort((a,b)=>a.x-b.x).forEach(n=>{ n.x = ix + slot(n)/2; ix += slot(n); n.y=y; });
+    all.push.apply(all, isolated);
+  }
+  // links ausrichten, aufs Raster legen
+  const minLeft = Math.min.apply(null, all.map(n=>n.x-n.w/2));
+  all.forEach(n=>{ n.x = Math.round((n.x - minLeft + 100)/GRID_SIZE)*GRID_SIZE; });
+  // Notizen/Textfelder wandern mit ihrem nächsten Symbol
+  nodes.filter(FREE).forEach(f=>{
+    let best=null, bd=Infinity;
+    items.forEach(n=>{ const d=Math.hypot(oldPos[n.id].x-f.x, oldPos[n.id].y-f.y); if(d<bd){bd=d;best=n;} });
+    if(best){ f.x += best.x-oldPos[best.id].x; f.y += best.y-oldPos[best.id].y; }
   });
 }
 
@@ -1361,6 +1629,7 @@ function onPointerUp(e){
         if(n){
           n.x = Math.round(n.x/GRID_SIZE)*GRID_SIZE;
           n.y = Math.round(n.y/GRID_SIZE)*GRID_SIZE;
+          if(!FREE_TYPES.includes(n.type)) snapToNeighbors(n); // rastet an vorhandener Reihe / Verbindung ein
         }
       }
     }
@@ -1504,6 +1773,30 @@ function renderProps(){
     } else if(n.type==='zaehler'){
       box.appendChild(fieldText('Messlokation / Zählpunkt', n.props.messlokation, v=>{ n.props.messlokation=v; render(); }, 'z.B. Z1'));
       box.appendChild(fieldText('Zählernummer (Gerät)', n.props.zaehlernummer, v=>{ n.props.zaehlernummer=v; render(); }, 'z.B. 1SAG1234567890'));
+      {
+        const hb = document.createElement('div'); hb.className='field';
+        const tb = document.createElement('button'); tb.className='btn'; tb.style.width='100%';
+        tb.textContent = 'Zähler getauscht – alte Nummer in Historie';
+        tb.onclick = ()=>{
+          if(!n.props.zaehlernummer){ alert('Es ist keine Zählernummer eingetragen.'); return; }
+          pushUndo();
+          n.props.nummerHistorie = (n.props.nummerHistorie||[]).concat([{ datum: new Date().toISOString().slice(0,10), nummer: n.props.zaehlernummer }]);
+          n.props.zaehlernummer = '';
+          render(); renderProps();
+          const inp = propsPanel.querySelector('input[placeholder="z.B. 1SAG1234567890"]'); if(inp) inp.focus();
+        };
+        hb.appendChild(tb);
+        (n.props.nummerHistorie||[]).slice().reverse().forEach((h,ri)=>{
+          const row = document.createElement('div');
+          row.style.cssText='display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--ink-soft);padding:5px 2px;';
+          row.innerHTML = '<span>alt: '+String(h.nummer).replace(/</g,'&lt;')+' · bis '+fmtDatumDe(h.datum)+'</span>';
+          const del = document.createElement('button'); del.textContent='✕'; del.title='Eintrag entfernen';
+          del.style.cssText='border:none;background:none;color:var(--ink-soft);cursor:pointer;font-size:14px;';
+          del.onclick = ()=>{ pushUndo(); const idx=(n.props.nummerHistorie.length-1-ri); n.props.nummerHistorie.splice(idx,1); render(); renderProps(); };
+          row.appendChild(del); hb.appendChild(row);
+        });
+        box.appendChild(hb);
+      }
       box.appendChild(fieldSelect('Zählertyp', n.props.zaehlertyp, ZAEHLERTYPEN, v=>{
         n.props.zaehlertyp=v;
         if(v===ZAEHLERTYPEN[2]){ n.props.slpRlm='RLM'; propagateRlm(n.id); } // MS/indirekt → immer RLM
@@ -1984,6 +2277,10 @@ function loadTemplate(key){
     conns.push(conn(n4,'e',n3,'w',false,'steuert'));
   }
 
+  // Alle Vorlagen-Symbole aufs gleiche Raster legen wie neu gezeichnete (GRID_SIZE)
+  nodes.forEach(n=>{ n.x = Math.round(n.x/GRID_SIZE)*GRID_SIZE; n.y = Math.round(n.y/GRID_SIZE)*GRID_SIZE; });
+  alignLevels();
+
   render();
   renderProps();
 }
@@ -2080,6 +2377,12 @@ document.querySelectorAll('.symbol-btn').forEach(btn=>{
     const y = Math.round((wrap.scrollTop + wrap.clientHeight/2)/GRID_SIZE)*GRID_SIZE;
     addNode(type, x, y);
     if(isMobile()) openSidebar('right');
+    // Eigenschaften sofort zum Ausfüllen anbieten, damit nichts vergessen wird
+    setTimeout(()=>{
+      const first = propsPanel.querySelector('input[type=text], input[type=number], textarea, select');
+      if(first){ first.scrollIntoView({block:'nearest'}); if(!isMobile()){ first.focus(); if(first.select && first.tagName==='INPUT') first.select(); } }
+      propsPanel.classList.remove('flash'); void propsPanel.offsetWidth; propsPanel.classList.add('flash');
+    }, 30);
   });
 });
 
@@ -2174,6 +2477,13 @@ function closeCheckModal(){
 document.getElementById('btnCheck').addEventListener('click', showCheckModal);
 document.getElementById('closeCheck').addEventListener('click', closeCheckModal);
 
+function doAutoAlign(){
+  if(!nodes.length) return;
+  pushUndo(); autoLayout(); render(); reselect();
+  const wrap = document.getElementById('canvasWrap'); if(wrap){ wrap.scrollLeft=0; wrap.scrollTop=0; }
+}
+document.getElementById('btnAlign').addEventListener('click', doAutoAlign);
+document.getElementById('btnAlign2').addEventListener('click', doAutoAlign);
 document.getElementById('btnClear').addEventListener('click', ()=>{
   if(nodes.length===0 && conns.length===0) return;
   if(confirm('Gesamtes Diagramm leeren?')){
@@ -2220,14 +2530,84 @@ document.getElementById('fileLoad').addEventListener('change', (e)=>{
   const reader = new FileReader();
   reader.onload = (ev)=>{
     try{
-      const data = JSON.parse(ev.target.result);
+      const buf = new Uint8Array(ev.target.result);
+      const isPdf = buf[0]===0x25 && buf[1]===0x50 && buf[2]===0x44 && buf[3]===0x46; // %PDF
+      let data, pdfNumbers = null;
+      if(isPdf){
+        const r = readEditorDataFromPdf(buf);
+        if(!r.data){ alert('In dieser PDF sind keine Editor-Daten enthalten. Nur PDFs, die mit diesem Editor exportiert wurden, lassen sich wieder öffnen (und nicht, wenn ein anderes Programm sie komplett neu geschrieben hat).'); return; }
+        data = r.data; pdfNumbers = r.numbers;
+      } else {
+        data = JSON.parse(new TextDecoder('utf-8').decode(buf));
+      }
       if(nodes.length>0 || conns.length>0) pushUndo();
       loadProjectData(data);
+      if(pdfNumbers) applyPdfNumbers(pdfNumbers);
     }catch(err){ alert('Datei konnte nicht gelesen werden: '+err.message); }
   };
-  reader.readAsText(file);
+  reader.readAsArrayBuffer(file);
   e.target.value='';
 });
+
+// Editor-Daten (JSON) und im PDF geänderte Zählernummern aus einer exportierten PDF lesen
+function pdfUnescape(str){
+  if(str[0]==='<'){ // Hex-String
+    const hex = str.slice(1,-1).replace(/\s+/g,''); let out='';
+    for(let i=0;i<hex.length;i+=2) out += String.fromCharCode(parseInt(hex.substr(i,2),16)||0);
+    return decodePdfText(out);
+  }
+  let out=''; const t = str.slice(1,-1);
+  for(let i=0;i<t.length;i++){
+    const ch=t[i];
+    if(ch!=='\\'){ out+=ch; continue; }
+    const nx=t[++i];
+    if(/[0-7]/.test(nx)){ let o=nx; while(o.length<3 && /[0-7]/.test(t[i+1]||'')) o+=t[++i]; out+=String.fromCharCode(parseInt(o,8)); }
+    else if(nx==='n') out+='\n'; else if(nx==='r') out+='\r'; else if(nx==='t') out+='\t'; else out+=nx;
+  }
+  return decodePdfText(out);
+}
+function decodePdfText(s){
+  if(s.charCodeAt(0)===0xFE && s.charCodeAt(1)===0xFF){ let o=''; for(let i=2;i+1<s.length;i+=2) o+=String.fromCharCode((s.charCodeAt(i)<<8)|s.charCodeAt(i+1)); return o; }
+  return s;
+}
+function readEditorDataFromPdf(bytes){
+  let txt=''; for(let i=0;i<bytes.length;i+=8192) txt += String.fromCharCode.apply(null, bytes.subarray(i,i+8192));
+  let data=null;
+  const a = txt.indexOf('%MKDATA1\n');
+  if(a>=0){
+    const b = txt.indexOf('\nendstream', a);
+    try{ data = JSON.parse(txt.slice(a+9, b)); }catch(e){ data=null; }
+  }
+  // Felder: spätere Objekte (z.B. nach Bearbeiten im PDF-Reader) überschreiben frühere
+  const numbers = {};
+  const objRe = /\d+\s+\d+\s+obj([\s\S]*?)endobj/g; let m;
+  while((m = objRe.exec(txt))){
+    const body = m[1];
+    const t = /\/T\s*\(zaehlernummer_(\d+)_/.exec(body);
+    if(!t) continue;
+    const v = /\/V\s*(\((?:\\.|[^\\)])*\)|<[0-9A-Fa-f]*>)/.exec(body);
+    if(v) numbers[t[1]] = pdfUnescape(v[1]);
+  }
+  return { data, numbers };
+}
+function applyPdfNumbers(numbers){
+  const zs = nodes.filter(n=>n.type==='zaehler' && (n.props.zaehlernummer || (n.props.nummerHistorie||[]).length));
+  const changes = [];
+  zs.forEach((n,i)=>{
+    if(numbers[i]===undefined) return;
+    const neu = numbers[i].trim(), alt = n.props.zaehlernummer||'';
+    if(neu!==alt) changes.push({n, alt, neu});
+  });
+  if(!changes.length) return;
+  const msg = 'Im PDF wurden Zählernummern geändert:\n\n' + changes.map(c=>`${c.n.props.messlokation||'Zähler'}: ${c.alt||'–'} → ${c.neu||'–'}`).join('\n') + '\n\nÜbernehmen? Die alte Nummer kommt in die Historie.';
+  if(!confirm(msg)) return;
+  pushUndo();
+  changes.forEach(c=>{
+    if(c.alt) c.n.props.nummerHistorie = (c.n.props.nummerHistorie||[]).concat([{ datum:new Date().toISOString().slice(0,10), nummer:c.alt }]);
+    c.n.props.zaehlernummer = c.neu;
+  });
+  render(); renderProps();
+}
 
 // ---------- Export ----------
 function buildExportSvgDataUrl(){
@@ -2252,11 +2632,10 @@ function buildExportSvgDataUrl(){
     .zaehler-header{fill:#20303f;stroke:none;}
     .zaehler-header-text{font-size:10.5px;font-weight:600;fill:#eef2f6;}
     .lbl-type{font-size:12px;font-weight:600;}
-    .lbl-sub{font-size:10.5px;fill:#4a5866;}
+    .lbl-sub{font-size:11px;fill:#2f3b47;}
     .conn-line{stroke:#20303f;stroke-width:2;fill:none;}
     .conn-line.ctrl{stroke:#c26f16;stroke-dasharray:6,4;}
-    .conn-label{font-size:10.5px;fill:#4a5866;}
-    .conn-label-bg{fill:#ffffff;}
+    .conn-label{font-size:11px;fill:#2f3b47;}
   `;
   clone.insertBefore(styleEl, clone.firstChild);
 
@@ -2344,7 +2723,7 @@ function buildExportSvgDataUrl(){
 
   const xml = new XMLSerializer().serializeToString(clone);
   const svg64 = btoa(unescape(encodeURIComponent(xml)));
-  return { url: 'data:image/svg+xml;base64,'+svg64, w, h, minX, viewY: minY-padTop };
+  return { url: 'data:image/svg+xml;base64,'+svg64, w, h, minX, viewY: minY-padTop, clone };
 }
 
 function renderToCanvas(cb){
@@ -2374,70 +2753,213 @@ document.getElementById('btnPng').addEventListener('click', ()=>{
   });
 });
 
+// ---------- Vektor-PDF (ohne externe Bibliothek): Linien/Formen als Vektoren, Text als echter Text ----------
+const HELV_W = {' ':278,'!':278,'"':355,'#':556,'$':556,'%':889,'&':667,"'":191,'(':333,')':333,'*':389,'+':584,',':278,'-':333,'.':278,'/':278,':':278,';':278,'<':584,'=':584,'>':584,'?':556,'@':1015,'A':667,'B':667,'C':722,'D':722,'E':667,'F':611,'G':778,'H':722,'I':278,'J':500,'K':667,'L':556,'M':833,'N':722,'O':778,'P':667,'Q':778,'R':722,'S':667,'T':611,'U':722,'V':667,'W':944,'X':667,'Y':667,'Z':611,'[':278,'\\':278,']':278,'^':469,'_':556,'`':333,'a':556,'b':556,'c':500,'d':556,'e':556,'f':278,'g':556,'h':556,'i':222,'j':222,'k':500,'l':222,'m':833,'n':556,'o':556,'p':556,'q':556,'r':333,'s':500,'t':278,'u':556,'v':500,'w':722,'x':500,'y':500,'z':500,'{':334,'|':260,'}':334,'~':584};
+function pdfTextW(t, fs, bold){ let w=0; for(const ch of t){ w += (HELV_W[ch]||556); } return w/1000*fs*(bold?1.06:1); }
+const PDF_FONTS = { n:'F1', b:'F2', i:'F3', bi:'F4' };
+const PDF_CHARMAP = {'○':'o','●':'*','▭':'[]','▬':'=','–':'\x96','—':'\x97','„':'\x84','“':'\x93','”':'\x94','‚':'\x82','‘':'\x91','’':'\x92','•':'\x95','…':'\x85','€':'\x80','→':'->','←':'<-','↔':'<->','Ω':'Ohm','🔒':'',' ':' '};
+function pdfLatin(t){
+  let o='';
+  for(const ch of String(t)){
+    if(PDF_CHARMAP[ch]!==undefined){ o+=PDF_CHARMAP[ch]; continue; }
+    const c = ch.charCodeAt(0);
+    o += c<=255 ? ch : '?';
+  }
+  return o;
+}
+function pdfEsc(t){
+  let o='';
+  for(let i=0;i<t.length;i++){
+    const c=t.charCodeAt(i), ch=t[i];
+    if(ch==='('||ch===')'||ch==='\\') o+='\\'+ch;
+    else if(c<32||c>126) o+='\\'+('00'+c.toString(8)).slice(-3);
+    else o+=ch;
+  }
+  return o;
+}
+function pdfNum(v){ return (Math.round(v*1000)/1000).toString(); }
+function pdfColor(css){
+  const m = /rgba?\(\s*([\d.]+)[ ,]+([\d.]+)[ ,]+([\d.]+)(?:[ ,/]+([\d.]+%?))?/.exec(css||'');
+  if(!m) return null;
+  if(m[4]!==undefined){ const a=m[4].endsWith('%')?parseFloat(m[4])/100:parseFloat(m[4]); if(a===0) return null; }
+  return [m[1],m[2],m[3]].map(x=>pdfNum(parseFloat(x)/255)).join(' ');
+}
+
+function exportVectorPdf(){
+  const ex = buildExportSvgDataUrl();
+  const { w, h, minX, viewY } = ex;
+
+  // Export-SVG in einem unsichtbaren, leeren iframe auswerten: so gelten nur die Export-Stile
+  // (keine Auswahl-Hervorhebung, keine Bildschirmfarben der Oberfläche)
+  const frame = document.createElement('iframe');
+  frame.style.cssText = 'position:absolute;left:-99999px;top:0;width:'+Math.ceil(w)+'px;height:'+Math.ceil(h)+'px;border:0;visibility:hidden;';
+  document.body.appendChild(frame);
+  const fdoc = frame.contentDocument;
+  fdoc.open(); fdoc.write('<!DOCTYPE html><html><body style="margin:0">'); fdoc.close();
+  const root = fdoc.importNode(ex.clone, true);
+  root.querySelectorAll('.selected,.multi-selected').forEach(e=>e.classList.remove('selected','multi-selected'));
+  fdoc.body.appendChild(root);
+  const getComputedStyle = el => frame.contentWindow.getComputedStyle(el);
+
+  // Seitengeometrie
+  const ratio = w/h;
+  const orientSetting = document.getElementById('pdfOrientation').value;
+  const landscape = orientSetting==='auto' ? ratio>1 : orientSetting==='landscape';
+  const fmt = document.getElementById('pdfFormat').value;
+  let [pw,ph] = fmt==='a3' ? [841.89,1190.55] : [595.28,841.89];
+  if(landscape) [pw,ph]=[ph,pw];
+  const margin = (parseFloat(document.getElementById('pdfMargin').value)||2) * 28.3465;
+  let imgW = pw-margin*2, imgH = imgW/ratio;
+  if(imgH > ph-margin*2){ imgH = ph-margin*2; imgW = imgH*ratio; }
+  const sc = document.getElementById('pdfScale').value;
+  if(sc!=='max'){ const f=parseFloat(sc); imgW*=f; imgH*=f; }
+  const ox = (pw-imgW)/2, oy = (ph-imgH)/2, S = imgW/w;
+  const X = x=> ox + (x-minX)*S;
+  const Y = y=> ph - (oy + (y-viewY)*S);
+
+  const ops = [];
+  const fields = [];
+  const num = (el,a)=> parseFloat(el.getAttribute(a))||0;
+
+  function paint(el, closeOnly){
+    const cs = getComputedStyle(el);
+    const fill = pdfColor(cs.fill), stroke = pdfColor(cs.stroke);
+    const sw = parseFloat(cs.strokeWidth)||0;
+    let pre = '';
+    if(fill) pre += fill+' rg ';
+    if(stroke && sw>0){
+      pre += stroke+' RG '+pdfNum(sw*S)+' w ';
+      const cap = cs.strokeLinecap==='round'?1:cs.strokeLinecap==='square'?2:0;
+      pre += cap+' J ';
+      const da = (cs.strokeDasharray||'').match(/[\d.]+/g);
+      pre += (da && da.length && cs.strokeDasharray!=='none') ? '['+da.map(v=>pdfNum(parseFloat(v)*S)).join(' ')+'] 0 d ' : '[] 0 d ';
+    }
+    const doStroke = !!(stroke && sw>0);
+    const op = fill && doStroke ? 'B' : fill ? 'f' : doStroke ? 'S' : 'n';
+    return { pre, op };
+  }
+
+  function walk(el, tx, ty, node){
+    const tag = el.tagName.toLowerCase();
+    if(tag==='style') return;
+    if(tag==='svg'){ [...el.children].forEach(c=>walk(c,tx,ty,node)); return; }
+    if(tag==='g'){
+      const m = /translate\(\s*([-\d.eE+]+)[ ,]+([-\d.eE+]+)\s*\)/.exec(el.getAttribute('transform')||'');
+      const nid = el.getAttribute('data-node-id');
+      const nn = nid ? (nodes.find(q=>q.id===nid)||node) : node;
+      [...el.children].forEach(c=>walk(c, tx+(m?parseFloat(m[1]):0), ty+(m?parseFloat(m[2]):0), nn));
+      return;
+    }
+    if(tag==='rect'){
+      const p = paint(el); if(p.op==='n') return;
+      ops.push(`q ${p.pre}${pdfNum(X(tx+num(el,'x')))} ${pdfNum(Y(ty+num(el,'y')+num(el,'height')))} ${pdfNum(num(el,'width')*S)} ${pdfNum(num(el,'height')*S)} re ${p.op} Q`);
+      return;
+    }
+    if(tag==='circle'){
+      const p = paint(el); if(p.op==='n') return;
+      const cx=X(tx+num(el,'cx')), cy=Y(ty+num(el,'cy')), r=num(el,'r')*S, k=0.5523*r;
+      ops.push(`q ${p.pre}${pdfNum(cx+r)} ${pdfNum(cy)} m ${pdfNum(cx+r)} ${pdfNum(cy+k)} ${pdfNum(cx+k)} ${pdfNum(cy+r)} ${pdfNum(cx)} ${pdfNum(cy+r)} c ${pdfNum(cx-k)} ${pdfNum(cy+r)} ${pdfNum(cx-r)} ${pdfNum(cy+k)} ${pdfNum(cx-r)} ${pdfNum(cy)} c ${pdfNum(cx-r)} ${pdfNum(cy-k)} ${pdfNum(cx-k)} ${pdfNum(cy-r)} ${pdfNum(cx)} ${pdfNum(cy-r)} c ${pdfNum(cx+k)} ${pdfNum(cy-r)} ${pdfNum(cx+r)} ${pdfNum(cy-k)} ${pdfNum(cx+r)} ${pdfNum(cy)} c h ${p.op} Q`);
+      return;
+    }
+    if(tag==='line'){
+      const p = paint(el); if(p.op==='n') return;
+      ops.push(`q ${p.pre}${pdfNum(X(tx+num(el,'x1')))} ${pdfNum(Y(ty+num(el,'y1')))} m ${pdfNum(X(tx+num(el,'x2')))} ${pdfNum(Y(ty+num(el,'y2')))} l S Q`);
+      return;
+    }
+    if(tag==='path'){
+      const p = paint(el); if(p.op==='n') return;
+      const t = (el.getAttribute('d')||'').match(/[MLZmlz]|-?[\d.]+(?:e-?\d+)?/g)||[];
+      let d='', i=0, cmd='';
+      while(i<t.length){
+        if(/[A-Za-z]/.test(t[i])){ cmd=t[i++]; if(cmd==='Z'||cmd==='z'){ d+='h '; } continue; }
+        const x=parseFloat(t[i++]), y=parseFloat(t[i++]);
+        d += `${pdfNum(X(tx+x))} ${pdfNum(Y(ty+y))} ${cmd.toUpperCase()==='M'?'m':'l'} `;
+        if(cmd==='M') cmd='L';
+      }
+      ops.push(`q ${p.pre}${d}${p.op==='f'||p.op==='B'?p.op:'S'} Q`);
+      return;
+    }
+    if(tag==='text'){
+      let txt = pdfLatin(el.textContent||'');
+      if(!txt.trim()) return;
+      const cs = getComputedStyle(el);
+      const fs = parseFloat(cs.fontSize)||10;
+      const bold = parseInt(cs.fontWeight,10)>=600 || cs.fontWeight==='bold';
+      const ital = cs.fontStyle==='italic' || cs.fontStyle==='oblique';
+      const font = PDF_FONTS[(bold?'b':'')+(ital?'i':'') || 'n'];
+      const col = pdfColor(cs.fill) || '0 0 0';
+      const tw = pdfTextW(txt, fs, bold);
+      const anchor = el.getAttribute('text-anchor') || cs.textAnchor || 'start';
+      const bx = tx+num(el,'x'), by = ty+num(el,'y');
+      let x0 = bx;
+      const emit = (t, xx)=> ops.push(`BT ${col} rg /${font} ${pdfNum(fs*S)} Tf ${pdfNum(X(xx))} ${pdfNum(Y(by))} Td (${pdfEsc(t)}) Tj ET`);
+      // Zählernummer: Vorsilbe fest, Wert als editierbares Formularfeld
+      if(node && node.type==='zaehler' && (node.props.zaehlernummer || (node.props.nummerHistorie||[]).length) && el.textContent==='Nr: '+(node.props.zaehlernummer||'–') && anchor==='start'){
+        emit('Nr: ', bx);
+        const fx = X(bx+pdfTextW('Nr: ', fs, bold)), right = X(node.x+node.w/2-6);
+        fields.push({ value: pdfLatin(node.props.zaehlernummer||''), x: fx, w: Math.max(30, right-fx), y: Y(by)-fs*S*0.28, h: fs*S*1.3, fs: fs*S, name: 'zaehlernummer_'+fields.length+'_'+(node.props.messlokation||node.id), col });
+        return;
+      }
+      if(anchor==='middle') x0 = bx - tw/2;
+      else if(anchor==='end') x0 = bx - tw;
+      // Beschriftung unter Symbolen/Sammelschiene: kleine weiße Fläche dahinter, damit Leitungen den Text nicht durchkreuzen
+      const cls = el.getAttribute('class')||'';
+      if(node && /lbl-sub|lbl-type/.test(cls) && node.type!=='zaehler'){
+        ops.push(`q 1 1 1 rg ${pdfNum(X(x0-2))} ${pdfNum(Y(by+fs*0.28))} ${pdfNum((tw+4)*S)} ${pdfNum(fs*1.08*S)} re f Q`);
+      }
+      emit(txt, x0);
+      return;
+    }
+    [...el.children].forEach(c=>walk(c,tx,ty,node));
+  }
+  try{ walk(root, 0, 0, null); }
+  finally{ document.body.removeChild(frame); }
+
+  // ---- PDF-Objekte schreiben ----
+  const objs = [];            // Strings, Index = Objektnr-1
+  const add = s=>{ objs.push(s); return objs.length; };
+  const fontIds = {};
+  const fontNames = {F1:'Helvetica',F2:'Helvetica-Bold',F3:'Helvetica-Oblique',F4:'Helvetica-BoldOblique'};
+  const catalogId = add(''), pagesId = add(''), pageId = add('');
+  Object.keys(fontNames).forEach(k=>{ fontIds[k] = add(`<< /Type /Font /Subtype /Type1 /BaseFont /${fontNames[k]} /Encoding /WinAnsiEncoding >>`); });
+  const fontRes = '<< /Font << '+Object.keys(fontIds).map(k=>`/${k} ${fontIds[k]} 0 R`).join(' ')+' >> >>';
+  const content = ops.join('\n');
+  const contentId = add(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
+  const annotIds = [];
+  fields.forEach(f=>{
+    const ap = `/Tx BMC q BT ${f.col} rg /F1 ${pdfNum(f.fs)} Tf 1 ${pdfNum(f.h*0.28)} Td (${pdfEsc(f.value)}) Tj ET Q EMC`;
+    const apId = add(`<< /Type /XObject /Subtype /Form /BBox [0 0 ${pdfNum(f.w)} ${pdfNum(f.h)}] /Resources ${fontRes} /Length ${ap.length} >>\nstream\n${ap}\nendstream`);
+    annotIds.push(add(`<< /Type /Annot /Subtype /Widget /FT /Tx /T (${pdfEsc(f.name)}) /V (${pdfEsc(f.value)}) /DA (/F1 ${pdfNum(f.fs)} Tf ${f.col} rg) /Rect [${pdfNum(f.x)} ${pdfNum(f.y)} ${pdfNum(f.x+f.w)} ${pdfNum(f.y+f.h)}] /F 4 /Border [0 0 0] /AP << /N ${apId} 0 R >> /P ${pageId} 0 R >>`));
+  });
+  const title = pdfEsc(pdfLatin(document.getElementById('mProjekt').value||'Messkonzept'));
+  // Editor-Daten als Anhang (messkonzept.json) einbetten: PDF lässt sich im Editor wieder öffnen und ergänzen
+  const json = JSON.stringify(buildSaveData()).replace(/[\u007f-\uffff]/g, c=>'\\u'+('0000'+c.charCodeAt(0).toString(16)).slice(-4));
+  const jsonBody = '%MKDATA1\n' + json;
+  const efId = add(`<< /Type /EmbeddedFile /Subtype /application#2Fjson /Length ${jsonBody.length} >>\nstream\n${jsonBody}\nendstream`);
+  const fsId = add(`<< /Type /Filespec /F (messkonzept.json) /UF (messkonzept.json) /Desc (Daten für den Messkonzept-Editor) /EF << /F ${efId} 0 R >> >>`);
+  const infoId = add(`<< /Title (${title}) /Producer (Messkonzept-Editor) >>`);
+  objs[catalogId-1] = `<< /Type /Catalog /Pages ${pagesId} 0 R /Names << /EmbeddedFiles << /Names [(messkonzept.json) ${fsId} 0 R] >> >>${annotIds.length?` /AcroForm << /Fields [${annotIds.map(i=>i+' 0 R').join(' ')}] /DR ${fontRes} /DA (/F1 0 Tf 0 g) >>`:''} >>`;
+  objs[pagesId-1] = `<< /Type /Pages /Kids [${pageId} 0 R] /Count 1 >>`;
+  objs[pageId-1] = `<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${pdfNum(pw)} ${pdfNum(ph)}] /Resources ${fontRes} /Contents ${contentId} 0 R${annotIds.length?` /Annots [${annotIds.map(i=>i+' 0 R').join(' ')}]`:''} >>`;
+  let out = '%PDF-1.4\n';
+  const offs = [];
+  objs.forEach((o,i)=>{ offs.push(out.length); out += `${i+1} 0 obj\n${o}\nendobj\n`; });
+  const xref = out.length;
+  out += `xref\n0 ${objs.length+1}\n0000000000 65535 f \n` + offs.map(o=>('0000000000'+o).slice(-10)+' 00000 n \n').join('');
+  out += `trailer\n<< /Size ${objs.length+1} /Root ${catalogId} 0 R /Info ${infoId} 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  const bytes = new Uint8Array(out.length);
+  for(let i=0;i<out.length;i++) bytes[i] = out.charCodeAt(i)&255;
+  const blob = new Blob([bytes], {type:'application/pdf'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (document.getElementById('mProjekt').value||'messkonzept').replace(/[^a-z0-9_\-]+/gi,'_') + '.pdf';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
+}
+
 document.getElementById('btnPdf').addEventListener('click', ()=>{
   if(nodes.length===0){ alert('Diagramm ist leer.'); return; }
-  renderToCanvas((canvas, tf)=>{
-    const { jsPDF } = window.jspdf;
-    const imgData = canvas.toDataURL('image/png');
-    const ratio = canvas.width/canvas.height;
-    const orientSetting = document.getElementById('pdfOrientation').value;
-    const orientation = orientSetting==='auto' ? (ratio>1 ? 'landscape':'portrait') : orientSetting;
-    const format = document.getElementById('pdfFormat').value;
-    const pdf = new jsPDF({ orientation, unit:'pt', format });
-    const pageW = pdf.internal.pageSize.getWidth();
-    const pageH = pdf.internal.pageSize.getHeight();
-    const marginCm = parseFloat(document.getElementById('pdfMargin').value) || 2;
-    const margin = marginCm * 28.3465; // cm → pt
-    let imgW = pageW-margin*2, imgH = imgW/ratio;
-    if(imgH > pageH-margin*2){ imgH = pageH-margin*2; imgW = imgH*ratio; }
-    const scaleSetting = document.getElementById('pdfScale').value;
-    if(scaleSetting !== 'max'){
-      const factor = parseFloat(scaleSetting);
-      imgW *= factor; imgH *= factor;
-    }
-    const x = (pageW-imgW)/2, y = (pageH-imgH)/2;
-    pdf.addImage(imgData,'PNG',x,y,imgW,imgH);
-
-    // Zählernummer als editierbares PDF-Formularfeld überlagern, damit sie sich später
-    // (z.B. bei Zählertausch) direkt im PDF ändern lässt, ohne das Diagramm neu zu exportieren.
-    if(tf && jsPDF.AcroFormTextField){
-      const scaleX = imgW / tf.w, scaleY = imgH / tf.h;
-      // Monospace-Zeichenbreite grob geschätzt, um die "Nr: "-Vorsilbe im Bild nicht zu überdecken
-      const charW = ZAEHLER_LH * 0.62;
-      let fieldSeq = 0;
-      nodes.filter(n=>n.type==='zaehler').forEach(n=>{
-        const lines = zaehlerBodyLines(n.props);
-        const idx = lines.findIndex(l=>l.field==='zaehlernummer');
-        if(idx===-1) return;
-        const bodyTop = -n.h/2 + ZAEHLER_HEADER_H + ZAEHLER_PAD_TOP;
-        const lineY = n.y + bodyTop + idx*ZAEHLER_LH; // Baseline in SVG-Koordinaten
-        const prefixW = lines[idx].prefix.length * charW;
-        const svgFieldX = n.x - n.w/2 + ZAEHLER_PAD_LEFT + prefixW;
-        const svgFieldRight = n.x + n.w/2 - 8;
-        const svgFieldTop = lineY - 10;
-        const svgFieldH = 14;
-
-        const pdfX = x + (svgFieldX - tf.minX) * scaleX;
-        const pdfY = y + (svgFieldTop - tf.viewY) * scaleY;
-        const pdfW = Math.max(20, (svgFieldRight - svgFieldX) * scaleX);
-        const pdfH = svgFieldH * scaleY;
-
-        // Weiße Fläche über den fest eingebrannten Wert legen, damit nur das Formularfeld sichtbar ist
-        pdf.setFillColor(255,255,255);
-        pdf.rect(pdfX-1, pdfY-1, pdfW+2, pdfH+2, 'F');
-
-        const field = new jsPDF.AcroFormTextField();
-        field.fieldName = 'zaehlernummer_' + (fieldSeq++) + '_' + (n.props.messlokation||n.id);
-        field.value = n.props.zaehlernummer || '';
-        field.x = pdfX; field.y = pdfY; field.width = pdfW; field.height = pdfH;
-        field.fontSize = Math.max(7, Math.round(10.5*scaleY));
-        field.color = '#20303f';
-        pdf.addField(field);
-      });
-    }
-
-    pdf.save((document.getElementById('mProjekt').value||'messkonzept').replace(/[^a-z0-9_\-]+/gi,'_') + '.pdf');
-  });
+  try{ exportVectorPdf(); }catch(err){ console.error(err); alert('PDF-Export fehlgeschlagen: '+err.message); }
 });
 
 // ---------- init ----------
