@@ -362,13 +362,18 @@ async function los() {
     $('preview').src = ergebnis.url;
     $('saveCard').hidden = false;
 
-    if ($('autosave').checked && !IOS) {
-      // Android / PC: direkt als Datei in "Downloads"
+    if ($('autosave').checked) {
+      // Direkt als Datei in "Downloads" (iOS: Safari fragt einmal "Laden?")
       herunterladen();
       $('status').textContent = `Gespeichert: ${ergebnis.name} (Downloads) · ±${Math.round(acc)} m`;
       $('status').className = 'ok';
-      $('save').textContent = 'Nochmal speichern / teilen';
-      $('saveHint').textContent = 'Das Bild liegt im Ordner Downloads und in der Galerie unter „Downloads“.';
+      if (IOS) {
+        $('save').textContent = 'Zusätzlich in Fotos sichern';
+        $('saveHint').textContent = 'Das Bild liegt in Dateien → Downloads. Für die Fotos-App hier tippen und „Bild sichern“ wählen.';
+      } else {
+        $('save').textContent = 'Nochmal speichern / teilen';
+        $('saveHint').textContent = 'Das Bild liegt im Ordner Downloads und in der Galerie unter „Downloads“.';
+      }
     } else {
       $('status').textContent = `Fertig · ±${Math.round(acc)} m`;
       $('save').textContent = 'Bild sichern';
