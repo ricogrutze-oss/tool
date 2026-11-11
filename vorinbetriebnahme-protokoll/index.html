@@ -534,6 +534,9 @@ img.thumb{cursor:pointer} #photoSheet .btn{display:flex;align-items:center;justi
       <label>Interne Bemerkung</label>
       <textarea id="bemerkungText"></textarea>
       <label>Unterschrift Prüfer (wird für die nächsten Protokolle gemerkt)</label>
+      <div id="sigPrev" style="border:1.5px dashed #999;border-radius:10px;min-height:70px;display:flex;align-items:center;justify-content:center;padding:6px;background:#fff"></div>
+      <div style="display:flex;gap:8px;margin-top:8px"><button type="button" class="btn" id="sigOpen" style="flex:1">Unterschreiben</button><button type="button" class="btn" id="sigClear" style="flex:1">Löschen</button></div>
+      <label>Name in Druckschrift (optional, falls nicht unterschrieben)</label>
       <input type="text" id="unterschrift">
     </div>
     <div class="card no-print">
@@ -1021,7 +1024,7 @@ function isStepComplete(id){
       return itemsDone('checkliste');
     }
     case 'ende': return (!absicherungVisible() || !!state.absicherung.sicherung) && itemsDone('ende');
-    case 'abschluss': return !!state.abschluss.unterschrift && gatherOffen().length===0;
+    case 'abschluss': return !!(state.abschluss.unterschrift||state.abschluss.sigImg) && gatherOffen().length===0;
   }
   return false;
 }
@@ -2258,7 +2261,7 @@ function gatherOffen(){   // fehlende Eingaben des Prüfers (keine Mängel der A
     { const _un = visibleItems().filter(i=>!chkAnswered(i.id)).length; if(_un) o.push('Checkliste: '+_un+' Punkt(e) noch nicht mit Ja oder Nein beantwortet'); }
     if(collectPhotos().length===0) o.push('Keine Fotos aufgenommen');
   }
-  if(!state.abschluss.unterschrift) o.push('Unterschrift fehlt');
+  if(!state.abschluss.unterschrift && !state.abschluss.sigImg) o.push('Unterschrift fehlt');
   return o;
 }
 
@@ -2669,7 +2672,7 @@ function reportCss(){
   + '.kls{display:inline-block;font-size:8pt;font-weight:700;padding:1px 6px;border-radius:8px;margin-right:4px;background:#eee}.kls.keine{background:#fdecee;color:#8a0018}.kls.frist{background:#fff4e0;color:#7a4a00}.kls.hinweis{background:#eef5dd;color:#3d6a08}'
   + '.fine{font-size:8pt;color:#555;margin-top:6px}'
   + '.sign{margin-top:18px;display:flex;justify-content:space-between;align-items:flex-end}'
-  + '.sig{font-family:"Brush Script MT",cursive;font-size:20pt;color:#1a3a8a;min-height:30px}'
+  + '.sigimg{display:block;height:46px;max-width:100%;margin:0 auto}.sig{font-family:"Brush Script MT",cursive;font-size:20pt;color:#1a3a8a;min-height:30px}'
   + '.pgrid{display:flex;flex-wrap:wrap;gap:10px}'
   + '.photo{width:48%;page-break-inside:avoid}'
   + '.photo .pn{font-size:8.5pt;color:#555;letter-spacing:.5px;border-bottom:1px dashed #aaa;margin-bottom:4px;text-transform:uppercase}'
@@ -2829,6 +2832,7 @@ function mapHtml(){
     + '</a><div class="cap">Antippen: Karte öffnen</div></div>';
 }
 
+function sigHtml(){ const a = state.abschluss; return a.sigImg ? '<div class="sig" style="min-height:0"><img class="sigimg" src="'+a.sigImg+'" alt="Unterschrift"></div>' : '<div class="sig">'+esc(a.unterschrift||'')+'</div>'; }
 function buildInternalHtml(){
   const s = state.standort, r = computeErgebnis();
   const adr = addressLines();
@@ -2875,7 +2879,7 @@ function buildInternalHtml(){
   if(r.offen.length) html += '<h3>Nicht dokumentiert</h3><ul style="margin:2px 0 0 18px;font-size:9pt;color:#555">'+r.offen.map(t=>'<li>'+esc(t)+'</li>').join('')+'</ul>';
   if(state.abschluss.bemerkung) html += '<h3>Bemerkung</h3><div style="font-size:9.5pt;white-space:pre-wrap">'+esc(state.abschluss.bemerkung)+'</div>';
   html += '<div class="sign"><div style="color:#444;font-size:9pt">Prüfer: '+esc(s.pruefer||'–')+'</div>'
-    + '<div style="text-align:center"><div class="sig">'+esc(state.abschluss.unterschrift||'')+'</div><div style="font-style:italic">'+esc(fmtDateDe())+'</div></div></div>';
+    + '<div style="text-align:center">'+sigHtml()+'<div style="font-style:italic">'+esc(fmtDateDe())+'</div></div></div>';
   html += '<div class="fine">'+(state.ebene==='NS' ? 'Bewertung der Mängel nach „Bewertung je Komponente“ (Stand 01.11.2026), Spalte '+(state.vorgang==='bestand'?'Bestandsanlage bzw. Neuanlage je Mangel':'Neuanlage')+' – fachliche Bewertung, keine Rechtsberatung.' : 'MS/HS: keine Bewertungsmatrix hinterlegt – jeder Mangel verhindert die Inbetriebsetzung'+(state.vorgang==='bestand'?' (Bestand: Mängelkarte mit Frist).':'.'))+'</div>';
 
   html += '</div>';
@@ -2917,10 +2921,39 @@ function buildExternalHtml(){
     }
     if(hinweis.length) html += '<h3 style="margin-top:12px">Hinweise (kein Verweigerungsgrund)</h3>'+maengelTabelle(hinweis,false);
   }
-  html += '<div class="sign" style="margin-top:24px"><div style="width:46%"><div class="sig">'+esc(state.abschluss.unterschrift||'')+'</div><div class="line">Prüfer Messstellenbetreiber'+(s.pruefer?': '+esc(s.pruefer):'')+' · '+esc(fmtDateDe())+'</div></div>'
+  html += '<div class="sign" style="margin-top:24px"><div style="width:46%">'+sigHtml()+'<div class="line">Prüfer Messstellenbetreiber'+(s.pruefer?': '+esc(s.pruefer):'')+' · '+esc(fmtDateDe())+'</div></div>'
     + '<div style="width:46%"><div class="line">Kenntnisnahme Installateur / Anlagenbetreiber (Ort, Datum, Unterschrift)</div></div></div>';
   html += '</div>';
   return html;
+}
+function externalText(){
+  const s = state.standort, r = computeErgebnis(), ext = r.ext;
+  const keine = ext.filter(m=>m.cls==='keine'), frist = ext.filter(m=>m.cls==='frist'), hinweis = ext.filter(m=>m.cls==='hinweis');
+  const anlass = {vor:'der Vorinbetriebnahme', ibn:'der Inbetriebnahme', nach:'der Nachprüfung', bestand:'der Abnahme der Bestandsanlage'}[state.vorgang] || 'der Prüfung';
+  const L = [];
+  L.push('MÄNGELSCHEIN – '+reportTitle(), '');
+  L.push([s.name].filter(Boolean).join(''), ...addressLines());
+  if(s.id) L.push('HarNES-Nr.: '+s.id);
+  L.push('Datum der Prüfung: '+fmtDateDe());
+  if(state.zaehler.z_nummer && state.vorgang!=='nach') L.push('Zählernummer: '+state.zaehler.z_nummer);
+  L.push('', 'ERGEBNIS: '+r.label, '');
+  const liste = (arr)=>arr.forEach((m,i)=>{
+    L.push((i+1)+'. '+m.text);
+    if(m.req) L.push('   Anforderung: '+m.req);
+    if(m.note) L.push('   Bemerkung: '+m.note);
+    if(m.massn) L.push('   Folge / Maßnahme: '+m.massn);
+    if(m.begr) L.push('   Begründung: '+m.begr+(m.quelle?' ('+m.quelle+')':''));
+    L.push('');
+  });
+  if(!ext.length){ L.push('Es wurden keine vom Installateur bzw. Anlagenbetreiber zu behebenden Mängel festgestellt.', ''); }
+  else {
+    L.push('Bei '+anlass+' wurden die nachfolgenden Feststellungen getroffen. Bitte beheben Sie die Mängel und melden Sie die Beseitigung dem Messstellenbetreiber zur Nachprüfung.', '');
+    if(keine.length){ L.push('MÄNGEL – KEINE INBETRIEBSETZUNG BIS ZUR BESEITIGUNG'); if(state.ebene==='NS') L.push(TXT_VERWEIGERUNG); L.push(''); liste(keine); }
+    if(frist.length){ L.push('MÄNGELKARTE MIT FRIST – INBETRIEBSETZUNG ERFOLGT', 'Frist zur Beseitigung: '+(fristIso()?fmtIso(fristIso()):'________________')+' (vier Wochen ab Prüfdatum)', ''); liste(frist); if(state.ebene==='NS') L.push(TXT_FRIST, ''); }
+    if(hinweis.length){ L.push('HINWEISE (KEIN VERWEIGERUNGSGRUND)', ''); liste(hinweis); }
+  }
+  L.push('Prüfer Messstellenbetreiber'+(s.pruefer?': '+s.pruefer:'')+' · '+fmtDateDe());
+  return L.join('\n');
 }
 function openInternalReport(){ openReport(wrapReport(reportFileTitle('Protokoll'), buildInternalHtml())); }
 function openExternalReport(){ openReport(wrapReport(reportFileTitle('Maengelschein'), buildExternalHtml())); }
@@ -3019,19 +3052,21 @@ async function htmlToPdfBlob(bodyHtml){
 let _finish = {files:null, pdfs:null};
 function dataJsonText(withPhotos){
   try{ state.abschluss.maengelListe = snapshotMaengel(computeErgebnis()); }catch(e){}
-  return JSON.stringify(state, (k,v)=>{ if(!withPhotos){ if(k==='weitereFotos') return []; if(typeof v==='string' && v.indexOf('data:image')===0) return ''; } return v; }, 1);
+  return JSON.stringify(state, (k,v)=>{ if(k==='sigImg') return v; if(!withPhotos){ if(k==='weitereFotos') return []; if(typeof v==='string' && v.indexOf('data:image')===0) return ''; } return v; }, 1);
 }
 function dataFile(){ const wp = document.getElementById('finishPhotos').checked; return new File([dataJsonText(wp)], reportFileTitle('Daten')+'.json', {type:'application/json'}); }
 function currentFiles(){ return (_finish.pdfs||[]).concat([dataFile()]); }
 function emailSubject(){
-  const s = state.standort, adr = addressLines().join(', ');
-  return reportTitle()+' – '+[s.name,adr].filter(Boolean).join(', ')+' ('+fmtDateDe()+')';
+  const s = state.standort;
+  const str = [s.strasse, s.hausnr].filter(Boolean).join(' '), ort = [s.plz, s.ort].filter(Boolean).join(' ');
+  const lei = [s.bezug?'Bezug '+s.bezug+' kW':'', s.einspeise?'Einspeisung '+s.einspeise+' kW':''].filter(Boolean).join(' / ');
+  return [reportTitle(), [str,ort].filter(Boolean).join(', '), s.name, lei].filter(Boolean).join(' – ')+' ('+fmtDateDe()+')';
 }
-function emailBody(){
+function emailBody(names){
   const r = computeErgebnis(), s = state.standort;
   let t = 'Ergebnis: '+r.label+'\n';
   if(r.frist.length) t += 'Frist zur Beseitigung der Mängel: '+fmtIso(fristIso())+'\n';
-  t += '\nAnlage: '+[s.name, addressLines().join(', ')].filter(Boolean).join(', ')+'\nPrüfdatum: '+fmtDateDe()+(s.pruefer?'\nPrüfer: '+s.pruefer:'')+'\n\nAnlagen: Inbetriebsetzungsprotokoll (intern), Mängelschein und Datendatei (JSON).';
+  t += '\nAnlage: '+[s.name, addressLines().join(', ')].filter(Boolean).join(', ')+'\nPrüfdatum: '+fmtDateDe()+(s.pruefer?'\nPrüfer: '+s.pruefer:'')+'\n\nAnlagen: '+((names&&names.length)?names:['Inbetriebsetzungsprotokoll (intern)','Mängelschein','Datendatei (JSON)']).join(', ')+'.';
   return t;
 }
 function finishLine(txt, cls){ const d=document.createElement('div'); d.textContent=txt; if(cls) d.className=cls; document.getElementById('finishStatus').appendChild(d); return d; }
@@ -3039,6 +3074,7 @@ function closeFinish(){ document.getElementById('finishModal').hidden = true; }
 async function openFinish(){
   ensureMapImg().catch(()=>{});
   const m = document.getElementById('finishModal'); m.hidden = false;
+  _finish.pdfs = null; _finish.files = null;
   renderFinishRecip();
   const st = document.getElementById('finishStatus'); st.innerHTML = '';
   ['finishShare','finishSave'].forEach(id=>document.getElementById(id).disabled = true);
@@ -3064,6 +3100,7 @@ async function openFinish(){
     state.abschluss.fertigTs = Date.now(); await flushDraft(); await archiveCurrent(true);
     prog.textContent = 'Fertig: Protokoll (intern), Mängelschein und Datendatei erstellt. Das Protokoll liegt im Verlauf.';
     ['finishShare','finishSave'].forEach(id=>document.getElementById(id).disabled = false);
+    renderFinishRecip();
   }catch(e){
     prog.textContent = 'PDF-Erstellung nicht möglich ('+(e&&e.message||e)+'). Die PDF-Bausteine werden einmalig aus dem Internet geladen. Alternativ die Berichte öffnen und über „Drucken / Als PDF speichern“ sichern.';
     prog.className = 'finish-warn';
@@ -3073,19 +3110,28 @@ async function openFinish(){
 function downloadFiles(files){
   files.forEach((f,i)=> setTimeout(()=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(f); a.download=f.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); }, i*500));
 }
-async function finishShare(){
-  if(!_finish.pdfs) return; const files = currentFiles();
+async function finishShare(g){
+  if(!_finish.pdfs) return;
+  const gr = (g && g.ids) ? g : null;
+  if(gr && gr.txt){
+    finishLine('E-Mail-Programm wird mit dem Mängelschein als Text geöffnet …');
+    location.href = 'mailto:'+gr.mails.map(encodeURIComponent).join(',')+'?subject='+encodeURIComponent(emailSubject())+'&body='+encodeURIComponent(externalText());
+    return;
+  }
+  const files = gr ? filesForGroup(gr) : currentFiles(), mails = gr ? gr.mails : recipientsFor(), names = gr ? gr.names.map(n=>n==='Protokoll intern'?'Inbetriebsetzungsprotokoll (intern)':n==='Datendatei'?'Datendatei (JSON)':n) : null;
   try{
     if(navigator.canShare && navigator.canShare({files})){
-      await navigator.share({files, title:emailSubject(), text:(ablageAdr()?'An: '+ablageAdr()+'\n\n':'')+emailBody()});
-      finishLine('Zum Teilen übergeben.');
+      let kop = false;
+      if(mails.length){ try{ await navigator.clipboard.writeText(mails.join('; ')); kop = true; }catch(e){} }
+      await navigator.share({files, title:emailSubject(), text:emailSubject()+'\n\n'+emailBody(names)});
+      finishLine('Zum Teilen übergeben.'+(kop?' Die E-Mail-Adresse(n) liegen in der Zwischenablage (im „An“-Feld einfügen).':''));
       return;
     }
   }catch(e){ if(e && e.name==='AbortError') return; }
   // Fallback (z. B. Desktop): PDFs speichern und E-Mail-Programm ohne Anhang öffnen
   downloadFiles(files);
   finishLine('Die Dateien wurden gespeichert. Bitte im E-Mail-Programm anhängen.');
-  location.href = 'mailto:'+encodeURIComponent(ablageAdr())+'?subject='+encodeURIComponent(emailSubject())+'&body='+encodeURIComponent(emailBody()+'\n\n(Dateien bitte anhängen)');
+  location.href = 'mailto:'+mails.map(encodeURIComponent).join(',')+'?subject='+encodeURIComponent(emailSubject())+'&body='+encodeURIComponent(emailBody(names)+'\n\n(Dateien bitte anhängen)');
 }
 function finishSave(){ if(_finish.pdfs) downloadFiles(currentFiles()); }
 document.getElementById('finishData').onclick = ()=>{ try{ state.standort.datum = document.getElementById('pruefdatum').value || state.standort.datum; }catch(e){} downloadFiles([dataFile()]); finishLine('Datendatei gespeichert. Bitte in den gemeinsamen Ordner legen.'); };
@@ -3102,6 +3148,8 @@ function profilSave(part){ try{ localStorage.setItem(PROFIL_KEY, JSON.stringify(
 function applyProfil(){
   const p = profilLoad();
   if(p.pruefer && !state.standort.pruefer){ state.standort.pruefer = p.pruefer; document.getElementById('pruefer').value = p.pruefer; }
+  if(p.sigImg && !state.abschluss.sigImg){ state.abschluss.sigImg = p.sigImg; }
+  paintSig();
   if(p.unterschrift && !state.abschluss.unterschrift){ state.abschluss.unterschrift = p.unterschrift; document.getElementById('unterschrift').value = p.unterschrift; }
   saveDraft();
 }
@@ -3203,18 +3251,44 @@ function recipList(){
     const l = []; if(pr.ablage) l.push(newRecip(pr.ablage));
     profilSave({empf:l}); return l;
   }
+  pr.empf.forEach(r=>{ if(!r.inh) r.inh = {prot:true, mang:true, json:true}; });
   return pr.empf;
 }
-function newRecip(mail){ return {name:'', mail:mail||'', ebene:{NS:true,MS:true,HS:true}, art:{vor:true,ibn:true,nach:true,bestand:true}}; }
+function newRecip(mail,inh){ return {name:'', mail:mail||'', ebene:{NS:true,MS:true,HS:true}, art:{vor:true,ibn:true,nach:true,bestand:true}, inh:inh||{prot:true,mang:true,json:true}}; }
+const INHALTE = [['prot','Protokoll intern'],['mang','Mängelschein'],['json','Datendatei']];
 function recipSave(l){ profilSave({empf:l}); }
-function recipientsFor(){
-  return recipList().filter(r=>r.mail && r.ebene && r.ebene[state.ebene] && r.art && r.art[state.vorgang]).map(r=>r.mail.trim());
+function recipObjsFor(){
+  return recipList().filter(r=>r.mail && r.mail.trim() && r.ebene && r.ebene[state.ebene] && r.art && r.art[state.vorgang]);
+}
+function recipientsFor(){ return recipObjsFor().map(r=>r.mail.trim()); }
+// Empfänger mit gleichem Inhalt werden zu einer Sendung zusammengefasst
+function groupsFor(){
+  const m = {};
+  recipObjsFor().forEach(r=>{
+    const k = r.txt ? 'txt' : INHALTE.filter(([id])=>r.inh[id]).map(([id])=>id).join('+'); if(!k) return;
+    (m[k] = m[k] || {key:k, mails:[], who:[]}); m[k].mails.push(r.mail.trim()); m[k].who.push(r.name||r.mail.trim());
+  });
+  return Object.values(m).map(g=>{ g.txt = g.key==='txt'; g.ids = g.txt ? ['mang'] : g.key.split('+'); g.names = g.txt ? ['Mängelschein als Text'] : INHALTE.filter(([id])=>g.ids.includes(id)).map(([,t])=>t); return g; });
+}
+function filesForGroup(g){
+  const f = []; const p = _finish.pdfs||[];
+  if(g.ids.includes('prot') && p[0]) f.push(p[0]);
+  if(g.ids.includes('mang') && p[1]) f.push(p[1]);
+  if(g.ids.includes('json')) f.push(dataFile());
+  return f;
 }
 function ablageAdr(){ return recipientsFor().join(','); }
 function renderFinishRecip(){
   const el = document.getElementById('finishRecip'); if(!el) return;
-  const l = recipientsFor();
-  el.textContent = l.length ? 'An: '+l.join(', ') : 'Keine E-Mail-Adresse für diese Spannungsebene und Art hinterlegt.';
+  const gs = groupsFor();
+  el.textContent = gs.length ? gs.map(g=>g.names.join(' + ')+' → '+g.mails.join(', ')).join('\n') : 'Keine E-Mail-Adresse für diese Spannungsebene und Art hinterlegt.';
+  el.style.whiteSpace = 'pre-line';
+  let box = document.getElementById('finishGroups');
+  if(!box){ box = document.createElement('div'); box.id = 'finishGroups'; el.insertAdjacentElement('afterend', box); }
+  box.innerHTML = '';
+  gs.forEach((g,i)=>{ const b = document.createElement('button'); b.type = 'button'; b.className = 'btn btn-primary btn-block'; b.style.marginTop = '8px'; b.disabled = !_finish.pdfs;
+    b.textContent = 'Senden an '+(g.who.length>2?g.who.slice(0,2).join(', ')+' …':g.who.join(', '))+' ('+g.names.join(' + ')+')'; b.onclick = ()=>finishShare(g); box.appendChild(b); });
+  const fs = document.getElementById('finishShare'); if(fs) fs.style.display = gs.length ? 'none' : '';
 }
 function renderRecip(){
   const box = document.getElementById('recipList'), l = recipList();
@@ -3222,10 +3296,13 @@ function renderRecip(){
     <input type="text" data-f="name" placeholder="Bezeichnung (z. B. Team Mittelspannung)" value="${esc(r.name||'')}">
     <input type="text" data-f="mail" inputmode="email" autocapitalize="off" placeholder="E-Mail-Adresse" value="${esc(r.mail||'')}">
     <div class="tg">${EBENEN.map(e=>`<span data-g="ebene" data-k="${e}" class="${r.ebene[e]?'on':''}">${e}</span>`).join('')}</div>
+    <div class="hint" style="margin:6px 0 2px">Erhält:</div>
+    <div class="tg">${INHALTE.map(([k,t])=>`<span data-g="inh" data-k="${k}" class="${r.inh[k]?'on':''}">${t}</span>`).join('')}</div>
+    <div class="tg" style="margin-top:6px"><span data-flag="txt" class="${r.txt?'on':''}">Mängelschein als Text in die E-Mail (ohne PDF – Adresse wird automatisch eingetragen)</span></div>
     <div class="tg" style="margin-top:6px">${ARTEN.map(([k,t])=>`<span data-g="art" data-k="${k}" class="${r.art[k]?'on':''}">${t}</span>`).join('')}</div>
     <div style="text-align:right;margin-top:6px"><button class="btn btn-sm btn-danger" data-del="1" type="button">Entfernen</button></div>
   </div>`).join('') || '<div class="hint">Noch keine Adresse hinterlegt.</div>';
-  document.getElementById('recipAdd').disabled = l.length>=10;
+  document.getElementById('recipAdd').disabled = l.length>=10; document.getElementById('recipAddInst').disabled = l.length>=10;
 }
 function openRecip(){ renderRecip(); document.getElementById('recipModal').hidden = false; }
 function closeRecip(){ document.getElementById('recipModal').hidden = true; renderFinishRecip(); }
@@ -3233,6 +3310,8 @@ document.getElementById('btnSet').onclick = openRecip;
 document.getElementById('finishRecipEdit').onclick = openRecip;
 document.getElementById('recipClose').onclick = closeRecip;
 document.getElementById('recipAdd').onclick = ()=>{ const l = recipList(); if(l.length<10){ l.push(newRecip('')); recipSave(l); renderRecip(); } };
+document.getElementById('recipAdd').insertAdjacentHTML('afterend',' <button class="btn" id="recipAddInst" type="button">+ Installateur (nur Mängelschein)</button>');
+document.getElementById('recipAddInst').onclick = ()=>{ const l = recipList(); if(l.length<10){ const r = newRecip('',{prot:false,mang:true,json:false}); r.name = 'Installateur'; l.push(r); recipSave(l); renderRecip(); } };
 document.getElementById('recipList').addEventListener('input', e=>{
   const row = e.target.closest('.rc'); if(!row || !e.target.dataset.f) return;
   const l = recipList(); l[+row.dataset.i][e.target.dataset.f] = e.target.value; recipSave(l);
@@ -3240,6 +3319,7 @@ document.getElementById('recipList').addEventListener('input', e=>{
 document.getElementById('recipList').addEventListener('click', e=>{
   const row = e.target.closest('.rc'); if(!row) return; const l = recipList(), r = l[+row.dataset.i];
   if(e.target.dataset.del){ if(e.target.dataset.armed!=='1'){ e.target.dataset.armed='1'; e.target.textContent='Wirklich entfernen?'; return; } l.splice(+row.dataset.i,1); recipSave(l); renderRecip(); return; }
+  if(e.target.dataset.flag){ const f = e.target.dataset.flag; r[f] = !r[f]; recipSave(l); e.target.classList.toggle('on'); return; }
   const g = e.target.dataset.g; if(!g) return; r[g][e.target.dataset.k] = !r[g][e.target.dataset.k]; recipSave(l); e.target.classList.toggle('on');
 });
 document.getElementById('finishCopy').onclick = async ()=>{ const t = recipientsFor().join('; '); if(!t){ finishLine('Keine Adresse zugeordnet.'); return; } try{ await navigator.clipboard.writeText(t); finishLine('Adressen kopiert.'); }catch(e){ finishLine(t); } };
@@ -3262,6 +3342,46 @@ document.getElementById('histFile').addEventListener('change', async e=>{
   await renderHist();
   const it = document.querySelector('.hist-item[data-pid="'+pid+'"]'); if(it){ const act = it.querySelector('.hist-act'); if(act) act.hidden = false; it.scrollIntoView({block:'nearest'}); }
 });
+
+/* ---------------- UNTERSCHRIFTSFELD ---------------- */
+function paintSig(){
+  const b = document.getElementById('sigPrev'); if(!b) return;
+  const img = state.abschluss.sigImg;
+  b.innerHTML = img ? '<img src="'+img+'" style="max-height:80px;max-width:100%">' : '<span style="color:#888">Noch keine Unterschrift</span>';
+  const c = document.getElementById('sigClear'); if(c) c.style.display = img ? '' : 'none';
+}
+function setSig(img){
+  state.abschluss.sigImg = img || ''; profilSave({sigImg: img || ''}); paintSig();
+  saveDraft(); try{ updateStepCompletionUI(); buildErgebnis(); }catch(e){}
+}
+function openSigPad(){
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:12px';
+  ov.innerHTML = '<div style="background:#fff;border-radius:14px;padding:12px;width:100%;max-width:640px;color:#111"><div style="font-weight:700;margin-bottom:6px">Bitte hier unterschreiben</div>'
+    + '<canvas id="sigCv" style="width:100%;height:220px;border:2px dashed #999;border-radius:10px;touch-action:none;background:#fafafa;display:block"></canvas>'
+    + '<div style="display:flex;gap:8px;margin-top:10px"><button class="btn" id="sigCancel" style="flex:1">Abbrechen</button><button class="btn" id="sigReset" style="flex:1">Neu</button><button class="btn btn-primary" id="sigOk" style="flex:1">Übernehmen</button></div></div>';
+  document.body.appendChild(ov);
+  const cv = ov.querySelector('#sigCv'), dpr = window.devicePixelRatio||1, r0 = cv.getBoundingClientRect();
+  cv.width = Math.round(r0.width*dpr); cv.height = Math.round(r0.height*dpr);
+  const cx = cv.getContext('2d'); cx.scale(dpr,dpr); cx.lineWidth = 2.6; cx.lineCap = 'round'; cx.lineJoin = 'round'; cx.strokeStyle = '#1a3a8a';
+  let draw = false, lx = 0, ly = 0, ink = false, minX=1e9,minY=1e9,maxX=-1,maxY=-1;
+  const pt = e=>{ const r = cv.getBoundingClientRect(); return [e.clientX-r.left, e.clientY-r.top]; };
+  cv.onpointerdown = e=>{ e.preventDefault(); cv.setPointerCapture(e.pointerId); draw = true; [lx,ly] = pt(e); cx.beginPath(); cx.arc(lx,ly,1.2,0,7); cx.fill(); ink = true; };
+  cv.onpointermove = e=>{ if(!draw) return; e.preventDefault(); const [x,y] = pt(e); cx.beginPath(); cx.moveTo(lx,ly); cx.lineTo(x,y); cx.stroke(); lx = x; ly = y; minX=Math.min(minX,x);minY=Math.min(minY,y);maxX=Math.max(maxX,x);maxY=Math.max(maxY,y); };
+  cv.onpointerup = cv.onpointercancel = ()=>{ draw = false; };
+  ov.querySelector('#sigCancel').onclick = ()=>ov.remove();
+  ov.querySelector('#sigReset').onclick = ()=>{ cx.clearRect(0,0,cv.width/dpr,cv.height/dpr); ink = false; minX=minY=1e9; maxX=maxY=-1; };
+  ov.querySelector('#sigOk').onclick = ()=>{
+    if(!ink || maxX<0){ ov.remove(); return; }
+    const pad = 8, sx = Math.max(0,(minX-pad)*dpr), sy = Math.max(0,(minY-pad)*dpr), sw = Math.min(cv.width-sx,(maxX-minX+2*pad)*dpr), sh = Math.min(cv.height-sy,(maxY-minY+2*pad)*dpr);
+    const o = document.createElement('canvas'), k = Math.min(1, 520/sw); o.width = Math.max(1,Math.round(sw*k)); o.height = Math.max(1,Math.round(sh*k));
+    o.getContext('2d').drawImage(cv, sx, sy, sw, sh, 0, 0, o.width, o.height);
+    setSig(o.toDataURL('image/png')); ov.remove();
+  };
+}
+document.getElementById('sigOpen').onclick = openSigPad;
+document.getElementById('sigClear').onclick = ()=>setSig('');
+paintSig();
 
 
 bootDraft().then(init);
