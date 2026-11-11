@@ -1,5 +1,1 @@
-{
-  "title": "Vorinbetriebnahme-Protokoll",
-  "description": "Protokoll für Zähleranlagen NS/MS/HS mit Zählerauslese, Bewertung je Komponente und Mängelschein",
-  "icon": "icon.svg"
-}
+{"name":"Vor-/Inbetriebnahme","description":"Protokoll für Zähleranlagen NS/MS/HS mit Zählerauslese, Bewertung je Komponente und Mängelschein","icon":"icon.svg"}

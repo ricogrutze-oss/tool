@@ -192,11 +192,18 @@ body.ns .buerde-only{display:none!important}
   .check-item:last-of-type, .check-cat .check-item:last-child{border-bottom:none}
   .step{border:1px solid transparent}
   .step.active{box-shadow:0 2px 8px rgba(77,138,12,.25)}
+img.thumb{cursor:pointer} #photoSheet .btn{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px}
+.thumb{border:2px solid var(--accent) !important; box-sizing:border-box}
+.thumb.empty{border:2px dashed var(--accent) !important; background-color:#2c2c2e; opacity:1}
+.thumb.empty[src]{border:2px solid var(--accent) !important}
+.rc{background:var(--field);border-radius:14px;padding:10px;margin-bottom:10px}.rc input{margin-bottom:6px}.tg{display:flex;flex-wrap:wrap;gap:6px}.tg span{padding:6px 12px;border-radius:999px;border:1.5px solid var(--accent);font-size:13px;cursor:pointer;user-select:none}.tg span.on{background:var(--accent);color:var(--on-accent)}
+.yn{display:flex;gap:8px}.yn span{flex:1;text-align:center;padding:9px 0;border-radius:10px;border:1.5px solid var(--accent);font-weight:600;cursor:pointer;user-select:none}.yn span.on[data-v=ja]{background:var(--accent);color:var(--on-accent)}.yn span.on[data-v=nein]{background:#c0392b;border-color:#c0392b;color:#fff}
 </style>
 </head>
 <body>
 
 <header>
+  <button class="hdr-btn no-print" id="btnSet" style="right:62px" aria-label="E-Mail-Empfänger"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></button>
   <button class="hdr-btn no-print" id="btnHist" aria-label="Verlauf: frühere Protokolle"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg></button>
   <h1>Vor-/Inbetriebnahme</h1>
   <div class="sub">Zähleranlagen NS · MS · HS<span id="saveBadge"></span></div>
@@ -331,7 +338,7 @@ body.ns .buerde-only{display:none!important}
   <!-- NACHPRÜFUNG -->
   <div class="panel" id="panel-nach">
     <div class="card">
-      <h2>Frühere Mängel laden</h2>
+      <h2 id="nachH1">Frühere Mängel laden</h2>
       <div class="hint">Lade das JSON-Protokoll des vorherigen Termins (Export im Abschluss). Die damals festgestellten Mängel erscheinen unten zur Nachprüfung. Du kannst auch Mängel von Hand ergänzen.</div>
       <button class="btn btn-block" style="margin-top:10px;" onclick="document.getElementById('nachImport').click()">Früheres Protokoll laden (JSON)</button>
       <input type="file" accept=".json,application/json" id="nachImport" style="display:none">
@@ -510,7 +517,8 @@ body.ns .buerde-only{display:none!important}
       <h2>Weitere Fotos</h2>
       <div id="extraPhotosGrid" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
       <input type="file" accept="image/*" multiple style="display:none" id="extraPhotoInput">
-      <button class="btn btn-sm no-print" style="margin-top:8px;" onclick="document.getElementById('extraPhotoInput').click()">+ Foto(s) hinzufügen</button>
+      <input type="file" accept="image/*" capture="environment" style="display:none" id="extraPhotoCam">
+      <button class="btn btn-sm no-print" style="margin-top:8px;" onclick="openPhotoSheet('extraPhotoCam','extraPhotoInput')">+ Foto hinzufügen</button>
       <div class="hint" id="extraPhotoHint"></div>
     </div>
     <div class="card">
@@ -540,10 +548,29 @@ body.ns .buerde-only{display:none!important}
   </div>
 
 </main>
+<div class="modal" id="photoSheet" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-label="Foto hinzufügen">
+    <h2>Foto</h2>
+    <div class="modal-actions" style="margin-top:6px">
+      <button class="btn btn-primary btn-block" id="psCam"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg> Kamera</button>
+      <button class="btn btn-block" id="psGal"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 9"/></svg> Galerie</button>
+      <button class="btn btn-block" id="psCancel">Abbrechen</button>
+    </div>
+  </div>
+</div>
+<div class="modal" id="recipModal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="recipTitle">
+    <h2 id="recipTitle">E-Mail-Empfänger</h2>
+    <div class="hint" style="margin:0 0 10px">Bis zu 10 Adressen. Je Adresse wählst du, bei welcher Spannungsebene und welcher Art des Termins sie benutzt wird. Beim Fertigstellen werden die passenden Adressen angezeigt und übernommen.</div>
+    <div id="recipList"></div>
+    <div class="modal-actions"><button class="btn btn-block" id="recipAdd">+ Adresse hinzufügen</button><button class="btn btn-primary btn-block" id="recipClose">Fertig</button></div>
+  </div>
+</div>
 <div class="modal" id="histModal" hidden>
   <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="histTitle">
     <h2 id="histTitle">Verlauf</h2>
     <div class="hint" style="margin:0;">Frühere Protokolle. Antippen zeigt die Aktionen.</div>
+    <div class="row" style="margin:10px 0 0"><button class="btn btn-block" id="histImport">Datendatei laden (aus dem Ordner)</button></div><input type="file" id="histFile" accept=".json,application/json" style="display:none"><div class="hint" id="histMsg"></div>
     <input type="text" id="histSearch" placeholder="Suchen (Anlage, Adresse, Zählernummer)">
     <div id="histList"></div>
     <div class="modal-actions"><button class="btn btn-block" id="histClose">Schließen</button></div>
@@ -553,9 +580,13 @@ body.ns .buerde-only{display:none!important}
   <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="finishTitle">
     <h2 id="finishTitle">Fertigstellen</h2>
     <div id="finishStatus"></div>
+    <label class="check" style="display:flex;gap:8px;align-items:center;margin-top:12px"><input type="checkbox" id="finishPhotos"> Fotos in die Datendatei einschließen (Datei wird größer)</label>
+    <div class="hint" id="finishRecip" style="margin-top:10px"></div>
+    <div class="row"><button class="btn btn-sm" id="finishCopy" type="button">Adressen kopieren</button><button class="btn btn-sm" id="finishRecipEdit" type="button">Empfänger bearbeiten</button></div>
     <div class="modal-actions">
-      <button class="btn btn-primary btn-block" id="finishShare" disabled>E-Mail mit beiden PDFs öffnen</button>
-      <button class="btn btn-block" id="finishSave" disabled>PDFs auf dem Gerät speichern</button>
+      <button class="btn btn-primary btn-block" id="finishShare" disabled>E-Mail mit PDFs und Daten öffnen</button>
+      <button class="btn btn-block" id="finishData">Nur Datendatei speichern (für den gemeinsamen Ordner)</button>
+      <button class="btn btn-block" id="finishSave" disabled>Dateien auf dem Gerät speichern</button>
       <button class="btn btn-block" id="finishOpen" hidden>Berichte zum Drucken öffnen</button>
       <button class="btn btn-block" id="finishClose">Schließen</button>
     </div>
@@ -594,6 +625,8 @@ function ensureDefaults(){
 
 /* ---------------- VORGANG / SICHTBARKEIT ---------------- */
 function isMSorHS(){ return state.ebene==='MS' || state.ebene==='HS'; }
+function kombiNach(){ return state.vorgang==='ibn' && !!(state.nachpruefung && state.nachpruefung.kombi && state.nachpruefung.items.length); }
+function showNach(){ return state.vorgang==='nach' || kombiNach(); }
 function isPruefung(){ return !!state.vorgang && state.vorgang!=='nach'; }   // alles außer reine Nachprüfung
 function isLive(){ return state.vorgang==='ibn' || state.vorgang==='bestand'; } // Anlage steht unter Spannung
 function hasWandlerAny(){ return isPruefung() && (isMSorHS() || (state.ebene==='NS' && state.messart==='halbindirekt')); }
@@ -754,7 +787,6 @@ const CHECKLIST = [
     ['b_ueberspannung','Überspannungsschutz vorhanden','','ns'],
     ['b_beruehrung','Berührungsschutz vollständig vorhanden','','ns'],
     ['b_trenn','Netz- und anlagenseitige Trennvorrichtung vorhanden','','ns'],
-    ['b_stromwandler','Stromwandler 0,5 S / FS 5, Übersetzung eingehalten, Konformität vorhanden','','ns+wandler'],
     ['b_abgriff','Spannungsabgriff netzseitig, erd- und kurzschlusssicher, Spannungspfad richtig verdrahtet','','wandler'],
     ['b_pruefklemme','Prüfklemme mit Kurzschließmöglichkeit, Längstrennung und Prüfbuchsen','','wandler'],
     ['b_pruefklemme_bed','Prüfklemme werkzeuglos bedienbar','','ns+wandler'],
@@ -815,7 +847,7 @@ function compFor(id){ if(state.ebene!=='NS') return null; return BEWERTUNG[id] ?
 function wandlerHostPanelId(){ const ids=activePanels().map(p=>p.id).filter(x=>x==='ct'||x==='vt'||x==='kombi'); return ids.length ? ids[ids.length-1] : null; }
 // Aufteilung der Checkliste (Auswahl von Rico, 02.11.2026): Standard = Anfang (Reiter „Checkliste“)
 const ITEM_HOST = {
-  w_einbaulage:'wandler', w_klemmverbindung:'wandler', w_erdung_min4:'wandler', w_erdung_ks_strom:'wandler', w_erdung_spannung:'wandler', v_querschnitt:'wandler', b_stromwandler:'wandler',
+  w_einbaulage:'wandler', w_klemmverbindung:'wandler', w_erdung_min4:'wandler', w_erdung_ks_strom:'wandler', w_erdung_spannung:'wandler', v_querschnitt:'wandler',
   s_sternspannung:'zaehler', s_verkettete:'zaehler', s_drehfeld:'zaehler', s_strom:'zaehler', s_vektor:'zaehler',
   v_phasengleich:'ende', pk_klemmverbindung:'ende', pk_geschlossen:'ende', pk_bruecken_offen:'ende',
   p_spannungspfad:'ende', p_messzelle:'ende', p_zaehler_modem:'ende', p_pruefklemme:'ende'
@@ -825,7 +857,10 @@ function hostOf(id){
   if(h==='wandler') return wandlerHostPanelId() ? 'wandler' : 'checkliste';
   return h;
 }
-function itemsDone(host){ return visibleItems().filter(i=>hostOf(i.id)===host).every(i=>state.checklist[i.id] && state.checklist[i.id].checked); }
+function chkAnswered(id){ const c=state.checklist[id]; return !!(c && (c.checked||c.nein)); }
+function setChk(id,v){ const c=state.checklist[id]; c.checked=(v==='ja'); c.nein=(v==='nein'); }
+function paintYn(id){ const y=document.getElementById('yn-'+id); if(!y) return; const c=state.checklist[id]||{}; y.querySelectorAll('span').forEach(sp=>sp.classList.toggle('on', (sp.dataset.v==='ja'&&!!c.checked)||(sp.dataset.v==='nein'&&!!c.nein&&!c.checked))); }
+function itemsDone(host){ return visibleItems().filter(i=>hostOf(i.id)===host).every(i=>chkAnswered(i.id)); }
 function absicherungVisible(){ return hasWandlerAny(); }
 
 // NS (bis 1 kV): keine Bürdemessung der Wandler (Wunsch Rico, 03.11.2026)
@@ -908,7 +943,7 @@ function bindRisoFields(){
 
 const PANEL_DEFS = [
   {id:'setup', label:'Start'},
-  {id:'nach', label:'Nachprüfung', cond:()=> state.vorgang==='nach'},
+  {id:'nach', label:'Nachprüfung', cond:()=> showNach()},
   {id:'checkliste', label:'Checkliste', cond:()=> isPruefung()},
   {id:'riso', label:'Riso', cond:()=> hasRiso()},
   {id:'ct', label:'Stromwandler', cond:()=> hasCtPanel()},
@@ -1125,7 +1160,7 @@ function bindZaehlerModem(){
       el.classList.add('sel'); saveDraft(); updateStepCompletionUI();
     };
   });
-  document.getElementById('extraPhotoInput').addEventListener('change', async e=>{
+  ['extraPhotoInput','extraPhotoCam'].forEach(_id=>document.getElementById(_id).addEventListener('change', async e=>{
     const files = Array.from(e.target.files);
     for(const file of files){
       if(state.abschluss.weitereFotos.length>=20){ alert('Maximal 20 zusätzliche Fotos.'); break; }
@@ -1134,7 +1169,7 @@ function bindZaehlerModem(){
     }
     saveDraft(); buildExtraPhotos();
     e.target.value = '';
-  });
+  }));
 }
 
 /* ---------------- GPS ---------------- */
@@ -1300,7 +1335,7 @@ function bindGroupRecognition(prefix, groupObj, kind){
 }
 
 /* ---------------- BARCODE: gemeinsamer Decoder ---------------- */
-const BC_FORMATS = ['code_128','code_39','code_93','ean_13','ean_8','itf','codabar','data_matrix','qr_code','upc_a'];
+const BC_FORMATS = ['code_128','code_39','code_93','ean_13','ean_8','itf','codabar','upc_a'];
 let _bd = null, _zxReader = null;
 async function getBD(){
   if(_bd!==null) return _bd;
@@ -1319,7 +1354,7 @@ function getZX(){
   if(!window.ZXing || !ZXing.MultiFormatReader) return null;
   const F = ZXing.BarcodeFormat, H = new Map();
   H.set(ZXing.DecodeHintType.TRY_HARDER, true);
-  H.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [F.CODE_128,F.CODE_39,F.CODE_93,F.EAN_13,F.EAN_8,F.ITF,F.CODABAR,F.DATA_MATRIX,F.QR_CODE,F.UPC_A].filter(Boolean));
+  H.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [F.CODE_128,F.CODE_39,F.CODE_93,F.EAN_13,F.EAN_8,F.ITF,F.CODABAR,F.UPC_A].filter(Boolean));
   const r = new ZXing.MultiFormatReader(); r.setHints(H); _zxReader = r; return r;
 }
 function zxDecodeCanvas(c){
@@ -1495,6 +1530,57 @@ async function recognizeTypeFromPhoto(prefix, groupObj, kind, url, statusId){
   }catch(e){ if(st) st.textContent=''; }
 }
 
+/* ---------------- BÜRDE per OCR ---------------- */
+async function ocrPrepare(file){
+  let bmp = null; try{ bmp = await createImageBitmap(file); }catch(e){}
+  if(!bmp) return file;
+  const sc = Math.min(2, 2000/Math.max(bmp.width,bmp.height));
+  const c = document.createElement('canvas'); c.width = Math.round(bmp.width*sc); c.height = Math.round(bmp.height*sc);
+  const g = c.getContext('2d'); g.filter = 'grayscale(1) contrast(1.6)'; g.drawImage(bmp,0,0,c.width,c.height);
+  return c;
+}
+function parseBuerdeText(text){
+  const t = String(text||'').replace(/,/g,'.').replace(/[Oo](?=\d)/g,'0');
+  const cands = [];
+  const add = (v,w)=>{ const n = parseFloat(v); if(isFinite(n) && n>0 && n<1000){ const k=String(n); if(!cands.find(c=>c.v===k)) cands.push({v:k,w}); } };
+  let m; const r1 = /(summe|gesamt)[^\d\n]{0,30}?(\d+(?:\.\d+)?)/gi;
+  while((m = r1.exec(t))) add(m[2], 3);
+  const r2 = /(\d+(?:\.\d+)?)\s*VA\b/gi;
+  while((m = r2.exec(t))) add(m[1], 2);
+  cands.sort((a,b)=>b.w-a.w);
+  return cands;
+}
+async function readBuerdeFromPhoto(file, base){
+  const gEl = document.getElementById(base+'-gemessen'); if(!gEl) return;
+  let st = document.getElementById('status-'+base+'-buerde');
+  if(!st){ st = document.createElement('div'); st.id = 'status-'+base+'-buerde'; st.className = 'status-line'; gEl.insertAdjacentElement('afterend', st); }
+  try{
+    st.className = 'status-line'; st.textContent = 'Lese Bürdewert aus Foto …';
+    await ensureTesseract();
+    const { data:{ text } } = await Tesseract.recognize(await ocrPrepare(file), 'eng');
+    window.__lastBuerdeOcr = text;
+    const c = parseBuerdeText(text);
+    if(!c.length){ st.className='status-line err'; st.textContent='Kein Bürdewert erkannt. Bitte von Hand eintragen.'; return; }
+    gEl.value = c[0].v; gEl.dispatchEvent(new Event('input'));
+    st.className = 'status-line ok'; st.textContent = '✓ Gelesen: '+c[0].v+' VA (bitte prüfen)';
+    c.slice(1,4).forEach(x=>{ const b=document.createElement('span'); b.className='chip'; b.textContent=x.v; b.onclick=()=>{ gEl.value=x.v; gEl.dispatchEvent(new Event('input')); st.firstChild && (st.firstChild.textContent='✓ Gelesen: '+x.v+' VA (bitte prüfen)'); }; st.append(' ', b); });
+  }catch(e){ st.className='status-line err'; st.textContent='Auslesen nicht möglich (kein Internet?). Bitte von Hand eintragen.'; }
+}
+
+/* ---------------- FOTO-AUSWAHL ---------------- */
+let _psCam = null, _psGal = null;
+function openPhotoSheet(camId, galId){ _psCam = camId; _psGal = galId; document.getElementById('photoSheet').hidden = false; }
+function closePhotoSheet(){ document.getElementById('photoSheet').hidden = true; }
+document.addEventListener('click', e=>{
+  const t = e.target.closest && e.target.closest('img.thumb'); if(!t || !t.id || t.id.indexOf('thumb-')!==0) return;
+  const k = t.id.slice(6);
+  if(document.getElementById('file-'+k+'-cam')) openPhotoSheet('file-'+k+'-cam', 'file-'+k+'-gal');
+});
+document.getElementById('psCam').onclick = ()=>{ const id=_psCam; closePhotoSheet(); const el=document.getElementById(id); if(el) el.click(); };
+document.getElementById('psGal').onclick = ()=>{ const id=_psGal; closePhotoSheet(); const el=document.getElementById(id); if(el) el.click(); };
+document.getElementById('psCancel').onclick = closePhotoSheet;
+document.getElementById('photoSheet').addEventListener('click', e=>{ if(e.target.id==='photoSheet') closePhotoSheet(); });
+
 /* ---------------- PHOTO HELPERS ---------------- */
 function fileToBase64(file){
   return new Promise((res,rej)=>{
@@ -1520,19 +1606,11 @@ function twoPhotoRowHtml(prefix){
       <img class="thumb empty" id="thumb-${prefix}-1">
       <input type="file" accept="image/*" capture="environment" style="display:none" id="file-${prefix}-1-cam">
       <input type="file" accept="image/*" style="display:none" id="file-${prefix}-1-gal">
-      <div style="display:flex;gap:4px;margin-top:4px;">
-        <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${prefix}-1-cam').click()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
-        <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${prefix}-1-gal').click()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 9"/></svg></button>
-      </div>
     </div>
     <div class="photo-mini">
       <img class="thumb empty" id="thumb-${prefix}-2">
       <input type="file" accept="image/*" capture="environment" style="display:none" id="file-${prefix}-2-cam">
       <input type="file" accept="image/*" style="display:none" id="file-${prefix}-2-gal">
-      <div style="display:flex;gap:4px;margin-top:4px;">
-        <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${prefix}-2-cam').click()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
-        <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${prefix}-2-gal').click()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 9"/></svg></button>
-      </div>
     </div>
   </div>`;
 }
@@ -1541,10 +1619,6 @@ function onePhotoRowHtml(prefix){
     <img class="thumb empty" id="thumb-${prefix}-1" style="width:100%; height:120px;">
     <input type="file" accept="image/*" capture="environment" style="display:none" id="file-${prefix}-1-cam">
     <input type="file" accept="image/*" style="display:none" id="file-${prefix}-1-gal">
-    <div style="display:flex;gap:4px;margin-top:4px;">
-      <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${prefix}-1-cam').click()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
-      <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${prefix}-1-gal').click()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 9"/></svg></button>
-    </div>
   </div>`;
 }
 function bindOnePhotoSlot(prefix, obj, decodeTargetId, statusId){
@@ -1585,13 +1659,14 @@ function bindTwoPhotoSlots(prefix, obj, decodeTargetId, statusId, onPhoto){
   if(obj.photos[0]){ const t=document.getElementById(`thumb-${prefix}-1`); if(t) t.src=obj.photos[0]; }
   if(obj.photos[1]){ const t=document.getElementById(`thumb-${prefix}-2`); if(t) t.src=obj.photos[1]; }
 }
-async function handleSimplePhoto(e, setter, thumbId){
+async function handleSimplePhoto(e, setter, thumbId, onFile){
   const file = e.target.files[0]; if(!file) return;
   const b64 = await fileToBase64(file);
   const url = 'data:image/jpeg;base64,'+b64;
   const th = document.getElementById(thumbId);
   if(th){ th.src = url; th.classList.remove('empty'); }
   setter(url); saveDraft(); updateStepCompletionUI();
+  if(onFile) onFile(file);
 }
 
 /* ---------------- WANDLER (CT/VT) ---------------- */
@@ -1673,10 +1748,6 @@ function phaseBlockHtml(prefix, p){
         <img class="thumb empty" id="thumb-${base}-buerde" style="margin-bottom:6px;">
         <input type="file" accept="image/*" capture="environment" style="display:none" id="file-${base}-buerde-cam">
         <input type="file" accept="image/*" style="display:none" id="file-${base}-buerde-gal">
-        <div style="display:flex;gap:4px;">
-          <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${base}-buerde-cam').click()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
-          <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${base}-buerde-gal').click()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 9"/></svg></button>
-        </div>
       </div>
       <div>
         <label>Gemessen (VA)</label><input type="text" id="${base}-gemessen">
@@ -1696,8 +1767,8 @@ function bindPhaseBlock(prefix, p, groupObj){
   bindTwoPhotoSlots(base, p, base+'-serial', 'status-'+base, url=>recognizeTypeFromPhoto(prefix, groupObj, prefix, url, 'status-'+base+'-typ'));
 
   if(p.buerdePhoto) document.getElementById('thumb-'+base+'-buerde').src = p.buerdePhoto;
-  document.getElementById('file-'+base+'-buerde-cam').addEventListener('change', e=>handleSimplePhoto(e, val=>{p.buerdePhoto=val;}, 'thumb-'+base+'-buerde'));
-  document.getElementById('file-'+base+'-buerde-gal').addEventListener('change', e=>handleSimplePhoto(e, val=>{p.buerdePhoto=val;}, 'thumb-'+base+'-buerde'));
+  document.getElementById('file-'+base+'-buerde-cam').addEventListener('change', e=>handleSimplePhoto(e, val=>{p.buerdePhoto=val;}, 'thumb-'+base+'-buerde', f=>readBuerdeFromPhoto(f, base)));
+  document.getElementById('file-'+base+'-buerde-gal').addEventListener('change', e=>handleSimplePhoto(e, val=>{p.buerdePhoto=val;}, 'thumb-'+base+'-buerde', f=>readBuerdeFromPhoto(f, base)));
 
   const gEl = document.getElementById(base+'-gemessen'); gEl.value=p.gemessenebuerde||'';
   gEl.addEventListener('input', e=>{ p.gemessenebuerde=e.target.value; saveDraft(); updateBuerdeDisplay(base, groupObj, p); });
@@ -1838,10 +1909,6 @@ function kombiPhaseBlockHtml(p){
         <img class="thumb empty" id="thumb-${base}-buerde" style="margin-bottom:6px;">
         <input type="file" accept="image/*" capture="environment" style="display:none" id="file-${base}-buerde-cam">
         <input type="file" accept="image/*" style="display:none" id="file-${base}-buerde-gal">
-        <div style="display:flex;gap:4px;">
-          <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${base}-buerde-cam').click()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
-          <button class="btn btn-sm" style="flex:1;" onclick="document.getElementById('file-${base}-buerde-gal').click()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 9"/></svg></button>
-        </div>
       </div>
       <div>
         <label>Gemessen Strom (VA)</label><input type="text" id="${base}-gemessenA">
@@ -1954,10 +2021,10 @@ function buildChecklist(){
       const item = document.createElement('div');
       item.className = 'check-item'; item.dataset.scope = scope||'all';
       item.innerHTML = `
-        <input type="checkbox" id="chk-${id}">
         <div style="flex:1;">
           <div class="txt">${label}</div>
           ${itemHint ? `<div class="hint" style="margin-top:2px;">${itemHint}</div>` : ''}
+          <div class="yn" id="yn-${id}" style="margin-top:8px;"><span data-v="ja">Ja</span><span data-v="nein">Nein</span></div>
           ${(BEWERTUNG[id]&&BEWERTUNG[id].variants) ? `<div id="varwrap-${id}" style="margin-top:6px;"><label style="margin:0 0 3px;">Falls nicht erfüllt:</label><select id="var-${id}"><option value="">– wählen –</option>${Object.entries(BEWERTUNG[id].variants).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('')}</select></div>` : ''}
           <span class="note-toggle" data-id="${id}">+ Notiz</span>
           <div class="note-field" id="notefield-${id}"><textarea id="note-${id}"></textarea></div>
@@ -1966,9 +2033,9 @@ function buildChecklist(){
     });
   });
   Object.keys(state.checklist).forEach(id=>{
-    const chk = document.getElementById('chk-'+id); if(!chk) return;
-    chk.checked = state.checklist[id].checked;
-    chk.addEventListener('change', e=>{ state.checklist[id].checked=e.target.checked; syncVariantUi(id); saveDraft(); updateStepCompletionUI(); });
+    const yn = document.getElementById('yn-'+id); if(!yn) return;
+    paintYn(id);
+    yn.querySelectorAll('span').forEach(sp=>{ sp.onclick = ()=>{ const c=state.checklist[id]; const cur = c.checked?'ja':(c.nein?'nein':''); setChk(id, cur===sp.dataset.v ? '' : sp.dataset.v); paintYn(id); syncVariantUi(id); saveDraft(); updateStepCompletionUI(); }; });
     const vs = document.getElementById('var-'+id);
     if(vs){ vs.value = state.checklist[id].variant||''; vs.addEventListener('change', e=>{ state.checklist[id].variant=e.target.value; saveDraft(); updateStepCompletionUI(); }); syncVariantUi(id); }
     const note = document.getElementById('note-'+id);
@@ -1993,9 +2060,9 @@ function buildChecklist(){
   document.getElementById('sicherungSonstigesText').value = state.absicherung.sonstigesText||'';
   document.getElementById('sicherungSonstigesText').addEventListener('input', e=>{ state.absicherung.sonstigesText=e.target.value; saveDraft(); });
 }
-function syncVariantUi(id){ const w=document.getElementById('varwrap-'+id); if(w) w.style.display = (state.checklist[id] && state.checklist[id].checked) ? 'none' : ''; }
+function syncVariantUi(id){ const w=document.getElementById('varwrap-'+id); const c=state.checklist[id]; if(w) w.style.display = (c && c.nein && !c.checked) ? '' : 'none'; }
 function syncChecklistDom(id){
-  const chk = document.getElementById('chk-'+id); if(chk) chk.checked = !!(state.checklist[id]&&state.checklist[id].checked);
+  paintYn(id); syncVariantUi(id);
   const note = document.getElementById('note-'+id); if(note && state.checklist[id]) note.value = state.checklist[id].note||'';
 }
 function placeChecklistCards(){
@@ -2032,7 +2099,7 @@ function refreshChecklistVisibility(){
 function buildSummary(){
   const el = document.getElementById('summaryBox');
   const items = visibleItems();
-  const done = items.filter(i=>state.checklist[i.id] && state.checklist[i.id].checked).length;
+  const done = items.filter(i=>chkAnswered(i.id)).length;
   const adresse = [ [state.standort.strasse,state.standort.hausnr].filter(Boolean).join(' '),
                      [state.standort.plz,state.standort.ort].filter(Boolean).join(' ') ].filter(Boolean).join(', ');
   const r = computeWandlerfaktor();
@@ -2141,10 +2208,12 @@ function gatherMaengel(){
     return list;
   }
   if(!isPruefung()) return list;
+  const _nk = new Set();
+  if(kombiNach()) state.nachpruefung.items.forEach((it,i)=>{ if(it.key) _nk.add(it.key); if(it.status==='offen') list.push({key:'nach:'+i, text:it.text, ext:it.ext!==false, comp:null, req:it.req||'', massn:it.massn||'', begr:it.begr||'', quelle:it.quelle||it.ref||'', cls:it.cls||'keine', note:it.note||''}); });
   const zs = (state.zaehler.zeiger||{}).status;
   visibleItems().forEach(({id,label})=>{
     const c = state.checklist[id] || {};
-    if(c.checked) return;
+    if(!c.nein || c.checked) return;
     if(id==='s_vektor' && (zs==null || zs==='leer' || zs==='unvollstaendig')) return;   // noch nicht auswertbar → „offen“, kein Mangel
     const comp = compFor(id), def = BEWERTUNG[id];
     let text = def ? def.komp+': '+def.mangel : 'Nicht erfüllt: '+label;
@@ -2164,7 +2233,7 @@ function gatherMaengel(){
   String(state.abschluss.maengel||'').split(/\n+/).map(t=>t.trim()).filter(Boolean).forEach((t,i)=>{
     list.push(mkMangel('text:'+i, t, true, {}));
   });
-  return list;
+  return _nk.size ? list.filter(m=>m.key && String(m.key).indexOf('nach:')===0 || !_nk.has(m.key)) : list;
 }
 
 function gatherOffen(){   // fehlende Eingaben des Prüfers (keine Mängel der Anlage)
@@ -2174,6 +2243,7 @@ function gatherOffen(){   // fehlende Eingaben des Prüfers (keine Mängel der A
     if(!state.nachpruefung.items.length) o.push('Keine Mängel zur Nachprüfung hinterlegt');
     state.nachpruefung.items.forEach(it=>{ if(!it.status) o.push('Nachprüfung offen: '+it.text); });
   } else {
+    if(kombiNach()) state.nachpruefung.items.forEach(it=>{ if(!it.status) o.push('Früheren Mangel abhaken: '+it.text); });
     if(!state.ebene || !state.messart) o.push('Spannungsebene / Messart wählen');
     wandlerGruppen().forEach(g=>{
       if(!g.serial) o.push(g.label+': Seriennummer fehlt');
@@ -2184,7 +2254,8 @@ function gatherOffen(){   // fehlende Eingaben des Prüfers (keine Mängel der A
     if(!state.zaehler.stand.ap) o.push('Einbaustand (Wirkenergie Bezug) fehlt');
     if(isLive() && hasFullReadout()){ const zs=(state.zaehler.zeiger||{}).status; if(zs==null||zs==='leer'||zs==='unvollstaendig') o.push('Zeigerdiagramm: Werte unvollständig'); }
     if(absicherungVisible() && !state.absicherung.sicherung) o.push('Absicherung nicht angegeben');
-    visibleItems().forEach(({id})=>{ const d=BEWERTUNG[id], c=state.checklist[id]||{}; if(d && d.variants && !c.checked && !c.variant) o.push(d.komp+': Wirksamkeit der Schutzmaßnahme angeben'); });
+    visibleItems().forEach(({id})=>{ const d=BEWERTUNG[id], c=state.checklist[id]||{}; if(d && d.variants && c.nein && !c.checked && !c.variant) o.push(d.komp+': Wirksamkeit der Schutzmaßnahme angeben'); });
+    { const _un = visibleItems().filter(i=>!chkAnswered(i.id)).length; if(_un) o.push('Checkliste: '+_un+' Punkt(e) noch nicht mit Ja oder Nein beantwortet'); }
     if(collectPhotos().length===0) o.push('Keine Fotos aufgenommen');
   }
   if(!state.abschluss.unterschrift) o.push('Unterschrift fehlt');
@@ -2240,11 +2311,11 @@ function buildErgebnis(){
   saveDraft();
 }
 function snapshotMaengel(r){   // für die Nachprüfung: nur Punkte, die behoben werden müssen
-  return r.maengel.filter(m=>m.cls==='keine'||m.cls==='frist').map(m=>({text:m.text, req:m.req, massn:m.massn, begr:m.begr, quelle:m.quelle, cls:m.cls, ext:m.ext}));
+  return r.maengel.filter(m=>m.cls==='keine'||m.cls==='frist').map(m=>({key:m.key||'', text:m.text, req:m.req, massn:m.massn, begr:m.begr, quelle:m.quelle, cls:m.cls, ext:m.ext}));
 }
 
 /* ---------------- NACHPRÜFUNG ---------------- */
-function itemFromSnapshot(m){ return {text:m.text, req:m.req||'', massn:m.massn||'', begr:m.begr||'', quelle:m.quelle||m.ref||'', cls:m.cls||'keine', ext:m.ext!==false, status:'', note:''}; }
+function itemFromSnapshot(m){ return {key:m.key||'', text:m.text, req:m.req||'', massn:m.massn||'', begr:m.begr||'', quelle:m.quelle||m.ref||'', cls:m.cls||'keine', ext:m.ext!==false, status:'', note:''}; }
 function offerTakeCurrentMaengel(){
   if(!isPruefung()) return;
   const list = snapshotMaengel(computeErgebnis());
@@ -2552,7 +2623,7 @@ function renderZeiger(){
   // Checklistenpunkt „Zeigerdiagramm plausibel“ automatisch nachführen
   if(isLive() && (res.status==='ok' || res.status==='warn')){
     const c = state.checklist.s_vektor || (state.checklist.s_vektor={checked:false,note:''});
-    c.checked = res.status==='ok';
+    c.checked = res.status==='ok'; c.nein = res.status==='warn';
     c.note = res.status==='warn' ? res.findings.filter(x=>x.level==='warn').map(x=>x.text).join(' ') : '';
     syncChecklistDom('s_vektor');
   }
@@ -2583,6 +2654,7 @@ function reportCss(){
   + 'h3{font-size:10.5pt;margin:8px 0 3px 0}'
   + '.head{display:flex;justify-content:space-between;gap:16px;margin-bottom:10px}'
   + '.head .l{flex:1}.head .r{min-width:42%}'
+  + '.head .m{flex:0 0 auto;align-self:flex-start}.head .m a{display:block;text-decoration:none;color:#1a5fb4}.head .m img{display:block;width:190px;height:119px;border:1px solid #999;border-radius:4px}.head .m .nomap{width:190px;height:119px;border:1px solid #999;border-radius:4px;background:#eef3e6;font-size:9pt;display:flex;align-items:center;justify-content:center;text-align:center;padding:6px}.head .m .cap{font-size:7pt;color:#555;text-align:center;margin-top:1px}.head.hm .r{min-width:0}'
   + 'table{border-collapse:collapse;width:100%}'
   + 'th{font-size:8.5pt;text-align:left;color:#444;font-weight:600;padding:2px 6px}'
   + 'td{padding:2px 6px;font-size:9.5pt;vertical-align:top}'
@@ -2601,7 +2673,7 @@ function reportCss(){
   + '.pgrid{display:flex;flex-wrap:wrap;gap:10px}'
   + '.photo{width:48%;page-break-inside:avoid}'
   + '.photo .pn{font-size:8.5pt;color:#555;letter-spacing:.5px;border-bottom:1px dashed #aaa;margin-bottom:4px;text-transform:uppercase}'
-  + '.photo img{width:100%;max-height:70mm;object-fit:contain;object-position:left top}'
+  + '.photo img{display:block;width:auto;height:auto;max-width:100%;max-height:70mm}'
   + '.mt th,.mt td{border:1px solid #999;padding:5px 7px}.mt th{background:#eef5dd}'
   + '.nr{width:28px;text-align:center}.chk{width:60px;text-align:center;font-size:14pt}'
   + '.note{font-size:8.5pt;color:#444;margin-top:2px}'
@@ -2661,7 +2733,7 @@ function checklistReportHtml(){
     html += '<div class="cat"><h3>Checkliste '+esc(cat.cat)+'</h3>';
     html += its.map(({id,label})=>{
       const c = state.checklist[id] || {};
-      return '<div class="it '+(c.checked?'':'open')+'">'+(c.checked?'☑':'☐')+' '+esc(label)+(c.note?' <i>('+esc(c.note)+')</i>':'')+'</div>';
+      return '<div class="it '+(c.checked?'':'open')+'">'+(c.checked?'☑':(c.nein?'☒':'☐'))+' '+esc(label)+(c.note?' <i>('+esc(c.note)+')</i>':'')+'</div>';
     }).join('');
     html += '</div>';
   });
@@ -2676,11 +2748,11 @@ function zaehlerBlockHtml(){
   const z = state.zaehler, st = z.stand, wf = computeWandlerfaktor();
   const mod = state.modem;
   let html = '<div class="blk"><table><tbody>'
-    + '<tr><td style="width:34%"><b>Zähler</b></td><td>'+esc(z.z_nummer||'–')+(z.hersteller?' <span style="color:#555;font-size:8.5pt">('+esc(z.hersteller.split(' – ')[0])+')</span>':'')+'</td><td style="width:26%"><b>'+(hasWandlerAny()?'Wandlerkonstante':'')+'</b></td></tr>'
+    + '<tr><td style="width:34%"><b>Zähler</b></td><td>'+esc(z.z_nummer||'–')+'</td><td style="width:26%"><b>'+(hasWandlerAny()?'Wandlerkonstante':'')+'</b></td></tr>'
     + '<tr><td>Modem/SMGW</td><td>'+esc(mod.sim||'–')+(mod.verbindungstest?' · Verbindungstest '+(mod.verbindungstest==='io'?'erfolgreich':'nicht erfolgreich'):'')+'</td><td><b>'+(hasWandlerAny()?esc(wf.total||'–'):'')+'</b></td></tr>'
     + '</tbody></table></div>';
   const voll = hasFullReadout();
-  html += '<div class="blk"><div class="blkh">Einbaustände'+(st.zeit?'<span>'+esc(st.zeit)+(st.quelle?' · '+esc(st.quelle):'')+'</span>':'')+'</div>'
+  html += '<div class="blk"><div class="blkh">Einbaustände'+(st.zeit?'<span>'+esc(st.zeit)+'</span>':'')+'</div>'
     + '<table><thead><tr><th>Wirk Bezug A+ (kWh)</th><th>Wirk Lieferung A− (kWh)</th>'+(voll?'<th>Blind R+ (kvarh)</th><th>Blind R− (kvarh)</th>':'')+'</tr></thead><tbody><tr>'
     + (voll?['ap','am','rp','rm']:['ap','am']).map(k=>'<td>'+esc(st[k]||'–')+'</td>').join('')+'</tr></tbody></table></div>';
   return html;
@@ -2705,22 +2777,77 @@ const TXT_VERWEIGERUNG = 'Die Inbetriebsetzung wird verweigert bei Mängeln, wel
 const TXT_FRIST = 'Werden die Mängel nicht fristgerecht beseitigt, kann die Unterbrechung der Anschlussnutzung vier Wochen nach Androhung erfolgen (§ 24 Abs. 2 NAV).';
 
 /* ---- Intern: Vor-/Inbetriebnahmeprotokoll ---- */
+/* ---- Kartenausschnitt (OpenStreetMap-Kacheln) im Protokollkopf ---- */
+let _mapCache = {gps:null, img:null};
+function parseGps(g){
+  const m = String(g||'').match(/(-?\d{1,3}(?:[.,]\d+)?)\s*[,;\s]\s*(-?\d{1,3}(?:[.,]\d+)?)/);
+  if(!m) return null;
+  const lat = parseFloat(m[1].replace(',','.')), lon = parseFloat(m[2].replace(',','.'));
+  if(!isFinite(lat)||!isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180) return null;
+  return {lat, lon};
+}
+function mapUrl(){ const p = parseGps(state.standort.gps); return p ? 'https://www.google.com/maps?q='+p.lat.toFixed(6)+','+p.lon.toFixed(6) : ''; }
+async function ensureMapImg(){
+  const g = state.standort.gps, p = parseGps(g);
+  if(!p) return null;
+  if(_mapCache.gps===g && _mapCache.img) return _mapCache.img;
+  try{
+    const Z = 16, n = Math.pow(2,Z), latR = p.lat*Math.PI/180;
+    const fx = (p.lon+180)/360*n, fy = (1-Math.log(Math.tan(latR)+1/Math.cos(latR))/Math.PI)/2*n;
+    const tx = Math.floor(fx), ty = Math.floor(fy);
+    const big = document.createElement('canvas'); big.width = 768; big.height = 768;
+    const bx = big.getContext('2d'); bx.fillStyle = '#e8e8e8'; bx.fillRect(0,0,768,768);
+    let ok = 0;
+    await Promise.all([-1,0,1].flatMap(dy=>[-1,0,1].map(dx=>new Promise(res=>{
+      const im = new Image(); im.crossOrigin = 'anonymous';
+      const t = setTimeout(res, 8000);
+      im.onload = ()=>{ try{ bx.drawImage(im,(dx+1)*256,(dy+1)*256,256,256); ok++; }catch(e){} clearTimeout(t); res(); };
+      im.onerror = ()=>{ clearTimeout(t); res(); };
+      im.src = 'https://tile.openstreetmap.org/'+Z+'/'+(tx+dx)+'/'+(ty+dy)+'.png';
+    }))));
+    if(ok<5) return null;
+    const px = 256+(fx-tx)*256, py = 256+(fy-ty)*256, W = 570, H = 357;
+    const out = document.createElement('canvas'); out.width = W; out.height = H;
+    const ox = out.getContext('2d');
+    ox.drawImage(big, Math.round(px-W/2), Math.round(py-H/2), W, H, 0, 0, W, H);
+    ox.fillStyle = '#d0021b'; ox.strokeStyle = '#fff'; ox.lineWidth = 3;
+    ox.beginPath(); ox.arc(W/2, H/2-14, 11, 0, Math.PI*2); ox.fill(); ox.stroke();
+    ox.beginPath(); ox.moveTo(W/2-8, H/2-8); ox.lineTo(W/2+8, H/2-8); ox.lineTo(W/2, H/2+4); ox.closePath(); ox.fill();
+    ox.fillStyle = '#fff'; ox.beginPath(); ox.arc(W/2, H/2-14, 4, 0, Math.PI*2); ox.fill();
+    ox.fillStyle = 'rgba(255,255,255,.8)'; ox.fillRect(W-190,H-16,190,16);
+    ox.fillStyle = '#333'; ox.font = '11px Arial'; ox.textAlign = 'right'; ox.fillText('© OpenStreetMap-Mitwirkende', W-4, H-4);
+    const url = out.toDataURL('image/jpeg', 0.82);
+    _mapCache = {gps:g, img:url};
+    return url;
+  }catch(e){ return null; }
+}
+function mapHtml(){
+  const u = mapUrl(); if(!u) return '';
+  const img = (_mapCache.gps===state.standort.gps && _mapCache.img) ? _mapCache.img : '';
+  return '<div class="m"><a href="'+u+'" target="_blank" rel="noopener" data-pdflink="'+u+'">'
+    + (img ? '<img src="'+img+'" alt="Karte">' : '<div class="nomap">Karte in Google Maps öffnen</div>')
+    + '</a><div class="cap">Antippen: Karte öffnen</div></div>';
+}
+
 function buildInternalHtml(){
   const s = state.standort, r = computeErgebnis();
   const adr = addressLines();
   const messart = {direkt:'Direktmessung',halbindirekt:'Halbindirekte Messung',wandler:'Wandlermessung',kombiwandler:'Kombiwandler'}[state.messart] || '';
   let html = '<div class="pg int"><h1>'+esc(reportTitle())+'</h1>';
-  html += '<div class="head"><div class="l"><div>'+esc(s.name||'')+'</div>'+adr.map(a=>'<div>'+esc(a)+'</div>').join('')+'<div style="margin-top:6px;color:#444">'+esc(messart)+'</div></div>'
+  const mp = mapHtml();
+  html += '<div class="head'+(mp?' hm':'')+'"><div class="l"><div>'+esc(s.name||'')+'</div>'+adr.map(a=>'<div>'+esc(a)+'</div>').join('')+'<div style="margin-top:6px;color:#444">'+esc(messart)+'</div></div>'
+    + mp
     + '<div class="r">'+(s.einspeise?'<div>Einspeiseleistung: '+esc(s.einspeise)+' kW</div>':'')+(s.bezug?'<div>Bezugsleistung: '+esc(s.bezug)+' kW</div>':'')
     + (s.id?'<div>HarNES-Nr.: '+esc(s.id)+'</div>':'')+(s.gps?'<div style="color:#444;font-size:9pt">GPS: '+esc(s.gps)+'</div>':'')+'</div></div>';
   html += '<div class="res'+resClass(r.status)+'">'+esc(r.label)+'</div>';
 
-  if(state.vorgang==='nach'){
+  if(showNach()){
     html += '<div class="blk"><div class="blkh">Nachprüfung der Mängel'+(state.nachpruefung.quelle?'<span>Quelle: '+esc(state.nachpruefung.quelle)+'</span>':'')+'</div>'
       + '<table class="mt"><thead><tr><th class="nr">Nr.</th><th>Mangel</th><th style="width:90px">Ergebnis</th><th>Bemerkung</th></tr></thead><tbody>'
       + state.nachpruefung.items.map((it,i)=>'<tr><td class="nr">'+(i+1)+'</td><td><span class="kls '+(it.cls||'keine')+'">'+esc(KLASSE_LABEL[it.cls||'keine'])+'</span> '+esc(it.text)+'</td><td class="'+(it.status==='offen'?'bad':'')+'">'+(it.status==='behoben'?'behoben':it.status==='offen'?'nicht behoben':'offen')+'</td><td>'+esc(it.note||'')+'</td></tr>').join('')
       + '</tbody></table></div>';
-  } else {
+  }
+  if(state.vorgang!=='nach'){
     html += zaehlerBlockHtml();
     const rr = hasRiso();
     if(hasCtPanel() && state.ct) html += wandlerTableHtml('Stromwandler', ratioText(state.ct), state.ct.klasse, state.ct.sollbuerde,
@@ -2832,6 +2959,23 @@ async function ensurePdfLibs(){
 // Bibliotheken im Hintergrund vorladen (Service Worker legt sie ab; danach auch offline verfügbar)
 setTimeout(()=>{ if(navigator.onLine) PDF_LIBS.forEach(u=>{ fetch(u,{mode:'no-cors'}).catch(()=>{}); }); }, 5000);
 
+function pdfTextWords(root, rootRect){
+  const out = [], tw = root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const clean = t=> t.replace(/[−–‑]/g,'-').replace(/φ/g,'phi').replace(/[☑☐✓✗]/g,'').replace(/[^\x20-\x7E\u00A0-\u00FF€]/g,'');
+  let n;
+  while((n = tw.nextNode())){
+    const txt = n.nodeValue; if(!txt || !txt.trim()) continue;
+    const par = n.parentNode; if(par && /^(SCRIPT|STYLE)$/.test(par.nodeName)) continue;
+    const re = /\S+/g; let m;
+    while((m = re.exec(txt))){
+      const t = clean(m[0]); if(!t) continue;
+      const rg = root.ownerDocument.createRange(); rg.setStart(n, m.index); rg.setEnd(n, m.index+m[0].length);
+      const r = rg.getClientRects()[0]; if(!r || r.width<1 || r.height<1) continue;
+      out.push({t, x:r.left-rootRect.left, y:r.top-rootRect.top, w:r.width, h:r.height});
+    }
+  }
+  return out;
+}
 async function htmlToPdfBlob(bodyHtml){
   await ensurePdfLibs();
   const ifr = document.createElement('iframe');
@@ -2847,6 +2991,9 @@ async function htmlToPdfBlob(bodyHtml){
     let first = true;
     for(const el of [...doc.querySelectorAll('.pg')]){
       const canvas = await window.html2canvas(el, {scale:2, backgroundColor:'#ffffff', useCORS:true, logging:false, windowWidth:720});
+      const elR = el.getBoundingClientRect();
+      const lks = [...el.querySelectorAll('a[data-pdflink]')].map(a=>{ const r=a.getBoundingClientRect(); return {u:a.getAttribute('data-pdflink'), x:r.left-elR.left, y:r.top-elR.top, w:r.width, h:r.height}; });
+      const words = pdfTextWords(el, elR);
       let w = PW, ratio = PW/canvas.width, totalH = canvas.height*ratio;
       if(totalH > PH && totalH <= PH*1.15){ ratio = PH/canvas.height; w = canvas.width*ratio; totalH = PH; }   // knapp zu lang: auf eine Seite verkleinern
       const slicePx = Math.floor(PH/ratio);
@@ -2856,13 +3003,26 @@ async function htmlToPdfBlob(bodyHtml){
         const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,c.width,h); ctx.drawImage(canvas,0,y,canvas.width,h,0,0,canvas.width,h);
         if(!first) pdf.addPage(); first = false;
         pdf.addImage(c.toDataURL('image/jpeg',0.9), 'JPEG', MX, MY, w, h*ratio);
+        const sTop = y*ratio, sBot = sTop + h*ratio;
+        lks.forEach(l=>{ const top = l.y*2*ratio; if(top>=sTop && top<sBot) try{ pdf.link(MX+l.x*2*ratio, MY+top-sTop, l.w*2*ratio, l.h*2*ratio, {url:l.u}); }catch(e){} });
+        // unsichtbare Textebene: Text und Nummern lassen sich im PDF markieren, kopieren und suchen
+        words.forEach(wd=>{ const top = wd.y*2*ratio; if(top<sTop || top>=sBot) return;
+          try{ const hmm = wd.h*2*ratio; let fs = Math.max(3, hmm*2.835*0.82); pdf.setFontSize(fs);
+            const nat = pdf.getTextWidth(wd.t), tw = wd.w*2*ratio; if(nat>tw && tw>0){ fs = fs*tw/nat; pdf.setFontSize(fs); }
+            pdf.text(wd.t, MX+wd.x*2*ratio, MY+top-sTop+hmm*0.8, {renderingMode:'invisible'}); }catch(e){} });
       }
     }
     return pdf.output('blob');
   } finally { ifr.remove(); }
 }
 
-let _finish = {files:null};
+let _finish = {files:null, pdfs:null};
+function dataJsonText(withPhotos){
+  try{ state.abschluss.maengelListe = snapshotMaengel(computeErgebnis()); }catch(e){}
+  return JSON.stringify(state, (k,v)=>{ if(!withPhotos){ if(k==='weitereFotos') return []; if(typeof v==='string' && v.indexOf('data:image')===0) return ''; } return v; }, 1);
+}
+function dataFile(){ const wp = document.getElementById('finishPhotos').checked; return new File([dataJsonText(wp)], reportFileTitle('Daten')+'.json', {type:'application/json'}); }
+function currentFiles(){ return (_finish.pdfs||[]).concat([dataFile()]); }
 function emailSubject(){
   const s = state.standort, adr = addressLines().join(', ');
   return reportTitle()+' – '+[s.name,adr].filter(Boolean).join(', ')+' ('+fmtDateDe()+')';
@@ -2871,13 +3031,15 @@ function emailBody(){
   const r = computeErgebnis(), s = state.standort;
   let t = 'Ergebnis: '+r.label+'\n';
   if(r.frist.length) t += 'Frist zur Beseitigung der Mängel: '+fmtIso(fristIso())+'\n';
-  t += '\nAnlage: '+[s.name, addressLines().join(', ')].filter(Boolean).join(', ')+'\nPrüfdatum: '+fmtDateDe()+(s.pruefer?'\nPrüfer: '+s.pruefer:'')+'\n\nAnlagen: Inbetriebsetzungsprotokoll (intern) und Mängelschein.';
+  t += '\nAnlage: '+[s.name, addressLines().join(', ')].filter(Boolean).join(', ')+'\nPrüfdatum: '+fmtDateDe()+(s.pruefer?'\nPrüfer: '+s.pruefer:'')+'\n\nAnlagen: Inbetriebsetzungsprotokoll (intern), Mängelschein und Datendatei (JSON).';
   return t;
 }
 function finishLine(txt, cls){ const d=document.createElement('div'); d.textContent=txt; if(cls) d.className=cls; document.getElementById('finishStatus').appendChild(d); return d; }
 function closeFinish(){ document.getElementById('finishModal').hidden = true; }
 async function openFinish(){
+  ensureMapImg().catch(()=>{});
   const m = document.getElementById('finishModal'); m.hidden = false;
+  renderFinishRecip();
   const st = document.getElementById('finishStatus'); st.innerHTML = '';
   ['finishShare','finishSave'].forEach(id=>document.getElementById(id).disabled = true);
   document.getElementById('finishOpen').hidden = true;
@@ -2885,14 +3047,22 @@ async function openFinish(){
   const r = computeErgebnis();
   finishLine(r.label, 'finish-res');
   if(r.offen.length){ finishLine('Noch nicht vollständig dokumentiert:', 'finish-warn'); r.offen.slice(0,8).forEach(t=>finishLine('• '+t,'finish-warn')); if(r.offen.length>8) finishLine('… und '+(r.offen.length-8)+' weitere','finish-warn'); }
+  const unans = visibleItems().filter(i=>!chkAnswered(i.id));
+  if(unans.length){
+    finishLine('Checkliste unvollständig: '+unans.length+' Punkt(e) noch nicht mit Ja oder Nein beantwortet. Das Protokoll kann erst danach versendet werden.','finish-warn');
+    unans.slice(0,6).forEach(i=>finishLine('• '+i.label,'finish-warn')); if(unans.length>6) finishLine('… und '+(unans.length-6)+' weitere','finish-warn');
+    return;
+  }
   const prog = finishLine('PDFs werden erstellt …');
   try{
     await flushDraft();
+    await ensureMapImg();
     const b1 = await htmlToPdfBlob(buildInternalHtml());
     const b2 = await htmlToPdfBlob(buildExternalHtml());
-    _finish.files = [ new File([b1], reportFileTitle('Protokoll')+'.pdf', {type:'application/pdf'}), new File([b2], reportFileTitle('Maengelschein')+'.pdf', {type:'application/pdf'}) ];
+    _finish.pdfs = [ new File([b1], reportFileTitle('Protokoll')+'.pdf', {type:'application/pdf'}), new File([b2], reportFileTitle('Maengelschein')+'.pdf', {type:'application/pdf'}) ];
+    _finish.files = currentFiles();
     state.abschluss.fertigTs = Date.now(); await flushDraft(); await archiveCurrent(true);
-    prog.textContent = 'Fertig: Protokoll (intern) und Mängelschein als PDF erstellt. Das Protokoll liegt im Verlauf.';
+    prog.textContent = 'Fertig: Protokoll (intern), Mängelschein und Datendatei erstellt. Das Protokoll liegt im Verlauf.';
     ['finishShare','finishSave'].forEach(id=>document.getElementById(id).disabled = false);
   }catch(e){
     prog.textContent = 'PDF-Erstellung nicht möglich ('+(e&&e.message||e)+'). Die PDF-Bausteine werden einmalig aus dem Internet geladen. Alternativ die Berichte öffnen und über „Drucken / Als PDF speichern“ sichern.';
@@ -2904,20 +3074,21 @@ function downloadFiles(files){
   files.forEach((f,i)=> setTimeout(()=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(f); a.download=f.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); }, i*500));
 }
 async function finishShare(){
-  const files = _finish.files; if(!files) return;
+  if(!_finish.pdfs) return; const files = currentFiles();
   try{
     if(navigator.canShare && navigator.canShare({files})){
-      await navigator.share({files, title:emailSubject(), text:emailBody()});
+      await navigator.share({files, title:emailSubject(), text:(ablageAdr()?'An: '+ablageAdr()+'\n\n':'')+emailBody()});
       finishLine('Zum Teilen übergeben.');
       return;
     }
   }catch(e){ if(e && e.name==='AbortError') return; }
   // Fallback (z. B. Desktop): PDFs speichern und E-Mail-Programm ohne Anhang öffnen
   downloadFiles(files);
-  finishLine('Die PDFs wurden gespeichert. Bitte im E-Mail-Programm anhängen.');
-  location.href = 'mailto:?subject='+encodeURIComponent(emailSubject())+'&body='+encodeURIComponent(emailBody()+'\n\n(PDFs bitte anhängen)');
+  finishLine('Die Dateien wurden gespeichert. Bitte im E-Mail-Programm anhängen.');
+  location.href = 'mailto:'+encodeURIComponent(ablageAdr())+'?subject='+encodeURIComponent(emailSubject())+'&body='+encodeURIComponent(emailBody()+'\n\n(Dateien bitte anhängen)');
 }
-function finishSave(){ if(_finish.files) downloadFiles(_finish.files); }
+function finishSave(){ if(_finish.pdfs) downloadFiles(currentFiles()); }
+document.getElementById('finishData').onclick = ()=>{ try{ state.standort.datum = document.getElementById('pruefdatum').value || state.standort.datum; }catch(e){} downloadFiles([dataFile()]); finishLine('Datendatei gespeichert. Bitte in den gemeinsamen Ordner legen.'); };
 document.getElementById('finishShare').onclick = finishShare;
 document.getElementById('finishSave').onclick = finishSave;
 document.getElementById('finishClose').onclick = closeFinish;
@@ -2948,7 +3119,7 @@ async function archiveCurrent(force){
   const list = await histLoad();
   let label = ''; try{ label = computeErgebnis().label; }catch(e){}
   const entry = {pid:s.pid, ts:Date.now(), name:s.standort.name||'(ohne Namen)', adr:addressLines().join(', '), datum:s.standort.datum||'', vorgang:s.vorgang, ebene:s.ebene,
-    ergebnis:label, zaehler:(s.zaehler&&s.zaehler.z_nummer)||'', fertig:!!(s.abschluss&&s.abschluss.fertigTs), state:JSON.stringify(s)};
+    ergebnis:label, nm:((s.abschluss&&s.abschluss.maengelListe)||[]).length, zaehler:(s.zaehler&&s.zaehler.z_nummer)||'', fertig:!!(s.abschluss&&s.abschluss.fertigTs), state:JSON.stringify(s)};
   const i = list.findIndex(e=>e.pid===s.pid);
   if(i>=0) list[i] = entry; else list.unshift(entry);
   list.sort((a,b)=>b.ts-a.ts);
@@ -2976,7 +3147,8 @@ async function renderHist(){
       ${e.ergebnis?`<div class="hist-res">${esc(e.ergebnis)}</div>`:''}
       <div class="hist-act" hidden>
         ${aktuell?'':`<button class="btn btn-sm btn-primary" data-act="open">Öffnen</button>`}
-        <button class="btn btn-sm" data-act="nach">Nachprüfung starten</button>
+        <button class="btn btn-sm" data-act="nach">Nur Mängel nachprüfen</button>
+        <button class="btn btn-sm btn-primary" data-act="ibn">${e.nm===0?'Inbetriebnahme starten':'Inbetriebnahme + Mängel'}</button>
         ${aktuell?'':`<button class="btn btn-sm btn-danger" data-act="del">Löschen</button>`}
       </div></div>`;
   }).join('');
@@ -2998,18 +3170,98 @@ async function histAction(pid, act, btn){
   if(act==='open'){
     await idbSet(LS_KEY, e.state); location.reload(); return;
   }
+  if(act==='ibn'){
+    const st = JSON.parse(e.state);
+    const items = ((st.abschluss&&st.abschluss.maengelListe)||[]).map(itemFromSnapshot);
+    const neu = JSON.parse(JSON.stringify(st)); delete neu.abschluss; delete neu.weitereFotos;
+    Object.assign(neu, {pid:newPid(), vorgang:'ibn',
+      nachpruefung:{items, kombi:true, quelle:(VORGANG_KURZ[st.vorgang]||'Protokoll')+' vom '+(st.standort&&st.standort.datum?fmtIso(st.standort.datum):new Date(e.ts).toLocaleDateString('de-DE'))}});
+    neu.standort = Object.assign({}, st.standort, {datum:'', pruefer:(profilLoad().pruefer||(st.standort||{}).pruefer||'')});
+    if(neu.zaehler){ neu.zaehler = Object.assign({}, neu.zaehler, {zeiger:null}); }
+    await idbSet(LS_KEY, JSON.stringify(neu)); location.reload(); return;
+  }
   if(act==='nach'){
     const st = JSON.parse(e.state);
     const items = ((st.abschluss&&st.abschluss.maengelListe)||[]).map(itemFromSnapshot);
-    const partial = {pid:newPid(), vorgang:'nach', ebene:st.ebene, messart:st.messart,
-      standort:Object.assign({}, st.standort, {datum:'', pruefer:(profilLoad().pruefer||st.standort.pruefer||'')}),
-      nachpruefung:{items, quelle:'Protokoll vom '+(st.standort.datum?fmtIso(st.standort.datum):new Date(e.ts).toLocaleDateString('de-DE'))}};
+    const partial = JSON.parse(JSON.stringify(st)); delete partial.abschluss; delete partial.weitereFotos;
+    Object.assign(partial, {pid:newPid(), vorgang:'nach',
+      nachpruefung:{items, quelle:(VORGANG_KURZ[st.vorgang]||'Protokoll')+' vom '+(st.standort.datum?fmtIso(st.standort.datum):new Date(e.ts).toLocaleDateString('de-DE'))}});
+    partial.standort = Object.assign({}, st.standort, {datum:'', pruefer:(profilLoad().pruefer||st.standort.pruefer||'')});
     await idbSet(LS_KEY, JSON.stringify(partial)); location.reload();
   }
 }
 document.getElementById('btnHist').onclick = openHist;
 document.getElementById('histClose').onclick = ()=>{ document.getElementById('histModal').hidden = true; };
 document.getElementById('histSearch').addEventListener('input', renderHist);
+
+/* E-Mail-Empfänger: bis zu 10 Adressen, je nach Spannungsebene und Art des Termins */
+const EBENEN = ['NS','MS','HS'];
+const ARTEN = [['vor','Vorinbetriebnahme'],['ibn','Inbetriebnahme'],['nach','Nachprüfung'],['bestand','Bestandsanlage']];
+function recipList(){
+  const pr = profilLoad();
+  if(!Array.isArray(pr.empf)){
+    const l = []; if(pr.ablage) l.push(newRecip(pr.ablage));
+    profilSave({empf:l}); return l;
+  }
+  return pr.empf;
+}
+function newRecip(mail){ return {name:'', mail:mail||'', ebene:{NS:true,MS:true,HS:true}, art:{vor:true,ibn:true,nach:true,bestand:true}}; }
+function recipSave(l){ profilSave({empf:l}); }
+function recipientsFor(){
+  return recipList().filter(r=>r.mail && r.ebene && r.ebene[state.ebene] && r.art && r.art[state.vorgang]).map(r=>r.mail.trim());
+}
+function ablageAdr(){ return recipientsFor().join(','); }
+function renderFinishRecip(){
+  const el = document.getElementById('finishRecip'); if(!el) return;
+  const l = recipientsFor();
+  el.textContent = l.length ? 'An: '+l.join(', ') : 'Keine E-Mail-Adresse für diese Spannungsebene und Art hinterlegt.';
+}
+function renderRecip(){
+  const box = document.getElementById('recipList'), l = recipList();
+  box.innerHTML = l.map((r,i)=>`<div class="rc" data-i="${i}">
+    <input type="text" data-f="name" placeholder="Bezeichnung (z. B. Team Mittelspannung)" value="${esc(r.name||'')}">
+    <input type="text" data-f="mail" inputmode="email" autocapitalize="off" placeholder="E-Mail-Adresse" value="${esc(r.mail||'')}">
+    <div class="tg">${EBENEN.map(e=>`<span data-g="ebene" data-k="${e}" class="${r.ebene[e]?'on':''}">${e}</span>`).join('')}</div>
+    <div class="tg" style="margin-top:6px">${ARTEN.map(([k,t])=>`<span data-g="art" data-k="${k}" class="${r.art[k]?'on':''}">${t}</span>`).join('')}</div>
+    <div style="text-align:right;margin-top:6px"><button class="btn btn-sm btn-danger" data-del="1" type="button">Entfernen</button></div>
+  </div>`).join('') || '<div class="hint">Noch keine Adresse hinterlegt.</div>';
+  document.getElementById('recipAdd').disabled = l.length>=10;
+}
+function openRecip(){ renderRecip(); document.getElementById('recipModal').hidden = false; }
+function closeRecip(){ document.getElementById('recipModal').hidden = true; renderFinishRecip(); }
+document.getElementById('btnSet').onclick = openRecip;
+document.getElementById('finishRecipEdit').onclick = openRecip;
+document.getElementById('recipClose').onclick = closeRecip;
+document.getElementById('recipAdd').onclick = ()=>{ const l = recipList(); if(l.length<10){ l.push(newRecip('')); recipSave(l); renderRecip(); } };
+document.getElementById('recipList').addEventListener('input', e=>{
+  const row = e.target.closest('.rc'); if(!row || !e.target.dataset.f) return;
+  const l = recipList(); l[+row.dataset.i][e.target.dataset.f] = e.target.value; recipSave(l);
+});
+document.getElementById('recipList').addEventListener('click', e=>{
+  const row = e.target.closest('.rc'); if(!row) return; const l = recipList(), r = l[+row.dataset.i];
+  if(e.target.dataset.del){ if(e.target.dataset.armed!=='1'){ e.target.dataset.armed='1'; e.target.textContent='Wirklich entfernen?'; return; } l.splice(+row.dataset.i,1); recipSave(l); renderRecip(); return; }
+  const g = e.target.dataset.g; if(!g) return; r[g][e.target.dataset.k] = !r[g][e.target.dataset.k]; recipSave(l); e.target.classList.toggle('on');
+});
+document.getElementById('finishCopy').onclick = async ()=>{ const t = recipientsFor().join('; '); if(!t){ finishLine('Keine Adresse zugeordnet.'); return; } try{ await navigator.clipboard.writeText(t); finishLine('Adressen kopiert.'); }catch(e){ finishLine(t); } };
+
+/* Datendatei aus dem gemeinsamen Ordner laden */
+document.getElementById('histImport').onclick = ()=>document.getElementById('histFile').click();
+document.getElementById('histFile').addEventListener('change', async e=>{
+  const f = e.target.files[0]; e.target.value = ''; if(!f) return;
+  const msg = document.getElementById('histMsg');
+  let st; try{ st = JSON.parse(await f.text()); }catch(err){ msg.textContent = 'Datei nicht lesbar.'; return; }
+  if(!st || typeof st!=='object' || !st.standort || !st.vorgang){ msg.textContent = 'Das ist keine Datendatei dieser App.'; return; }
+  const list = await histLoad();
+  let pid = st.pid; if(!pid || list.some(x=>x.pid===pid)) pid = newPid(); st.pid = pid;
+  const a = st.abschluss || {}, s = st.standort; let label = '';
+  try{ label = (ERG_TEXT[st.vorgang]||{})[a.ergebnis] || ''; }catch(err){}
+  const entry = {pid, ts:Date.now(), name:s.name||'(ohne Namen)', adr:[[s.strasse,s.hausnr].filter(Boolean).join(' '),[s.plz,s.ort].filter(Boolean).join(' ')].filter(Boolean).join(', '),
+    datum:s.datum||'', vorgang:st.vorgang, ebene:st.ebene, ergebnis:label, nm:(a.maengelListe||[]).length, zaehler:(st.zaehler&&st.zaehler.z_nummer)||'', fertig:!!a.fertigTs, state:JSON.stringify(st)};
+  list.unshift(entry); await idbSet('hist', list.slice(0,40));
+  msg.textContent = 'Geladen: '+entry.name+'. Tippe auf den Eintrag und wähle, wie es weitergeht.';
+  await renderHist();
+  const it = document.querySelector('.hist-item[data-pid="'+pid+'"]'); if(it){ const act = it.querySelector('.hist-act'); if(act) act.hidden = false; it.scrollIntoView({block:'nearest'}); }
+});
 
 
 bootDraft().then(init);
