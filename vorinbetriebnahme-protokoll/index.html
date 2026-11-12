@@ -198,7 +198,7 @@ img.thumb{cursor:pointer} #photoSheet .btn{display:flex;align-items:center;justi
 .thumb.empty[src]{border:2px solid var(--accent) !important}
 .rc{background:var(--field);border-radius:14px;padding:10px;margin-bottom:10px}.rc input{margin-bottom:6px}.tg{display:flex;flex-wrap:wrap;gap:6px}.tg span{padding:6px 12px;border-radius:999px;border:1.5px solid var(--accent);font-size:13px;cursor:pointer;user-select:none}.tg span.on{background:var(--accent);color:var(--on-accent)}
 .yn{display:flex;gap:8px}.yn span{flex:1;text-align:center;padding:9px 0;border-radius:10px;border:1.5px solid var(--accent);font-weight:600;cursor:pointer;user-select:none}.yn span.on[data-v=ja]{background:var(--accent);color:var(--on-accent)}.yn span.on[data-v=nein]{background:#c0392b;border-color:#c0392b;color:#fff}
-</style>
+.fm{display:flex;gap:8px}.fm span{flex:1;text-align:center;padding:9px 6px;border-radius:10px;border:1.5px solid var(--accent);font-weight:600;cursor:pointer;user-select:none}.fm span.on{background:var(--accent);color:var(--on-accent)}</style>
 </head>
 <body>
 
@@ -492,6 +492,53 @@ img.thumb{cursor:pointer} #photoSheet .btn{display:flex;align-items:center;justi
     <div class="card" id="liveChecklistCard">
       <h2>Prüf-Checkliste Zähler</h2>
       <div id="liveChecklistContainer"></div>
+    </div>
+  </div>
+
+  <!-- FRE / EINSPEISEMANAGEMENT -->
+  <div class="panel" id="panel-fae">
+    <div class="card">
+      <h2>FRE – Einspeisemanagement</h2>
+      <div class="hint" style="margin-top:0;">Ferngesteuerte Leistungsreduzierung der PV-Anlage (über 25 kW Einspeiseleistung, Niederspannung). Die Stufen 100 / 60 / 30 / 0 % werden am FAE einzeln geschaltet und die Einspeiseleistung am Zähler gemessen.</div>
+      <div class="hint" id="faeInfo" style="white-space:pre-line;"></div>
+      <label>Art der Einspeisung</label>
+      <div class="fm" id="faeModus"><span data-m="voll">Volleinspeisung</span><span data-m="ueberschuss">Überschusseinspeisung</span></div>
+      <div id="faeUeberschussBox" style="display:none">
+        <label>Hausverbrauch in kW (leer = automatisch aus der 0-%-Stufe)</label>
+        <input type="text" inputmode="decimal" id="fae_last">
+        <div class="hint">Bei Überschusseinspeisung misst der Zähler nur die Differenz aus PV-Erzeugung und Verbrauch. Die PV-Leistung ergibt sich aus Zählerwert + Hausverbrauch; bei der 0-%-Stufe darf nichts mehr eingespeist werden. Voraussetzung: Der Verbrauch bleibt während der Prüfung ungefähr gleich.</div>
+      </div>
+      <label>FAE Seriennummer</label>
+      <div style="display:flex; gap:6px;">
+        <input type="text" id="fae_nr" style="flex:1;">
+        <button class="btn btn-sm" type="button" onclick="startBarcodeScan('fae_nr','status-fae-serial')">Scan</button>
+      </div>
+      <div class="status-line" id="status-fae-serial"></div>
+      <label style="margin-top:10px;">Foto FAE (Barcode wird gelesen)</label>
+      <div id="faePhoto"></div>
+      <label>Zählerkonstante (Impulse je kWh, für die Impulsmessung)</label>
+      <input type="text" inputmode="decimal" id="fae_konst">
+      <label>Zulässige Abweichung (± % der Einspeiseleistung)</label>
+      <input type="text" inputmode="decimal" id="fae_tol">
+      <label>Bezugsleistung für 100 % (kW, leer = automatisch)</label>
+      <input type="text" inputmode="decimal" id="fae_bezugov">
+    </div>
+    <div id="faeStages"></div>
+    <div class="card" id="faeSummary"></div>
+  </div>
+
+  <!-- NA-SCHUTZ -->
+  <div class="panel" id="panel-na">
+    <div class="card">
+      <h2>NA-Schutz</h2>
+      <div class="hint" style="margin-top:0;">Netz- und Anlagenschutz mit Kuppelschalter (Erzeugungsanlagen über 30 kW).</div>
+      <label style="margin-top:10px;">Foto NA-Schutz</label>
+      <div id="naPhoto"></div>
+      <label>Hersteller / Typ (optional – wird für das nächste Mal gemerkt)</label>
+      <input type="text" id="na_typ" list="naTypList" autocomplete="off">
+      <datalist id="naTypList"></datalist>
+      <label>Ergebnis</label>
+      <div class="fm" id="naStatus" style="flex-direction:column"><span data-s="ok">NA-Schutz funktioniert</span><span data-s="defekt">NA-Schutz funktioniert nicht</span><span data-s="fehlt">NA-Schutz nicht verbaut</span></div>
     </div>
   </div>
 
@@ -954,6 +1001,8 @@ const PANEL_DEFS = [
   {id:'kombi', label:'Kombiwandler', cond:()=> hasKombiPanel()},
   {id:'modem', label:'Modem', cond:()=> isPruefung()},
   {id:'zaehler', label:'Zähler', cond:()=> isPruefung()},
+  {id:'fae', label:'FRE', cond:()=> faeNeeded()},
+  {id:'na', label:'NA-Schutz', cond:()=> naNeeded()},
   {id:'ende', label:'Abschluss-Check', cond:()=> isPruefung()},
   {id:'abschluss', label:'Abschluss'},
 ];
@@ -989,6 +1038,8 @@ function showStepByIndex(i){
   if(panels[i].id==='riso') buildRisoFields();
   if(panels[i].id==='nach') buildNachList();
   if(panels[i].id==='zaehler') buildZaehlerPanel();
+  if(panels[i].id==='fae') buildFae();
+  if(panels[i].id==='na') buildNa();
   if(panels[i].id==='ct') buildCtBlocks();
   if(panels[i].id==='vt') buildVtBlocks();
   if(panels[i].id==='kombi') buildKombiBlocks();
@@ -1019,6 +1070,8 @@ function isStepComplete(id){
     case 'vt': return !!(state.vt && state.vt.primaer && state.vt.sekundaer && state.vt.phases.every(p=>p.seriennummer)) && (wandlerHostPanelId()!=='vt' || itemsDone('wandler'));
     case 'kombi': return !!(state.kombi && state.kombi.primaerA && state.kombi.sekundaerA && state.kombi.primaerV && state.kombi.sekundaerV && state.kombi.phases.every(p=>p.seriennummer)) && (wandlerHostPanelId()!=='kombi' || itemsDone('wandler'));
     case 'zaehler': return !!(state.zaehler.z_nummer && state.zaehler.stand.ap) && itemsDone('zaehler');
+    case 'fae': return faeComplete();
+    case 'na': return naComplete();
     case 'modem': return !!(state.modem.sim || state.modem.notizen);
     case 'checkliste': {
       return itemsDone('checkliste');
@@ -2208,6 +2261,7 @@ function gatherMaengel(){
     state.nachpruefung.items.forEach((it,i)=>{
       if(it.status==='offen') list.push({key:'nach:'+i, text:it.text, ext:it.ext!==false, comp:null, req:it.req||'', massn:it.massn||'', begr:it.begr||'', quelle:it.quelle||it.ref||'', cls:it.cls||'keine', note:it.note||''});
     });
+    faeMaengel(list);
     return list;
   }
   if(!isPruefung()) return list;
@@ -2233,6 +2287,7 @@ function gatherMaengel(){
       if(v!=null && v<RISO_MIN_MOHM) list.push(mkMangel('riso:'+k, l+': Isolationswiderstand zu niedrig ('+state.riso[k]+' MΩ)', true, {req:'Isolationswiderstand mind. '+RISO_MIN_MOHM+' MΩ bei 500 V DC'}));
     });
   }
+  faeMaengel(list);
   String(state.abschluss.maengel||'').split(/\n+/).map(t=>t.trim()).filter(Boolean).forEach((t,i)=>{
     list.push(mkMangel('text:'+i, t, true, {}));
   });
@@ -2245,6 +2300,7 @@ function gatherOffen(){   // fehlende Eingaben des Prüfers (keine Mängel der A
   if(state.vorgang==='nach'){
     if(!state.nachpruefung.items.length) o.push('Keine Mängel zur Nachprüfung hinterlegt');
     state.nachpruefung.items.forEach(it=>{ if(!it.status) o.push('Nachprüfung offen: '+it.text); });
+    faeOffen(o);
   } else {
     if(kombiNach()) state.nachpruefung.items.forEach(it=>{ if(!it.status) o.push('Früheren Mangel abhaken: '+it.text); });
     if(!state.ebene || !state.messart) o.push('Spannungsebene / Messart wählen');
@@ -2259,6 +2315,7 @@ function gatherOffen(){   // fehlende Eingaben des Prüfers (keine Mängel der A
     if(absicherungVisible() && !state.absicherung.sicherung) o.push('Absicherung nicht angegeben');
     visibleItems().forEach(({id})=>{ const d=BEWERTUNG[id], c=state.checklist[id]||{}; if(d && d.variants && c.nein && !c.checked && !c.variant) o.push(d.komp+': Wirksamkeit der Schutzmaßnahme angeben'); });
     { const _un = visibleItems().filter(i=>!chkAnswered(i.id)).length; if(_un) o.push('Checkliste: '+_un+' Punkt(e) noch nicht mit Ja oder Nein beantwortet'); }
+    faeOffen(o);
     if(collectPhotos().length===0) o.push('Keine Fotos aufgenommen');
   }
   if(!state.abschluss.unterschrift && !state.abschluss.sigImg) o.push('Unterschrift fehlt');
@@ -2724,6 +2781,7 @@ function collectPhotos(){
   if(hasCtPanel()) grp(state.ct);
   if(hasVtPanel()) grp(state.vt);
   if(hasKombiPanel()) grp(state.kombi);
+  if(faeShown()){ (faeS().photos||[]).forEach(p=>add(p,'FAE')); if(naNeeded()) (naS().photos||[]).forEach(p=>add(p,'NA-Schutz')); }
   (state.abschluss.weitereFotos||[]).forEach(p=>add(p,'Weiteres Foto'));
   return out;
 }
@@ -2851,8 +2909,10 @@ function buildInternalHtml(){
       + state.nachpruefung.items.map((it,i)=>'<tr><td class="nr">'+(i+1)+'</td><td><span class="kls '+(it.cls||'keine')+'">'+esc(KLASSE_LABEL[it.cls||'keine'])+'</span> '+esc(it.text)+'</td><td class="'+(it.status==='offen'?'bad':'')+'">'+(it.status==='behoben'?'behoben':it.status==='offen'?'nicht behoben':'offen')+'</td><td>'+esc(it.note||'')+'</td></tr>').join('')
       + '</tbody></table></div>';
   }
+  if(state.vorgang==='nach') html += faeBlockHtml();
   if(state.vorgang!=='nach'){
     html += zaehlerBlockHtml();
+    html += faeBlockHtml();
     const rr = hasRiso();
     if(hasCtPanel() && state.ct) html += wandlerTableHtml('Stromwandler', ratioText(state.ct), state.ct.klasse, state.ct.sollbuerde,
       state.ct.phases.map((p,i)=>({label:'L'+(i+1), serial:p.seriennummer, gem:p.gemessenebuerde, riso:state.riso['iL'+(i+1)]})), rr);
@@ -2957,6 +3017,267 @@ function externalText(){
 }
 function openInternalReport(){ openReport(wrapReport(reportFileTitle('Protokoll'), buildInternalHtml())); }
 function openExternalReport(){ openReport(wrapReport(reportFileTitle('Maengelschein'), buildExternalHtml())); }
+
+/* ---------------- FRE / EINSPEISEMANAGEMENT (PV > 25 kW, NS) ---------------- */
+const FAE_STUFEN = [['p100',100],['p60',60],['p30',30],['p0',0]];
+function faeS(){
+  if(!state.fae) state.fae = {};
+  const f = state.fae;
+  if(!f.modus) f.modus = 'voll';
+  if(!Array.isArray(f.photos)) f.photos = [];
+  if(!f.st) f.st = {};
+  ['nr','konst','tol','last','bezugov'].forEach(k=>{ if(f[k]==null) f[k] = ''; });
+  FAE_STUFEN.forEach(([k])=>{ if(!f.st[k]) f.st[k] = {val:'', bezug:false, na:false}; });
+  return f;
+}
+function faeNeeded(){ return !!state.vorgang && state.vorgang!=='vor' && state.ebene==='NS' && (parseNum(state.standort.einspeise)||0) > 25; }
+function faeShown(){ return faeNeeded(); }
+function fmtKw(v, d){ return (v==null||!isFinite(v)) ? '–' : v.toFixed(d==null?2:d).replace('.',','); }
+function faeCalc(){
+  const f = faeS(), P = parseNum(state.standort.einspeise)||0;
+  const tolPct = (f.tol!=='' && parseNum(f.tol)!=null) ? parseNum(f.tol) : 5;
+  const ov = parseNum(f.bezugov);
+  const drossel = P>25 && P<=100;
+  const base = ov>0 ? ov : (P>100 ? P : 0.6*P);
+  const tol = P*tolPct/100;
+  const ueb = f.modus==='ueberschuss';
+  const net = k=>{ const s=f.st[k]; let v = parseNum(s.val); if(v==null) return null; return (ueb && s.bezug) ? -v : v; };
+  let last = null; const lov = parseNum(f.last);
+  if(ueb){ if(f.last!=='' && lov!=null) last = lov; else if(net('p0')!=null) last = -net('p0'); }
+  const rows = FAE_STUFEN.map(([k,pct])=>{
+    const s = f.st[k], soll = base*pct/100, n = net(k);
+    let mess = null;
+    if(n!=null) mess = ueb ? (last==null ? null : n+last) : n;
+    if(ueb && k==='p0' && n!=null && (f.last===''||lov==null)) mess = 0;   // Verbrauch aus dieser Stufe abgeleitet
+    let status = 'offen', dev = null;
+    if(s.na) status = 'na';
+    else if(mess!=null){
+      dev = mess - soll;
+      if(pct===0){ status = (ueb && f.last==='' ) ? (n<=tol ? 'ok' : 'hoch') : (mess<=tol ? 'ok' : 'hoch'); dev = (ueb && f.last==='') ? n : mess; }
+      else status = Math.abs(dev)<=tol+1e-9 ? 'ok' : (dev>0 ? 'hoch' : 'niedrig');
+    }
+    return {k, pct, soll, net:n, mess, dev, status, na:!!s.na};
+  });
+  return {P, base, tol, tolPct, drossel, ueb, last, rows};
+}
+function faeComplete(){ const f = faeS(), rs = faeCalc().rows; return !!f.nr && rs.every(r=>r.status!=='offen') && rs.some(r=>r.status!=='na'); }
+function faeMaengel(list){
+  if(!faeShown()) return;
+  naMaengel(list);
+  const c = faeCalc();
+  c.rows.forEach(r=>{
+    if(r.status!=='hoch' && r.status!=='niedrig') return;
+    if(state.vorgang==='nach' && state.nachpruefung.items.some(it=>it.key==='fae:'+r.k)) return;   // früherer Mangel wird dort abgehakt
+    const m = mkMangel('fae:'+r.k, 'Einspeisemanagement (FRE/FAE) Stufe '+r.pct+' %: '+(r.pct===0 ? 'Einspeisung '+fmtKw(r.dev)+' kW statt 0 kW' : 'gemessen '+fmtKw(r.mess)+' kW, Sollwert '+fmtKw(r.soll)+' kW (zulässig ± '+fmtKw(c.tol)+' kW)')+(r.status==='niedrig'?' – Leistung zu niedrig':''),
+      true, {req:'Ferngesteuerte Leistungsreduzierung auf 100 / 60 / 30 / 0 % mit höchstens '+c.tolPct+' % Abweichung', quelle:'EEG § 9'});
+    m.cls = 'frist'; m.massn = 'Einspeisemanagement (FRE/FAE) fachgerecht einrichten bzw. parametrieren und die Funktion nachweisen.'; m.begr = 'Technische Einrichtung zur ferngesteuerten Reduzierung der Einspeiseleistung.';
+    list.push(m);
+  });
+}
+function faeOffen(o){
+  if(!faeShown()) return;
+  naOffen(o);
+  const f = faeS(), c = faeCalc();
+  if(!f.nr) o.push('FRE/FAE: Seriennummer fehlt');
+  c.rows.forEach(r=>{
+    if(r.status==='offen') o.push('FRE/FAE: Stufe '+r.pct+' % nicht gemessen'+(c.ueb && r.net!=null && c.last==null ? ' (Hausverbrauch fehlt)' : ''));
+  });
+  if(c.rows.every(r=>r.status==='na'||r.status==='offen') && c.rows.some(r=>r.status==='na')) o.push('FRE/FAE: Keine Stufe messbar – Prüfung bei besserer Einstrahlung wiederholen');
+}
+function faeBlockHtml(){
+  if(!faeShown()) return '';
+  const f = faeS(), c = faeCalc();
+  const naH = naBlockHtml();
+  const lbl = {ok:'bestanden', hoch:'zu hoch', niedrig:'zu niedrig', offen:'nicht gemessen', na:'nicht prüfbar (zu wenig Einstrahlung)'};
+  let h = '<div class="blk"><div class="blkh">FRE – Einspeisemanagement<span>FAE-Nr.: '+esc(f.nr||'–')+' · '+(c.ueb?'Überschusseinspeisung':'Volleinspeisung')+' · Einspeiseleistung '+fmtKw(c.P,1)+' kW'
+    + (c.drossel?' (gesetzlich auf 60 % begrenzt)':'')+' · 100 % = '+fmtKw(c.base,1)+' kW · Toleranz ± '+fmtKw(c.tol)+' kW'+(c.ueb && c.last!=null?' · Hausverbrauch '+fmtKw(c.last)+' kW':'')+'</span></div>'
+    + '<table><thead><tr><th>Stufe</th><th>Soll (kW)</th>'+(c.ueb?'<th>Zähler (kW)</th>':'')+'<th>PV-Leistung (kW)</th><th>Abweichung (kW)</th><th>Ergebnis</th></tr></thead><tbody>'
+    + c.rows.map(r=>'<tr><td><b>'+r.pct+' %</b></td><td>'+fmtKw(r.soll)+'</td>'+(c.ueb?'<td>'+fmtKw(r.net)+'</td>':'')+'<td>'+fmtKw(r.mess)+'</td><td>'+(r.dev==null?'–':(r.dev>0?'+':'')+fmtKw(r.dev))+'</td><td'+((r.status==='hoch'||r.status==='niedrig')?' class="bad"':'')+'>'+lbl[r.status]+'</td></tr>').join('')
+    + '</tbody></table>'
+    + (c.rows.some(r=>r.status==='na') ? '<div class="fine">Vermerk: Stufe(n) '+c.rows.filter(r=>r.status==='na').map(r=>r.pct+' %').join(', ')+' wegen zu geringer solarer Einstrahlung nicht prüfbar. Die geprüften Stufen sind maßgeblich für das Ergebnis.</div>' : '')
+    + '</div>' + naH;
+  return h;
+}
+
+/* --- Panel --- */
+function faeStageHtml(k, pct){
+  return '<div class="card" data-k="'+k+'"><h2>Stufe '+pct+' %</h2><div class="hint" style="margin-top:0" id="fae-soll-'+k+'"></div>'
+    + '<label>Gemessene Wirkleistung am Zähler (kW)</label>'
+    + '<div style="display:flex;gap:6px"><input type="text" inputmode="decimal" id="fae-val-'+k+'" style="flex:1"><button class="btn btn-sm" type="button" data-pulse="'+k+'">Impulse messen</button></div>'
+    + '<div class="fm" id="fae-sg-'+k+'" style="margin-top:8px"><span data-b="0">Einspeisung</span><span data-b="1">Bezug</span></div>'
+    + '<label style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="checkbox" id="fae-na-'+k+'" style="width:22px;height:22px;flex:none;margin:0"> Zu wenig Einstrahlung – Stufe nicht prüfbar (wird vermerkt)</label>'
+    + '<div class="status-line" id="fae-res-'+k+'"></div></div>';
+}
+function buildFae(){
+  const f = faeS();
+  document.getElementById('faeStages').innerHTML = FAE_STUFEN.map(([k,p])=>faeStageHtml(k,p)).join('');
+  document.getElementById('faePhoto').innerHTML = onePhotoRowHtml('fae');
+  bindOnePhotoSlot('fae', f, 'fae_nr', 'status-fae-serial');
+  document.getElementById('fae_nr').value = f.nr;
+  document.getElementById('fae_konst').value = f.konst; document.getElementById('fae_tol').value = f.tol;
+  document.getElementById('fae_last').value = f.last; document.getElementById('fae_bezugov').value = f.bezugov;
+  FAE_STUFEN.forEach(([k])=>{
+    const s = f.st[k];
+    document.getElementById('fae-val-'+k).value = s.val; document.getElementById('fae-na-'+k).checked = !!s.na;
+    document.getElementById('fae-val-'+k).oninput = e=>{ s.val = e.target.value; faeChanged(); };
+    document.getElementById('fae-na-'+k).onchange = e=>{ s.na = e.target.checked; faeChanged(); };
+    document.querySelectorAll('#fae-sg-'+k+' span').forEach(sp=> sp.onclick = ()=>{ s.bezug = sp.dataset.b==='1'; faeChanged(); });
+  });
+  document.querySelectorAll('#faeStages [data-pulse]').forEach(b=> b.onclick = ()=>faePulseOpen(b.dataset.pulse));
+  faeRefresh();
+}
+function faeChanged(){ saveDraft(); faeRefresh(); try{ updateStepCompletionUI(); }catch(e){} }
+function faeRefresh(){
+  const f = faeS(), c = faeCalc();
+  document.querySelectorAll('#faeModus span').forEach(sp=>sp.classList.toggle('on', sp.dataset.m===f.modus));
+  document.getElementById('faeUeberschussBox').style.display = c.ueb ? '' : 'none';
+  document.getElementById('faeInfo').textContent = 'Einspeiseleistung: '+fmtKw(c.P,1)+' kW'
+    + (c.drossel ? '\nAnlagen bis 100 kW sind gesetzlich auf 60 % begrenzt: 100 % entspricht hier '+fmtKw(c.base,1)+' kW.' : (c.P>100 ? '\nÜber 100 kW: 100 % entspricht '+fmtKw(c.base,1)+' kW.' : ''))
+    + (parseNum(f.bezugov)>0 ? '\n(Bezugsleistung von Hand vorgegeben)' : '')
+    + '\nZulässige Abweichung: ± '+c.tolPct+' % der Einspeiseleistung = ± '+fmtKw(c.tol)+' kW.';
+  c.rows.forEach(r=>{
+    const s = f.st[r.k];
+    document.getElementById('fae-soll-'+r.k).textContent = 'Soll: '+fmtKw(r.soll)+' kW'+(r.pct===0?' (höchstens '+fmtKw(c.tol)+' kW Einspeisung)':' (zulässig '+fmtKw(r.soll-c.tol)+' bis '+fmtKw(r.soll+c.tol)+' kW)');
+    const sg = document.getElementById('fae-sg-'+r.k); sg.style.display = c.ueb ? '' : 'none';
+    sg.querySelectorAll('span').forEach(sp=>sp.classList.toggle('on', (sp.dataset.b==='1')===!!s.bezug));
+    const el = document.getElementById('fae-res-'+r.k);
+    let t = '', cls = 'status-line';
+    if(r.status==='ok'){ t = '✓ in Ordnung'+(r.pct===0 ? '' : ' (Abweichung '+(r.dev>0?'+':'')+fmtKw(r.dev)+' kW)'); cls += ' ok'; }
+    else if(r.status==='hoch' || r.status==='niedrig'){ t = (r.pct===0 ? 'Es wird noch eingespeist: '+fmtKw(r.dev)+' kW' : 'Abweichung '+(r.dev>0?'+':'')+fmtKw(r.dev)+' kW – '+(r.status==='hoch'?'zu hoch':'zu niedrig')); cls += ' err'; }
+    else if(r.status==='na'){ t = 'Nicht prüfbar (zu wenig Einstrahlung) – wird im Protokoll vermerkt.'; }
+    else if(c.ueb && r.net!=null && c.last==null){ t = 'Hausverbrauch fehlt (aus der 0-%-Stufe oder von Hand).'; }
+    if(c.ueb && r.net!=null && r.status!=='na') t += (t?' · ':'')+'PV-Leistung '+fmtKw(r.mess)+' kW';
+    el.className = cls; el.textContent = t;
+  });
+  const bad = c.rows.filter(r=>r.status==='hoch'||r.status==='niedrig').length, open = c.rows.filter(r=>r.status==='offen').length + (c.rows.every(r=>r.status==='na'||r.status==='offen') && c.rows.some(r=>r.status==='na') ? 1 : 0), nna = c.rows.filter(r=>r.status==='na').length;
+  const sm = document.getElementById('faeSummary');
+  sm.innerHTML = '<h2>Ergebnis FRE</h2><div class="status-line '+(bad?'err':(open?'':'ok'))+'">'+(bad ? bad+' Stufe(n) außerhalb der Toleranz – wird als Mangel geführt.' : open ? 'Noch nicht alle Stufen gemessen bzw. prüfbar.' : '✓ Alle geprüften Stufen innerhalb der Toleranz.'+(nna?' ('+nna+' Stufe(n) wegen zu wenig Einstrahlung nicht prüfbar – im Protokoll vermerkt.)':''))+'</div>';
+}
+document.getElementById('faeModus').addEventListener('click', e=>{ const m = e.target.dataset && e.target.dataset.m; if(!m) return; faeS().modus = m; faeChanged(); });
+[['fae_nr','nr'],['fae_konst','konst'],['fae_tol','tol'],['fae_last','last'],['fae_bezugov','bezugov']].forEach(([id,k])=>{
+  document.getElementById(id).addEventListener('input', e=>{ faeS()[k] = e.target.value; faeChanged(); });
+});
+
+/* --- Impulsmessung (LED-Impulse am Zähler → Leistung) --- */
+function faePulseKw(ts, konst){
+  if(!ts || ts.length<3 || !(konst>0)) return null;
+  const span = (ts[ts.length-1]-ts[0])/1000; if(span<=0) return null;
+  return 3600/(konst*(span/(ts.length-1)));
+}
+function faeEdgeDetector(){
+  const hist = []; let on = false; const pulses = [];
+  return { pulses, feed(v, t){
+    hist.push([t,v]); while(hist.length && t-hist[0][0]>3000) hist.shift();
+    let lo = 1e9, hi = -1e9; hist.forEach(h=>{ if(h[1]<lo) lo=h[1]; if(h[1]>hi) hi=h[1]; });
+    if(hi-lo < 18) return false;
+    const up = lo+0.6*(hi-lo), dn = lo+0.4*(hi-lo);
+    if(!on && v>up){ on = true; if(!pulses.length || t-pulses[pulses.length-1] > 40){ pulses.push(t); return true; } }
+    else if(on && v<dn) on = false;
+    return false;
+  } };
+}
+let _fp = null;
+function faePulseOpen(k){
+  const f = faeS(); const ov = document.createElement('div'); ov.className = 'modal';
+  ov.innerHTML = '<div class="modal-box"><h2>Impulse messen</h2>'
+    + '<label>Zählerkonstante (Impulse je kWh)</label><input type="text" inputmode="decimal" id="fpKonst" value="'+esc(f.konst)+'">'
+    + '<div class="fm" id="fpMode" style="margin-top:10px"><span data-m="tap" class="on">Antippen</span><span data-m="cam">Kamera (LED)</span></div>'
+    + '<div id="fpCam" style="display:none;margin-top:10px;position:relative"><video id="fpVid" playsinline muted style="width:100%;border-radius:12px;background:#000;max-height:220px"></video><div style="position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border:3px solid #86bc25;border-radius:8px;pointer-events:none"></div><div class="hint">Zähler-LED in das grüne Quadrat halten und ruhig bleiben. Geeignet bis etwa 10 Impulse pro Sekunde.</div></div>'
+    + '<div id="fpTap" style="margin-top:10px"><button type="button" class="btn btn-primary btn-block" id="fpBtn" style="min-height:90px;font-size:18px">Bei jedem LED-Impuls tippen</button></div>'
+    + '<div id="fpOut" class="status-line" style="font-size:16px;margin-top:10px">Impulse: 0</div>'
+    + '<div class="modal-actions" style="display:flex;gap:8px;margin-top:10px"><button class="btn" id="fpReset" style="flex:1">Neu</button><button class="btn" id="fpCancel" style="flex:1">Abbrechen</button><button class="btn btn-primary" id="fpOk" style="flex:1" disabled>Übernehmen</button></div></div>';
+  document.body.appendChild(ov);
+  const st = {ts:[], kw:null, stream:null, raf:0, det:null, mode:'tap'};
+  _fp = st;
+  const konst = ()=>parseNum(ov.querySelector('#fpKonst').value);
+  const upd = ()=>{
+    const kw = faePulseKw(st.ts, konst()); st.kw = kw;
+    ov.querySelector('#fpOut').textContent = 'Impulse: '+st.ts.length+(kw!=null ? ' · Leistung: '+fmtKw(kw)+' kW' : (konst()>0 ? ' (mind. 3 nötig)' : ' (Zählerkonstante eintragen)'));
+    ov.querySelector('#fpOk').disabled = kw==null;
+  };
+  const stopCam = ()=>{ cancelAnimationFrame(st.raf); if(st.stream){ st.stream.getTracks().forEach(t=>t.stop()); st.stream = null; } };
+  const close = ()=>{ stopCam(); ov.remove(); _fp = null; };
+  ov.querySelector('#fpKonst').oninput = upd;
+  ov.querySelector('#fpBtn').onclick = ()=>{ st.ts.push(performance.now()); upd(); };
+  ov.querySelector('#fpReset').onclick = ()=>{ st.ts.length = 0; if(st.det) st.det = faeEdgeDetector(), st.ts = st.det.pulses; upd(); };
+  ov.querySelector('#fpCancel').onclick = close;
+  ov.querySelector('#fpOk').onclick = ()=>{
+    if(st.kw==null) return; const k2 = ov.querySelector('#fpKonst').value; if(k2){ f.konst = k2; const el = document.getElementById('fae_konst'); if(el) el.value = k2; }
+    f.st[k].val = fmtKw(st.kw).replace('.',','); const inp = document.getElementById('fae-val-'+k); if(inp) inp.value = f.st[k].val;
+    close(); faeChanged();
+  };
+  ov.querySelector('#fpMode').onclick = async e=>{
+    const m = e.target.dataset && e.target.dataset.m; if(!m) return;
+    ov.querySelectorAll('#fpMode span').forEach(sp=>sp.classList.toggle('on', sp.dataset.m===m));
+    st.mode = m; stopCam(); st.ts = []; st.det = null;
+    ov.querySelector('#fpCam').style.display = m==='cam' ? '' : 'none'; ov.querySelector('#fpTap').style.display = m==='tap' ? '' : 'none';
+    upd();
+    if(m!=='cam') return;
+    try{
+      st.stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}, width:{ideal:640}, height:{ideal:480}}, audio:false});
+      const v = ov.querySelector('#fpVid'); v.srcObject = st.stream; await v.play();
+      const cv = document.createElement('canvas'); cv.width = 24; cv.height = 24; const cx = cv.getContext('2d', {willReadFrequently:true});
+      st.det = faeEdgeDetector(); st.ts = st.det.pulses;
+      const loop = ()=>{
+        if(!st.stream) return;
+        const w = v.videoWidth, h = v.videoHeight;
+        if(w){ cx.drawImage(v, w/2-12*w/320, h/2-12*w/320, 24*w/320, 24*w/320, 0, 0, 24, 24);
+          const d = cx.getImageData(0,0,24,24).data; let sum = 0; for(let i=0;i<d.length;i+=4) sum += Math.max(d[i],d[i+1],d[i+2]);
+          if(st.det.feed(sum/(d.length/4), performance.now())) upd(); }
+        st.raf = requestAnimationFrame(loop);
+      };
+      loop();
+    }catch(err){ ov.querySelector('#fpOut').textContent = 'Kamera nicht verfügbar – bitte „Antippen“ nutzen oder den Wert von Hand eintragen.'; }
+  };
+  upd();
+}
+
+
+/* ---------------- NA-Schutz (Einspeiseleistung über 30 kW) – eigener Reiter, bewusst einfach ---------------- */
+const NA_STATUS = [['ok','NA-Schutz funktioniert'],['defekt','NA-Schutz funktioniert nicht'],['fehlt','NA-Schutz nicht verbaut']];
+function naS(){
+  const f = faeS(); if(!f.na) f.na = {};
+  const n = f.na; if(!Array.isArray(n.photos)) n.photos = [];
+  if(n.typ==null) n.typ = ''; if(!n.status) n.status = '';
+  return n;
+}
+function naNeeded(){ return faeNeeded() && (parseNum(state.standort.einspeise)||0) > 30; }
+function naComplete(){ return !naNeeded() || !!naS().status; }
+function naMaengel(list){
+  if(!naNeeded()) return; const n = naS();
+  if(n.status!=='defekt' && n.status!=='fehlt') return;
+  const t = n.status==='fehlt' ? 'NA-Schutz (Netz- und Anlagenschutz mit Kuppelschalter) ist nicht verbaut' : 'NA-Schutz (Netz- und Anlagenschutz mit Kuppelschalter) funktioniert nicht';
+  const m = mkMangel('fae:na', t+(n.typ?' (Typ: '+n.typ+')':''), true, {req:'Zentraler NA-Schutz mit Kuppelschalter bei Erzeugungsanlagen über 30 kVA', quelle:'VDE-AR-N 4105'});
+  m.cls = 'frist'; m.massn = n.status==='fehlt' ? 'NA-Schutz mit Kuppelschalter fachgerecht errichten und die Funktion nachweisen.' : 'NA-Schutz und Kuppelschalter instand setzen und die Funktion nachweisen.';
+  m.begr = 'Zentraler Netz- und Anlagenschutz mit Kuppelschalter.';
+  list.push(m);
+}
+function naOffen(o){ if(naNeeded() && !naS().status) o.push('NA-Schutz: Ergebnis wählen (funktioniert / funktioniert nicht / nicht verbaut)'); }
+function naBlockHtml(){
+  if(!naNeeded()) return ''; const n = naS();
+  const lbl = (NA_STATUS.find(x=>x[0]===n.status)||[0,'nicht angegeben'])[1];
+  return '<div class="blk"><div class="blkh">NA-Schutz (Kuppelschalter)<span>'+(n.typ?'Hersteller / Typ: '+esc(n.typ)+' · ':'')+'<b'+((n.status==='defekt'||n.status==='fehlt')?' class="bad"':'')+'>'+esc(lbl)+'</b></span></div></div>';
+}
+function naTypen(){ try{ const l = profilLoad().naTypen; return Array.isArray(l) ? l : []; }catch(e){ return []; } }
+function naTypMerken(t){
+  t = (t||'').trim(); if(!t) return;
+  const l = naTypen().filter(x=>x.toLowerCase()!==t.toLowerCase()); l.unshift(t);
+  profilSave({naTypen:l.slice(0,12), naTyp:t});
+}
+function buildNa(){
+  const n = naS();
+  document.getElementById('naPhoto').innerHTML = onePhotoRowHtml('na');
+  bindOnePhotoSlot('na', n, null, null);
+  const typ = document.getElementById('na_typ');
+  if(!n.typ){ try{ const last = profilLoad().naTyp; if(last && !n.status) n.typ = last; }catch(e){} }
+  typ.value = n.typ;
+  document.getElementById('naTypList').innerHTML = naTypen().map(t=>'<option value="'+esc(t)+'">').join('');
+  typ.oninput = e=>{ n.typ = e.target.value; saveDraft(); };
+  typ.onchange = e=>{ naTypMerken(e.target.value); };
+  const paint = ()=>document.querySelectorAll('#naStatus span').forEach(sp=>sp.classList.toggle('on', sp.dataset.s===n.status));
+  paint();
+  document.querySelectorAll('#naStatus span').forEach(sp=> sp.onclick = ()=>{ n.status = (n.status===sp.dataset.s ? '' : sp.dataset.s); if(n.status && n.typ) naTypMerken(n.typ); paint(); saveDraft(); try{ updateStepCompletionUI(); }catch(e){} });
+}
 
 /* ---------------- SPEICHERN (IndexedDB) ---------------- */
 const IDB_NAME = 'vibn', IDB_STORE = 'kv';
