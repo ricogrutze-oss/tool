@@ -72,6 +72,9 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 .prog{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:8px;display:none}
 .prog i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
 .hidden{display:none!important}
+table.grid{font-size:12px} table.grid th,table.grid td{text-align:center;padding:4px 2px} table.grid td:first-child{text-align:left;color:var(--ink2);padding-right:6px}
+.mk{display:inline-block;width:14px;height:14px;border-radius:4px;background:var(--accent)}
+.lbl2{font-size:12px;color:var(--ink2);font-weight:600;margin:14px 0 2px}
 .scroll{overflow-x:auto}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 .tabs button{min-height:34px;padding:6px 12px;font-size:13px;border-radius:17px;background:var(--bg);color:var(--ink)}
@@ -138,7 +141,7 @@ input[type=file]{display:none}
     <button id="actEv" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Ereignisse</button>
   </div>
   <div class="row" style="margin-top:10px">
-    <button class="sec" id="actTest" disabled>Verbindungstest</button>
+    <button class="sec" id="actTest" disabled>Empfänger-Test</button>
   </div>
   <div id="msg"></div>
 </section>
@@ -350,10 +353,15 @@ function decodeEmpfang(d){
   const z=o=>({korrekt:(d[o]<<8)|d[o+1],fehler:(d[o+2]<<8)|d[o+3],adresse:d[o+4],dkek:d[o+5],stunden:d[o+6]});
   return {z1:z(0),z2:z(7),rest:d.length>14?d[14]:null};
 }
+/* T-Antwort (= „Empfänger-Test“ in RPT01, gegen Screenshot geprüft):
+   0–3 Datensatz · 4–8 hh mm MM TT JJ · 14 (low) natürl. Wochentag · 15–18 Rundsteuer-Wochentage heute…+7 (je Nibble, 1=Mo…7=So, 8=S1, 9=S2)
+   19–22 Teilprogramm-Kombination je Tag (Nibble 1=T0 …) · 26–28 Geräteadresse · 29 Anzahl SPUs */
 function decodeStatus(d){
+  const nib=(o,n)=>{const r=[];for(let i=0;i<n;i++){const b=d[o+(i>>1)];r.push(i&1?b&15:b>>4);}return r;};
   return {datensatz:hex2(d[0])+hex2(d[1])+'.'+hex2(d[2])+hex2(d[3]),
     zeit:new Date(2000+d[8],d[6]-1,d[7],d[4],d[5]),
-    adresse:d.length>28?((d[26]<<16)|(d[27]<<8)|d[28]):null, raw:d};
+    wdNat:d[14]&15, wdRs:nib(15,8), tp:nib(19,8),
+    adresse:d.length>28?((d[26]<<16)|(d[27]<<8)|d[28]):null, spu:d.length>29?d[29]:null, raw:d};
 }
 function decodeAddr(d){ return (d[0]<<16)|(d[1]<<8)|d[2]; }
 function decodeParam(d){
@@ -363,13 +371,14 @@ function decodeParam(d){
   P.adresse=(d[0x7FD]<<16)|(d[0x7FE]<<8)|d[0x7FF];
   // Sommerzeit- und Feiertagstabelle (14 Byte je Jahr)
   P.sz=[];P.ft=[];let p=0x203,prevY=-1;
-  while(p+14<=0x400){
+  const nFt=d[0x202]<=8?d[0x202]:4, len=6+2*nFt;   // Satzlänge hängt von der Zahl der Feiertage je Jahr ab
+  while(p+len<=0x400){
     const y=d[p]; if(y===0xFF||y===0||(prevY>=0&&y!==prevY+1))break;
     const r={jahr:2000+y,von:pad(d[p+1])+'.'+pad(d[p+2]),bis:pad(d[p+3])+'.'+pad(d[p+4])};
     if(d[p+2]>12||d[p+4]>12)break;
     P.sz.push(r);
-    for(let k=0;k<4;k++){const dd=d[p+5+k*2],mm=d[p+6+k*2]; if(dd&&dd!==0xFF)P.ft.push({jahr:String(2000+y),tag:pad(dd)+'.'+pad(mm&0x0F),art:ftArt(mm>>4)});}
-    prevY=y;p+=14;
+    for(let k=0;k<nFt;k++){const dd=d[p+5+k*2],mm=d[p+6+k*2]; if(dd&&dd!==0xFF)P.ft.push({jahr:String(2000+y),tag:pad(dd)+'.'+pad(mm&0x0F),art:ftArt(mm>>4)});}
+    prevY=y;p+=len;
   }
   if(d[p]!==0xFF)p++;
   while(p+1<0x400&&d[p]&&d[p]!==0xFF){P.ft.push({jahr:'****',tag:pad(d[p])+'.'+pad(d[p+1]&0x0F),art:ftArt(d[p+1]>>4)});p+=2;}
@@ -378,8 +387,7 @@ function decodeParam(d){
   for(let o=0x800;o+8<=0x2000;o+=8){
     const r=d.slice(o,o+8); if(r.every(x=>x===0xFF))break;
     if(sum8(r.slice(0,7))!==r[7])break;
-    const v=(r[0]<<8)|r[1];
-    P.zz.push({id:r[3],prog:(r[4]>>3)+1,bit:(r[4]>>2)&1,zeit:pad((v>>3)&0x1F)+':'+pad(r[2]),wt:(r[5]===0x7F&&r[6]===0xFF)?'Mo..So,S1,S2':hex2(r[5])+hex2(r[6]),raw:toHex(r)});
+        P.zz.push({id:r[3],prog:(r[4]>>3)+1,bit:(r[4]>>2)&1,zeit:pad(r[1]>>3)+':'+pad(r[0]),wt:(r[5]===0x7F&&r[6]===0xFF)?'Mo..So,S1,S2':hex2(r[5])+hex2(r[6]),raw:toHex(r)});
   }
   // Interpreterprogramme (Rohdaten)
   let end=0x200; while(end>0&&d[end-1]===0xFF)end--;
@@ -430,6 +438,18 @@ function decodeEvents(d,refDate){
 function card(id,title,html){
   let el=document.getElementById(id); if(!el){el=document.createElement('section');el.className='card';el.id=id;$('#results').prepend(el);}
   el.innerHTML='<h2>'+esc(title)+'</h2>'+html; $('#expCard').classList.remove('hidden'); return el;
+}
+function renderTest(){
+  const S=R.status; if(!S)return; const z=S.zeit, days=[];
+  for(let i=0;i<8;i++){const t=new Date(z.getFullYear(),z.getMonth(),z.getDate()+i);days.push(pad(t.getDate())+'.'+pad(t.getMonth()+1));}
+  const rom=(R.ident||'').match(/(\d)\s*$/);
+  const WDN=['','Mo','Di','Mi','Do','Fr','Sa','So','S1','S2'];
+  const kv=[['Identifikation',S.datensatz],['ROM-Nr.',rom?rom[1]:'–'],['Geräteadresse',S.adresse!=null?fmtAddr(S.adresse):'–'],['Anzahl SPUs',S.spu??'–'],
+    ['Uhrzeit',pad(z.getHours())+':'+pad(z.getMinutes())],['Datum',pad(z.getDate())+'.'+pad(z.getMonth()+1)+'.'+String(z.getFullYear()).slice(2)],['Natürlicher Wochentag',WDN[S.wdNat]||S.wdNat]];
+  const grid=(rows,val)=>'<div class="scroll"><table class="grid"><tr><th></th>'+days.map(d=>'<th>'+d+'</th>').join('')+'</tr>'+rows.map(([lbl,k])=>'<tr><td>'+lbl+'</td>'+val.map(v=>'<td>'+(v===k?'<span class="mk"></span>':'')+'</td>').join('')+'</tr>').join('')+'</table></div>';
+  card('cTest','Empfänger-Test','<div class="kv">'+kv.map(r=>'<div>'+esc(r[0])+'</div><div>'+esc(r[1])+'</div>').join('')+'</div>'
+    +'<div class="lbl2">Rundsteuer-Wochentage</div>'+grid(WDN.slice(1).map((w,i)=>[w,i+1]),S.wdRs)
+    +'<div class="lbl2">Teilprogramm-Kombination</div>'+grid([['T0',1],['T1',2],['T2',3],['T3',4]],S.tp));
 }
 function renderGeraet(){
   const rows=[];
@@ -485,9 +505,11 @@ async function run(name,fn){
   catch(e){ log('e',e.message); showMsg(esc(e.message),'err'); setStatus(link?'Verbunden · Fehler beim letzten Vorgang':'Nicht verbunden',link?'on':''); session=false; }
   finally{ setBusy(false); progress(null); }
 }
-$('#actTest').onclick=()=>run('Verbindungstest',async()=>{ const id=await startSession(); setIdent(id); R.quelle='Live'; renderGeraet(); showMsg('Verbindung in Ordnung: '+esc(id),'ok'); });
+$('#actTest').onclick=()=>run('Verbindungstest',async()=>{ const id=await startSession(); setIdent(id); R.quelle='Live';
+  try{ if(await enq()){ const t=await command('T'); R.status=decodeStatus(t); R.raw.T=toHex(t); } }catch(e){ log('e','Empfänger-Test: '+e.message); }
+  renderGeraet(); renderTest(); showMsg('Verbindung in Ordnung: '+esc(id),'ok'); });
 $('#actRx').onclick=()=>run('Empfang lesen',async()=>{ await ensure(); setIdent(ident); const d=await command('c'); R.raw.c=toHex(d); R.empfang=decodeEmpfang(d); R.quelle='Live'; renderGeraet(); renderEmpfang(); });
-$('#actEv').onclick=()=>run('Ereignisse lesen',async()=>{ await ensure(); setIdent(ident); const t=await command('T'); R.status=decodeStatus(t); R.raw.T=toHex(t); const z=await command('Z'); R.raw.Z=toHex(z); R.events=decodeEvents(z,R.status.zeit); R.quelle='Live'; renderGeraet(); renderEvents(); });
+$('#actEv').onclick=()=>run('Ereignisse lesen',async()=>{ await ensure(); setIdent(ident); const t=await command('T'); R.status=decodeStatus(t); R.raw.T=toHex(t); const z=await command('Z'); R.raw.Z=toHex(z); R.events=decodeEvents(z,R.status.zeit); R.quelle='Live'; renderGeraet(); renderTest(); renderEvents(); });
 $('#actRead').onclick=()=>run('Lesen',async()=>{ await ensure(); setIdent(ident); const k=await command('K'); R.raw.K=toHex(k); R.param=decodeParam(k); if(await enq()){ try{const o=await command('O'); R.adresse=decodeAddr(o);}catch(e){} } R.quelle='Live'; renderGeraet(); renderParam(); });
 
 /* Verbinden */
