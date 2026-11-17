@@ -716,9 +716,24 @@ class IEC{
       await this.l.send([...(a?new Array(40).fill(0):[]),...enc(`/?${$('#addr').value.trim()}!\r\n`)]);
       try{const id=await this.l.wait(findIdent,to||+S.hs||5000);
         this.ident=id.trim();log('INFO','Kennung: '+this.ident);this.onIdent?.(this.ident);return this.ident;}
-      catch(e){if(to||a>=1)throw e;log('INFO','Keine Kennung – zweiter Versuch mit Weckfolge (Zähler braucht nach dem vorigen Vorgang kurz)');await sleep(2500);}
+      catch(e){if(to||a>=2)throw e;
+        if(a===0){log('INFO','Keine Kennung – zweiter Versuch mit Weckfolge (Zähler braucht nach dem vorigen Vorgang kurz)');await sleep(2500);}
+        else if(!(await this.clearHdlc()))throw e;   /* Zähler hing noch in einer HDLC-Sitzung → beendet, dritter Versuch */
+      }
     }
   }
+  /* Hängt der Zähler noch in einer HDLC-Sitzung (9600 Bd 8N1, z. B. nach abgebrochener Empfangs-/Zeiger-Abfrage), hört er nicht auf /?! bei 300 Bd.
+     Dann DISC an die üblichen Adresspaare (Server 1/17, Client 32/16) senden; antwortet er mit UA/DM (Rahmenanfang 7E), war er im HDLC-Modus. */
+  async clearHdlc(){const t=this.l.t;
+    try{await mdmLine(9600,8,'N');
+      for(const [d,c] of [[0x03,0x41],[0x23,0x41],[0x23,0x21],[0x03,0x21]]){const h=[0xa0,7,d,c,0x53],x=crcH(h);await this.l.send([0x7e,...h,x&255,x>>8,0x7e]);await sleep(t instanceof DemoT?10:150);}
+      await sleep(t instanceof DemoT?20:300);
+      const was=this.l.buf.includes(0x7e);
+      if(was)log('INFO','Zähler hing noch in einer HDLC-Sitzung – beendet, neuer Versuch');
+      await mdmLine(300,7,'E');this.baud=300;   /* Kopf zurück auf 300 Bd 7E1 */
+      if(was)await sleep(t instanceof DemoT?0:800);
+      return was;}
+    catch(e){log('WARN','HDLC aufräumen: '+e.message);try{await mdmLine(300,7,'E');}catch{}this.baud=300;return false;}}
   pickBaud(){let z=BAUD[this.ident[4]]?this.ident[4]:'0';
     if(this.l.t.fixedBaud||S.baud==='hold')return '0';
     if(S.baud!=='auto'){const max=+S.baud;while(BAUD[z]>max)z=String(+z-1);}return z;}
@@ -1412,11 +1427,12 @@ const OPS_AUTO=async()=>{
   status('Zähler wird erkannt …');prog('ind');ST.detected='';
   if(ble)await t.prep();else if(ser)await t.setBaud(300,{dataBits:7,parity:'even',stopBits:1});IECP.baud=300;
   await sleep(t instanceof DemoT?0:ble?150:600);LINK.clear();
-  await LINK.send([...new Array(40).fill(0),...enc(`/?${$('#addr').value.trim()}!\r\n`)]);
-  let id=null;
-  try{id=await LINK.wait(b=>{const i=b.indexOf(0x2f);if(i<0)return null;const r=b.slice(i);
+  const tryId=async()=>{await LINK.send([...new Array(40).fill(0),...enc(`/?${$('#addr').value.trim()}!\r\n`)]);
+    try{return await LINK.wait(b=>{const i=b.indexOf(0x2f);if(i<0)return null;const r=b.slice(i);
       const cr=r.indexOf(13);if(cr>0&&r[cr+1]===10){const id=dec(r.slice(0,cr));b.splice(0,i+cr+2);return{id};}
-      return null;},ble?4500:5000);}catch(e){}
+      return null;},ble?4500:5000);}catch(e){return null;}};
+  let id=await tryId();
+  if(!id&&await IECP.clearHdlc()){await IECP.reset300();LINK.clear();id=await tryId();}   /* Zähler hing noch in HDLC → beenden und nochmal fragen */
   const tag=(x,r)=>r&&r.startsWith('⚠')?r:`${x} · ${r}`;
   if(id){ST.detected='Stromzähler (IEC)';log('INFO','Erkannt: Stromzähler '+id.id);return tag('Stromzähler '+id.id.slice(1,4),await OPS.all(id.id));}
   log('INFO','Keine Antwort auf /?! – prüfe auf SML');status('Keine Antwort auf Anfrage – prüfe SML …');
@@ -1594,8 +1610,11 @@ function lgMdmDecode(q){const g=k=>q[k]?.ok?q[k].v:null,op=g(0),csq=g(1),scan=g(
   const sc=dlStr(scan),list=[...sc.matchAll(/(\d\d)(\d{5})/g)].map(m=>({csq:+m[1],plmn:m[2]}));
   Object.assign(MDM,{sigT:'RSSI',csq:typeof csq==='number'?csq:null,rsrp:typeof csq==='number'&&csq<=31?-113+2*csq:null,plmn:dlStr(op),reg:null,x50:typeof x50==='number'?x50:null,scan:list,t:new Date()});
   if(MDM.rsrp!=null)(MDM.hist=MDM.hist||[]).push([Date.now(),MDM.rsrp,null]);}
-async function lgModem(count){let found=false;
-  try{status('Zähler wird angesprochen …');prog('ind');const id=await IECP.handshake(2500);ST.ident=id;
+async function lgModem(count,preId){let found=false;
+  try{status('Zähler wird angesprochen …');prog('ind');
+    /* preId: Kennung wurde gerade abgefragt, der Zähler wartet auf die Antwort – nicht noch einmal /?! senden.
+       Ist der Typ als L+G bekannt, mit Wiederholungen (Weckfolge) fragen; sonst nur ein kurzer Versuch, damit der nächste Weg nicht lange wartet. */
+    const id=preId||await IECP.handshake(isLGE(ST.ident)?undefined:2500);ST.ident=id;
     if(!isLGE(id))throw new Error(`Zähler ${id}: Modem-Empfang über den Zähler bisher nur bei L+G (Mode E)`);found=true;
     const opt={clients:[16,32],servers:[17,1],servers32:[17,1],keepOrder:true,pre:true};
     /* 0x7D08 = IP-Adresse des Modems: u32 (dMAP-Mitschnitt: 00 06 0A 4A 4B 1B = 10.74.75.27; dMAP liest sie mit Client 32 + Passwort) */
@@ -1728,9 +1747,16 @@ $('#btnMdmPng').onclick=async()=>{if(MDM.rsrp==null&&!MDM.imei)return;await save
 let mdmRun=false;
 /* externes Modem (EMH-Protokoll) oder Modem im L+G-Zähler (DLMS) – zuletzt erfolgreiche Art zuerst */
 async function opModem(count){showTab('werte');for(const k in MDM)delete MDM[k];renderMdm();
+  /* Kaltstart (Zählertyp noch unbekannt): erst EINMAL ganz normal nach der Kennung fragen – wie Zeiger/Uhrzeit. Früher probierte der EMH-Weg zuerst
+     und beendete den L+G-Zähler mit B0; der brauchte danach Sekunden und der L+G-Weg fand ihn nicht mehr („Kein Modem gefunden“ – ging erst nach „Zeiger“). */
+  let preId=null;
+  if(!ST.ident&&IECP){try{status('Zähler wird erkannt …');prog('ind');LINK.strip=true;LINK.clear();
+      const id=await IECP.handshake();ST.ident=id;
+      if(isLGE(id))preId=id;else{try{await IECP.bye();}catch{}await sleep(700);}}
+    catch(e){log('INFO','Modem: keine Kennung vom Zähler ('+e.message+') – probiere Modem direkt');}}
   const order=isLGE(ST.ident)||S.mdmKind==='lg'?[lgModem,extModem]:[extModem,lgModem];
-  try{for(const f of order){try{const r=await f(count);const k=f===lgModem?'lg':'ext';if(S.mdmKind!==k){S.mdmKind=k;saveS();}return r;}
-      catch(e){if(e.final||stopReq)throw e;log('WARN',e.message);for(const k in MDM)delete MDM[k];renderMdm();}}
+  try{for(const f of order){try{const r=await f(count,f===lgModem&&isLGE(ST.ident)?preId:null);preId=null;const k=f===lgModem?'lg':'ext';if(S.mdmKind!==k){S.mdmKind=k;saveS();}return r;}
+      catch(e){preId=null;if(e.final||stopReq)throw e;log('WARN',e.message);for(const k in MDM)delete MDM[k];renderMdm();}}
     throw new Error(`Kein Modem gefunden. Den Empfang über den Zähler gibt es bisher bei EMH (XC mit Variomod-Modem) und L+G${ST.ident?` (hier: ${ST.ident.slice(0,18)})`:''}; ein eigenständiges Modem antwortet nur, wenn der Kopf direkt am Modem sitzt. Metcom folgt. Protokoll (Mehr → Protokoll) bitte schicken.`);}
   finally{stopReq=false;}}
 /* EMH-XC-Zähler mit Variomod-Modem (Mitschnitt Variomod Manager, COM8): das Modem hängt am Zähler und antwortet erst im „Konfigurationsmodus“:
