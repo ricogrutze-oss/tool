@@ -139,8 +139,6 @@ input[type=file]{display:none}
   </div>
   <div class="row" style="margin-top:10px">
     <button class="sec" id="actTest" disabled>Verbindungstest</button>
-    <button class="sec" id="btnFile">Testmodus: Mitschnitt laden</button>
-    <input type="file" id="file" multiple accept=".txt,.log,text/plain">
   </div>
   <div id="msg"></div>
 </section>
@@ -545,51 +543,7 @@ async function openSerial(bt){
 $('#btnConn').onclick=()=>{ showMsg(''); connMode()==='ble'?connectBle():openSerial(false); };
 loadSet();
 
-/* ================= Testmodus: Mitschnitt (Serial-Monitor-Log von RPT01) ================= */
 R.raw={};
-function parseCapture(text){
-  const seq=[]; const re=/IRP_MJ_(WRITE) DOWN\s+((?:[0-9a-fA-F]{2} )+)|IRP_MJ_(READ) UP STATUS_SUCCESS\s+((?:[0-9a-fA-F]{2} )+)/;
-  for(const line of text.split(/\r?\n/)){
-    const m=re.exec(line); if(!m)continue;
-    const k=m[1]?'TX':'RX'; const b=(m[2]||m[4]).trim().split(/\s+/).map(x=>parseInt(x,16));
-    if(seq.length&&seq[seq.length-1].k===k)seq[seq.length-1].b.push(...b); else seq.push({k,b});
-  }
-  return seq;
-}
-function loadCapture(text,name){
-  const seq=parseCapture(text); if(!seq.length)throw new Error(name+': keine Schnittstellendaten gefunden.');
-  let found=[];
-  for(let i=0;i<seq.length;i++){
-    const s=seq[i]; if(s.k!=='TX')continue;
-    const b=s.b.map(x=>x&0x7F);
-    if(b.length>=5&&b[0]===0x2F&&b[1]===0x3F){ const r=seq[i+1]; if(r&&r.k==='RX'){ const id=printable(r.b).replace(/<0D>|<0A>/g,''); setIdent(id);} continue; }
-    if(b.length!==3||b[0]<0x20)continue;
-    const c=String.fromCharCode(b[0]); if(hex2(sum8([b[0]]))!==String.fromCharCode(b[1],b[2]))continue;
-    const r=seq[i+1]; if(!r||r.k!=='RX')continue;
-    let d; try{ d=parseHexAnswer(r.b.map(x=>x&0x7F),c);}catch(e){ continue; }
-    found.push(c);
-    if(c==='L'){ setIdent(String.fromCharCode(...d).trim()); }
-    else if(c==='O'){ R.adresse=decodeAddr(d); }
-    else if(c==='c'){ R.empfang=decodeEmpfang(d); R.raw.c=toHex(d); }
-    else if(c==='T'){ R.status=decodeStatus(d); R.raw.T=toHex(d); }
-    else if(c==='Z'){ R.raw.Z=toHex(d); R._z=d; }
-    else if(c==='K'){ R.raw.K=toHex(d); R.param=decodeParam(d); }
-  }
-  if(R._z){ R.events=decodeEvents(R._z,R.status?.zeit); delete R._z; }
-  return found;
-}
-$('#btnFile').onclick=()=>$('#file').click();
-$('#file').onchange=async e=>{
-  const files=[...e.target.files]; e.target.value=''; if(!files.length)return;
-  showMsg(''); const info=[];
-  for(const f of files){
-    try{ const t=await f.text(); const c=loadCapture(t,f.name); info.push(esc(f.name)+': '+(c.length?'Befehle '+[...new Set(c)].join(', '):'keine bekannten Befehle')); }
-    catch(err){ info.push(esc(err.message)); }
-  }
-  R.quelle='Mitschnitt';
-  renderGeraet(); if(R.param)renderParam(); if(R.events)renderEvents(); if(R.empfang)renderEmpfang();
-  showMsg('Testmodus · '+info.join('<br>'),'ok');
-};
 
 /* ================= Export ================= */
 function download(name,text,type){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type})); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500); }
@@ -613,7 +567,7 @@ $('#expTxt').onclick=()=>{
 };
 
 /* Test-Schnittstelle (nur für Entwicklung) */
-window.RSE={decodeParam,decodeEvents,decodeEmpfang,decodeStatus,parseHexAnswer,loadCapture,connected,R,frame,
+window.RSE={decodeParam,decodeEvents,decodeEmpfang,decodeStatus,parseHexAnswer,connected,R,frame,
   useFake(l){connected(l)}};
 </script>
 </body>
