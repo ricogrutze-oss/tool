@@ -30,7 +30,11 @@ button.sec{background:var(--accent-soft);color:var(--accent-ink)}
 button.ghost{background:transparent;color:var(--accent-ink);padding:8px 10px;min-height:36px}
 button:disabled{opacity:.4;cursor:default}
 button svg{width:20px;height:20px;flex:none}
-.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.rel{display:grid;grid-template-columns:70px 1fr 1fr 64px;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:15px}
+.rel button{min-height:40px;padding:8px}
+.rel .st{text-align:center;font-weight:600;font-size:13px;color:var(--ink2)}
+.rel .st.on{color:var(--accent-ink)}
 .grid3 button{flex-direction:column;padding:14px 6px;font-size:14px}
 .grid3 button svg{width:26px;height:26px}
 .status{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink2);margin-top:10px}
@@ -139,6 +143,7 @@ input[type=file]{display:none}
     <button id="actRead" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h12l4 4v12H4z"/><path d="M8 12h8M8 16h8M8 8h5"/></svg>Lesen</button>
     <button id="actRx" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20v-4M10 20v-8M15 20v-12M20 20V4"/></svg>Empfang</button>
     <button id="actEv" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Ereignisse</button>
+    <button id="actRel" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="10" rx="5"/><circle cx="15" cy="12" r="3"/></svg>Relais</button>
   </div>
   <div class="row" style="margin-top:10px">
     <button class="sec" id="actTest" disabled>Empfänger-Test</button>
@@ -200,7 +205,7 @@ function setStatus(txt,state){ $('#stat').textContent=txt; $('#dot').className='
 function showMsg(html,cls='note'){ $('#msg').innerHTML=html?`<div class="note ${cls}">${html}</div>`:''; }
 function progress(p){ const el=$('#prog'); if(p==null){el.style.display='none';return} el.style.display='block'; el.firstElementChild.style.width=Math.min(100,p*100).toFixed(1)+'%'; }
 let busy=false;
-function setBusy(b){ busy=b; ['#actRead','#actRx','#actEv','#actTest'].forEach(s=>$(s).disabled=b||!link); }
+function setBusy(b){ busy=b; ['#actRead','#actRx','#actEv','#actTest','#actRel'].forEach(s=>$(s).disabled=b||!link); }
 
 /* ================= Transporte ================= */
 const SPP='00001101-0000-1000-8000-00805f9b34fb';
@@ -313,6 +318,16 @@ function parseHexAnswer(raw,cmd){
   const data=bytes.slice(0,-1);
   if(sum8(data)!==bytes[bytes.length-1])throw new Error('Prüfsummenfehler bei Befehl „'+cmd+'“ ('+data.length+' Bytes). Bitte wiederholen.');
   return data;
+}
+/* Relais schalten (aus RPT01-Mitschnitt „Relais…“): „J“ + Hex-Byte, Antwort ACK.
+   Byte = 0x80 | 0x20 (Ein) | Relaisnummer-1  →  JA0 = Relais 1 Ein, J80 = Relais 1 Aus, JA1/J81 = Relais 2 */
+async function relay(n,on){
+  const b=0x80|(on?0x20:0)|(n-1);
+  rxBuf=[]; await send(enc('J'+hex2(b)),'Relais '+n+' '+(on?'Ein':'Aus'));
+  const ok=await waitUntil(()=>rxBuf.length>0,2000);
+  log(ok&&rxBuf[0]===0x06?'rx':'e',ok?printable(rxBuf):'keine Antwort');
+  if(!ok)throw new Error('Keine Antwort auf Relais-Befehl.');
+  if(rxBuf[0]!==0x06)throw new Error('Gerät hat den Relais-Befehl abgelehnt.');
 }
 async function enq(){
   rxBuf=[]; await send([0x05,0x30,0x35],'ENQ');
@@ -451,6 +466,14 @@ function renderTest(){
     +'<div class="lbl2">Rundsteuer-Wochentage</div>'+grid(WDN.slice(1).map((w,i)=>[w,i+1]),S.wdRs)
     +'<div class="lbl2">Teilprogramm-Kombination</div>'+grid([['T0',1],['T1',2],['T2',3],['T3',4]],S.tp));
 }
+const REL={};
+function renderRelais(){
+  const rows=[1,2,3,4,5,6].map(n=>'<div class="rel"><span>Relais '+n+'</span><button class="sec" data-n="'+n+'" data-on="1">Ein</button><button class="sec" data-n="'+n+'" data-on="0">Aus</button><span class="st'+(REL[n]==='Ein'?' on':'')+'">'+(REL[n]||'?')+'</span></div>').join('');
+  const el=card('cRel','Relais schalten',rows+'<p class="small">Rechts steht der zuletzt gesendete Befehl (bestätigt vom Empfänger), nicht die gemessene Stellung. Relais 1 und 2 sind aus dem Mitschnitt geprüft, 3–6 nach demselben Schema. Das Gerät schaltet sofort.</p>');
+  el.querySelectorAll('button[data-n]').forEach(b=>b.onclick=()=>{ const n=+b.dataset.n,on=b.dataset.on==='1';
+    run('Relais '+n+' '+(on?'Ein':'Aus'),async()=>{ await ensure(); await relay(n,on); REL[n]=on?'Ein':'Aus'; renderRelais(); }); });
+  el.scrollIntoView({behavior:'smooth',block:'start'});
+}
 function renderGeraet(){
   const rows=[];
   if(R.ident)rows.push(['Kennung',R.ident]);
@@ -510,6 +533,7 @@ $('#actTest').onclick=()=>run('Verbindungstest',async()=>{ const id=await startS
   renderGeraet(); renderTest(); showMsg('Verbindung in Ordnung: '+esc(id),'ok'); });
 $('#actRx').onclick=()=>run('Empfang lesen',async()=>{ await ensure(); setIdent(ident); const d=await command('c'); R.raw.c=toHex(d); R.empfang=decodeEmpfang(d); R.quelle='Live'; renderGeraet(); renderEmpfang(); });
 $('#actEv').onclick=()=>run('Ereignisse lesen',async()=>{ await ensure(); setIdent(ident); const t=await command('T'); R.status=decodeStatus(t); R.raw.T=toHex(t); const z=await command('Z'); R.raw.Z=toHex(z); R.events=decodeEvents(z,R.status.zeit); R.quelle='Live'; renderGeraet(); renderTest(); renderEvents(); });
+$('#actRel').onclick=()=>renderRelais();
 $('#actRead').onclick=()=>run('Lesen',async()=>{ await ensure(); setIdent(ident); const k=await command('K'); R.raw.K=toHex(k); R.param=decodeParam(k); if(await enq()){ try{const o=await command('O'); R.adresse=decodeAddr(o);}catch(e){} } R.quelle='Live'; renderGeraet(); renderParam(); });
 
 /* Verbinden */
