@@ -156,6 +156,7 @@ input[type=file]{display:none}
 <section class="card hidden" id="expCard">
   <h2>Speichern</h2>
   <div class="row">
+    <button id="expPdf">Bericht (PDF)</button>
     <button class="sec" id="expTxt">Bericht (.txt)</button>
     <button class="sec" id="expRaw">Rohdaten (.json)</button>
   </div>
@@ -595,6 +596,81 @@ R.raw={};
 function download(name,text,type){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type})); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500); }
 function fname(ext){ const a=R.adresse??R.param?.adresse??R.status?.adresse; const d=new Date(); return 'FTY_'+(a!=null?String(a).padStart(8,'0'):'unbekannt')+'_'+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'_'+pad(d.getHours())+pad(d.getMinutes())+'.'+ext; }
 $('#expRaw').onclick=()=>download(fname('json'),JSON.stringify({erstellt:new Date().toISOString(),kennung:R.ident,adresse:R.adresse??R.param?.adresse??R.status?.adresse,quelle:R.quelle,bloecke:R.raw},null,1),'application/json');
+/* ---------- PDF ohne externe Bibliothek (funktioniert offline) ----------
+   Schriften: Helvetica / Helvetica-Bold / Courier mit WinAnsi-Kodierung (Umlaute ok), A4 */
+function makePdf(build){
+  const W=595,H=842,M=48; const pages=[]; let cur=null,y=0;
+  const fx=n=>(+n).toFixed(2);
+  const esc=t=>String(t).replace(/[–—]/g,'-').replace(/[„“”]/g,'"').replace(/·/g,'\xB7').replace(/[^\x20-\x7E\xA0-\xFF]/g,'?').replace(/([\\()])/g,'\\$1');
+  const cw={F1:0.5,F2:0.55,F3:0.6};
+  const P={W,M,
+    newPage(){ cur=[]; pages.push(cur); y=H-M; },
+    need(h){ if(!cur||y-h<M+20)P.newPage(); },
+    text(t,{f='F1',sz=10,x=M,col=null}={}){ cur.push((col?col+' rg ':'0.11 0.11 0.12 rg ')+'BT /'+f+' '+sz+' Tf '+fx(x)+' '+fx(y)+' Td ('+esc(t)+') Tj ET'); },
+    line(t,o={}){ const sz=o.sz||10; P.need(sz*1.45); y-=sz*1.45; P.text(t,o); },
+    wrap(t,o={}){ const sz=o.sz||10,f=o.f||'F1',max=Math.floor((W-2*M-(o.x?o.x-M:0))/(sz*cw[f])); let r=String(t); while(r.length>max){ let k=r.lastIndexOf(' ',max); if(k<max*0.5)k=max; P.line(r.slice(0,k),o); r=r.slice(k).replace(/^ /,'  '); } P.line(r,o); },
+    h1(t){ P.need(40); y-=8; cur.push('0.306 0.604 0.165 rg '+fx(M)+' '+fx(y-22)+' '+fx(W-2*M)+' 26 re f'); y-=17; P.text(t,{f:'F2',sz:14,x:M+8,col:'1 1 1'}); y-=11; },
+    h2(t){ P.need(36); y-=14; P.line(t,{f:'F2',sz:11.5}); cur.push('0.306 0.604 0.165 RG 0.8 w '+fx(M)+' '+fx(y-4)+' m '+fx(W-M)+' '+fx(y-4)+' l S'); y-=6; },
+    kv(rows){ rows.forEach(([k,v])=>{ P.need(15); y-=14.5; P.text(k,{sz:10,col:'0.42 0.42 0.44'}); P.text(v,{f:'F2',sz:10,x:M+170}); }); },
+    gap(h=6){ y-=h; },
+    note(t){ P.wrap(t,{sz:8.5,col:'0.55 0.37 0'}); }
+  };
+  P.newPage(); build(P);
+  // Fußzeilen
+  const foot=build.footer||'';
+  pages.forEach((pg,i)=>pg.push('0.42 0.42 0.44 rg BT /F1 8 Tf '+M+' 26 Td ('+esc(foot)+') Tj ET BT /F1 8 Tf '+(W-M-50)+' 26 Td ('+esc('Seite '+(i+1)+'/'+pages.length)+') Tj ET'));
+  // PDF zusammensetzen
+  const objs=[]; const add=o=>{objs.push(o);return objs.length;};
+  const cat=add(''), pgs=add('');
+  const fonts=['Helvetica','Helvetica-Bold','Courier'].map(n=>add('<< /Type /Font /Subtype /Type1 /BaseFont /'+n+' /Encoding /WinAnsiEncoding >>'));
+  const res='<< /Font << /F1 '+fonts[0]+' 0 R /F2 '+fonts[1]+' 0 R /F3 '+fonts[2]+' 0 R >> >>';
+  const kids=pages.map(pg=>{ const c=pg.join('\n'); const cs=add('<< /Length '+c.length+' >>\nstream\n'+c+'\nendstream'); return add('<< /Type /Page /Parent '+pgs+' 0 R /MediaBox [0 0 '+W+' '+H+'] /Resources '+res+' /Contents '+cs+' 0 R >>'); });
+  objs[cat-1]='<< /Type /Catalog /Pages '+pgs+' 0 R >>';
+  objs[pgs-1]='<< /Type /Pages /Kids ['+kids.map(k=>k+' 0 R').join(' ')+'] /Count '+kids.length+' >>';
+  let out='%PDF-1.4\n%\xE2\xE3\xCF\xD3\n'; const off=[];
+  objs.forEach((o,i)=>{ off.push(out.length); out+=(i+1)+' 0 obj\n'+o+'\nendobj\n'; });
+  const xr=out.length; out+='xref\n0 '+(objs.length+1)+'\n0000000000 65535 f \n'+off.map(o=>String(o).padStart(10,'0')+' 00000 n \n').join('');
+  out+='trailer\n<< /Size '+(objs.length+1)+' /Root '+cat+' 0 R >>\nstartxref\n'+xr+'\n%%EOF';
+  const u=new Uint8Array(out.length); for(let i=0;i<out.length;i++)u[i]=out.charCodeAt(i)&255;
+  return new Blob([u],{type:'application/pdf'});
+}
+function buildReport(P){
+  const a=R.adresse??R.param?.adresse??R.status?.adresse, ds=R.param?.datensatz||R.status?.datensatz;
+  P.h1('Rundsteuerempfänger – Auslesung');
+  P.line('Erstellt am '+new Date().toLocaleString('de-DE',{dateStyle:'medium',timeStyle:'short'})+(R.quelle==='Live'?'':' · Quelle: '+(R.quelle||'')),{sz:9,col:'0.42 0.42 0.44'});
+  P.h2('Gerät');
+  const kv=[]; if(R.ident)kv.push(['Kennung',R.ident+(R.typ?'  ('+R.typ+')':'')]); if(a!=null)kv.push(['Geräteadresse',fmtAddr(a)]); if(ds)kv.push(['Datensatz',ds]);
+  if(R.param)kv.push(['Anwenderadresse',R.param.anwender]); if(R.status)kv.push(['Gerätezeit',R.status.zeit.toLocaleString('de-DE',{dateStyle:'medium',timeStyle:'short'})]);
+  P.kv(kv);
+  if(R.status){ const S=R.status,z=S.zeit,WDN=['','Mo','Di','Mi','Do','Fr','Sa','So','S1','S2']; const days=[];
+    for(let i=0;i<8;i++){const t=new Date(z.getFullYear(),z.getMonth(),z.getDate()+i);days.push(pad(t.getDate())+'.'+pad(t.getMonth()+1));}
+    P.h2('Empfänger-Test'); const rom=(R.ident||'').match(/(\d)\s*$/);
+    P.kv([['ROM-Nr.',rom?rom[1]:'–'],['Anzahl SPUs',String(S.spu??'–')],['Natürlicher Wochentag',WDN[S.wdNat]||String(S.wdNat)]]); P.gap(4);
+    P.line('       '+days.map(d=>d.padStart(6)).join(''),{f:'F3',sz:8.5});
+    P.line('RS-Tag '+S.wdRs.map(v=>(WDN[v]||'?').padStart(6)).join(''),{f:'F3',sz:8.5});
+    P.line('TP     '+S.tp.map(v=>('T'+(v-1)).padStart(6)).join(''),{f:'F3',sz:8.5}); }
+  if(R.empfang){ const e=R.empfang; P.h2('Empfangsqualität');
+    P.line(''.padEnd(46)+'Zähler 1'.padStart(10)+'Zähler 2'.padStart(10),{f:'F3',sz:9});
+    [['Korrekte Telegramme','korrekt'],['Fehlerhafte Telegramme','fehler'],['Telegramme mit gültiger Anwender-Adresse','adresse'],['DK/EK-Interpreterprogramm-Aufrufe','dkek'],['Aktivität des Zählers (Stunden)','stunden']]
+      .forEach(([t,k])=>P.line(t.padEnd(46)+String(e.z1[k]).padStart(10)+String(e.z2[k]).padStart(10),{f:'F3',sz:9})); }
+  if(R.param){ const Pm=R.param;
+    P.h2('Zeitzeilen'); P.line('ID    Prog  Zeit   Befehl*  Wochentage',{f:'F3',sz:9});
+    Pm.zz.forEach(z=>P.line(String(z.id).padEnd(6)+String(z.prog).padEnd(6)+z.zeit.padEnd(7)+(z.bit?'Ein':'Aus').padEnd(9)+z.wt,{f:'F3',sz:9}));
+    P.note('* Ein/Aus vorläufig gedeutet.');
+    P.h2('Sommerzeit'); const sz=Pm.sz.map(x=>x.jahr+'  '+x.von+'..'+x.bis);
+    for(let i=0;i<sz.length;i+=3)P.line(sz.slice(i,i+3).map(t=>t.padEnd(24)).join(''),{f:'F3',sz:9});
+    P.h2('Feiertage'); const ft=Pm.ft.map(f=>f.jahr+' '+f.tag+' '+f.art);
+    for(let i=0;i<ft.length;i+=4)P.line(ft.slice(i,i+4).map(t=>t.padEnd(18)).join(''),{f:'F3',sz:9});
+    P.h2('Interpreterprogramme'); P.note('Noch nicht in Klartext übersetzt ('+Pm.progRaw.length+' Bytes Rohdaten, siehe Rohdaten-Export).'); }
+  if(R.events){ P.h2('Ereignisspeicher'); P.note('Deutung vorläufig. Neueste Tage zuerst. P = Programm.');
+    const groups=[]; let g={day:null,items:[]}; for(const x of R.events.list){ if(x.type==='day'){groups.push(g);g={day:x.d,items:[]};} else g.items.push(x); } groups.push(g);
+    const short=x=>{ const m=/Programm (\d+) \((\w+)\)/.exec(x.txt); return x.time+' '+(m?'P'+m[1]+' '+m[2]:x.txt.replace(' (vermutet)','?')); };
+    for(let i=groups.length-1;i>=0;i--){ const G=groups[i]; if(!G.items.length&&!G.day)continue;
+      P.wrap((G.day?dayLabel(G.day):'Ältere Einträge').padEnd(26)+G.items.map(short).join(' · '),{f:'F3',sz:7.5}); } }
+}
+$('#expPdf').onclick=()=>{ try{ const b=()=>{}; const fn=P=>buildReport(P); fn.footer='Rundsteuerempfänger '+(()=>{const a=R.adresse??R.param?.adresse??R.status?.adresse;return a!=null?fmtAddr(a):'';})();
+  const blob=makePdf(fn); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=fname('pdf'); document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000); }
+  catch(e){ showMsg('PDF konnte nicht erstellt werden: '+esc(e.message),'err'); log('e',e.message); } };
 $('#expTxt').onclick=()=>{
   const L=[]; const a=R.adresse??R.param?.adresse??R.status?.adresse;
   L.push('Rundsteuerempfänger – Auslesung '+new Date().toLocaleString('de-DE'));
