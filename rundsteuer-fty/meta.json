@@ -3,5 +3,5 @@
   "short_name": "RSE",
   "description": "L+G FTY Rundsteuerempfänger per optischem Kopf auslesen: Lesen, Empfangsqualität, Ereignisspeicher",
   "icon": "icon.svg",
-  "version": "0.1"
+  "version": "0.3"
 }

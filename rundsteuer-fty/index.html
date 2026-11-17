@@ -78,41 +78,57 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 .tabs button.act{background:var(--accent);color:#fff}
 .small{font-size:12px;color:var(--ink2)}
 input[type=file]{display:none}
+.sheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;justify-content:center}
+.sheetBox{background:var(--card);width:100%;max-width:760px;border-radius:16px 16px 0 0;padding:16px 16px calc(env(safe-area-inset-bottom) + 24px);max-height:85vh;overflow:auto}
 </style>
 </head>
 <body>
 <header>
-  <h1>Rundsteuerempfänger</h1>
-  <div class="sub">Landis+Gyr FTY · Auslesen per optischem Kopf</div>
+  <div class="row" style="justify-content:space-between;flex-wrap:nowrap">
+    <div><h1>Rundsteuerempfänger</h1><div class="sub">Landis+Gyr FTY · Auslesen per optischem Kopf</div></div>
+    <button class="ghost" id="btnSet" aria-label="Einstellungen" style="padding:8px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:26px;height:26px"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+  </div>
 </header>
 <main>
 
 <section class="card">
   <h2>Verbindung</h2>
-  <div class="row" id="connBtns">
-    <button id="btnBle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7l10 10-5 5V2l5 5L7 17"/></svg>Bluetooth</button>
-    <button id="btnSpp" class="sec"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7l10 10-5 5V2l5 5L7 17"/></svg>Bluetooth klassisch</button>
-    <button id="btnUsb" class="sec"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v14M8 6l4-4 4 4M7 12v3h10v-3M12 16v6"/><circle cx="12" cy="20" r="0"/></svg>USB / Kabel</button>
+  <div class="row">
+    <button id="btnConn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="connIco"></svg><span id="connTxt">Verbinden</span></button>
     <button id="btnDisc" class="ghost hidden">Trennen</button>
   </div>
   <div class="status"><span class="dot" id="dot"></span><span id="stat">Nicht verbunden</span></div>
   <div class="prog" id="prog"><i></i></div>
+</section>
 
-  <details style="margin-top:12px">
-    <summary>Einstellungen Lesekopf</summary>
+<div id="setSheet" class="sheet hidden">
+  <div class="sheetBox">
+    <div class="row" style="justify-content:space-between;margin-bottom:6px"><h2 style="margin:0;font-size:20px;text-transform:none;letter-spacing:0;color:var(--ink)">Einstellungen</h2><button class="ghost" id="setClose">Fertig</button></div>
     <div class="set">
       <div>
-        <div class="lbl">Baudrate bei Bluetooth-Köpfen (beim Kabel schaltet das Programm selbst um)</div>
+        <div class="lbl">Lesekopf</div>
         <div class="seg">
-          <label><input type="radio" name="hm" value="auto" checked><span>Kopf schaltet auf 9600</span></label>
-          <label><input type="radio" name="hm" value="300"><span>Bei 300 Baud bleiben</span></label>
+          <label><input type="radio" name="conn" value="ble" checked><span>Bluetooth</span></label>
+          <label><input type="radio" name="conn" value="usb"><span>Tastkopf (USB)</span></label>
         </div>
       </div>
-      <label class="chk"><input type="checkbox" id="optParity"><span>Paritätsbit im Handy erzeugen<br><span class="small">Nur einschalten, wenn der Kopf 8N1 durchreicht und der Empfänger nicht antwortet.</span></span></label>
-      <label class="chk"><input type="checkbox" id="optRts" checked><span>RTS bei 9600 Baud aus (wie RPT01)<br><span class="small">Nur für Kabelköpfe relevant.</span></span></label>
+      <details>
+        <summary>Erweitert</summary>
+        <div class="set">
+          <div>
+            <div class="lbl">Baudrate</div>
+            <div class="seg">
+              <label><input type="radio" name="hm" value="auto" checked><span>Automatisch (9600)</span></label>
+              <label><input type="radio" name="hm" value="300"><span>Immer 300 Baud</span></label>
+            </div>
+          </div>
+          <label class="chk"><input type="checkbox" id="optAll"><span>Alle Bluetooth-Geräte anzeigen<br><span class="small">Normalerweise werden nur Device-Leseköpfe angezeigt.</span></span></label>
+          <label class="chk"><input type="checkbox" id="optRts" checked><span>RTS bei 9600 Baud aus (wie RPT01)<br><span class="small">Nur für USB-Köpfe.</span></span></label>
+        </div>
+      </details>
     </div>
-  </details>
-</section>
+  </div>
+</div>
 
 <section class="card">
   <h2>Funktionen</h2>
@@ -188,77 +204,70 @@ function setBusy(b){ busy=b; ['#actRead','#actRx','#actEv','#actTest'].forEach(s
 /* ================= Transporte ================= */
 const SPP='00001101-0000-1000-8000-00805f9b34fb';
 const BLE_UART=[
-  '6e400001-b5a3-f393-e0a9-e50e24dcca9e', // Nordic UART
-  '49535343-fe7d-4ae5-8fa9-9fafd205e455', // Microchip / ISSC transparent UART
-  '0000ffe0-0000-1000-8000-00805f9b34fb', // HM-10 / CC254x
-  '0000fff0-0000-1000-8000-00805f9b34fb',
-  '0000ff00-0000-1000-8000-00805f9b34fb',
-  '0003cdd0-0000-1000-8000-00805f9b0131',
-  '0000fee7-0000-1000-8000-00805f9b34fb',
-  '0000ffb0-0000-1000-8000-00805f9b34fb',
-  '0000ae30-0000-1000-8000-00805f9b34fb'
+  '2456e1b9-26e2-8f83-e744-f34f01e9d701', // Device DvBTIR (u-blox Serial Port Service)
+  '6e400001-b5a3-f393-e0a9-e50e24dcca9e','6e400001-b5a3-f393-e0a9-e50e24dc4179',
+  '0000ffe0-0000-1000-8000-00805f9b34fb','49535343-fe7d-4ae5-8fa9-9fafd205e455',
+  '0000fff0-0000-1000-8000-00805f9b34fb','0000ffb0-0000-1000-8000-00805f9b34fb',
+  '0003cdd0-0000-1000-8000-00805f9b0131','device_information','battery_service'
 ];
+const BLE_FILTER=[{namePrefix:'Device_DvB'},{namePrefix:'DvB'},{namePrefix:'Device_'}];
+const BLEKEY='rse-fty-ble';
+const props=c=>Object.entries({R:c.properties.read,W:c.properties.write,w:c.properties.writeWithoutResponse,N:c.properties.notify,I:c.properties.indicate}).filter(e=>e[1]).map(e=>e[0]).join('');
 
-class SerialLink{
-  constructor(port){ this.port=port; const i=port.getInfo?port.getInfo():{}; this.isBT=!!i.bluetoothServiceClassId; this.kind=this.isBT?'Bluetooth (seriell)':'USB / Kabel'; this.baud=0; }
-  async open(baud){
-    await this.port.open({baudRate:baud,dataBits:7,parity:'even',stopBits:1,bufferSize:65536});
-    this.baud=baud; await this.signals(); this.startRead();
-  }
-  async signals(){ if(this.isBT)return; const rtsOff=$('#optRts').checked&&this.baud>300; try{await this.port.setSignals({dataTerminalReady:true,requestToSend:!rtsOff})}catch(e){} }
-  startRead(){
-    this.reader=this.port.readable.getReader();
-    this.loop=(async()=>{try{for(;;){const {value,done}=await this.reader.read(); if(done)break; if(value&&this.onData)this.onData(value);}}catch(e){} finally{try{this.reader.releaseLock()}catch(e){}}})();
-  }
-  async write(bytes){ const w=this.port.writable.getWriter(); try{await w.write(new Uint8Array(bytes))}finally{w.releaseLock()} }
-  get canSetBaud(){ return !this.isBT }
-  async setBaud(b){
-    if(b===this.baud)return;
-    if(this.isBT){ this.baud=b; return; }
-    try{await this.reader.cancel()}catch(e){} await this.loop; await this.port.close(); await this.open(b);
-  }
-  async close(){ try{await this.reader.cancel()}catch(e){} try{await this.loop}catch(e){} try{await this.port.close()}catch(e){} }
-}
-
+/* Device DvBTIR (wie im Zählerauslese-Tool, aus dem Bluetooth-Mitschnitt der Q4-App):
+   Steuerbefehl an den Kopf = 0x80 + Zeichen. '0'…'6' = Baudrate (IEC-Kennbuchstabe),
+   'C' = 7 Datenbits, 'E' = gerade Parität, 'A' = 1 Stoppbit. Parität erzeugt der Kopf selbst. */
 class BleLink{
-  constructor(){ this.kind='Bluetooth LE'; this.baud=9600; }
+  constructor(dev){ this.kind='Bluetooth (DvBTIR)'; this.baud=300; this.dev=dev||null; }
+  static async remembered(){
+    try{ if(!navigator.bluetooth?.getDevices)return null; const id=localStorage.getItem(BLEKEY); const ds=await navigator.bluetooth.getDevices();
+      const d=ds.find(x=>id&&x.id===id)||ds.find(x=>/DvB/i.test(x.name||'')); return d?new BleLink(d):null; }catch(e){ return null; }
+  }
   async connect(){
-    this.dev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:BLE_UART});
-    this.dev.addEventListener('gattserverdisconnected',()=>onLinkLost());
+    if(!this.dev){
+      this.dev=await navigator.bluetooth.requestDevice($('#optAll').checked?{acceptAllDevices:true,optionalServices:BLE_UART}:{filters:BLE_FILTER,optionalServices:BLE_UART});
+    }
+    log('in','Kopf: '+(this.dev.name||this.dev.id));
+    this.dev.addEventListener('gattserverdisconnected',()=>{ if(link===this)onLinkLost(); });
     const srv=await this.dev.gatt.connect();
-    let services=[]; try{services=await srv.getPrimaryServices()}catch(e){}
-    let rx=null,tx=null;
-    for(const s of services){
-      let chars=[]; try{chars=await s.getCharacteristics()}catch(e){continue}
+    const services=await srv.getPrimaryServices();
+    let found=null;
+    for(const sv of services){
+      const chars=await sv.getCharacteristics().catch(()=>[]);
+      log('in','Dienst '+sv.uuid+': '+chars.map(c=>c.uuid.slice(0,8)+' ['+props(c)+']').join(', '));
+      if(/^0000180[af]/.test(sv.uuid))continue;
+      const w=chars.find(c=>c.properties.write||c.properties.writeWithoutResponse);
       const n=chars.find(c=>c.properties.notify||c.properties.indicate);
-      const w=chars.find(c=>c.properties.writeWithoutResponse||c.properties.write);
-      if(n&&w){rx=n;tx=w;break}
-      if(!rx&&n)rx=n; if(!tx&&w)tx=w;
+      if(w&&n&&!found)found={sv,w,n};
     }
-    if(!rx||!tx)throw new Error('Am Gerät wurde kein serieller Bluetooth-Dienst gefunden. Wahrscheinlich ist der Kopf ein klassisches Bluetooth-Gerät, dann bitte „Bluetooth klassisch“ verwenden.');
-    this.rx=rx; this.tx=tx;
-    await rx.startNotifications();
-    rx.addEventListener('characteristicvaluechanged',e=>{const v=e.target.value; if(this.onData)this.onData(new Uint8Array(v.buffer,v.byteOffset,v.byteLength));});
-    log('in','BLE: Dienst '+rx.service.uuid+' (Lesen '+rx.uuid.slice(4,8)+', Schreiben '+tx.uuid.slice(4,8)+')');
+    if(!found){ try{this.dev.gatt.disconnect()}catch(e){} throw new Error('Am Kopf wurde kein Datenkanal gefunden. Bitte unten „Protokoll“ kopieren und schicken.'); }
+    this.tx=found.w; this.rx=found.n;
+    await this.rx.startNotifications();
+    this.rx.addEventListener('characteristicvaluechanged',e=>{const v=e.target.value; if(this.onData)this.onData(new Uint8Array(v.buffer,v.byteOffset,v.byteLength));});
+    try{localStorage.setItem(BLEKEY,this.dev.id)}catch(e){}
+    log('in','Verwende Dienst '+found.sv.uuid);
+    await this.setBaud(300,true);
   }
-  get canSetBaud(){ return false }
-  async setBaud(b){ this.baud=b; }
-  async write(bytes){
-    const a=new Uint8Array(bytes);
-    for(let i=0;i<a.length;i+=20){
-      const part=a.slice(i,i+20);
-      if(this.tx.properties.writeWithoutResponse&&this.tx.writeValueWithoutResponse) await this.tx.writeValueWithoutResponse(part);
-      else await this.tx.writeValue(part);
-    }
+  async raw(a){ const u=new Uint8Array(a);
+    for(let i=0;i<u.length;i+=20){ const c=u.slice(i,i+20);
+      if(this.tx.properties.writeWithoutResponse&&this.tx.writeValueWithoutResponse)await this.tx.writeValueWithoutResponse(c);
+      else if(this.tx.writeValueWithResponse)await this.tx.writeValueWithResponse(c); else await this.tx.writeValue(c); } }
+  async cmd(c){ await this.raw([0x80,c.charCodeAt(0)]); }
+  get canSetBaud(){ return true }
+  async setBaud(b,force){
+    if(b===this.baud&&!force)return;
+    const z=Object.keys(BAUD).find(k=>BAUD[k]===b); if(z==null)throw new Error('Baudrate '+b+' vom Kopf nicht unterstützt');
+    for(const c of [z,'C','E','A'])await this.cmd(c);
+    log('in','Kopf auf '+b+' Baud 7E1'); this.baud=b;
   }
+  async write(bytes){ await this.raw(bytes.map(x=>x&0x7F)); }
   async close(){ try{this.dev.gatt.disconnect()}catch(e){} }
 }
 
 /* ================= Protokoll (IEC 62056-21 + L+G FTY) ================= */
 let link=null, rxBuf=[], lastRx=0, session=false, ident='';
 function onData(chunk){ for(const b of chunk)rxBuf.push(b&0x7F); lastRx=performance.now(); }
-function addParity(b){ if(!$('#optParity').checked)return b; return b.map(x=>{x&=0x7F;let p=0;for(let i=0;i<7;i++)p^=(x>>i)&1;return x|(p<<7)}); }
-async function send(bytes,label){ log('tx',(label?label+'  ':'')+printable(bytes)); await link.write(addParity(bytes)); }
+async function send(bytes,label){ log('tx',(label?label+'  ':'')+printable(bytes)); await link.write(bytes); }
 function frame(cmd){ const b=enc(cmd); return b.concat(enc(hex2(sum8(b)))); }
 function charTime(){ return 10.5/ (link.baud||9600) * 1000; }
 
@@ -313,7 +322,7 @@ async function enq(){
 async function startSession(){
   session=false;
   // 1) Schnellversuch: Gerät ist noch im Binärmodus (9600)
-  if(link.canSetBaud||$('input[name=hm]:checked').value==='auto'){
+  if($('input[name=hm]:checked').value==='auto'){
     await link.setBaud(9600); await sleep(80);
     try{ const d=await command('L',{timeout:900}); ident=String.fromCharCode(...d).trim(); session=true; log('in','Gerät noch aktiv: '+ident); return ident; }catch(e){ log('in','Kein Schnellzugang, starte Anmeldung (300 Baud)'); }
   }
@@ -321,15 +330,15 @@ async function startSession(){
   await link.setBaud(300); await sleep(250);
   let id=null;
   for(let i=0;i<2&&!id;i++){ await send(enc('/?!\r\n'),'Anmeldung'); id=await readIdent(2500); }
-  if(!id)throw new Error('Keine Antwort vom Gerät. Lesekopf richtig aufgesetzt? Bei Bluetooth ggf. Einstellung „Paritätsbit“ probieren.');
+  if(!id)throw new Error('Keine Antwort vom Gerät. Lesekopf richtig aufgesetzt? ');
   ident=id; log('in','Kennung: '+id);
   const mode=$('input[name=hm]:checked').value;
-  const z=(!link.canSetBaud&&mode==='300')?'0':(BAUD[id[4]]?id[4]:'5');
+  const z=(mode==='300')?'0':(BAUD[id[4]]?id[4]:'5');
   await send([0x06,0x30,z.charCodeAt(0),0x32,0x0D,0x0A],'ACK 0'+z+'2');
   await sleep(6*charTime()+150);
   await link.setBaud(BAUD[z]); if(link.signals)await link.signals();
   await sleep(300);
-  if(!await enq()){ await sleep(300); if(!await enq())throw new Error('Gerät reagiert nach der Umschaltung nicht. Bei Bluetooth bitte „Bei 300 Baud bleiben“ einstellen und erneut versuchen.'); }
+  if(!await enq()){ await sleep(300); if(!await enq())throw new Error('Gerät reagiert nach der Umschaltung nicht. Bitte unter Einstellungen → Erweitert „Immer 300 Baud“ wählen und erneut versuchen.'); }
   session=true; return id;
 }
 async function ensure(){
@@ -488,22 +497,53 @@ function connected(l){
   link=l; link.onData=onData; session=false; ident='';
   setStatus('Verbunden · '+l.kind,'on'); $('#btnDisc').classList.remove('hidden'); setBusy(false);
   log('in','Verbunden über '+l.kind);
+  setTimeout(()=>$('#actTest').click(),300); // gleich anmelden und Kennung lesen
 }
 function onLinkLost(){ log('e','Verbindung getrennt'); link=null; session=false; setStatus('Nicht verbunden'); $('#btnDisc').classList.add('hidden'); setBusy(false); }
 $('#btnDisc').onclick=async()=>{ if(link)await link.close(); onLinkLost(); };
-$('#btnBle').onclick=async()=>{
-  if(!navigator.bluetooth)return showMsg('Bluetooth wird in diesem Browser nicht unterstützt. Bitte Chrome unter Android verwenden (auf dem iPhone nicht möglich).','err');
-  try{ const l=new BleLink(); await l.connect(); connected(l); }catch(e){ if(e.name!=='NotFoundError')showMsg(esc(e.message),'err'); log('e',e.message); }
-};
-async function openSerial(opts){
-  if(!navigator.serial)return showMsg('Serielle Schnittstelle wird in diesem Browser nicht unterstützt. Am PC Chrome oder Edge verwenden; unter Android erst ab neueren Chrome-Versionen.','err');
-  try{ const port=await navigator.serial.requestPort(opts); const l=new SerialLink(port); await l.open(l.isBT?9600:300); connected(l); }
-  catch(e){ if(e.name!=='NotFoundError')showMsg(esc(e.message),'err'); log('e',e.message); }
+
+/* Einstellungen (werden im Gerät gemerkt) */
+const SETKEY='rse-fty-settings';
+function saveSet(){ try{localStorage.setItem(SETKEY,JSON.stringify({conn:connMode(),hm:$('input[name=hm]:checked').value,all:$('#optAll').checked,rts:$('#optRts').checked}))}catch(e){} updConnBtn(); }
+function loadSet(){ let s={}; try{s=JSON.parse(localStorage.getItem(SETKEY)||'{}')}catch(e){}
+  if(!s.conn) s.conn=(navigator.bluetooth||!navigator.serial)?'ble':'usb';
+  const c=document.querySelector(`input[name=conn][value="${s.conn}"]`); if(c)c.checked=true;
+  const h=document.querySelector(`input[name=hm][value="${s.hm||'auto'}"]`); if(h)h.checked=true;
+  $('#optAll').checked=!!s.all; $('#optRts').checked=s.rts!==false; updConnBtn(); }
+const connMode=()=>$('input[name=conn]:checked').value;
+const ICO={ble:'<path d="M7 7l10 10-5 5V2l5 5L7 17"/>',usb:'<path d="M12 2v14M8 6l4-4 4 4M7 12v3h10v-3M12 16v6"/>'};
+function updConnBtn(){ const m=connMode(); $('#connIco').innerHTML=ICO[m]; $('#connTxt').textContent=m==='ble'?'Bluetooth-Kopf verbinden':'Tastkopf (USB) verbinden'; }
+document.querySelectorAll('#setSheet input').forEach(i=>i.addEventListener('change',saveSet));
+$('#btnSet').onclick=()=>$('#setSheet').classList.remove('hidden');
+$('#setClose').onclick=()=>$('#setSheet').classList.add('hidden');
+$('#setSheet').onclick=e=>{ if(e.target.id==='setSheet')$('#setSheet').classList.add('hidden'); };
+
+/* Verbinden – alles Weitere automatisch */
+async function connectBle(){
+  if(!navigator.bluetooth)return showMsg('Bluetooth geht in diesem Browser nicht. Bitte Chrome unter Android oder am PC verwenden (iPhone nicht möglich).','err');
+  setStatus('Verbinde …','busy');
+  try{
+    let l=$('#optAll').checked?null:await Promise.race([BleLink.remembered(),sleep(2500).then(()=>null)]);
+    if(l){ try{ await l.connect(); connected(l); return; }catch(e){ log('in','Gespeicherter Kopf nicht erreichbar – Auswahl öffnen'); } }
+    l=new BleLink(); await l.connect(); connected(l);
+  }catch(e){
+    log('e',e.message); setStatus('Nicht verbunden');
+    if(e.name==='NotFoundError'&&/cancel/i.test(e.message))return;
+    showMsg(e.name==='NotFoundError'?'Kein DvBTIR gefunden. Kopf eingeschaltet? Notfalls unter Einstellungen → Erweitert „Alle Bluetooth-Geräte anzeigen“.':esc(e.message),'err');
+  }
 }
-$('#btnSpp').onclick=()=>openSerial({allowedBluetoothServiceClassIds:[SPP],filters:[{bluetoothServiceClassId:SPP}]});
-$('#btnUsb').onclick=()=>openSerial({});
-if(!navigator.serial){ $('#btnSpp').classList.add('hidden'); $('#btnUsb').classList.add('hidden'); }
-if(!navigator.bluetooth){ $('#btnBle').classList.add('sec'); }
+async function openSerial(bt){
+  if(!navigator.serial)return showMsg('USB-Leseköpfe werden in diesem Browser nicht unterstützt. Am PC Chrome oder Edge verwenden.','err');
+  try{
+    let port=null;
+    const known=(await navigator.serial.getPorts()).filter(p=>{const i=p.getInfo?p.getInfo():{};return bt?!!i.bluetoothServiceClassId:!i.bluetoothServiceClassId});
+    if(known.length===1)port=known[0];
+    if(!port)port=await navigator.serial.requestPort(bt?{allowedBluetoothServiceClassIds:[SPP],filters:[{bluetoothServiceClassId:SPP}]}:{});
+    const l=new SerialLink(port); await l.open(l.isBT?9600:300); connected(l);
+  }catch(e){ log('e',e.message); if(e.name!=='NotFoundError')showMsg(esc(e.message),'err'); }
+}
+$('#btnConn').onclick=()=>{ showMsg(''); connMode()==='ble'?connectBle():openSerial(false); };
+loadSet();
 
 /* ================= Testmodus: Mitschnitt (Serial-Monitor-Log von RPT01) ================= */
 R.raw={};
