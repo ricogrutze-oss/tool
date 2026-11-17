@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#4E9A2A">
+<title>Rundsteuerempfänger</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+:root{
+  --accent:#4E9A2A; --accent-soft:#E8F3E1; --accent-ink:#2F6A14;
+  --bg:#F2F2F7; --card:#FFFFFF; --ink:#1C1C1E; --ink2:#6B6B70; --line:#E3E3E8;
+  --warn:#B25E00; --warn-soft:#FFF2E0; --err:#C62828; --err-soft:#FDECEC;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--accent:#6CBF45;--accent-soft:#1E2E17;--accent-ink:#9BDB7A;--bg:#000;--card:#1C1C1E;--ink:#F2F2F7;--ink2:#9A9AA0;--line:#2C2C2E;--warn:#FFB45C;--warn-soft:#332410;--err:#FF6B6B;--err-soft:#3A1717;}
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+header{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);padding:calc(env(safe-area-inset-top) + 12px) 16px 10px;border-bottom:1px solid var(--line)}
+header h1{margin:0;font-size:22px;font-weight:700;letter-spacing:-.3px}
+header .sub{color:var(--ink2);font-size:13px}
+main{max-width:760px;margin:0 auto;padding:14px 16px 80px}
+.card{background:var(--card);border-radius:14px;padding:14px 16px;margin:0 0 14px;box-shadow:0 1px 0 rgba(0,0,0,.03)}
+.card h2{margin:0 0 10px;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--ink2)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+button{font:inherit;border:0;border-radius:11px;padding:11px 14px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer;min-height:44px;display:inline-flex;align-items:center;gap:8px;justify-content:center}
+button.sec{background:var(--accent-soft);color:var(--accent-ink)}
+button.ghost{background:transparent;color:var(--accent-ink);padding:8px 10px;min-height:36px}
+button:disabled{opacity:.4;cursor:default}
+button svg{width:20px;height:20px;flex:none}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.grid3 button{flex-direction:column;padding:14px 6px;font-size:14px}
+.grid3 button svg{width:26px;height:26px}
+.status{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink2);margin-top:10px}
+.dot{width:10px;height:10px;border-radius:50%;background:#B0B0B5;flex:none}
+.dot.on{background:var(--accent)} .dot.busy{background:#E0A000;animation:p 1s infinite} @keyframes p{50%{opacity:.35}}
+.seg{display:flex;background:var(--bg);border-radius:10px;padding:2px;gap:2px}
+.seg label{flex:1;text-align:center;padding:7px 6px;border-radius:8px;font-size:13px;cursor:pointer;color:var(--ink2)}
+.seg input{display:none}
+.seg input:checked+span{color:var(--ink);font-weight:600}
+.seg label:has(input:checked){background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+details summary{cursor:pointer;color:var(--accent-ink);font-weight:600;font-size:14px;padding:4px 0;list-style:none}
+details summary::-webkit-details-marker{display:none}
+details summary::before{content:"›";display:inline-block;margin-right:6px;transition:transform .15s}
+details[open] summary::before{transform:rotate(90deg)}
+.set{display:grid;gap:12px;margin-top:10px;font-size:14px}
+.set .lbl{color:var(--ink2);font-size:12px;margin-bottom:4px}
+.chk{display:flex;gap:10px;align-items:flex-start;font-size:14px}
+.chk input{width:20px;height:20px;accent-color:var(--accent);flex:none;margin-top:1px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:7px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--ink2);font-weight:600}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:15px}
+.kv div:nth-child(odd){color:var(--ink2)}
+.kv div:nth-child(even){font-weight:600;font-variant-numeric:tabular-nums;word-break:break-word}
+.note{font-size:13px;padding:9px 11px;border-radius:10px;background:var(--warn-soft);color:var(--warn);margin:8px 0}
+.err{background:var(--err-soft);color:var(--err)}
+.ok{background:var(--accent-soft);color:var(--accent-ink)}
+.mono{font-family:var(--mono);font-size:12px}
+.raw{font-family:var(--mono);font-size:11px;color:var(--ink2);white-space:pre-wrap;word-break:break-all}
+.day{font-weight:700;font-size:14px;padding:10px 0 4px;border-bottom:1px solid var(--line)}
+.ev{display:grid;grid-template-columns:52px 1fr auto;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px;align-items:baseline}
+.ev .t{font-variant-numeric:tabular-nums;color:var(--ink2)}
+.ev .r{font-family:var(--mono);font-size:11px;color:var(--ink2)}
+.ev.spec{background:var(--warn-soft);margin:0 -8px;padding:6px 8px;border-radius:8px}
+#log{font-family:var(--mono);font-size:11px;max-height:260px;overflow:auto;white-space:pre-wrap;word-break:break-all;background:var(--bg);border-radius:10px;padding:8px;margin-top:8px}
+#log .tx{color:#2B6CB0} #log .rx{color:var(--accent-ink)} #log .in{color:var(--ink2)} #log .e{color:var(--err)}
+@media (prefers-color-scheme: dark){#log .tx{color:#7FB2F0}}
+.prog{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:8px;display:none}
+.prog i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+.hidden{display:none!important}
+.scroll{overflow-x:auto}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.tabs button{min-height:34px;padding:6px 12px;font-size:13px;border-radius:17px;background:var(--bg);color:var(--ink)}
+.tabs button.act{background:var(--accent);color:#fff}
+.small{font-size:12px;color:var(--ink2)}
+input[type=file]{display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>Rundsteuerempfänger</h1>
+  <div class="sub">Landis+Gyr FTY · Auslesen per optischem Kopf</div>
+</header>
+<main>
+
+<section class="card">
+  <h2>Verbindung</h2>
+  <div class="row" id="connBtns">
+    <button id="btnBle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7l10 10-5 5V2l5 5L7 17"/></svg>Bluetooth</button>
+    <button id="btnSpp" class="sec"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7l10 10-5 5V2l5 5L7 17"/></svg>Bluetooth klassisch</button>
+    <button id="btnUsb" class="sec"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v14M8 6l4-4 4 4M7 12v3h10v-3M12 16v6"/><circle cx="12" cy="20" r="0"/></svg>USB / Kabel</button>
+    <button id="btnDisc" class="ghost hidden">Trennen</button>
+  </div>
+  <div class="status"><span class="dot" id="dot"></span><span id="stat">Nicht verbunden</span></div>
+  <div class="prog" id="prog"><i></i></div>
+
+  <details style="margin-top:12px">
+    <summary>Einstellungen Lesekopf</summary>
+    <div class="set">
+      <div>
+        <div class="lbl">Baudrate bei Bluetooth-Köpfen (beim Kabel schaltet das Programm selbst um)</div>
+        <div class="seg">
+          <label><input type="radio" name="hm" value="auto" checked><span>Kopf schaltet auf 9600</span></label>
+          <label><input type="radio" name="hm" value="300"><span>Bei 300 Baud bleiben</span></label>
+        </div>
+      </div>
+      <label class="chk"><input type="checkbox" id="optParity"><span>Paritätsbit im Handy erzeugen<br><span class="small">Nur einschalten, wenn der Kopf 8N1 durchreicht und der Empfänger nicht antwortet.</span></span></label>
+      <label class="chk"><input type="checkbox" id="optRts" checked><span>RTS bei 9600 Baud aus (wie RPT01)<br><span class="small">Nur für Kabelköpfe relevant.</span></span></label>
+    </div>
+  </details>
+</section>
+
+<section class="card">
+  <h2>Funktionen</h2>
+  <div class="grid3">
+    <button id="actRead" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h12l4 4v12H4z"/><path d="M8 12h8M8 16h8M8 8h5"/></svg>Lesen</button>
+    <button id="actRx" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20v-4M10 20v-8M15 20v-12M20 20V4"/></svg>Empfang</button>
+    <button id="actEv" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Ereignisse</button>
+  </div>
+  <div class="row" style="margin-top:10px">
+    <button class="sec" id="actTest" disabled>Verbindungstest</button>
+    <button class="sec" id="btnFile">Testmodus: Mitschnitt laden</button>
+    <input type="file" id="file" multiple accept=".txt,.log,text/plain">
+  </div>
+  <div id="msg"></div>
+</section>
+
+<div id="results"></div>
+
+<section class="card hidden" id="expCard">
+  <h2>Speichern</h2>
+  <div class="row">
+    <button class="sec" id="expTxt">Bericht (.txt)</button>
+    <button class="sec" id="expRaw">Rohdaten (.json)</button>
+  </div>
+  <p class="small">Die Rohdaten helfen, die Auswertung später zu verfeinern oder weitere Typen zu ergänzen.</p>
+</section>
+
+<section class="card">
+  <details id="logDet">
+    <summary>Protokoll (Datenverkehr)</summary>
+    <div class="row" style="margin-top:6px"><button class="ghost" id="logCopy">Kopieren</button><button class="ghost" id="logClear">Leeren</button></div>
+    <div id="log"></div>
+  </details>
+</section>
+
+</main>
+<script>
+'use strict';
+/* ================= Hilfsfunktionen ================= */
+const $=s=>document.querySelector(s);
+const hex2=n=>n.toString(16).toUpperCase().padStart(2,'0');
+const toHex=b=>Array.from(b,hex2).join(' ');
+const sum8=b=>{let s=0;for(const x of b)s=(s+x)&0xFF;return s};
+const enc=s=>Array.from(s,c=>c.charCodeAt(0));
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const pad=(n,l=2)=>String(n).padStart(l,'0');
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const WD=['','Mo','Di','Mi','Do','Fr','Sa','So'];
+function printable(b){let s='';for(const c0 of b){const c=c0&0x7F;s+=(c>=32&&c<127)?String.fromCharCode(c):'<'+hex2(c)+'>'}return s}
+function fmtAddr(n){const s=String(n).padStart(8,'0');return s.slice(0,2)+"'"+s.slice(2,5)+"'"+s.slice(5)}
+const BAUD={'0':300,'1':600,'2':1200,'3':2400,'4':4800,'5':9600,'6':19200};
+
+/* ================= Log ================= */
+const logEl=$('#log'); const logLines=[];
+function log(kind,text){
+  const t=new Date(); const ts=pad(t.getHours())+':'+pad(t.getMinutes())+':'+pad(t.getSeconds());
+  const line=ts+' '+({tx:'→ ',rx:'← ',in:'· ',e:'! '}[kind]||'')+text;
+  logLines.push(line); if(logLines.length>3000)logLines.shift();
+  const d=document.createElement('div');d.className=kind;d.textContent=line.length>600?line.slice(0,600)+' …('+line.length+' Zeichen)':line;
+  logEl.appendChild(d); while(logEl.childNodes.length>800)logEl.removeChild(logEl.firstChild);
+  logEl.scrollTop=logEl.scrollHeight;
+}
+$('#logCopy').onclick=()=>navigator.clipboard?.writeText(logLines.join('\n'));
+$('#logClear').onclick=()=>{logLines.length=0;logEl.innerHTML=''};
+
+/* ================= Status / UI ================= */
+function setStatus(txt,state){ $('#stat').textContent=txt; $('#dot').className='dot'+(state?' '+state:''); }
+function showMsg(html,cls='note'){ $('#msg').innerHTML=html?`<div class="note ${cls}">${html}</div>`:''; }
+function progress(p){ const el=$('#prog'); if(p==null){el.style.display='none';return} el.style.display='block'; el.firstElementChild.style.width=Math.min(100,p*100).toFixed(1)+'%'; }
+let busy=false;
+function setBusy(b){ busy=b; ['#actRead','#actRx','#actEv','#actTest'].forEach(s=>$(s).disabled=b||!link); }
+
+/* ================= Transporte ================= */
+const SPP='00001101-0000-1000-8000-00805f9b34fb';
+const BLE_UART=[
+  '6e400001-b5a3-f393-e0a9-e50e24dcca9e', // Nordic UART
+  '49535343-fe7d-4ae5-8fa9-9fafd205e455', // Microchip / ISSC transparent UART
+  '0000ffe0-0000-1000-8000-00805f9b34fb', // HM-10 / CC254x
+  '0000fff0-0000-1000-8000-00805f9b34fb',
+  '0000ff00-0000-1000-8000-00805f9b34fb',
+  '0003cdd0-0000-1000-8000-00805f9b0131',
+  '0000fee7-0000-1000-8000-00805f9b34fb',
+  '0000ffb0-0000-1000-8000-00805f9b34fb',
+  '0000ae30-0000-1000-8000-00805f9b34fb'
+];
+
+class SerialLink{
+  constructor(port){ this.port=port; const i=port.getInfo?port.getInfo():{}; this.isBT=!!i.bluetoothServiceClassId; this.kind=this.isBT?'Bluetooth (seriell)':'USB / Kabel'; this.baud=0; }
+  async open(baud){
+    await this.port.open({baudRate:baud,dataBits:7,parity:'even',stopBits:1,bufferSize:65536});
+    this.baud=baud; await this.signals(); this.startRead();
+  }
+  async signals(){ if(this.isBT)return; const rtsOff=$('#optRts').checked&&this.baud>300; try{await this.port.setSignals({dataTerminalReady:true,requestToSend:!rtsOff})}catch(e){} }
+  startRead(){
+    this.reader=this.port.readable.getReader();
+    this.loop=(async()=>{try{for(;;){const {value,done}=await this.reader.read(); if(done)break; if(value&&this.onData)this.onData(value);}}catch(e){} finally{try{this.reader.releaseLock()}catch(e){}}})();
+  }
+  async write(bytes){ const w=this.port.writable.getWriter(); try{await w.write(new Uint8Array(bytes))}finally{w.releaseLock()} }
+  get canSetBaud(){ return !this.isBT }
+  async setBaud(b){
+    if(b===this.baud)return;
+    if(this.isBT){ this.baud=b; return; }
+    try{await this.reader.cancel()}catch(e){} await this.loop; await this.port.close(); await this.open(b);
+  }
+  async close(){ try{await this.reader.cancel()}catch(e){} try{await this.loop}catch(e){} try{await this.port.close()}catch(e){} }
+}
+
+class BleLink{
+  constructor(){ this.kind='Bluetooth LE'; this.baud=9600; }
+  async connect(){
+    this.dev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:BLE_UART});
+    this.dev.addEventListener('gattserverdisconnected',()=>onLinkLost());
+    const srv=await this.dev.gatt.connect();
+    let services=[]; try{services=await srv.getPrimaryServices()}catch(e){}
+    let rx=null,tx=null;
+    for(const s of services){
+      let chars=[]; try{chars=await s.getCharacteristics()}catch(e){continue}
+      const n=chars.find(c=>c.properties.notify||c.properties.indicate);
+      const w=chars.find(c=>c.properties.writeWithoutResponse||c.properties.write);
+      if(n&&w){rx=n;tx=w;break}
+      if(!rx&&n)rx=n; if(!tx&&w)tx=w;
+    }
+    if(!rx||!tx)throw new Error('Am Gerät wurde kein serieller Bluetooth-Dienst gefunden. Wahrscheinlich ist der Kopf ein klassisches Bluetooth-Gerät, dann bitte „Bluetooth klassisch“ verwenden.');
+    this.rx=rx; this.tx=tx;
+    await rx.startNotifications();
+    rx.addEventListener('characteristicvaluechanged',e=>{const v=e.target.value; if(this.onData)this.onData(new Uint8Array(v.buffer,v.byteOffset,v.byteLength));});
+    log('in','BLE: Dienst '+rx.service.uuid+' (Lesen '+rx.uuid.slice(4,8)+', Schreiben '+tx.uuid.slice(4,8)+')');
+  }
+  get canSetBaud(){ return false }
+  async setBaud(b){ this.baud=b; }
+  async write(bytes){
+    const a=new Uint8Array(bytes);
+    for(let i=0;i<a.length;i+=20){
+      const part=a.slice(i,i+20);
+      if(this.tx.properties.writeWithoutResponse&&this.tx.writeValueWithoutResponse) await this.tx.writeValueWithoutResponse(part);
+      else await this.tx.writeValue(part);
+    }
+  }
+  async close(){ try{this.dev.gatt.disconnect()}catch(e){} }
+}
+
+/* ================= Protokoll (IEC 62056-21 + L+G FTY) ================= */
+let link=null, rxBuf=[], lastRx=0, session=false, ident='';
+function onData(chunk){ for(const b of chunk)rxBuf.push(b&0x7F); lastRx=performance.now(); }
+function addParity(b){ if(!$('#optParity').checked)return b; return b.map(x=>{x&=0x7F;let p=0;for(let i=0;i<7;i++)p^=(x>>i)&1;return x|(p<<7)}); }
+async function send(bytes,label){ log('tx',(label?label+'  ':'')+printable(bytes)); await link.write(addParity(bytes)); }
+function frame(cmd){ const b=enc(cmd); return b.concat(enc(hex2(sum8(b)))); }
+function charTime(){ return 10.5/ (link.baud||9600) * 1000; }
+
+async function waitUntil(cond,timeout){ const t0=performance.now(); while(performance.now()-t0<timeout){ if(cond())return true; await sleep(15);} return cond(); }
+
+async function readIdent(timeout){
+  rxBuf=[];
+  const ok=await waitUntil(()=>{const s=String.fromCharCode(...rxBuf);const i=s.indexOf('/');return i>=0&&s.indexOf('\n',i)>0},timeout);
+  const s=String.fromCharCode(...rxBuf); log('rx',printable(rxBuf));
+  if(!ok)return null; const i=s.indexOf('/'); return s.slice(i,s.indexOf('\n',i)).trim();
+}
+
+/* Befehl senden, Antwort ACK + Hex + Prüfsumme lesen */
+const EXPECT={L:27,O:9,c:33,T:63,Z:4095,K:20483};
+async function command(cmd,{quiet=false,timeout}={}){
+  rxBuf=[];
+  await send(frame(cmd),'Befehl '+cmd);
+  const exp=EXPECT[cmd]||0, ct=charTime();
+  const total=timeout||Math.max(3000,(exp||200)*ct*1.6+2500);
+  const idle=Math.max(400,ct*25);
+  const t0=performance.now(); let shown=0;
+  for(;;){
+    await sleep(20);
+    const n=rxBuf.length, now=performance.now();
+    if(exp&&n>=exp)break;
+    if(n>0&&now-lastRx>idle)break;
+    if(now-t0>total)break;
+    if(exp>500&&n-shown>200){progress(n/exp);shown=n}
+  }
+  progress(null);
+  const raw=rxBuf.slice();
+  if(!quiet)log('rx',raw.length>120?printable(raw.slice(0,120))+' … ('+raw.length+' Zeichen)':printable(raw));
+  if(!raw.length)throw new Error('Keine Antwort auf Befehl „'+cmd+'“.');
+  if(raw[0]===0x15)throw new Error('Gerät hat Befehl „'+cmd+'“ abgelehnt (NAK).');
+  return parseHexAnswer(raw,cmd);
+}
+function parseHexAnswer(raw,cmd){
+  const a=raw.indexOf(0x06); if(a<0)throw new Error('Antwort auf „'+cmd+'“ ohne Bestätigung.');
+  const h=String.fromCharCode(...raw.slice(a+1)).replace(/[^0-9A-Fa-f]/g,'');
+  if(h.length<2)return new Uint8Array(0);
+  const bytes=new Uint8Array(h.length>>1); for(let i=0;i<bytes.length;i++)bytes[i]=parseInt(h.substr(i*2,2),16);
+  const data=bytes.slice(0,-1);
+  if(sum8(data)!==bytes[bytes.length-1])throw new Error('Prüfsummenfehler bei Befehl „'+cmd+'“ ('+data.length+' Bytes). Bitte wiederholen.');
+  return data;
+}
+async function enq(){
+  rxBuf=[]; await send([0x05,0x30,0x35],'ENQ');
+  const ok=await waitUntil(()=>rxBuf.includes(0x06),1500);
+  log(ok?'rx':'e',ok?'<ACK>':'keine Bestätigung auf ENQ'); return ok;
+}
+
+async function startSession(){
+  session=false;
+  // 1) Schnellversuch: Gerät ist noch im Binärmodus (9600)
+  if(link.canSetBaud||$('input[name=hm]:checked').value==='auto'){
+    await link.setBaud(9600); await sleep(80);
+    try{ const d=await command('L',{timeout:900}); ident=String.fromCharCode(...d).trim(); session=true; log('in','Gerät noch aktiv: '+ident); return ident; }catch(e){ log('in','Kein Schnellzugang, starte Anmeldung (300 Baud)'); }
+  }
+  // 2) IEC-Anmeldung bei 300 Baud
+  await link.setBaud(300); await sleep(250);
+  let id=null;
+  for(let i=0;i<2&&!id;i++){ await send(enc('/?!\r\n'),'Anmeldung'); id=await readIdent(2500); }
+  if(!id)throw new Error('Keine Antwort vom Gerät. Lesekopf richtig aufgesetzt? Bei Bluetooth ggf. Einstellung „Paritätsbit“ probieren.');
+  ident=id; log('in','Kennung: '+id);
+  const mode=$('input[name=hm]:checked').value;
+  const z=(!link.canSetBaud&&mode==='300')?'0':(BAUD[id[4]]?id[4]:'5');
+  await send([0x06,0x30,z.charCodeAt(0),0x32,0x0D,0x0A],'ACK 0'+z+'2');
+  await sleep(6*charTime()+150);
+  await link.setBaud(BAUD[z]); if(link.signals)await link.signals();
+  await sleep(300);
+  if(!await enq()){ await sleep(300); if(!await enq())throw new Error('Gerät reagiert nach der Umschaltung nicht. Bei Bluetooth bitte „Bei 300 Baud bleiben“ einstellen und erneut versuchen.'); }
+  session=true; return id;
+}
+async function ensure(){
+  if(session){ if(await enq())return; }
+  await startSession();
+}
+
+/* ================= Dekodierung ================= */
+const R={}; // Ergebnisse
+function decodeEmpfang(d){
+  const z=o=>({korrekt:(d[o]<<8)|d[o+1],fehler:(d[o+2]<<8)|d[o+3],adresse:d[o+4],dkek:d[o+5],stunden:d[o+6]});
+  return {z1:z(0),z2:z(7),rest:d.length>14?d[14]:null};
+}
+function decodeStatus(d){
+  return {datensatz:hex2(d[0])+hex2(d[1])+'.'+hex2(d[2])+hex2(d[3]),
+    zeit:new Date(2000+d[8],d[6]-1,d[7],d[4],d[5]),
+    adresse:d.length>28?((d[26]<<16)|(d[27]<<8)|d[28]):null, raw:d};
+}
+function decodeAddr(d){ return (d[0]<<16)|(d[1]<<8)|d[2]; }
+function decodeParam(d){
+  const P={};
+  P.datensatz=hex2(d[0x500])+hex2(d[0x501])+'.'+hex2(d[0x502])+hex2(d[0x503]);
+  P.anwender=hex2(d[0x514])+hex2(d[0x515]);
+  P.adresse=(d[0x7FD]<<16)|(d[0x7FE]<<8)|d[0x7FF];
+  // Sommerzeit- und Feiertagstabelle (14 Byte je Jahr)
+  P.sz=[];P.ft=[];let p=0x203,prevY=-1;
+  while(p+14<=0x400){
+    const y=d[p]; if(y===0xFF||y===0||(prevY>=0&&y!==prevY+1))break;
+    const r={jahr:2000+y,von:pad(d[p+1])+'.'+pad(d[p+2]),bis:pad(d[p+3])+'.'+pad(d[p+4])};
+    if(d[p+2]>12||d[p+4]>12)break;
+    P.sz.push(r);
+    for(let k=0;k<4;k++){const dd=d[p+5+k*2],mm=d[p+6+k*2]; if(dd&&dd!==0xFF)P.ft.push({jahr:String(2000+y),tag:pad(dd)+'.'+pad(mm&0x0F),art:ftArt(mm>>4)});}
+    prevY=y;p+=14;
+  }
+  if(d[p]!==0xFF)p++;
+  while(p+1<0x400&&d[p]&&d[p]!==0xFF){P.ft.push({jahr:'****',tag:pad(d[p])+'.'+pad(d[p+1]&0x0F),art:ftArt(d[p+1]>>4)});p+=2;}
+  // Zeitzeilen (8 Byte, letzte = Prüfsumme)
+  P.zz=[];
+  for(let o=0x800;o+8<=0x2000;o+=8){
+    const r=d.slice(o,o+8); if(r.every(x=>x===0xFF))break;
+    if(sum8(r.slice(0,7))!==r[7])break;
+    const v=(r[0]<<8)|r[1];
+    P.zz.push({id:r[3],prog:(r[4]>>3)+1,bit:(r[4]>>2)&1,zeit:pad((v>>3)&0x1F)+':'+pad(r[2]),wt:(r[5]===0x7F&&r[6]===0xFF)?'Mo..So,S1,S2':hex2(r[5])+hex2(r[6]),raw:toHex(r)});
+  }
+  // Interpreterprogramme (Rohdaten)
+  let end=0x200; while(end>0&&d[end-1]===0xFF)end--;
+  P.progRaw=d.slice(0,end);
+  P.setRaw=d.slice(0x500,0x580);
+  return P;
+}
+function ftArt(f){ return f===7?'SO':(f===1?'S1':f===2?'S2':'Code '+f); }
+
+/* Ereignisspeicher: [2 Byte ?][2 Byte Schreibzeiger][Ring 3-Byte-Einträge][2 Byte Zeiger] */
+function decodeEvents(d,refDate){
+  const ptr=(d[2]<<8)|d[3]; const ring=d.slice(4,d.length-2); const n=ring.length-(ring.length%3);
+  const recs=[];
+  for(let i=0;i<n;i+=3){ const o=(ptr+i)%n; recs.push([ring[o],ring[(o+1)%n],ring[(o+2)%n]]); }
+  // Datumseinträge sammeln, Jahre rückwärts vergeben
+  const dates=[]; recs.forEach((r,i)=>{ if((r[0]>>4)===6){ const day=r[1]>>3, mon=r[0]&0x0F, wd=r[2]&7; if(day>=1&&day<=31&&mon>=1&&mon<=12)dates.push({i,day,mon,wd}); } });
+  const ref=refDate||new Date();
+  let year=null;
+  for(let k=dates.length-1;k>=0;k--){
+    const x=dates[k];
+    if(year===null){
+      year=ref.getFullYear(); if(new Date(year,x.mon-1,x.day)>ref)year--;
+      if(x.wd>=1&&x.wd<=6){ for(let y=year;y>year-8;y--){ const g=new Date(y,x.mon-1,x.day).getDay(); if((g===0?7:g)===x.wd){year=y;break;} } }
+    }else{
+      const nx=dates[k+1]; if(x.mon>nx.mon||(x.mon===nx.mon&&x.day>nx.day))year--;
+    }
+    x.year=year;
+  }
+  const byIdx=new Map(dates.map(x=>[x.i,x]));
+  const out=[]; let cur=null;
+  recs.forEach((r,i)=>{
+    const t=r[0]>>4;
+    if(t===6){ cur=byIdx.get(i)||null; if(cur)out.push({type:'day',d:cur,raw:r}); return; }
+    if(r[0]===0xFF&&r[1]===0xFF&&r[2]===0xFF)return;
+    const min=((r[1]&7)<<8)|r[2]; const tm=min<1440?pad(Math.floor(min/60))+':'+pad(min%60):'--:--';
+    let txt,spec=false;
+    if(t===0xA){ txt='Zeitzeile → Programm '+((r[1]>>3)+1)+' ('+((r[0]&1)?'Ein':'Aus')+')'; }
+    else if(t===2){ txt='Netzausfall (vermutet)'; spec=true; }
+    else if(t===3){ txt='Netzwiederkehr (vermutet)'; spec=true; }
+    else if(t===7){ txt='Uhr gestellt / synchronisiert (vermutet)'; spec=true; }
+    else { txt='Ereignis Typ '+t.toString(16).toUpperCase(); spec=true; }
+    out.push({type:'ev',time:tm,txt,spec,raw:r,day:cur});
+  });
+  return {ptr,head:(d[0]<<8)|d[1],list:out};
+}
+
+/* ================= Darstellung ================= */
+function card(id,title,html){
+  let el=document.getElementById(id); if(!el){el=document.createElement('section');el.className='card';el.id=id;$('#results').prepend(el);}
+  el.innerHTML='<h2>'+esc(title)+'</h2>'+html; $('#expCard').classList.remove('hidden'); return el;
+}
+function renderGeraet(){
+  const rows=[];
+  if(R.ident)rows.push(['Kennung',R.ident]);
+  if(R.typ)rows.push(['Typ',R.typ]);
+  const adr=R.adresse??R.param?.adresse??R.status?.adresse; if(adr!=null)rows.push(['Geräteadresse',fmtAddr(adr)]);
+  const ds=R.param?.datensatz||R.status?.datensatz; if(ds)rows.push(['Datensatz',ds]);
+  if(R.param)rows.push(['Anwenderadresse',R.param.anwender]);
+  if(R.status)rows.push(['Gerätezeit',R.status.zeit.toLocaleString('de-DE',{dateStyle:'medium',timeStyle:'short'})]);
+  if(R.quelle)rows.push(['Quelle',R.quelle]);
+  card('cGer','Gerät','<div class="kv">'+rows.map(r=>'<div>'+esc(r[0])+'</div><div>'+esc(r[1])+'</div>').join('')+'</div>');
+}
+function renderEmpfang(){
+  const e=R.empfang; const L=[['Korrekte Telegramme','korrekt'],['Fehlerhafte Telegramme','fehler'],['Telegramme mit gültiger Anwender-Adresse','adresse'],['DK/EK-Interpreterprogramme-Aufrufe','dkek'],['Dauer der Aktivität des Zählers in Stunden','stunden']];
+  card('cRx','Empfangsqualität','<div class="scroll"><table><tr><th></th><th class="n">Zähler 1</th><th class="n">Zähler 2</th></tr>'+L.map(([t,k])=>'<tr><td>'+t+'</td><td class="n">'+e.z1[k]+'</td><td class="n">'+e.z2[k]+'</td></tr>').join('')+'</table></div>');
+}
+function dayLabel(x){
+  let wd=WD[x.wd]||'', extra='';
+  if(x.year!=null){ const g=new Date(x.year,x.mon-1,x.day).getDay(); const real=WD[g===0?7:g]; if(real!==wd){ if(x.wd===7)extra=' (Feiertag)'; wd=real; } }
+  return wd+' '+pad(x.day)+'.'+pad(x.mon)+'.'+(x.year??'')+extra;
+}
+function renderEvents(){
+  const E=R.events; const list=E.list.slice().reverse(); // neueste zuerst
+  let html='<div class="small">'+E.list.filter(x=>x.type==='ev').length+' Einträge · neueste oben</div>';
+  html+='<div class="note">Die Deutung der Ereignisse ist vorläufig (aus den Mitschnitten abgeleitet). Gelb markierte Einträge bitte einmal mit der Anzeige in RPT01 vergleichen. Der Rohcode steht rechts daneben.</div>';
+  let pend=[];
+  const flush=day=>{ if(!pend.length&&!day)return; const label=day?dayLabel(day):'Ältere Einträge (Datum bereits überschrieben)';
+    html+='<div class="day">'+esc(label)+'</div>'+pend.reverse().map(x=>'<div class="ev'+(x.spec?' spec':'')+'"><span class="t">'+x.time+'</span><span>'+esc(x.txt)+'</span><span class="r">'+toHex(x.raw)+'</span></div>').join(''); pend=[]; };
+  // chronologisch gruppieren, dann rückwärts ausgeben
+  const groups=[]; let g={day:null,items:[]};
+  for(const x of E.list){ if(x.type==='day'){ groups.push(g); g={day:x.d,items:[]}; } else g.items.push(x); }
+  groups.push(g);
+  for(let i=groups.length-1;i>=0;i--){ const G=groups[i]; if(!G.day&&!G.items.length)continue; pend=G.items.slice(); flush(G.day); }
+  card('cEv','Ereignisspeicher',html);
+}
+function renderParam(){
+  const P=R.param;
+  let h='<div class="tabs"><button data-t="zz" class="act">Zeitzeilen</button><button data-t="sz">Sommerzeit</button><button data-t="ft">Feiertage</button><button data-t="pr">Programme</button></div>';
+  h+='<div data-p="zz"><div class="scroll"><table><tr><th>ID</th><th>Prog</th><th>Zeit</th><th>Befehl*</th><th>Wochentage</th></tr>'+P.zz.map(z=>'<tr><td>'+z.id+'</td><td>'+z.prog+'</td><td>'+z.zeit+'</td><td>'+(z.bit?'Ein':'Aus')+'</td><td>'+esc(z.wt)+'</td></tr>').join('')+'</table></div><p class="small">* „Ein/Aus“ vorläufig gedeutet. Reihenfolge wie im Gerät gespeichert.</p></div>';
+  h+='<div data-p="sz" class="hidden"><div class="scroll"><table><tr><th>Jahr</th><th>Beginn</th><th>Ende</th></tr>'+P.sz.map(s=>'<tr><td>'+s.jahr+'</td><td>'+s.von+'.</td><td>'+s.bis+'.</td></tr>').join('')+'</table></div></div>';
+  h+='<div data-p="ft" class="hidden"><div class="scroll"><table><tr><th>Jahr</th><th>Datum</th><th>Art</th></tr>'+P.ft.map(f=>'<tr><td>'+f.jahr+'</td><td>'+f.tag+'.</td><td>'+f.art+'</td></tr>').join('')+'</table></div></div>';
+  h+='<div data-p="pr" class="hidden"><div class="note">Die Interpreterprogramme sind noch nicht in Klartext übersetzt. Hier stehen die Rohdaten ('+P.progRaw.length+' Bytes).</div><div class="raw">'+hexBlock(P.progRaw)+'</div><details style="margin-top:8px"><summary>Einstellungsblock (Rohdaten ab 0x500)</summary><div class="raw">'+hexBlock(P.setRaw,0x500)+'</div></details></div>';
+  const el=card('cPar','Parameter (Lesen)',h);
+  el.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{el.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('act',x===b));el.querySelectorAll('[data-p]').forEach(p=>p.classList.toggle('hidden',p.dataset.p!==b.dataset.t));});
+}
+function hexBlock(b,base=0){let s='';for(let i=0;i<b.length;i+=16)s+=(base+i).toString(16).toUpperCase().padStart(4,'0')+'  '+toHex(b.slice(i,i+16))+'\n';return esc(s)}
+function setIdent(id){ R.ident=id; const m=/^\/(\w{3})\d(.*)$/.exec(id||''); R.typ=m?(m[1]==='LGZ'?'Landis+Gyr ':m[1]+' ')+m[2].replace(/G\d$/,''):''; }
+
+/* ================= Aktionen ================= */
+async function run(name,fn){
+  if(busy)return; setBusy(true); showMsg(''); setStatus(name+' …','busy');
+  try{ await fn(); setStatus('Verbunden · '+link.kind+(ident?' · '+ident:''),'on'); }
+  catch(e){ log('e',e.message); showMsg(esc(e.message),'err'); setStatus(link?'Verbunden · Fehler beim letzten Vorgang':'Nicht verbunden',link?'on':''); session=false; }
+  finally{ setBusy(false); progress(null); }
+}
+$('#actTest').onclick=()=>run('Verbindungstest',async()=>{ const id=await startSession(); setIdent(id); R.quelle='Live'; renderGeraet(); showMsg('Verbindung in Ordnung: '+esc(id),'ok'); });
+$('#actRx').onclick=()=>run('Empfang lesen',async()=>{ await ensure(); setIdent(ident); const d=await command('c'); R.raw.c=toHex(d); R.empfang=decodeEmpfang(d); R.quelle='Live'; renderGeraet(); renderEmpfang(); });
+$('#actEv').onclick=()=>run('Ereignisse lesen',async()=>{ await ensure(); setIdent(ident); const t=await command('T'); R.status=decodeStatus(t); R.raw.T=toHex(t); const z=await command('Z'); R.raw.Z=toHex(z); R.events=decodeEvents(z,R.status.zeit); R.quelle='Live'; renderGeraet(); renderEvents(); });
+$('#actRead').onclick=()=>run('Lesen',async()=>{ await ensure(); setIdent(ident); const k=await command('K'); R.raw.K=toHex(k); R.param=decodeParam(k); if(await enq()){ try{const o=await command('O'); R.adresse=decodeAddr(o);}catch(e){} } R.quelle='Live'; renderGeraet(); renderParam(); });
+
+/* Verbinden */
+function connected(l){
+  link=l; link.onData=onData; session=false; ident='';
+  setStatus('Verbunden · '+l.kind,'on'); $('#btnDisc').classList.remove('hidden'); setBusy(false);
+  log('in','Verbunden über '+l.kind);
+}
+function onLinkLost(){ log('e','Verbindung getrennt'); link=null; session=false; setStatus('Nicht verbunden'); $('#btnDisc').classList.add('hidden'); setBusy(false); }
+$('#btnDisc').onclick=async()=>{ if(link)await link.close(); onLinkLost(); };
+$('#btnBle').onclick=async()=>{
+  if(!navigator.bluetooth)return showMsg('Bluetooth wird in diesem Browser nicht unterstützt. Bitte Chrome unter Android verwenden (auf dem iPhone nicht möglich).','err');
+  try{ const l=new BleLink(); await l.connect(); connected(l); }catch(e){ if(e.name!=='NotFoundError')showMsg(esc(e.message),'err'); log('e',e.message); }
+};
+async function openSerial(opts){
+  if(!navigator.serial)return showMsg('Serielle Schnittstelle wird in diesem Browser nicht unterstützt. Am PC Chrome oder Edge verwenden; unter Android erst ab neueren Chrome-Versionen.','err');
+  try{ const port=await navigator.serial.requestPort(opts); const l=new SerialLink(port); await l.open(l.isBT?9600:300); connected(l); }
+  catch(e){ if(e.name!=='NotFoundError')showMsg(esc(e.message),'err'); log('e',e.message); }
+}
+$('#btnSpp').onclick=()=>openSerial({allowedBluetoothServiceClassIds:[SPP],filters:[{bluetoothServiceClassId:SPP}]});
+$('#btnUsb').onclick=()=>openSerial({});
+if(!navigator.serial){ $('#btnSpp').classList.add('hidden'); $('#btnUsb').classList.add('hidden'); }
+if(!navigator.bluetooth){ $('#btnBle').classList.add('sec'); }
+
+/* ================= Testmodus: Mitschnitt (Serial-Monitor-Log von RPT01) ================= */
+R.raw={};
+function parseCapture(text){
+  const seq=[]; const re=/IRP_MJ_(WRITE) DOWN\s+((?:[0-9a-fA-F]{2} )+)|IRP_MJ_(READ) UP STATUS_SUCCESS\s+((?:[0-9a-fA-F]{2} )+)/;
+  for(const line of text.split(/\r?\n/)){
+    const m=re.exec(line); if(!m)continue;
+    const k=m[1]?'TX':'RX'; const b=(m[2]||m[4]).trim().split(/\s+/).map(x=>parseInt(x,16));
+    if(seq.length&&seq[seq.length-1].k===k)seq[seq.length-1].b.push(...b); else seq.push({k,b});
+  }
+  return seq;
+}
+function loadCapture(text,name){
+  const seq=parseCapture(text); if(!seq.length)throw new Error(name+': keine Schnittstellendaten gefunden.');
+  let found=[];
+  for(let i=0;i<seq.length;i++){
+    const s=seq[i]; if(s.k!=='TX')continue;
+    const b=s.b.map(x=>x&0x7F);
+    if(b.length>=5&&b[0]===0x2F&&b[1]===0x3F){ const r=seq[i+1]; if(r&&r.k==='RX'){ const id=printable(r.b).replace(/<0D>|<0A>/g,''); setIdent(id);} continue; }
+    if(b.length!==3||b[0]<0x20)continue;
+    const c=String.fromCharCode(b[0]); if(hex2(sum8([b[0]]))!==String.fromCharCode(b[1],b[2]))continue;
+    const r=seq[i+1]; if(!r||r.k!=='RX')continue;
+    let d; try{ d=parseHexAnswer(r.b.map(x=>x&0x7F),c);}catch(e){ continue; }
+    found.push(c);
+    if(c==='L'){ setIdent(String.fromCharCode(...d).trim()); }
+    else if(c==='O'){ R.adresse=decodeAddr(d); }
+    else if(c==='c'){ R.empfang=decodeEmpfang(d); R.raw.c=toHex(d); }
+    else if(c==='T'){ R.status=decodeStatus(d); R.raw.T=toHex(d); }
+    else if(c==='Z'){ R.raw.Z=toHex(d); R._z=d; }
+    else if(c==='K'){ R.raw.K=toHex(d); R.param=decodeParam(d); }
+  }
+  if(R._z){ R.events=decodeEvents(R._z,R.status?.zeit); delete R._z; }
+  return found;
+}
+$('#btnFile').onclick=()=>$('#file').click();
+$('#file').onchange=async e=>{
+  const files=[...e.target.files]; e.target.value=''; if(!files.length)return;
+  showMsg(''); const info=[];
+  for(const f of files){
+    try{ const t=await f.text(); const c=loadCapture(t,f.name); info.push(esc(f.name)+': '+(c.length?'Befehle '+[...new Set(c)].join(', '):'keine bekannten Befehle')); }
+    catch(err){ info.push(esc(err.message)); }
+  }
+  R.quelle='Mitschnitt';
+  renderGeraet(); if(R.param)renderParam(); if(R.events)renderEvents(); if(R.empfang)renderEmpfang();
+  showMsg('Testmodus · '+info.join('<br>'),'ok');
+};
+
+/* ================= Export ================= */
+function download(name,text,type){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type})); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500); }
+function fname(ext){ const a=R.adresse??R.param?.adresse??R.status?.adresse; const d=new Date(); return 'FTY_'+(a!=null?String(a).padStart(8,'0'):'unbekannt')+'_'+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'_'+pad(d.getHours())+pad(d.getMinutes())+'.'+ext; }
+$('#expRaw').onclick=()=>download(fname('json'),JSON.stringify({erstellt:new Date().toISOString(),kennung:R.ident,adresse:R.adresse??R.param?.adresse??R.status?.adresse,quelle:R.quelle,bloecke:R.raw},null,1),'application/json');
+$('#expTxt').onclick=()=>{
+  const L=[]; const a=R.adresse??R.param?.adresse??R.status?.adresse;
+  L.push('Rundsteuerempfänger – Auslesung '+new Date().toLocaleString('de-DE'));
+  if(R.ident)L.push('Kennung: '+R.ident+(R.typ?' ('+R.typ+')':''));
+  if(a!=null)L.push('Geräteadresse: '+fmtAddr(a));
+  const ds=R.param?.datensatz||R.status?.datensatz; if(ds)L.push('Datensatz: '+ds);
+  if(R.param)L.push('Anwenderadresse: '+R.param.anwender);
+  if(R.status)L.push('Gerätezeit: '+R.status.zeit.toLocaleString('de-DE'));
+  if(R.empfang){const e=R.empfang;L.push('','EMPFANGSQUALITÄT              Zähler 1   Zähler 2');
+    [['Korrekte Telegramme','korrekt'],['Fehlerhafte Telegramme','fehler'],['Gültige Anwender-Adresse','adresse'],['DK/EK-Programmaufrufe','dkek'],['Aktivität (Stunden)','stunden']].forEach(([t,k])=>L.push(t.padEnd(30)+String(e.z1[k]).padStart(8)+String(e.z2[k]).padStart(11)));}
+  if(R.param){const P=R.param;L.push('','ZEITZEILEN','ID   Prog  Zeit   Befehl  Wochentage');P.zz.forEach(z=>L.push(String(z.id).padEnd(5)+String(z.prog).padEnd(6)+z.zeit.padEnd(7)+(z.bit?'Ein':'Aus').padEnd(8)+z.wt));
+    L.push('','SOMMERZEIT');P.sz.forEach(s=>L.push(s.jahr+'   '+s.von+'..'+s.bis));
+    L.push('','FEIERTAGE');P.ft.forEach(f=>L.push(f.jahr+' '+f.tag+' '+f.art));}
+  if(R.events){L.push('','EREIGNISSPEICHER (neueste zuletzt, Deutung vorläufig)');let day='';R.events.list.forEach(x=>{if(x.type==='day'){day=dayLabel(x.d);L.push('-- '+day);}else L.push('   '+x.time+'  '+x.txt+'   ['+toHex(x.raw)+']');});}
+  download(fname('txt'),L.join('\r\n'),'text/plain;charset=utf-8');
+};
+
+/* Test-Schnittstelle (nur für Entwicklung) */
+window.RSE={decodeParam,decodeEvents,decodeEmpfang,decodeStatus,parseHexAnswer,loadCapture,connected,R,frame,
+  useFake(l){connected(l)}};
+</script>
+</body>
+</html>
