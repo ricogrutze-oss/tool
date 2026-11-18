@@ -436,7 +436,8 @@ function decodeParam(d){
   for(let o=0x800;o+8<=0x2000;o+=8){
     const r=d.slice(o,o+8); if(r.every(x=>x===0xFF))break;
     if(sum8(r.slice(0,7))!==r[7])break;
-        P.zz.push({id:r[3],prog:(r[4]>>3)+1,bit:(r[4]>>2)&1,zeit:pad(r[1]>>3)+':'+pad(r[0]),wt:(r[5]===0x7F&&r[6]===0xFF)?'Mo..So,S1,S2':hex2(r[5])+hex2(r[6]),raw:toHex(r)});
+        if(r[3]&0x80){ (P.zzHidden=P.zzHidden||[]).push(toHex(r)); continue; }   // ID ≥ 128: zeigt RPT01 nicht in der Zeitzeilen-Liste (FCB8.0012)
+    P.zz.push({id:r[3],prog:(r[4]>>3)+1,bit:(r[4]>>2)&1,zeit:pad(r[1]>>3)+':'+pad(r[0]),wt:(r[5]===0x7F&&r[6]===0xFF)?'Mo..So,S1,S2':hex2(r[5])+hex2(r[6]),raw:toHex(r)});
   }
   // Interpreterprogramme (Rohdaten)
   let end=0x200; while(end>0&&d[end-1]===0xFF)end--;
@@ -547,7 +548,7 @@ function renderEvents(){
 function renderParam(){
   const P=R.param;
   let h='<div class="tabs"><button data-t="zz" class="act">Zeitzeilen</button><button data-t="sz">Sommerzeit</button><button data-t="ft">Feiertage</button><button data-t="pr">Programme</button></div>';
-  h+='<div data-p="zz"><div class="scroll"><table><tr><th>ID</th><th>Prog</th><th>Zeit</th><th>Befehl</th><th>Wochentage</th></tr>'+P.zz.map(z=>'<tr><td>'+z.id+'</td><td>'+z.prog+'</td><td>'+z.zeit+'</td><td>'+(z.bit?'Ein':'Aus')+'</td><td>'+esc(z.wt)+'</td></tr>').join('')+'</table></div><p class="small">Reihenfolge wie im Gerät gespeichert.</p></div>';
+  h+='<div data-p="zz"><div class="scroll"><table><tr><th>ID</th><th>Prog</th><th>Zeit</th><th>Befehl</th><th>Wochentage</th></tr>'+P.zz.map(z=>'<tr><td>'+z.id+'</td><td>'+z.prog+'</td><td>'+z.zeit+'</td><td>'+(z.bit?'Ein':'Aus')+'</td><td>'+esc(z.wt)+'</td></tr>').join('')+'</table></div><p class="small">Reihenfolge wie im Gerät gespeichert.'+(P.zzHidden?' Zusätzlich '+P.zzHidden.length+' interne Einträge, die RPT01 nicht auflistet.':'')+'</p></div>';
   h+='<div data-p="sz" class="hidden"><div class="scroll"><table><tr><th>Jahr</th><th>Beginn</th><th>Ende</th></tr>'+P.sz.map(s=>'<tr><td>'+s.jahr+'</td><td>'+s.von+'.</td><td>'+s.bis+'.</td></tr>').join('')+'</table></div></div>';
   h+='<div data-p="ft" class="hidden"><div class="scroll"><table><tr><th>Jahr</th><th>Datum</th><th>Art</th></tr>'+P.ft.map(f=>'<tr><td>'+f.jahr+'</td><td>'+f.tag+'.</td><td>'+f.art+'</td></tr>').join('')+'</table></div></div>';
   h+='<div data-p="pr" class="hidden"><div class="note">Die Interpreterprogramme sind noch nicht in Klartext übersetzt. Hier stehen die Rohdaten ('+P.progRaw.length+' Bytes).</div><div class="raw">'+hexBlock(P.progRaw)+'</div><details style="margin-top:8px"><summary>Einstellungsblock (Rohdaten ab 0x500)</summary><div class="raw">'+hexBlock(P.setRaw,0x500)+'</div></details></div>';
