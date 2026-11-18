@@ -505,7 +505,7 @@ function renderTest(){
 const REL={};
 function renderRelais(){
   const rows=[1,2,3,4,5,6].map(n=>'<div class="rel"><span>Relais '+n+'</span><button class="sec" data-n="'+n+'" data-on="1">Ein</button><button class="sec" data-n="'+n+'" data-on="0">Aus</button><span class="st'+(REL[n]==='Ein'?' on':'')+'">'+(REL[n]||'?')+'</span></div>').join('');
-  const el=card('cRel','Relais schalten',rows+'<p class="small">Rechts steht der zuletzt gesendete Befehl (bestätigt vom Empfänger), nicht die gemessene Stellung. Relais 1 und 2 sind aus dem Mitschnitt geprüft, 3–6 nach demselben Schema. Das Gerät schaltet sofort.</p>');
+  const el=card('cRel','Relais schalten',rows+'<p class="small">Rechts steht der zuletzt gesendete Befehl (bestätigt vom Empfänger), nicht die gemessene Stellung. Das Gerät schaltet sofort.</p>');
   el.querySelectorAll('button[data-n]').forEach(b=>b.onclick=()=>{ const n=+b.dataset.n,on=b.dataset.on==='1';
     run('Relais '+n+' '+(on?'Ein':'Aus'),async()=>{ await ensure(); await relay(n,on); REL[n]=on?'Ein':'Aus'; renderRelais(); }); });
   el.scrollIntoView({behavior:'smooth',block:'start'});
