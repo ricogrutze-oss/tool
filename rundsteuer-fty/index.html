@@ -79,6 +79,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 .inp{font:inherit;width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);min-height:44px}
 table.grid{font-size:12px} table.grid th,table.grid td{text-align:center;padding:4px 2px} table.grid td:first-child{text-align:left;color:var(--ink2);padding-right:6px}
 .mk{display:inline-block;width:14px;height:14px;border-radius:4px;background:var(--accent)}
+.prg{font-family:var(--mono);font-size:13px;margin:6px 0 10px;white-space:pre-wrap}
 .lbl2{font-size:12px;color:var(--ink2);font-weight:600;margin:14px 0 2px}
 .scroll{overflow-x:auto}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
@@ -442,7 +443,61 @@ function decodeParam(d){
   let end=0x200; while(end>0&&d[end-1]===0xFF)end--;
   P.progRaw=d.slice(0,end);
   P.setRaw=d.slice(0x500,0x580);
+  try{ P.prog=decodePrograms(d); }catch(e){ P.prog=null; P.progErr=e.message; }
   return P;
+}
+/* ===== Interpreterprogramme (aus 5 Datensätzen + RPT01-Datenbank entschlüsselt) =====
+   Code = Halbbyte-Strom ab 0x000. Befehl = 1 Byte mit vertauschten Halbbytes (Nummer wie in RPT01-Tabelle „InterpreterCode“),
+   danach feste Anzahl Halbbytes Operand. Programmanfänge: 0x520 (Adresse), Bereich je Programm: 0x540 (Halbbyte, 1/2 → +256).
+   DK-Nummer: Tabelle „14 8p EK“ (0x550–0x5C0, DK = (EK+1)/2), sonst Liste „3y1…3y4“ (UW-Typen: DK = y+11). */
+const IOPS={0x16:['ifdk',4],0x09:['einif',2],0x0a:['ausif',2],0x03:['endif',0],0x02:['end',0],0x2b:['ifnv',3],0x29:['setnv',1],0x2a:['clrnv',1],
+  0x07:['starte',1],0x35:['relais',1],0xd5:['delay',3],0x1f:['delayz',5],0x5f:['delayz',5],0x13:['dkrel',3],0x0f:['einrel',3],0x10:['ausrel',3],
+  0x01:['wait',0],0x0b:['endloop',2],0x08:['else',2]};
+function relMask(n){ const n0=parseInt(n[0],16), m=parseInt(n[1],16)|(parseInt(n[2],16)<<4), base=n0&8?4:1, r=[]; let ok=(n0===4||n0===8);
+  for(let i=0;i<4;i++){ const v=(m>>(2*i))&3; if(v===1)r.push(base+i); else if(v)ok=false; }
+  return ok&&r.length?'K'+r.join(','):'(Code '+n+')'; }
+function decodePrograms(d){
+  const h=Array.from(d.slice(0,0x200),b=>b.toString(16).padStart(2,'0')).join('');
+  const st=[...d.slice(0x520,0x530)].filter(b=>b), rg=Array.from(d.slice(0x540,0x550),b=>b.toString(16).padStart(2,'0')).join('');
+  // DK aus EK-Tabelle
+  const dkOf={}; for(let i=0x550;i<0x5c0;i++){ if(d[i]===0x14&&(d[i+1]&0x80)&&d[i+2]>0&&d[i+2]<0xff){ dkOf[d[i+1]&0x7f]=(d[i+2]+1)>>1; i+=2; } }
+  const progs=[]; let codeEnd=0;
+  st.forEach((a,idx)=>{ const r=parseInt(rg[idx],16)||1, base=(r-1)*256; let pos=base+a+1; const toks=[];
+    for(let g=0;g<200&&pos+2<=h.length;g++){ const op=parseInt(h[pos+1]+h[pos],16), def=IOPS[op];
+      if(!def){ toks.push({k:'unk',pos,arg:h.substr(pos,2)}); break; }
+      toks.push({k:def[0],pos,arg:h.substr(pos+2,def[1]),op}); pos+=2+def[1]; if(def[0]==='end')break; }
+    if(r===1)codeEnd=Math.max(codeEnd,pos); progs.push({nr:idx+1,base,toks}); });
+  // DK-Liste (ohne Zeitzeilen-Tabelle)
+  let dkList=[]; if(!Object.keys(dkOf).length){ const m=/((?:3[0-9a-f]1)*3[0-9a-f]4)/.exec(h.slice(codeEnd,512)); if(m)dkList=m[1].match(/3[0-9a-f][14]/g).map(x=>parseInt(x[1],16)+11); }
+  let li=0;
+  progs.forEach((P,idx)=>{ const usesDk=P.toks.some(t=>t.k==='ifdk'||t.k==='dkrel');
+    P.dk= dkOf[idx]!=null?dkOf[idx]:(usesDk&&!Object.keys(dkOf).length&&li<dkList.length?dkList[li++]:null);
+    const loops=new Set(P.toks.filter(t=>t.k==='endloop').map(t=>P.base+parseInt(t.arg[1]+t.arg[0],16)+1));
+    const L=[]; let ind=0; const stk=[]; const out=(i,t)=>L.push('    '.repeat(Math.max(0,i))+t); const dk=P.dk!=null?P.dk:'?';
+    for(let i=0;i<P.toks.length;i++){ const t=P.toks[i];
+      if(loops.has(t.pos)){ out(ind,'Loop'); stk.push({t:'loop',b:ind}); ind++; }
+      switch(t.k){
+        case 'ifdk': out(ind,'If DK '+dk); stk.push({t:'dk',b:ind}); break;
+        case 'einif': case 'ausif': { const b=(stk[stk.length-1]||{b:0}).b; out(b,t.k==='einif'?'EinIf':'AusIf'); ind=b+1; break; }
+        case 'ifnv': out(ind,'If NV-Flag '+parseInt(t.arg[0],16)); stk.push({t:'if',b:ind}); ind++; break;
+        case 'else': { const b=(stk[stk.length-1]||{b:0}).b; out(b,'Else'); ind=b+1; break; }
+        case 'endif': { const s=stk.pop()||{b:0}; out(s.b,'EndIf'); ind=s.b; break; }
+        case 'setnv': out(ind,'set NV-Flag '+parseInt(t.arg,16)); break;
+        case 'clrnv': out(ind,'clear NV-Flag '+parseInt(t.arg,16)); break;
+        case 'starte': { const n=[parseInt(t.arg,16)+1]; while(P.toks[i+1]&&P.toks[i+1].k==='starte'&&!loops.has(P.toks[i+1].pos)){ i++; n.push(parseInt(P.toks[i].arg,16)+1); } out(ind,'starte Programm '+n.join(',')); break; }
+        case 'relais': { const v=parseInt(t.arg,16); out(ind,(v&8?'Ein':'Aus')+' Relais K'+(v&7)); break; }
+        case 'einrel': out(ind,'Ein Relais '+relMask(t.arg).replace('K','K')); break;
+        case 'ausrel': out(ind,'Aus Relais '+relMask(t.arg)); break;
+        case 'dkrel': out(ind,'DK '+dk+' Relais '+relMask(t.arg)); break;
+        case 'delay': { const v=parseInt(t.arg[0],16); out(ind,v===2?'Delay 1 s':'Delay (Code '+t.arg[0]+')'); break; }
+        case 'delayz': { const k=t.op.toString(16)+t.arg.slice(0,3); out(ind,{'1fea6':'Delay 0... 5 min','5fd4c':'Delay 0... 10 min'}[k]||'Delay "Zufall" (Code '+k+')'); break; }
+        case 'wait': out(ind,'WaitTaste'); break;
+        case 'endloop': { const s=stk.pop()||{b:0}; out(s.b,'EndLoop'); ind=s.b; break; }
+        case 'end': out(0,'End.'); break;
+        default: out(ind,'… unbekannter Befehl 0x'+t.arg[1]+t.arg[0]+' – Rest nicht übersetzt');
+      } }
+    P.lines=L; P.unsure=L.some(l=>/Code |\?|unbekannt/.test(l)); });
+  return progs;
 }
 function ftArt(f){ return f===7?'SO':f===8?'S1':f===9?'S2':'Code '+f; }   // gegen RPT01-Ausdruck FAE6.0002 geprüft
 
@@ -550,7 +605,9 @@ function renderParam(){
   h+='<div data-p="zz"><div class="scroll"><table><tr><th>ID</th><th>Prog</th><th>Zeit</th><th>Befehl</th><th>Wochentage</th></tr>'+P.zz.map(z=>'<tr><td>'+z.id+'</td><td>'+z.prog+'</td><td>'+z.zeit+'</td><td>'+(z.bit?'Ein':'Aus')+'</td><td>'+esc(z.wt)+'</td></tr>').join('')+'</table></div><p class="small">Reihenfolge wie im Gerät gespeichert.'+(P.zzHidden?' Zusätzlich '+P.zzHidden.length+' interne Einträge, die RPT01 nicht auflistet.':'')+'</p></div>';
   h+='<div data-p="sz" class="hidden"><div class="scroll"><table><tr><th>Jahr</th><th>Beginn</th><th>Ende</th></tr>'+P.sz.map(s=>'<tr><td>'+s.jahr+'</td><td>'+s.von+'.</td><td>'+s.bis+'.</td></tr>').join('')+'</table></div></div>';
   h+='<div data-p="ft" class="hidden"><div class="scroll"><table><tr><th>Jahr</th><th>Datum</th><th>Art</th></tr>'+P.ft.map(f=>'<tr><td>'+f.jahr+'</td><td>'+f.tag+'.</td><td>'+f.art+'</td></tr>').join('')+'</table></div></div>';
-  h+='<div data-p="pr" class="hidden"><div class="note">Die Interpreterprogramme sind noch nicht in Klartext übersetzt. Hier stehen die Rohdaten ('+P.progRaw.length+' Bytes).</div><div class="raw">'+hexBlock(P.progRaw)+'</div><details style="margin-top:8px"><summary>Einstellungsblock (Rohdaten ab 0x500)</summary><div class="raw">'+hexBlock(P.setRaw,0x500)+'</div></details></div>';
+  h+='<div data-p="pr" class="hidden">'+(P.prog?P.prog.map(g=>'<div class="day">Programm Nr. '+g.nr+'</div><pre class="prg">'+esc(g.lines.join('\n'))+'</pre>').join('')
+     +(P.prog.some(g=>g.unsure)?'<div class="note">„?“ bzw. „Code …“: Diese Stelle ist noch nicht sicher entschlüsselt. Bitte Mitschnitt + RPT01-Ausdruck schicken.</div>':''):'<div class="note">Programme konnten nicht übersetzt werden'+(P.progErr?': '+esc(P.progErr):'')+'.</div>')
+     +'<details style="margin-top:8px"><summary>Rohdaten Programme ('+P.progRaw.length+' Bytes)</summary><div class="raw">'+hexBlock(P.progRaw)+'</div></details><details style="margin-top:8px"><summary>Einstellungsblock (Rohdaten ab 0x500)</summary><div class="raw">'+hexBlock(P.setRaw,0x500)+'</div></details></div>';
   const el=card('cPar','Parameter (Lesen)',h);
   el.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{el.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('act',x===b));el.querySelectorAll('[data-p]').forEach(p=>p.classList.toggle('hidden',p.dataset.p!==b.dataset.t));});
 }
@@ -742,7 +799,10 @@ function buildReport(P){
     for(let i=0;i<sz.length;i+=3)P.line(sz.slice(i,i+3).map(t=>t.padEnd(24)).join(''),{f:'F3',sz:9});
     P.h2('Feiertage'); const ft=Pm.ft.map(f=>f.jahr+' '+f.tag+' '+f.art);
     for(let i=0;i<ft.length;i+=4)P.line(ft.slice(i,i+4).map(t=>t.padEnd(18)).join(''),{f:'F3',sz:9});
-    P.h2('Interpreterprogramme'); P.note('Noch nicht in Klartext übersetzt ('+Pm.progRaw.length+' Bytes Rohdaten, siehe Rohdaten-Export).'); }
+    P.h2('Interpreterprogramme');
+    if(Pm.prog){ Pm.prog.forEach(g=>{ P.need(30); P.gap(4); P.line('Programm Nr. '+g.nr,{f:'F2',sz:9.5}); g.lines.forEach(l=>P.line(l,{f:'F3',sz:8.5})); });
+      if(Pm.prog.some(g=>g.unsure))P.note('„?“ / „Code …“ = noch nicht sicher entschlüsselt.'); }
+    else P.note('Programme konnten nicht übersetzt werden.'); }
   if(R.fer){ P.h2('FER1001 Konfiguration'); P.kv([['Gerät',(R.fer.typ||'FER1001')+(R.fer.ver?' · Version '+R.fer.ver:'')]].concat(R.fer.rows.map(([k,v])=>[FER_LBL[k]||k,ferVal(k,v)]))); }
   if(R.events){ P.h2('Ereignisspeicher'); P.kv([['Betriebstagezähler',String(R.events.tage)]]); P.note('Neueste Tage zuerst. IP = Interpreterprogramm, ZZ = Zeitzeile.');
     const groups=[]; let g={day:null,items:[]}; for(const x of R.events.list){ if(x.type==='day'){groups.push(g);g={day:x.d,items:[]};} else g.items.push(x); } groups.push(g);
@@ -765,14 +825,15 @@ $('#expTxt').onclick=()=>{
     [['Korrekte Telegramme','korrekt'],['Fehlerhafte Telegramme','fehler'],['Gültige Anwender-Adresse','adresse'],['DK/EK-Programmaufrufe','dkek'],['Aktivität (Stunden)','stunden']].forEach(([t,k])=>L.push(t.padEnd(30)+String(e.z1[k]).padStart(8)+String(e.z2[k]).padStart(11)));}
   if(R.param){const P=R.param;L.push('','ZEITZEILEN','ID   Prog  Zeit   Befehl  Wochentage');P.zz.forEach(z=>L.push(String(z.id).padEnd(5)+String(z.prog).padEnd(6)+z.zeit.padEnd(7)+(z.bit?'Ein':'Aus').padEnd(8)+z.wt));
     L.push('','SOMMERZEIT');P.sz.forEach(s=>L.push(s.jahr+'   '+s.von+'..'+s.bis));
-    L.push('','FEIERTAGE');P.ft.forEach(f=>L.push(f.jahr+' '+f.tag+' '+f.art));}
+    L.push('','FEIERTAGE');P.ft.forEach(f=>L.push(f.jahr+' '+f.tag+' '+f.art));
+    if(P.prog){L.push('','INTERPRETERPROGRAMME');P.prog.forEach(g=>{L.push('','Programm Nr. '+g.nr);g.lines.forEach(l=>L.push(l));});}}
   if(R.fer){L.push('','FER1001 KONFIGURATION'+(R.fer.ver?' (Version '+R.fer.ver+')':''));R.fer.rows.forEach(([k,v])=>L.push((FER_LBL[k]||k).padEnd(26)+ferVal(k,v)));}
   if(R.events){L.push('','EREIGNISSPEICHER (Betriebstagezähler '+R.events.tage+', älteste zuerst)');let day='';R.events.list.forEach(x=>{if(x.type==='day'){day=dayLabel(x.d);L.push('-- '+day);}else L.push('   '+pad(x.nr,4)+'  '+x.time+'  '+x.txt+(x.spec?'   ['+toHex(x.raw)+']':''));});}
   download(fname('txt'),L.join('\r\n'),'text/plain;charset=utf-8');
 };
 
 /* Test-Schnittstelle (nur für Entwicklung) */
-window.RSE={parseFer,decodeParam,decodeEvents,decodeEmpfang,decodeStatus,parseHexAnswer,connected,R,frame,
+window.RSE={decodePrograms,parseFer,decodeParam,decodeEvents,decodeEmpfang,decodeStatus,parseHexAnswer,connected,R,frame,
   useFake(l){connected(l)}};
 </script>
 </body>
