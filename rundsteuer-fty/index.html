@@ -66,7 +66,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 .mono{font-family:var(--mono);font-size:12px}
 .raw{font-family:var(--mono);font-size:11px;color:var(--ink2);white-space:pre-wrap;word-break:break-all}
 .day{font-weight:700;font-size:14px;padding:10px 0 4px;border-bottom:1px solid var(--line)}
-.ev{display:grid;grid-template-columns:52px 1fr auto;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px;align-items:baseline}
+.ev{display:grid;grid-template-columns:86px 1fr auto;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px;align-items:baseline}
 .ev .t{font-variant-numeric:tabular-nums;color:var(--ink2)}
 .ev .r{font-family:var(--mono);font-size:11px;color:var(--ink2)}
 .ev.spec{background:var(--warn-soft);margin:0 -8px;padding:6px 8px;border-radius:8px}
@@ -473,14 +473,16 @@ function decodeEvents(d,refDate){
     if(r[0]===0xFF&&r[1]===0xFF&&r[2]===0xFF)return;
     const min=((r[1]&7)<<8)|r[2]; const tm=min<1440?pad(Math.floor(min/60))+':'+pad(min%60):'--:--';
     let txt,spec=false;
-    if(t===0xA){ txt='Zeitzeile → Programm '+((r[1]>>3)+1)+' ('+((r[0]&1)?'Ein':'Aus')+')'; }
-    else if(t===2){ txt='Netzausfall (vermutet)'; spec=true; }
-    else if(t===3){ txt='Netzwiederkehr (vermutet)'; spec=true; }
-    else if(t===7){ txt='Uhr gestellt / synchronisiert (vermutet)'; spec=true; }
+    /* Texte wie RPT01 „Ereignisspeicher“ (am 18.11. gegen Screenshot geprüft) */
+    if(t===0xA){ txt='IP '+((r[1]>>3)+1)+' '+((r[0]&1)?'EIN':'AUS')+', Aufruf durch ZZ'; }
+    else if(t===2){ txt='Netzabschaltung'; }
+    else if(t===3){ txt='Netzeinschaltung'; }
+    else if(t===7){ txt='1.Synchro nach SPU'; }
     else { txt='Ereignis Typ '+t.toString(16).toUpperCase(); spec=true; }
-    out.push({type:'ev',time:tm,txt,spec,raw:r,day:cur});
+    out.push({type:'ev',nr:0,time:tm,txt,spec,raw:r,day:cur});
   });
-  return {ptr,head:(d[0]<<8)|d[1],list:out};
+  let nr=0; out.forEach(x=>{ x.nr=++nr; if(x.type==='day')x.d.nr=x.nr; });   // Nummerierung wie RPT01: ältester = 1, Datumszeilen zählen mit
+  return {ptr,head:(d[0]<<8)|d[1],tage:(d[0]<<8)|d[1],list:out};
 }
 
 /* ================= Darstellung ================= */
@@ -530,11 +532,11 @@ function dayLabel(x){
 }
 function renderEvents(){
   const E=R.events; const list=E.list.slice().reverse(); // neueste zuerst
-  let html='<div class="small">'+E.list.filter(x=>x.type==='ev').length+' Einträge · neueste oben</div>';
-  html+='<div class="note">Die Deutung der Ereignisse ist vorläufig (aus den Mitschnitten abgeleitet). Gelb markierte Einträge bitte einmal mit der Anzeige in RPT01 vergleichen. Der Rohcode steht rechts daneben.</div>';
+  let html='<div class="kv" style="margin-bottom:8px"><div>Betriebstagezähler</div><div>'+E.tage+'</div><div>Einträge</div><div>'+E.list.length+' · neueste oben</div></div>';
+  if(E.list.some(x=>x.spec))html+='<div class="note">Gelb markierte Einträge haben einen noch unbekannten Ereigniscode. Bitte mit RPT01 vergleichen; der Rohcode steht rechts daneben.</div>';
   let pend=[];
-  const flush=day=>{ if(!pend.length&&!day)return; const label=day?dayLabel(day):'Ältere Einträge (Datum bereits überschrieben)';
-    html+='<div class="day">'+esc(label)+'</div>'+pend.reverse().map(x=>'<div class="ev'+(x.spec?' spec':'')+'"><span class="t">'+x.time+'</span><span>'+esc(x.txt)+'</span><span class="r">'+toHex(x.raw)+'</span></div>').join(''); pend=[]; };
+  const flush=day=>{ if(!pend.length&&!day)return; const label=day?(day.nr?pad(day.nr,4)+'  ':'')+dayLabel(day):'Ohne Datum';
+    html+='<div class="day">'+esc(label)+'</div>'+pend.reverse().map(x=>'<div class="ev'+(x.spec?' spec':'')+'"><span class="t">'+pad(x.nr,4)+' '+x.time+'</span><span>'+esc(x.txt)+'</span><span class="r">'+(x.spec?toHex(x.raw):'')+'</span></div>').join(''); pend=[]; };
   // chronologisch gruppieren, dann rückwärts ausgeben
   const groups=[]; let g={day:null,items:[]};
   for(const x of E.list){ if(x.type==='day'){ groups.push(g); g={day:x.d,items:[]}; } else g.items.push(x); }
@@ -545,7 +547,7 @@ function renderEvents(){
 function renderParam(){
   const P=R.param;
   let h='<div class="tabs"><button data-t="zz" class="act">Zeitzeilen</button><button data-t="sz">Sommerzeit</button><button data-t="ft">Feiertage</button><button data-t="pr">Programme</button></div>';
-  h+='<div data-p="zz"><div class="scroll"><table><tr><th>ID</th><th>Prog</th><th>Zeit</th><th>Befehl*</th><th>Wochentage</th></tr>'+P.zz.map(z=>'<tr><td>'+z.id+'</td><td>'+z.prog+'</td><td>'+z.zeit+'</td><td>'+(z.bit?'Ein':'Aus')+'</td><td>'+esc(z.wt)+'</td></tr>').join('')+'</table></div><p class="small">* „Ein/Aus“ vorläufig gedeutet. Reihenfolge wie im Gerät gespeichert.</p></div>';
+  h+='<div data-p="zz"><div class="scroll"><table><tr><th>ID</th><th>Prog</th><th>Zeit</th><th>Befehl</th><th>Wochentage</th></tr>'+P.zz.map(z=>'<tr><td>'+z.id+'</td><td>'+z.prog+'</td><td>'+z.zeit+'</td><td>'+(z.bit?'Ein':'Aus')+'</td><td>'+esc(z.wt)+'</td></tr>').join('')+'</table></div><p class="small">Reihenfolge wie im Gerät gespeichert.</p></div>';
   h+='<div data-p="sz" class="hidden"><div class="scroll"><table><tr><th>Jahr</th><th>Beginn</th><th>Ende</th></tr>'+P.sz.map(s=>'<tr><td>'+s.jahr+'</td><td>'+s.von+'.</td><td>'+s.bis+'.</td></tr>').join('')+'</table></div></div>';
   h+='<div data-p="ft" class="hidden"><div class="scroll"><table><tr><th>Jahr</th><th>Datum</th><th>Art</th></tr>'+P.ft.map(f=>'<tr><td>'+f.jahr+'</td><td>'+f.tag+'.</td><td>'+f.art+'</td></tr>').join('')+'</table></div></div>';
   h+='<div data-p="pr" class="hidden"><div class="note">Die Interpreterprogramme sind noch nicht in Klartext übersetzt. Hier stehen die Rohdaten ('+P.progRaw.length+' Bytes).</div><div class="raw">'+hexBlock(P.progRaw)+'</div><details style="margin-top:8px"><summary>Einstellungsblock (Rohdaten ab 0x500)</summary><div class="raw">'+hexBlock(P.setRaw,0x500)+'</div></details></div>';
@@ -734,20 +736,19 @@ function buildReport(P){
     [['Korrekte Telegramme','korrekt'],['Fehlerhafte Telegramme','fehler'],['Telegramme mit gültiger Anwender-Adresse','adresse'],['DK/EK-Interpreterprogramm-Aufrufe','dkek'],['Aktivität des Zählers (Stunden)','stunden']]
       .forEach(([t,k])=>P.line(t.padEnd(46)+String(e.z1[k]).padStart(10)+String(e.z2[k]).padStart(10),{f:'F3',sz:9})); }
   if(R.param){ const Pm=R.param;
-    P.h2('Zeitzeilen'); P.line('ID    Prog  Zeit   Befehl*  Wochentage',{f:'F3',sz:9});
+    P.h2('Zeitzeilen'); P.line('ID    Prog  Zeit   Befehl   Wochentage',{f:'F3',sz:9});
     Pm.zz.forEach(z=>P.line(String(z.id).padEnd(6)+String(z.prog).padEnd(6)+z.zeit.padEnd(7)+(z.bit?'Ein':'Aus').padEnd(9)+z.wt,{f:'F3',sz:9}));
-    P.note('* Ein/Aus vorläufig gedeutet.');
     P.h2('Sommerzeit'); const sz=Pm.sz.map(x=>x.jahr+'  '+x.von+'..'+x.bis);
     for(let i=0;i<sz.length;i+=3)P.line(sz.slice(i,i+3).map(t=>t.padEnd(24)).join(''),{f:'F3',sz:9});
     P.h2('Feiertage'); const ft=Pm.ft.map(f=>f.jahr+' '+f.tag+' '+f.art);
     for(let i=0;i<ft.length;i+=4)P.line(ft.slice(i,i+4).map(t=>t.padEnd(18)).join(''),{f:'F3',sz:9});
     P.h2('Interpreterprogramme'); P.note('Noch nicht in Klartext übersetzt ('+Pm.progRaw.length+' Bytes Rohdaten, siehe Rohdaten-Export).'); }
   if(R.fer){ P.h2('FER1001 Konfiguration'); P.kv([['Gerät',(R.fer.typ||'FER1001')+(R.fer.ver?' · Version '+R.fer.ver:'')]].concat(R.fer.rows.map(([k,v])=>[FER_LBL[k]||k,ferVal(k,v)]))); }
-  if(R.events){ P.h2('Ereignisspeicher'); P.note('Deutung vorläufig. Neueste Tage zuerst. P = Programm.');
+  if(R.events){ P.h2('Ereignisspeicher'); P.kv([['Betriebstagezähler',String(R.events.tage)]]); P.note('Neueste Tage zuerst. IP = Interpreterprogramm, ZZ = Zeitzeile.');
     const groups=[]; let g={day:null,items:[]}; for(const x of R.events.list){ if(x.type==='day'){groups.push(g);g={day:x.d,items:[]};} else g.items.push(x); } groups.push(g);
-    const short=x=>{ const m=/Programm (\d+) \((\w+)\)/.exec(x.txt); return x.time+' '+(m?'P'+m[1]+' '+m[2]:x.txt.replace(' (vermutet)','?')); };
+    const short=x=>x.time+' '+x.txt.replace(', Aufruf durch ZZ',' (ZZ)');
     for(let i=groups.length-1;i>=0;i--){ const G=groups[i]; if(!G.items.length&&!G.day)continue;
-      P.wrap((G.day?dayLabel(G.day):'Ältere Einträge').padEnd(26)+G.items.map(short).join(' · '),{f:'F3',sz:7.5}); } }
+      P.wrap((G.day?dayLabel(G.day):'Ohne Datum').padEnd(26)+G.items.map(short).join(' · '),{f:'F3',sz:7.5}); } }
 }
 $('#expPdf').onclick=()=>{ try{ const b=()=>{}; const fn=P=>buildReport(P); fn.footer='Rundsteuerempfänger '+(()=>{const a=R.adresse??R.param?.adresse??R.status?.adresse;return a!=null?fmtAddr(a):(R.fer?'FER1001 '+(R.fer.addr||''):'');})();
   const blob=makePdf(fn); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=fname('pdf'); document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000); }
@@ -766,7 +767,7 @@ $('#expTxt').onclick=()=>{
     L.push('','SOMMERZEIT');P.sz.forEach(s=>L.push(s.jahr+'   '+s.von+'..'+s.bis));
     L.push('','FEIERTAGE');P.ft.forEach(f=>L.push(f.jahr+' '+f.tag+' '+f.art));}
   if(R.fer){L.push('','FER1001 KONFIGURATION'+(R.fer.ver?' (Version '+R.fer.ver+')':''));R.fer.rows.forEach(([k,v])=>L.push((FER_LBL[k]||k).padEnd(26)+ferVal(k,v)));}
-  if(R.events){L.push('','EREIGNISSPEICHER (neueste zuletzt, Deutung vorläufig)');let day='';R.events.list.forEach(x=>{if(x.type==='day'){day=dayLabel(x.d);L.push('-- '+day);}else L.push('   '+x.time+'  '+x.txt+'   ['+toHex(x.raw)+']');});}
+  if(R.events){L.push('','EREIGNISSPEICHER (Betriebstagezähler '+R.events.tage+', älteste zuerst)');let day='';R.events.list.forEach(x=>{if(x.type==='day'){day=dayLabel(x.d);L.push('-- '+day);}else L.push('   '+pad(x.nr,4)+'  '+x.time+'  '+x.txt+(x.spec?'   ['+toHex(x.raw)+']':''));});}
   download(fname('txt'),L.join('\r\n'),'text/plain;charset=utf-8');
 };
 
