@@ -159,6 +159,7 @@ input[type=file]{display:none}
     <button id="actRx" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20v-4M10 20v-8M15 20v-12M20 20V4"/></svg>Empfang</button>
     <button id="actEv" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Ereignisse</button>
     <button id="actRel" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="10" rx="5"/><circle cx="15" cy="12" r="3"/></svg>Relais</button>
+    <button id="actWr" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Schreiben</button>
   </div>
   <div class="row" style="margin-top:10px" id="ftyBox2">
     <button class="sec" id="actTest" disabled>Empfänger-Test</button>
@@ -221,7 +222,7 @@ function setStatus(txt,state){ $('#stat').textContent=txt; $('#dot').className='
 function showMsg(html,cls='note'){ $('#msg').innerHTML=html?`<div class="note ${cls}">${html}</div>`:''; }
 function progress(p){ const el=$('#prog'); if(p==null){el.style.display='none';return} el.style.display='block'; el.firstElementChild.style.width=Math.min(100,p*100).toFixed(1)+'%'; }
 let busy=false;
-function setBusy(b){ busy=b; ['#actRead','#actRx','#actEv','#actTest','#actRel','#actFer'].forEach(s=>$(s).disabled=b||!link); }
+function setBusy(b){ busy=b; ['#actRead','#actRx','#actEv','#actTest','#actRel','#actFer','#actWr'].forEach(s=>$(s).disabled=b||!link); }
 
 /* ================= Transporte ================= */
 const SPP='00001101-0000-1000-8000-00805f9b34fb';
@@ -613,7 +614,7 @@ function renderParam(){
   el.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{el.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('act',x===b));el.querySelectorAll('[data-p]').forEach(p=>p.classList.toggle('hidden',p.dataset.p!==b.dataset.t));});
 }
 function hexBlock(b,base=0){let s='';for(let i=0;i<b.length;i+=16)s+=(base+i).toString(16).toUpperCase().padStart(4,'0')+'  '+toHex(b.slice(i,i+16))+'\n';return esc(s)}
-function setIdent(id){ R.ident=id; const m=/^\/(\w{3})\d(.*)$/.exec(id||''); R.typ=m?(m[1]==='LGZ'?'Landis+Gyr ':m[1]+' ')+m[2].replace(/G\d$/,''):''; }
+function setIdent(id){ R.ident=id; const m=/^\/(\w{3})\d(.*)$/.exec(id||''); R.typ=m?(m[1]==='LGZ'?'Landis+Gyr ':m[1]+' ')+m[2].replace(/[A-Z]\d$/,''):''; }
 
 /* ================= Aktionen ================= */
 async function run(name,fn){
@@ -623,12 +624,110 @@ async function run(name,fn){
   finally{ setBusy(false); progress(null); }
 }
 $('#actTest').onclick=()=>run('Verbindungstest',async()=>{ const id=await startSession(); setIdent(id); R.quelle='Live';
-  try{ if(await enq()){ const t=await command('T'); R.status=decodeStatus(t); R.raw.T=toHex(t); } }catch(e){ log('e','Empfänger-Test: '+e.message); }
+  try{ if(await enq()){ const t=await command('T'); R.status=decodeStatus(t); R.raw.T=toHex(t); R.tBytes=t; } }catch(e){ log('e','Empfänger-Test: '+e.message); }
   renderGeraet(); renderTest(); showMsg('Verbindung in Ordnung: '+esc(id),'ok'); });
 $('#actRx').onclick=()=>run('Empfang lesen',async()=>{ await ensure(); setIdent(ident); const d=await command('c'); R.raw.c=toHex(d); R.empfang=decodeEmpfang(d); R.quelle='Live'; renderGeraet(); renderEmpfang(); });
 $('#actEv').onclick=()=>run('Ereignisse lesen',async()=>{ await ensure(); setIdent(ident); const t=await command('T'); R.status=decodeStatus(t); R.raw.T=toHex(t); const z=await command('Z'); R.raw.Z=toHex(z); R.events=decodeEvents(z,R.status.zeit); R.quelle='Live'; renderGeraet(); renderTest(); renderEvents(); });
 $('#actRel').onclick=()=>renderRelais();
-$('#actRead').onclick=()=>run('Lesen',async()=>{ await ensure(); setIdent(ident); const k=await command('K'); R.raw.K=toHex(k); R.param=decodeParam(k); if(await enq()){ try{const o=await command('O'); R.adresse=decodeAddr(o);}catch(e){} } R.quelle='Live'; renderGeraet(); renderParam(); });
+/* ================= Datensatz schreiben (Klonen) – Ablauf wie RPT01 „Anwendungskombination senden“ =================
+   Mitschnitte 17./18.11. (FCB8.0002, FCB8.0012): ENQ, G → Neustart; Anmeldung, ENQ, G, „S“+16 Byte (ACK je Block),
+   I + Summe → Neustart; Anmeldung, ENQ, T, U + 18×H, I + Summe, Y + 6×H, I + Summe, T.
+   Daten = Lesen-Abbild 0x000…(Ende Zeitzeilen + 16); 0x600–0x64F = feste Startwerte von RPT01; Geräteadresse 0x7FD–0x7FF = FF (bleibt im Gerät). */
+const LIBKEY='rse-fty-lib';
+const RPT_600='11111111000000000001010101500000000000800000000018000000000000000000000000000000000000000000ffffffffffffffffffffffffffffffffffff00ffff0000ffffffffffffffffffffff';
+const hexToBytes=h=>{ h=h.replace(/[^0-9a-fA-F]/g,''); const a=new Uint8Array(h.length>>1); for(let i=0;i<a.length;i++)a[i]=parseInt(h.substr(i*2,2),16); return a; };
+const bytesToHex=b=>Array.from(b,x=>x.toString(16).padStart(2,'0')).join('');
+function libLoad(){ try{return JSON.parse(localStorage.getItem(LIBKEY)||'[]')}catch(e){return []} }
+function libSave(l){ try{localStorage.setItem(LIBKEY,JSON.stringify(l)); return true}catch(e){ showMsg('Vorlage konnte nicht gespeichert werden (Speicher voll?).','err'); return false} }
+function writeImage(K){
+  let end=0x800; while(end+8<=0x2000&&!K.slice(end,end+8).every(x=>x===0xFF))end+=8;   // Zeitzeilen
+  const len=Math.ceil(end/16)*16+16; const img=K.slice(0,len);
+  const def=hexToBytes(RPT_600); img.set(def,0x600); img[0x7fd]=img[0x7fe]=img[0x7ff]=0xFF;
+  return img;
+}
+function rsWeekdays(date,P){   // Rundsteuer-Wochentag je Tag: 1–7 = Mo–So, Feiertag aus Datensatz: SO=7, S1=8, S2=9
+  const art={SO:7,S1:8,S2:9}, out=[];
+  for(let i=0;i<8;i++){ const t=new Date(date.getFullYear(),date.getMonth(),date.getDate()+i), tag=pad(t.getDate())+'.'+pad(t.getMonth()+1);
+    const f=(P.ft||[]).find(x=>x.tag===tag&&(x.jahr==='****'||+x.jahr===t.getFullYear())); const g=t.getDay();
+    out.push(f&&art[f.art]?art[f.art]:(g===0?7:g)); }
+  return out;
+}
+function nibbles(a){ const r=[]; for(let i=0;i<a.length;i+=2)r.push((a[i]<<4)|a[i+1]); return r; }
+async function ackCmd(bytes,label,timeout=2500){ rxBuf=[]; await send(bytes,label); const ok=await waitUntil(()=>rxBuf.length>0,timeout);
+  if(!ok)throw new Error('Keine Bestätigung auf '+label+'. Vorgang abgebrochen.'); if(rxBuf[0]!==0x06)throw new Error('Gerät hat '+label+' abgelehnt ('+printable(rxBuf)+'). Vorgang abgebrochen.'); }
+async function relogin(wait){ session=false; log('in','Warte auf Neustart des Empfängers …'); await sleep(wait); for(let i=0;i<3;i++){ try{ await startSession(); return; }catch(e){ log('e',e.message); await sleep(1500); } } throw new Error('Empfänger meldet sich nach dem Neustart nicht.'); }
+async function writeDataset(tpl,onStep){
+  const K=hexToBytes(tpl.K), Tsrc=tpl.T?hexToBytes(tpl.T):null, P=decodeParam(K);
+  // 1) Zielgerät prüfen
+  onStep('Zielgerät prüfen'); await ensure();
+  const id=ident.trim(); if(tpl.ident&&id&&tpl.ident.trim()!==id)throw new Error('Gerätetyp passt nicht: Vorlage '+tpl.ident+', Gerät '+id+'. Schreiben abgebrochen.');
+  let zielAdr=null; try{ zielAdr=decodeAddr(await command('O')); }catch(e){}
+  const img=writeImage(K); const sum=img.reduce((a,b)=>(a+b)&0xFF,0);
+  log('in','Schreibe '+P.datensatz+' ('+img.length+' Byte) auf '+(zielAdr!=null?fmtAddr(zielAdr):'?'));
+  // 2) G → Neustart
+  onStep('Empfänger vorbereiten'); await enq(); await ackCmd(frame('G'),'G'); await relogin(3500);
+  // 3) G + Datenblöcke + Prüfsumme (vorher wie RPT01 Kennung lesen)
+  try{ await command('L'); }catch(e){}
+  await ackCmd(frame('G'),'G');
+  for(let o=0;o<img.length;o+=16){ onStep('Übertrage '+Math.round(o/img.length*100)+' %'); progress(o/img.length);
+    await ackCmd(enc('S'+bytesToHex(img.slice(o,o+16)).toUpperCase()),'Block '+(o/16+1)); }
+  progress(null); await ackCmd(enc('I'+hex2(sum)),'Prüfsumme');
+  // 4) Neustart, dann Uhr / Wochentage / Teilprogramme wie RPT01
+  onStep('Uhr und Kalender stellen'); await relogin(3000); await enq(); try{ await command('T'); }catch(e){}
+  const now=new Date(), wd=now.getDay()===0?7:now.getDay(), rs=rsWeekdays(now,P);
+  let tp=1; if(Tsrc&&Tsrc.length>22){ const n=[]; for(let i=19;i<23;i++){n.push(Tsrc[i]>>4,Tsrc[i]&15);} const v=n.find(x=>x>=1&&x<=4); if(v)tp=v; }
+  const U=[now.getHours(),now.getMinutes(),now.getMonth()+1,now.getDate(),now.getFullYear()%100,wd,...nibbles(rs),...nibbles(Array(8).fill(tp)),0xFF,0xFF,0xFF,0xFF];
+  await ackCmd(frame('U'),'U'); for(const b of U)await ackCmd(enc('H'+hex2(b)),'H'); await ackCmd(enc('I'+hex2(U.reduce((a,b)=>(a+b)&0xFF,0))),'Prüfsumme U');
+  const t2=new Date(); const Y=[t2.getSeconds(),t2.getHours(),t2.getMinutes(),t2.getMonth()+1,t2.getDate(),t2.getFullYear()%100];
+  await ackCmd(frame('Y'),'Y'); for(const b of Y)await ackCmd(enc('H'+hex2(b)),'H'); await ackCmd(enc('I'+hex2(Y.reduce((a,b)=>(a+b)&0xFF,0))),'Prüfsumme Y');
+  // 5) Kontrolle: zurücklesen und vergleichen
+  onStep('Kontrolle: zurücklesen (ca. 25 s)'); await enq(); const t=await command('T'); R.status=decodeStatus(t); R.tBytes=t;
+  await enq(); const back=await command('K'); const diff=[];
+  for(let i=0;i<img.length;i++){ if(i>=0x600&&i<0x650)continue; if(i>=0x7fd&&i<=0x7ff)continue; if(back[i]!==img[i])diff.push(i); }
+  R.kBytes=back; R.raw.K=toHex(back); R.param=decodeParam(back); R.quelle='Live';
+  return {ok:diff.length===0,diff,ds:P.datensatz,adr:zielAdr,len:img.length};
+}
+function renderWrite(){
+  const L=libLoad(); const cur=R.kBytes&&R.param;
+  let h='<div class="note err">Achtung: Schreiben ersetzt die komplette Parametrierung des Empfängers (Programme, Zeitzeilen, Feiertage). Der Ereignisspeicher wird dabei geleert. Geräteadresse bleibt erhalten. Erst an einem Testgerät ausprobieren!</div>';
+  h+='<div class="lbl2">Vorlagen auf diesem Handy</div>';
+  h+=L.length?L.map((t,i)=>'<label class="chk" style="padding:6px 0;border-bottom:1px solid var(--line)"><input type="radio" name="tpl" value="'+i+'"><span><b>'+esc(t.name)+'</b><br><span class="small">'+esc(t.ds)+' · '+esc(t.ident||'')+' · gespeichert '+new Date(t.saved).toLocaleDateString('de-DE')+'</span></span></label>').join(''):'<p class="small">Noch keine Vorlage gespeichert.</p>';
+  h+='<div class="row" style="margin-top:8px">'+(cur?'<button class="sec" id="wrSave">Gelesenen Datensatz als Vorlage speichern</button>':'')+'<button class="sec" id="wrImp">Vorlage aus Datei</button><button class="sec" id="wrExp">Vorlage als Datei</button><button class="ghost" id="wrDel">Löschen</button><input type="file" id="wrFile" accept=".json,application/json" style="display:none"></div>';
+  if(!cur)h+='<p class="small">Tipp: Erst an einem richtig parametrierten FTY „Lesen“, dann hier als Vorlage speichern.</p>';
+  h+='<label class="chk" style="margin-top:12px"><input type="checkbox" id="wrOk"><span>Ich habe die Vorlage geprüft und will sie auf <b>dieses</b> Gerät schreiben.</span></label>';
+  h+='<div class="row" style="margin-top:8px"><button id="wrGo">Jetzt schreiben</button></div><div id="wrRes"></div>';
+  const el=card('cWr','Datensatz schreiben',h); el.scrollIntoView({behavior:'smooth',block:'start'});
+  const sel=()=>{ const r=el.querySelector('input[name=tpl]:checked'); return r?+r.value:-1; };
+  const sv=el.querySelector('#wrSave'); if(sv)sv.onclick=()=>{ const name=prompt('Name der Vorlage:',R.param.datensatz+' ('+(R.ident||'FTY')+')'); if(!name)return;
+    const l=libLoad(); l.push({name,ds:R.param.datensatz,ident:R.ident||'',saved:Date.now(),K:bytesToHex(R.kBytes),T:R.tBytes?bytesToHex(R.tBytes):''}); if(libSave(l))renderWrite(); };
+  el.querySelector('#wrDel').onclick=()=>{ const i=sel(); if(i<0)return showMsg('Bitte erst eine Vorlage auswählen.','err'); const l=libLoad(); if(!confirm('Vorlage „'+l[i].name+'“ löschen?'))return; l.splice(i,1); libSave(l); renderWrite(); };
+  el.querySelector('#wrExp').onclick=()=>{ const i=sel(); if(i<0)return showMsg('Bitte erst eine Vorlage auswählen.','err'); const t=libLoad()[i]; download('Vorlage_'+t.ds.replace('.','_')+'.json',JSON.stringify({rseVorlage:1,...t},null,1),'application/json'); };
+  el.querySelector('#wrImp').onclick=()=>el.querySelector('#wrFile').click();
+  el.querySelector('#wrFile').onchange=async e=>{ const f=e.target.files[0]; if(!f)return; try{ const j=JSON.parse(await f.text());
+      let K=j.K, T=j.T||'', ident=j.ident||j.kennung||'';
+      if(!K&&j.bloecke){ K=(j.bloecke.K||'').replace(/\s/g,''); T=(j.bloecke.T||'').replace(/\s/g,''); }
+      const kb=hexToBytes(K||''); if(kb.length<0x850)throw new Error('Datei enthält kein vollständiges Lesen-Abbild.');
+      const P=decodeParam(kb); const l=libLoad(); l.push({name:j.name||(P.datensatz+' (Datei)'),ds:P.datensatz,ident,saved:Date.now(),K:bytesToHex(kb),T}); if(libSave(l)){renderWrite(); showMsg('Vorlage '+esc(P.datensatz)+' übernommen.','ok');}
+    }catch(err){ showMsg('Datei nicht lesbar: '+esc(err.message),'err'); } };
+  el.querySelector('#wrGo').onclick=()=>{ const i=sel(); if(i<0)return showMsg('Bitte eine Vorlage auswählen.','err'); if(!el.querySelector('#wrOk').checked)return showMsg('Bitte die Prüfung bestätigen (Häkchen).','err');
+    const t=libLoad()[i]; if(!confirm('Datensatz '+t.ds+' jetzt auf das verbundene Gerät schreiben?'))return;
+    run('Schreiben',async()=>{ const r=await writeDataset(t,st=>setStatus(st+' …','busy'));
+      el.querySelector('#wrRes').innerHTML=r.ok?'<div class="note ok">Fertig: '+esc(r.ds)+' geschrieben auf '+(r.adr!=null?fmtAddr(r.adr):'Gerät')+'. Kontrolle: zurückgelesen, alle '+r.len+' Byte stimmen.</div>'
+        :'<div class="note err">Achtung: Nach dem Schreiben weichen '+r.diff.length+' Byte ab (z. B. 0x'+r.diff.slice(0,5).map(x=>x.toString(16)).join(', 0x')+'). Bitte erneut schreiben oder mit RPT01 prüfen.</div>';
+      renderGeraet(); renderTest(); renderParam(); }); };
+}
+$('#actWr').onclick=()=>renderWrite();
+
+/* Beim Verbinden automatisch: Empfänger-Test, Empfang, Lesen (nicht Ereignisse/Relais) */
+function autoRead(){ run('Automatisch auslesen',async()=>{
+  const id=await startSession(); setIdent(id); R.quelle='Live';
+  try{ const t=await command('T'); R.status=decodeStatus(t); R.raw.T=toHex(t); R.tBytes=t; renderGeraet(); renderTest(); }catch(e){ log('e','Empfänger-Test: '+e.message); }
+  try{ await ensure(); const c=await command('c'); R.raw.c=toHex(c); R.empfang=decodeEmpfang(c); renderEmpfang(); }catch(e){ log('e','Empfang: '+e.message); }
+  setStatus('Lese Parameter (ca. 25 s) …','busy');
+  await ensure(); const k=await command('K'); R.raw.K=toHex(k); R.kBytes=k; R.param=decodeParam(k);
+  if(await enq()){ try{const o=await command('O'); R.adresse=decodeAddr(o);}catch(e){} }
+  renderGeraet(); renderParam(); showMsg('Ausgelesen: Empfänger-Test, Empfang und Parameter. Ereignisse und Relais bei Bedarf über die Knöpfe.','ok'); }); }
+$('#actRead').onclick=()=>run('Lesen',async()=>{ await ensure(); setIdent(ident); const k=await command('K'); R.raw.K=toHex(k); R.kBytes=k; R.param=decodeParam(k); if(await enq()){ try{const o=await command('O'); R.adresse=decodeAddr(o);}catch(e){} } R.quelle='Live'; renderGeraet(); renderParam(); });
 
 /* ================= FER1001 (Wireless NetControl) – Textmenü, 9600 Baud 8N1 =================
    Ablauf aus Mitschnitt FER Explorer v1.2: „zz##“ + CRLF + 24× „!“ → „Passwort:“; Zugangscode zeichenweise (Echo „*“),
@@ -677,7 +776,7 @@ function connected(l){
   link=l; link.onData=onData; session=false; ident='';
   setStatus('Verbunden · '+l.kind,'on'); $('#btnDisc').classList.remove('hidden'); setBusy(false);
   log('in','Verbunden über '+l.kind);
-  if(devType()==='fty')setTimeout(()=>$('#actTest').click(),300); // gleich anmelden und Kennung lesen
+  if(devType()==='fty')setTimeout(()=>autoRead(),300); // gleich anmelden und alles außer Ereignissen/Relais lesen
 }
 function onLinkLost(){ log('e','Verbindung getrennt'); link=null; session=false; setStatus('Nicht verbunden'); $('#btnDisc').classList.add('hidden'); setBusy(false); }
 $('#btnDisc').onclick=async()=>{ if(link)await link.close(); onLinkLost(); };
@@ -834,7 +933,7 @@ $('#expTxt').onclick=()=>{
 };
 
 /* Test-Schnittstelle (nur für Entwicklung) */
-window.RSE={decodePrograms,parseFer,decodeParam,decodeEvents,decodeEmpfang,decodeStatus,parseHexAnswer,connected,R,frame,
+window.RSE={writeImage,rsWeekdays,writeDataset,hexToBytes,bytesToHex,decodePrograms,parseFer,decodeParam,decodeEvents,decodeEmpfang,decodeStatus,parseHexAnswer,connected,R,frame,
   useFake(l){connected(l)}};
 </script>
 </body>
