@@ -76,6 +76,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 .prog{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:8px;display:none}
 .prog i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
 .hidden{display:none!important}
+.inp{font:inherit;width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);min-height:44px}
 table.grid{font-size:12px} table.grid th,table.grid td{text-align:center;padding:4px 2px} table.grid td:first-child{text-align:left;color:var(--ink2);padding-right:6px}
 .mk{display:inline-block;width:14px;height:14px;border-radius:4px;background:var(--accent)}
 .lbl2{font-size:12px;color:var(--ink2);font-weight:600;margin:14px 0 2px}
@@ -113,6 +114,13 @@ input[type=file]{display:none}
     <div class="row" style="justify-content:space-between;margin-bottom:6px"><h2 style="margin:0;font-size:20px;text-transform:none;letter-spacing:0;color:var(--ink)">Einstellungen</h2><button class="ghost" id="setClose">Fertig</button></div>
     <div class="set">
       <div>
+        <div class="lbl">Gerätetyp</div>
+        <div class="seg">
+          <label><input type="radio" name="dev" value="fty" checked><span>L+G FTY</span></label>
+          <label><input type="radio" name="dev" value="fer"><span>FER1001</span></label>
+        </div>
+      </div>
+      <div>
         <div class="lbl">Lesekopf</div>
         <div class="seg">
           <label><input type="radio" name="conn" value="ble" checked><span>Bluetooth</span></label>
@@ -129,6 +137,7 @@ input[type=file]{display:none}
               <label><input type="radio" name="hm" value="300"><span>Immer 300 Baud</span></label>
             </div>
           </div>
+          <div><div class="lbl">FER1001-Zugangscode (wird nur auf diesem Gerät gespeichert)</div><input type="password" id="ferPw" autocomplete="off" placeholder="Zugangscode" class="inp"></div>
           <label class="chk"><input type="checkbox" id="optAll"><span>Alle Bluetooth-Geräte anzeigen<br><span class="small">Normalerweise werden nur Device-Leseköpfe angezeigt.</span></span></label>
           <label class="chk"><input type="checkbox" id="optRts" checked><span>RTS bei 9600 Baud aus (wie RPT01)<br><span class="small">Nur für USB-Köpfe.</span></span></label>
         </div>
@@ -139,13 +148,18 @@ input[type=file]{display:none}
 
 <section class="card">
   <h2>Funktionen</h2>
-  <div class="grid3">
+  <div id="ferBox" class="hidden">
+    <div class="lbl" style="font-size:12px;color:var(--ink2);margin-bottom:4px">Einzeladresse (steht auf dem Gerät)</div>
+    <div class="row" style="flex-wrap:nowrap"><input id="ferAddr" class="inp" inputmode="numeric" placeholder="z. B. 12503375" style="flex:1">
+    <button id="actFer" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h12l4 4v12H4z"/><path d="M8 12h8M8 16h8M8 8h5"/></svg>Auslesen</button></div>
+  </div>
+  <div class="grid3" id="ftyBox">
     <button id="actRead" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h12l4 4v12H4z"/><path d="M8 12h8M8 16h8M8 8h5"/></svg>Lesen</button>
     <button id="actRx" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20v-4M10 20v-8M15 20v-12M20 20V4"/></svg>Empfang</button>
     <button id="actEv" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Ereignisse</button>
     <button id="actRel" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="10" rx="5"/><circle cx="15" cy="12" r="3"/></svg>Relais</button>
   </div>
-  <div class="row" style="margin-top:10px">
+  <div class="row" style="margin-top:10px" id="ftyBox2">
     <button class="sec" id="actTest" disabled>Empfänger-Test</button>
   </div>
   <div id="msg"></div>
@@ -206,7 +220,7 @@ function setStatus(txt,state){ $('#stat').textContent=txt; $('#dot').className='
 function showMsg(html,cls='note'){ $('#msg').innerHTML=html?`<div class="note ${cls}">${html}</div>`:''; }
 function progress(p){ const el=$('#prog'); if(p==null){el.style.display='none';return} el.style.display='block'; el.firstElementChild.style.width=Math.min(100,p*100).toFixed(1)+'%'; }
 let busy=false;
-function setBusy(b){ busy=b; ['#actRead','#actRx','#actEv','#actTest','#actRel'].forEach(s=>$(s).disabled=b||!link); }
+function setBusy(b){ busy=b; ['#actRead','#actRx','#actEv','#actTest','#actRel','#actFer'].forEach(s=>$(s).disabled=b||!link); }
 
 /* ================= Transporte ================= */
 const SPP='00001101-0000-1000-8000-00805f9b34fb';
@@ -217,6 +231,25 @@ const BLE_UART=[
   '0000fff0-0000-1000-8000-00805f9b34fb','0000ffb0-0000-1000-8000-00805f9b34fb',
   '0003cdd0-0000-1000-8000-00805f9b0131','device_information','battery_service'
 ];
+/* Gerätetyp: FTY = IEC 62056-21 (300→9600 Baud, 7E1), FER1001 = Textmenü 9600 Baud 8N1 */
+const devType=()=>document.querySelector('input[name=dev]:checked')?.value||'fty';
+const lineFmt=()=>devType()==='fer'?{bits:8,par:'none'}:{bits:7,par:'even'};
+
+/* USB-/Kabelkopf über Web Serial (am PC Chrome/Edge) */
+class SerialLink{
+  constructor(port){ this.port=port; this.kind='Tastkopf (USB)'; this.baud=0; }
+  async open(baud){ const f=lineFmt(); this.fmt=f.bits+f.par;
+    await this.port.open({baudRate:baud,dataBits:f.bits,parity:f.par,stopBits:1,bufferSize:65536});
+    this.baud=baud; await this.signals(); this.startRead(); }
+  async signals(){ const rtsOff=$('#optRts').checked&&this.baud>300; try{await this.port.setSignals({dataTerminalReady:true,requestToSend:!rtsOff})}catch(e){} }
+  startRead(){ this.reader=this.port.readable.getReader();
+    this.loop=(async()=>{try{for(;;){const {value,done}=await this.reader.read(); if(done)break; if(value&&this.onData)this.onData(value);}}catch(e){} finally{try{this.reader.releaseLock()}catch(e){}}})(); }
+  async write(bytes){ const w=this.port.writable.getWriter(); try{await w.write(new Uint8Array(bytes))}finally{w.releaseLock()} }
+  get canSetBaud(){ return true }
+  async setBaud(b,force){ const f=lineFmt(); if(b===this.baud&&this.fmt===f.bits+f.par&&!force)return;
+    try{await this.reader.cancel()}catch(e){} try{await this.loop}catch(e){} await this.port.close(); await this.open(b); }
+  async close(){ try{await this.reader.cancel()}catch(e){} try{await this.loop}catch(e){} try{await this.port.close()}catch(e){} }
+}
 const BLE_FILTER=[{namePrefix:'Device_DvB'},{namePrefix:'DvB'},{namePrefix:'Device_'}];
 const BLEKEY='rse-fty-ble';
 const props=c=>Object.entries({R:c.properties.read,W:c.properties.write,w:c.properties.writeWithoutResponse,N:c.properties.notify,I:c.properties.indicate}).filter(e=>e[1]).map(e=>e[0]).join('');
@@ -253,7 +286,7 @@ class BleLink{
     this.rx.addEventListener('characteristicvaluechanged',e=>{const v=e.target.value; if(this.onData)this.onData(new Uint8Array(v.buffer,v.byteOffset,v.byteLength));});
     try{localStorage.setItem(BLEKEY,this.dev.id)}catch(e){}
     log('in','Verwende Dienst '+found.sv.uuid);
-    await this.setBaud(300,true);
+    await this.setBaud(devType()==='fer'?9600:300,true);
   }
   async raw(a){ const u=new Uint8Array(a);
     for(let i=0;i<u.length;i+=20){ const c=u.slice(i,i+20);
@@ -262,10 +295,10 @@ class BleLink{
   async cmd(c){ await this.raw([0x80,c.charCodeAt(0)]); }
   get canSetBaud(){ return true }
   async setBaud(b,force){
-    if(b===this.baud&&!force)return;
+    const f=lineFmt(), fm=f.bits+f.par; if(b===this.baud&&this.fmt===fm&&!force)return;
     const z=Object.keys(BAUD).find(k=>BAUD[k]===b); if(z==null)throw new Error('Baudrate '+b+' vom Kopf nicht unterstützt');
-    for(const c of [z,'C','E','A'])await this.cmd(c);
-    log('in','Kopf auf '+b+' Baud 7E1'); this.baud=b;
+    for(const c of [z,f.bits===7?'C':'D',f.par==='even'?'E':'N','A'])await this.cmd(c);
+    log('in','Kopf auf '+b+' Baud '+(f.bits===7?'7E1':'8N1')); this.baud=b; this.fmt=fm;
   }
   async write(bytes){ await this.raw(bytes.map(x=>x&0x7F)); }
   async close(){ try{this.dev.gatt.disconnect()}catch(e){} }
@@ -537,28 +570,76 @@ $('#actEv').onclick=()=>run('Ereignisse lesen',async()=>{ await ensure(); setIde
 $('#actRel').onclick=()=>renderRelais();
 $('#actRead').onclick=()=>run('Lesen',async()=>{ await ensure(); setIdent(ident); const k=await command('K'); R.raw.K=toHex(k); R.param=decodeParam(k); if(await enq()){ try{const o=await command('O'); R.adresse=decodeAddr(o);}catch(e){} } R.quelle='Live'; renderGeraet(); renderParam(); });
 
+/* ================= FER1001 (Wireless NetControl) – Textmenü, 9600 Baud 8N1 =================
+   Ablauf aus Mitschnitt FER Explorer v1.2: „zz##“ + CRLF + 24× „!“ → „Passwort:“; Zugangscode zeichenweise (Echo „*“),
+   LF → „OK“; Einzeladresse + LF → Konfiguration als <Tag>Wert</Tag> bis <COMMAND>END</COMMAND>. */
+const rxText=()=>String.fromCharCode(...rxBuf);
+async function ferRead(addr){
+  const pw=$('#ferPw').value; if(!pw)throw new Error('Bitte zuerst unter Einstellungen → Erweitert den FER1001-Zugangscode eintragen.');
+  await link.setBaud(9600); await sleep(100);
+  let ok=false;
+  for(let i=0;i<2&&!ok;i++){ rxBuf=[]; await send(enc('zz##\r\n'+'!'.repeat(24)),'Wecken');
+    ok=await waitUntil(()=>/Passwort/i.test(rxText())||/OK\r?\n/.test(rxText()),6000); log(ok?'rx':'e',printable(rxBuf)||'keine Antwort'); }
+  if(!ok)throw new Error('FER1001 antwortet nicht. Lesekopf richtig aufgesetzt? Gerätetyp FER1001 gewählt?');
+  if(/Passwort/i.test(rxText())){
+    rxBuf=[]; for(const ch of pw){ const n=rxBuf.length; await link.write(enc(ch)); log('tx','Zugangscode-Zeichen (verborgen)'); await waitUntil(()=>rxBuf.length>n,1500); }
+    await send([0x0A],'LF');
+    const okPw=await waitUntil(()=>/OK/.test(rxText())||/Passwort/i.test(rxText().replace(/^[*\s]+/,'')),4000);
+    log('rx',printable(rxBuf)); if(!okPw||!/OK/.test(rxText()))throw new Error('Zugangscode wurde nicht angenommen.');
+  }
+  rxBuf=[]; await send(enc(addr+'\n'),'Einzeladresse');
+  const done=await waitUntil(()=>/<COMMAND>END<\/COMMAND>/.test(rxText()),20000);
+  await sleep(600); const txt=rxText(); log('rx',txt.length>200?txt.slice(0,200)+' … ('+txt.length+' Zeichen)':txt);
+  if(!/<COMMAND>START/.test(txt))throw new Error('Keine Konfiguration erhalten. Stimmt die Einzeladresse? Antwort: '+txt.replace(/\s+/g,' ').slice(0,80));
+  if(!done)throw new Error('Konfiguration unvollständig empfangen. Bitte wiederholen.');
+  return parseFer(txt);
+}
+function parseFer(txt){
+  const rows=[]; const re=/<([^<>\/]+)>([^<]*)<\/\1>/g; let m;
+  while((m=re.exec(txt))){ if(m[1]!=='COMMAND')rows.push([m[1],m[2].trim()]); }
+  const ver=(/Version\s+([\d.]+)/.exec(txt)||[])[1]||''; const typ=(/\*\s*(FER\s*\d+[^*]*)\*/.exec(txt)||[])[1]||'';
+  const get=k=>(rows.find(r=>r[0]===k)||[])[1];
+  return {rows,ver,typ:typ.trim(),addr:get('Einzeladresse'),raw:txt};
+}
+const FER_LBL={'Empfangsstoerung':'Empfangsstörung','Schalthandlung':'Schalthandlungen'};
+function ferVal(k,v){ if(k==='Schaltbefehle'&&/^-\d+$/.test(v)){ const n=+v; return v+'  (= '+(n+65536)+', Zähler übergelaufen?)'; } if(k==='Erstinbetriebnahme')return v.replace('_',' '); return v; }
+function renderFer(){
+  const F=R.fer; if(!F)return;
+  const head=[['Gerät',(F.typ||'FER1001')+(F.ver?' · Version '+F.ver:'')]];
+  card('cFer','FER1001 Konfiguration','<div class="kv">'+head.concat(F.rows.map(([k,v])=>[FER_LBL[k]||k,ferVal(k,v)])).map(r=>'<div>'+esc(r[0])+'</div><div>'+esc(r[1])+'</div>').join('')+'</div>'
+    +'<p class="small">Werte wie im FER Explorer. „Schaltbefehle“ zeigt das Gerät als Zahl mit Vorzeichen an; ein negativer Wert ist sehr wahrscheinlich ein Zählerüberlauf.</p>');
+}
+$('#actFer').onclick=()=>{ const a=$('#ferAddr').value.trim(); if(!/^\d{4,10}$/.test(a))return showMsg('Bitte die Einzeladresse eingeben (nur Ziffern, steht auf dem Gerät).','err'); saveSet();
+  run('FER1001 auslesen',async()=>{ R.fer=await ferRead(a); R.raw.fer=R.fer.raw; R.quelle='Live'; ident=R.fer.typ||'FER1001'; renderFer(); }); };
+
 /* Verbinden */
 function connected(l){
   link=l; link.onData=onData; session=false; ident='';
   setStatus('Verbunden · '+l.kind,'on'); $('#btnDisc').classList.remove('hidden'); setBusy(false);
   log('in','Verbunden über '+l.kind);
-  setTimeout(()=>$('#actTest').click(),300); // gleich anmelden und Kennung lesen
+  if(devType()==='fty')setTimeout(()=>$('#actTest').click(),300); // gleich anmelden und Kennung lesen
 }
 function onLinkLost(){ log('e','Verbindung getrennt'); link=null; session=false; setStatus('Nicht verbunden'); $('#btnDisc').classList.add('hidden'); setBusy(false); }
 $('#btnDisc').onclick=async()=>{ if(link)await link.close(); onLinkLost(); };
 
 /* Einstellungen (werden im Gerät gemerkt) */
 const SETKEY='rse-fty-settings';
-function saveSet(){ try{localStorage.setItem(SETKEY,JSON.stringify({conn:connMode(),hm:$('input[name=hm]:checked').value,all:$('#optAll').checked,rts:$('#optRts').checked}))}catch(e){} updConnBtn(); }
+function saveSet(){ try{localStorage.setItem(SETKEY,JSON.stringify({dev:devType(),pw:$('#ferPw').value,addr:$('#ferAddr').value,conn:connMode(),hm:$('input[name=hm]:checked').value,all:$('#optAll').checked,rts:$('#optRts').checked}))}catch(e){} updConnBtn(); }
 function loadSet(){ let s={}; try{s=JSON.parse(localStorage.getItem(SETKEY)||'{}')}catch(e){}
   if(!s.conn) s.conn=(navigator.bluetooth||!navigator.serial)?'ble':'usb';
   const c=document.querySelector(`input[name=conn][value="${s.conn}"]`); if(c)c.checked=true;
+  const dv=document.querySelector(`input[name=dev][value="${s.dev||'fty'}"]`); if(dv)dv.checked=true; $('#ferPw').value=s.pw||''; $('#ferAddr').value=s.addr||'';
   const h=document.querySelector(`input[name=hm][value="${s.hm||'auto'}"]`); if(h)h.checked=true;
   $('#optAll').checked=!!s.all; $('#optRts').checked=s.rts!==false; updConnBtn(); }
 const connMode=()=>$('input[name=conn]:checked').value;
 const ICO={ble:'<path d="M7 7l10 10-5 5V2l5 5L7 17"/>',usb:'<path d="M12 2v14M8 6l4-4 4 4M7 12v3h10v-3M12 16v6"/>'};
-function updConnBtn(){ const m=connMode(); $('#connIco').innerHTML=ICO[m]; $('#connTxt').textContent=m==='ble'?'Bluetooth-Kopf verbinden':'Tastkopf (USB) verbinden'; }
+function updDev(){ const fer=devType()==='fer';
+  $('#ferBox').classList.toggle('hidden',!fer); $('#ftyBox').classList.toggle('hidden',fer); $('#ftyBox2').classList.toggle('hidden',fer);
+  document.querySelector('header .sub').textContent=fer?'Wireless NetControl FER1001 · Auslesen':'Landis+Gyr FTY · Auslesen per optischem Kopf';
+  if(link&&!busy){ session=false; link.setBaud(fer?9600:300,true).catch(e=>log('e',e.message)); } }
+function updConnBtn(){ updDev(); const m=connMode(); $('#connIco').innerHTML=ICO[m]; $('#connTxt').textContent=m==='ble'?'Bluetooth-Kopf verbinden':'Tastkopf (USB) verbinden'; }
 document.querySelectorAll('#setSheet input').forEach(i=>i.addEventListener('change',saveSet));
+$('#ferAddr').addEventListener('change',saveSet);
 $('#btnSet').onclick=()=>$('#setSheet').classList.remove('hidden');
 $('#setClose').onclick=()=>$('#setSheet').classList.add('hidden');
 $('#setSheet').onclick=e=>{ if(e.target.id==='setSheet')$('#setSheet').classList.add('hidden'); };
@@ -584,7 +665,7 @@ async function openSerial(bt){
     const known=(await navigator.serial.getPorts()).filter(p=>{const i=p.getInfo?p.getInfo():{};return bt?!!i.bluetoothServiceClassId:!i.bluetoothServiceClassId});
     if(known.length===1)port=known[0];
     if(!port)port=await navigator.serial.requestPort(bt?{allowedBluetoothServiceClassIds:[SPP],filters:[{bluetoothServiceClassId:SPP}]}:{});
-    const l=new SerialLink(port); await l.open(l.isBT?9600:300); connected(l);
+    const l=new SerialLink(port); await l.open(devType()==='fer'?9600:300); connected(l);
   }catch(e){ log('e',e.message); if(e.name!=='NotFoundError')showMsg(esc(e.message),'err'); }
 }
 $('#btnConn').onclick=()=>{ showMsg(''); connMode()==='ble'?connectBle():openSerial(false); };
@@ -594,7 +675,7 @@ R.raw={};
 
 /* ================= Export ================= */
 function download(name,text,type){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type})); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500); }
-function fname(ext){ const a=R.adresse??R.param?.adresse??R.status?.adresse; const d=new Date(); return 'FTY_'+(a!=null?String(a).padStart(8,'0'):'unbekannt')+'_'+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'_'+pad(d.getHours())+pad(d.getMinutes())+'.'+ext; }
+function fname(ext){ const a=R.adresse??R.param?.adresse??R.status?.adresse; const d=new Date(); if(R.fer&&a==null)return 'FER1001_'+(R.fer.addr||'unbekannt')+'_'+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'_'+pad(d.getHours())+pad(d.getMinutes())+'.'+ext; return 'FTY_'+(a!=null?String(a).padStart(8,'0'):'unbekannt')+'_'+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'_'+pad(d.getHours())+pad(d.getMinutes())+'.'+ext; }
 $('#expRaw').onclick=()=>download(fname('json'),JSON.stringify({erstellt:new Date().toISOString(),kennung:R.ident,adresse:R.adresse??R.param?.adresse??R.status?.adresse,quelle:R.quelle,bloecke:R.raw},null,1),'application/json');
 /* ---------- PDF ohne externe Bibliothek (funktioniert offline) ----------
    Schriften: Helvetica / Helvetica-Bold / Courier mit WinAnsi-Kodierung (Umlaute ok), A4 */
@@ -638,10 +719,9 @@ function buildReport(P){
   const a=R.adresse??R.param?.adresse??R.status?.adresse, ds=R.param?.datensatz||R.status?.datensatz;
   P.h1('Rundsteuerempfänger – Auslesung');
   P.line('Erstellt am '+new Date().toLocaleString('de-DE',{dateStyle:'medium',timeStyle:'short'})+(R.quelle==='Live'?'':' · Quelle: '+(R.quelle||'')),{sz:9,col:'0.42 0.42 0.44'});
-  P.h2('Gerät');
   const kv=[]; if(R.ident)kv.push(['Kennung',R.ident+(R.typ?'  ('+R.typ+')':'')]); if(a!=null)kv.push(['Geräteadresse',fmtAddr(a)]); if(ds)kv.push(['Datensatz',ds]);
   if(R.param)kv.push(['Anwenderadresse',R.param.anwender]); if(R.status)kv.push(['Gerätezeit',R.status.zeit.toLocaleString('de-DE',{dateStyle:'medium',timeStyle:'short'})]);
-  P.kv(kv);
+  if(kv.length){ P.h2('Gerät'); P.kv(kv); }
   if(R.status){ const S=R.status,z=S.zeit,WDN=['','Mo','Di','Mi','Do','Fr','Sa','So','S1','S2']; const days=[];
     for(let i=0;i<8;i++){const t=new Date(z.getFullYear(),z.getMonth(),z.getDate()+i);days.push(pad(t.getDate())+'.'+pad(t.getMonth()+1));}
     P.h2('Empfänger-Test'); const rom=(R.ident||'').match(/(\d)\s*$/);
@@ -662,13 +742,14 @@ function buildReport(P){
     P.h2('Feiertage'); const ft=Pm.ft.map(f=>f.jahr+' '+f.tag+' '+f.art);
     for(let i=0;i<ft.length;i+=4)P.line(ft.slice(i,i+4).map(t=>t.padEnd(18)).join(''),{f:'F3',sz:9});
     P.h2('Interpreterprogramme'); P.note('Noch nicht in Klartext übersetzt ('+Pm.progRaw.length+' Bytes Rohdaten, siehe Rohdaten-Export).'); }
+  if(R.fer){ P.h2('FER1001 Konfiguration'); P.kv([['Gerät',(R.fer.typ||'FER1001')+(R.fer.ver?' · Version '+R.fer.ver:'')]].concat(R.fer.rows.map(([k,v])=>[FER_LBL[k]||k,ferVal(k,v)]))); }
   if(R.events){ P.h2('Ereignisspeicher'); P.note('Deutung vorläufig. Neueste Tage zuerst. P = Programm.');
     const groups=[]; let g={day:null,items:[]}; for(const x of R.events.list){ if(x.type==='day'){groups.push(g);g={day:x.d,items:[]};} else g.items.push(x); } groups.push(g);
     const short=x=>{ const m=/Programm (\d+) \((\w+)\)/.exec(x.txt); return x.time+' '+(m?'P'+m[1]+' '+m[2]:x.txt.replace(' (vermutet)','?')); };
     for(let i=groups.length-1;i>=0;i--){ const G=groups[i]; if(!G.items.length&&!G.day)continue;
       P.wrap((G.day?dayLabel(G.day):'Ältere Einträge').padEnd(26)+G.items.map(short).join(' · '),{f:'F3',sz:7.5}); } }
 }
-$('#expPdf').onclick=()=>{ try{ const b=()=>{}; const fn=P=>buildReport(P); fn.footer='Rundsteuerempfänger '+(()=>{const a=R.adresse??R.param?.adresse??R.status?.adresse;return a!=null?fmtAddr(a):'';})();
+$('#expPdf').onclick=()=>{ try{ const b=()=>{}; const fn=P=>buildReport(P); fn.footer='Rundsteuerempfänger '+(()=>{const a=R.adresse??R.param?.adresse??R.status?.adresse;return a!=null?fmtAddr(a):(R.fer?'FER1001 '+(R.fer.addr||''):'');})();
   const blob=makePdf(fn); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=fname('pdf'); document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000); }
   catch(e){ showMsg('PDF konnte nicht erstellt werden: '+esc(e.message),'err'); log('e',e.message); } };
 $('#expTxt').onclick=()=>{
@@ -684,12 +765,13 @@ $('#expTxt').onclick=()=>{
   if(R.param){const P=R.param;L.push('','ZEITZEILEN','ID   Prog  Zeit   Befehl  Wochentage');P.zz.forEach(z=>L.push(String(z.id).padEnd(5)+String(z.prog).padEnd(6)+z.zeit.padEnd(7)+(z.bit?'Ein':'Aus').padEnd(8)+z.wt));
     L.push('','SOMMERZEIT');P.sz.forEach(s=>L.push(s.jahr+'   '+s.von+'..'+s.bis));
     L.push('','FEIERTAGE');P.ft.forEach(f=>L.push(f.jahr+' '+f.tag+' '+f.art));}
+  if(R.fer){L.push('','FER1001 KONFIGURATION'+(R.fer.ver?' (Version '+R.fer.ver+')':''));R.fer.rows.forEach(([k,v])=>L.push((FER_LBL[k]||k).padEnd(26)+ferVal(k,v)));}
   if(R.events){L.push('','EREIGNISSPEICHER (neueste zuletzt, Deutung vorläufig)');let day='';R.events.list.forEach(x=>{if(x.type==='day'){day=dayLabel(x.d);L.push('-- '+day);}else L.push('   '+x.time+'  '+x.txt+'   ['+toHex(x.raw)+']');});}
   download(fname('txt'),L.join('\r\n'),'text/plain;charset=utf-8');
 };
 
 /* Test-Schnittstelle (nur für Entwicklung) */
-window.RSE={decodeParam,decodeEvents,decodeEmpfang,decodeStatus,parseHexAnswer,connected,R,frame,
+window.RSE={parseFer,decodeParam,decodeEvents,decodeEmpfang,decodeStatus,parseHexAnswer,connected,R,frame,
   useFake(l){connected(l)}};
 </script>
 </body>

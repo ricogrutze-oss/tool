@@ -1,7 +1,7 @@
 {
   "name": "Rundsteuerempfänger",
   "short_name": "RSE",
-  "description": "L+G FTY Rundsteuerempfänger per optischem Kopf auslesen: Lesen, Empfangsqualität, Ereignisspeicher",
+  "description": "Rundsteuerempfänger per optischem Kopf auslesen: L+G FTY (Lesen, Empfang, Ereignisse, Relais) und FER1001 (Konfiguration)",
   "icon": "icon.svg",
-  "version": "0.7"
+  "version": "0.8"
 }
