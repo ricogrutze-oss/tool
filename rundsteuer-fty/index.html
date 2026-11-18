@@ -117,7 +117,8 @@ input[type=file]{display:none}
       <div>
         <div class="lbl">Gerätetyp</div>
         <div class="seg">
-          <label><input type="radio" name="dev" value="fty" checked><span>L+G FTY</span></label>
+          <label><input type="radio" name="dev" value="auto" checked><span>Automatisch</span></label>
+          <label><input type="radio" name="dev" value="fty"><span>L+G FTY</span></label>
           <label><input type="radio" name="dev" value="fer"><span>FER1001</span></label>
         </div>
       </div>
@@ -138,7 +139,7 @@ input[type=file]{display:none}
               <label><input type="radio" name="hm" value="300"><span>Immer 300 Baud</span></label>
             </div>
           </div>
-          <div><div class="lbl">FER1001-Zugangscode (wird nur auf diesem Gerät gespeichert)</div><input type="password" id="ferPw" autocomplete="off" placeholder="Zugangscode" class="inp"></div>
+          <div><div class="lbl">FER1001-Zugangscode (wie im FER Explorer, wird nur auf diesem Handy gespeichert)</div><input type="password" id="ferPw" autocomplete="off" placeholder="Zugangscode" class="inp"></div>
           <label class="chk"><input type="checkbox" id="optAll"><span>Alle Bluetooth-Geräte anzeigen<br><span class="small">Normalerweise werden nur Device-Leseköpfe angezeigt.</span></span></label>
           <label class="chk"><input type="checkbox" id="optRts" checked><span>RTS bei 9600 Baud aus (wie RPT01)<br><span class="small">Nur für USB-Köpfe.</span></span></label>
         </div>
@@ -150,6 +151,8 @@ input[type=file]{display:none}
 <section class="card">
   <h2>Funktionen</h2>
   <div id="ferBox" class="hidden">
+    <div class="note ok" id="ferHint">Wireless NetControl FER1001 erkannt. Bitte Einzeladresse eingeben und „Auslesen“ drücken.</div>
+    <div id="ferPwRow" class="hidden" style="margin-bottom:8px"><div class="lbl" style="font-size:12px;color:var(--ink2);margin-bottom:4px">Zugangscode (nur einmal nötig, wird auf diesem Handy gemerkt)</div><input id="ferPwFront" type="password" class="inp" autocomplete="off" placeholder="Zugangscode wie im FER Explorer"></div>
     <div class="lbl" style="font-size:12px;color:var(--ink2);margin-bottom:4px">Einzeladresse (steht auf dem Gerät)</div>
     <div class="row" style="flex-wrap:nowrap"><input id="ferAddr" class="inp" inputmode="numeric" placeholder="z. B. 12503375" style="flex:1">
     <button id="actFer" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h12l4 4v12H4z"/><path d="M8 12h8M8 16h8M8 8h5"/></svg>Auslesen</button></div>
@@ -234,7 +237,9 @@ const BLE_UART=[
   '0003cdd0-0000-1000-8000-00805f9b0131','device_information','battery_service'
 ];
 /* Gerätetyp: FTY = IEC 62056-21 (300→9600 Baud, 7E1), FER1001 = Textmenü 9600 Baud 8N1 */
-const devType=()=>document.querySelector('input[name=dev]:checked')?.value||'fty';
+let detDev=null;   // automatisch erkannter Typ
+const devSel=()=>document.querySelector('input[name=dev]:checked')?.value||'auto';
+const devType=()=>{ const v=devSel(); return v==='auto'?(detDev||'fty'):v; };
 const lineFmt=()=>devType()==='fer'?{bits:8,par:'none'}:{bits:7,par:'even'};
 
 /* USB-/Kabelkopf über Web Serial (am PC Chrome/Edge) */
@@ -719,6 +724,19 @@ function renderWrite(){
 }
 $('#actWr').onclick=()=>renderWrite();
 
+/* Gerät automatisch erkennen: zuletzt erkannter Typ zuerst; FTY = IEC-Anmeldung, FER = Passwort-Abfrage nach Wecken */
+function ferReady(){ detDev='fer'; updDev(); $('#ferPwRow').classList.toggle('hidden',!!ferPw()); setStatus('Verbunden · FER1001 erkannt','on'); const a=$('#ferAddr'); a.focus(); a.select(); }
+function detect(){ run('Gerät erkennen',async()=>{
+  const last=(()=>{try{return localStorage.getItem('rse-lastdev')}catch(e){return null}})();
+  const order=last==='fer'?['fer','fty']:['fty','fer'];
+  for(const t of order){
+    detDev=t; updDev(); session=false;
+    if(t==='fty'){ try{ await link.setBaud(300,true); await startSession(); try{localStorage.setItem('rse-lastdev','fty')}catch(e){} log('in','Erkannt: L+G FTY'); setTimeout(()=>autoRead(),50); return; }catch(e){ log('in','Kein FTY: '+e.message); } }
+    else { await link.setBaud(9600,true); if(await ferWake(9000)){ try{localStorage.setItem('rse-lastdev','fer')}catch(e){} log('in','Erkannt: FER1001'); setTimeout(()=>ferReady(),50); return; } log('in','Kein FER1001'); }
+  }
+  detDev=null; updDev(); throw new Error('Kein Empfänger erkannt. Lesekopf richtig aufgesetzt?');
+}); }
+
 /* Beim Verbinden automatisch: Empfänger-Test, Empfang, Lesen (nicht Ereignisse/Relais) */
 function autoRead(){ run('Automatisch auslesen',async()=>{
   const id=await startSession(); setIdent(id); R.quelle='Live';
@@ -734,20 +752,28 @@ $('#actRead').onclick=()=>run('Lesen',async()=>{ await ensure(); setIdent(ident)
    Ablauf aus Mitschnitt FER Explorer v1.2: „zz##“ + CRLF + 24× „!“ → „Passwort:“; Zugangscode zeichenweise (Echo „*“),
    LF → „OK“; Einzeladresse + LF → Konfiguration als <Tag>Wert</Tag> bis <COMMAND>END</COMMAND>. */
 const rxText=()=>String.fromCharCode(...rxBuf);
-async function ferRead(addr){
-  const pw=$('#ferPw').value; if(!pw)throw new Error('Bitte zuerst unter Einstellungen → Erweitert den FER1001-Zugangscode eintragen.');
+/* Wecken wie FER Explorer: „zz##“ + CRLF, dann einzeln alle 200 ms „!“, bis „Passwort:“ kommt (ca. 5 s).
+   Ist das Gerät schon wach, holt LF + „!“ die Passwort-Abfrage zurück. */
+async function ferWake(maxMs=9000){
   await link.setBaud(9600); await sleep(100);
-  // Wecken wie FER Explorer: „zz##“ + CRLF, dann einzeln alle 200 ms „!“, bis „Passwort:“ kommt (dauert ca. 5 s)
-  let ok=false; const awake=()=>/Passwort/i.test(rxText())||/OK\r?\n/.test(rxText());
-  for(let i=0;i<2&&!ok;i++){ rxBuf=[]; await send(enc('zz##\r\n'),'Wecken');
-    for(let k=0;k<50&&!awake();k++){ await link.write(enc('!')); await sleep(200); }
-    ok=await waitUntil(awake,1500); log(ok?'rx':'e',printable(rxBuf)||'keine Antwort'); }
-  if(!ok)throw new Error('FER1001 antwortet nicht. Lesekopf richtig aufgesetzt? Gerätetyp FER1001 gewählt?');
-  if(/Passwort/i.test(rxText())){
+  const awake=()=>/Passwort/i.test(rxText());
+  rxBuf=[]; await send([0x0A],'LF'); const t0=performance.now(); let zz=false;
+  while(performance.now()-t0<maxMs&&!awake()){
+    if(!zz&&performance.now()-t0>1500){ zz=true; await send(enc('zz##\r\n'),'Wecken'); }
+    await link.write(enc('!')); await sleep(200); }
+  const ok=await waitUntil(awake,1200); log(ok?'rx':'e',printable(rxBuf)||'keine Antwort'); return ok;
+}
+function ferPw(){ return ($('#ferPwFront').value||$('#ferPw').value||'').trim(); }
+async function ferRead(addr){
+  const pw=ferPw(); if(!pw){ $('#ferPwRow').classList.remove('hidden'); throw new Error('Bitte einmalig den Zugangscode eingeben (wie im FER Explorer).'); }
+  if(!await ferWake())throw new Error('FER1001 antwortet nicht. Lesekopf richtig aufgesetzt?');
+  {
     rxBuf=[]; for(const ch of pw){ const n=rxBuf.length; await link.write(enc(ch)); log('tx','Zugangscode-Zeichen (verborgen)'); await waitUntil(()=>rxBuf.length>n,1500); }
     await send([0x0A],'LF');
     const okPw=await waitUntil(()=>/OK/.test(rxText())||/Passwort/i.test(rxText().replace(/^[*\s]+/,'')),4000);
-    log('rx',printable(rxBuf)); if(!okPw||!/OK/.test(rxText()))throw new Error('Zugangscode wurde nicht angenommen.');
+    log('rx',printable(rxBuf)); if(!okPw||!/OK/.test(rxText())){ $('#ferPw').value=''; $('#ferPwFront').value=''; saveSet(); $('#ferPwRow').classList.remove('hidden'); throw new Error('Zugangscode wurde nicht angenommen. Bitte den Zugangscode aus dem FER Explorer eingeben (nicht die Einzeladresse).'); }
+    if($('#ferPwFront').value){ $('#ferPw').value=$('#ferPwFront').value; saveSet(); }
+    $('#ferPwRow').classList.add('hidden');
   }
   rxBuf=[]; await send(enc(addr+'\n'),'Einzeladresse');
   const done=await waitUntil(()=>/<COMMAND>END<\/COMMAND>/.test(rxText()),20000);
@@ -779,18 +805,19 @@ function connected(l){
   link=l; link.onData=onData; session=false; ident='';
   setStatus('Verbunden · '+l.kind,'on'); $('#btnDisc').classList.remove('hidden'); setBusy(false);
   log('in','Verbunden über '+l.kind);
-  if(devType()==='fty')setTimeout(()=>autoRead(),300); // gleich anmelden und alles außer Ereignissen/Relais lesen
+  setTimeout(()=>{ if(devSel()==='fer')ferReady(); else if(devSel()==='fty')autoRead(); else detect(); },300);
 }
 function onLinkLost(){ log('e','Verbindung getrennt'); link=null; session=false; setStatus('Nicht verbunden'); $('#btnDisc').classList.add('hidden'); setBusy(false); }
 $('#btnDisc').onclick=async()=>{ if(link)await link.close(); onLinkLost(); };
 
 /* Einstellungen (werden im Gerät gemerkt) */
 const SETKEY='rse-fty-settings';
-function saveSet(){ try{localStorage.setItem(SETKEY,JSON.stringify({dev:devType(),pw:$('#ferPw').value,addr:$('#ferAddr').value,conn:connMode(),hm:$('input[name=hm]:checked').value,all:$('#optAll').checked,rts:$('#optRts').checked}))}catch(e){} updConnBtn(); }
+function saveSet(){ try{localStorage.setItem(SETKEY,JSON.stringify({v:2,dev:devSel(),pw:$('#ferPw').value,addr:$('#ferAddr').value,conn:connMode(),hm:$('input[name=hm]:checked').value,all:$('#optAll').checked,rts:$('#optRts').checked}))}catch(e){} updConnBtn(); }
 function loadSet(){ let s={}; try{s=JSON.parse(localStorage.getItem(SETKEY)||'{}')}catch(e){}
   if(!s.conn) s.conn=(navigator.bluetooth||!navigator.serial)?'ble':'usb';
   const c=document.querySelector(`input[name=conn][value="${s.conn}"]`); if(c)c.checked=true;
-  const dv=document.querySelector(`input[name=dev][value="${s.dev||'fty'}"]`); if(dv)dv.checked=true; $('#ferPw').value=s.pw||''; $('#ferAddr').value=s.addr||'';
+  if(s.v!==2){ s.dev='auto'; }   // ab 1.3: automatisch erkennen
+  const dv=document.querySelector(`input[name=dev][value="${s.dev||'auto'}"]`); if(dv)dv.checked=true; $('#ferPw').value=s.pw||''; $('#ferAddr').value=s.addr||'';
   const h=document.querySelector(`input[name=hm][value="${s.hm||'auto'}"]`); if(h)h.checked=true;
   $('#optAll').checked=!!s.all; $('#optRts').checked=s.rts!==false; updConnBtn(); }
 const connMode=()=>$('input[name=conn]:checked').value;
@@ -802,6 +829,7 @@ function updDev(){ const fer=devType()==='fer';
 function updConnBtn(){ updDev(); const m=connMode(); $('#connIco').innerHTML=ICO[m]; $('#connTxt').textContent=m==='ble'?'Bluetooth-Kopf verbinden':'Tastkopf (USB) verbinden'; }
 document.querySelectorAll('#setSheet input').forEach(i=>i.addEventListener('change',saveSet));
 $('#ferAddr').addEventListener('change',saveSet);
+$('#ferAddr').addEventListener('keydown',e=>{ if(e.key==='Enter')$('#actFer').click(); });
 $('#btnSet').onclick=()=>$('#setSheet').classList.remove('hidden');
 $('#setClose').onclick=()=>$('#setSheet').classList.add('hidden');
 $('#setSheet').onclick=e=>{ if(e.target.id==='setSheet')$('#setSheet').classList.add('hidden'); };
