@@ -243,7 +243,8 @@ class SerialLink{
   async open(baud){ const f=lineFmt(); this.fmt=f.bits+f.par;
     await this.port.open({baudRate:baud,dataBits:f.bits,parity:f.par,stopBits:1,bufferSize:65536});
     this.baud=baud; await this.signals(); this.startRead(); }
-  async signals(){ const rtsOff=$('#optRts').checked&&this.baud>300; try{await this.port.setSignals({dataTerminalReady:true,requestToSend:!rtsOff})}catch(e){} }
+  async signals(){ const fer=devType()==='fer'; const rtsOff=fer||($('#optRts').checked&&this.baud>300);   // FER Explorer: DTR und RTS aus
+    try{await this.port.setSignals({dataTerminalReady:!fer,requestToSend:!rtsOff})}catch(e){} }
   startRead(){ this.reader=this.port.readable.getReader();
     this.loop=(async()=>{try{for(;;){const {value,done}=await this.reader.read(); if(done)break; if(value&&this.onData)this.onData(value);}}catch(e){} finally{try{this.reader.releaseLock()}catch(e){}}})(); }
   async write(bytes){ const w=this.port.writable.getWriter(); try{await w.write(new Uint8Array(bytes))}finally{w.releaseLock()} }
@@ -736,9 +737,11 @@ const rxText=()=>String.fromCharCode(...rxBuf);
 async function ferRead(addr){
   const pw=$('#ferPw').value; if(!pw)throw new Error('Bitte zuerst unter Einstellungen → Erweitert den FER1001-Zugangscode eintragen.');
   await link.setBaud(9600); await sleep(100);
-  let ok=false;
-  for(let i=0;i<2&&!ok;i++){ rxBuf=[]; await send(enc('zz##\r\n'+'!'.repeat(24)),'Wecken');
-    ok=await waitUntil(()=>/Passwort/i.test(rxText())||/OK\r?\n/.test(rxText()),6000); log(ok?'rx':'e',printable(rxBuf)||'keine Antwort'); }
+  // Wecken wie FER Explorer: „zz##“ + CRLF, dann einzeln alle 200 ms „!“, bis „Passwort:“ kommt (dauert ca. 5 s)
+  let ok=false; const awake=()=>/Passwort/i.test(rxText())||/OK\r?\n/.test(rxText());
+  for(let i=0;i<2&&!ok;i++){ rxBuf=[]; await send(enc('zz##\r\n'),'Wecken');
+    for(let k=0;k<50&&!awake();k++){ await link.write(enc('!')); await sleep(200); }
+    ok=await waitUntil(awake,1500); log(ok?'rx':'e',printable(rxBuf)||'keine Antwort'); }
   if(!ok)throw new Error('FER1001 antwortet nicht. Lesekopf richtig aufgesetzt? Gerätetyp FER1001 gewählt?');
   if(/Passwort/i.test(rxText())){
     rxBuf=[]; for(const ch of pw){ const n=rxBuf.length; await link.write(enc(ch)); log('tx','Zugangscode-Zeichen (verborgen)'); await waitUntil(()=>rxBuf.length>n,1500); }
