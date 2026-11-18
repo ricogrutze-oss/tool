@@ -424,8 +424,7 @@ function decodeParam(d){
   while(p+len<=0x400){
     const y=d[p]; if(y===0xFF||y===0||(prevY>=0&&y!==prevY+1))break;
     const r={jahr:2000+y,von:pad(d[p+1])+'.'+pad(d[p+2]),bis:pad(d[p+3])+'.'+pad(d[p+4])};
-    if(d[p+2]>12||d[p+4]>12)break;
-    P.sz.push(r);
+    if(d[p+2]>=1&&d[p+2]<=12&&d[p+4]>=1&&d[p+4]<=12)P.sz.push(r);   // Jahr ohne Sommerzeit (z. B. 31.15) nur mit Feiertagen
     for(let k=0;k<nFt;k++){const dd=d[p+5+k*2],mm=d[p+6+k*2]; if(dd&&dd!==0xFF)P.ft.push({jahr:String(2000+y),tag:pad(dd)+'.'+pad(mm&0x0F),art:ftArt(mm>>4)});}
     prevY=y;p+=len;
   }
@@ -445,7 +444,7 @@ function decodeParam(d){
   P.setRaw=d.slice(0x500,0x580);
   return P;
 }
-function ftArt(f){ return f===7?'SO':(f===1?'S1':f===2?'S2':'Code '+f); }
+function ftArt(f){ return f===7?'SO':f===8?'S1':f===9?'S2':'Code '+f; }   // gegen RPT01-Ausdruck FAE6.0002 geprüft
 
 /* Ereignisspeicher: [2 Byte ?][2 Byte Schreibzeiger][Ring 3-Byte-Einträge][2 Byte Zeiger] */
 function decodeEvents(d,refDate){
