@@ -530,6 +530,7 @@ function decodeEvents(d,refDate){
     let txt,spec=false;
     /* Texte wie RPT01 „Ereignisspeicher“ (am 18.11. gegen Screenshot geprüft) */
     if(t===0xA){ txt='IP '+((r[1]>>3)+1)+' '+((r[0]&1)?'EIN':'AUS')+', Aufruf durch ZZ'; }
+    else if(t===1){ txt='IP '+((r[1]>>3)+1)+' '+((r[0]&1)?'EIN':'AUS')+', Aufruf durch Rundsteuertelegramm (Text vermutet)'; spec=true; }   // FTY 00'838'485, 18.11.
     else if(t===2){ txt='Netzabschaltung'; }
     else if(t===3){ txt='Netzeinschaltung'; }
     else if(t===7){ txt='1.Synchro nach SPU'; }
@@ -588,7 +589,7 @@ function dayLabel(x){
 function renderEvents(){
   const E=R.events; const list=E.list.slice().reverse(); // neueste zuerst
   let html='<div class="kv" style="margin-bottom:8px"><div>Betriebstagezähler</div><div>'+E.tage+'</div><div>Einträge</div><div>'+E.list.length+' · neueste oben</div></div>';
-  if(E.list.some(x=>x.spec))html+='<div class="note">Gelb markierte Einträge haben einen noch unbekannten Ereigniscode. Bitte mit RPT01 vergleichen; der Rohcode steht rechts daneben.</div>';
+  if(E.list.some(x=>x.spec))html+='<div class="note">Gelb markierte Einträge sind noch nicht mit RPT01 bestätigt (Text vermutet oder Code unbekannt); der Rohcode steht rechts daneben.</div>';
   let pend=[];
   const flush=day=>{ if(!pend.length&&!day)return; const label=day?(day.nr?pad(day.nr,4)+'  ':'')+dayLabel(day):'Ohne Datum';
     html+='<div class="day">'+esc(label)+'</div>'+pend.reverse().map(x=>'<div class="ev'+(x.spec?' spec':'')+'"><span class="t">'+pad(x.nr,4)+' '+x.time+'</span><span>'+esc(x.txt)+'</span><span class="r">'+(x.spec?toHex(x.raw):'')+'</span></div>').join(''); pend=[]; };
@@ -806,7 +807,7 @@ function buildReport(P){
   if(R.fer){ P.h2('FER1001 Konfiguration'); P.kv([['Gerät',(R.fer.typ||'FER1001')+(R.fer.ver?' · Version '+R.fer.ver:'')]].concat(R.fer.rows.map(([k,v])=>[FER_LBL[k]||k,ferVal(k,v)]))); }
   if(R.events){ P.h2('Ereignisspeicher'); P.kv([['Betriebstagezähler',String(R.events.tage)]]); P.note('Neueste Tage zuerst. IP = Interpreterprogramm, ZZ = Zeitzeile.');
     const groups=[]; let g={day:null,items:[]}; for(const x of R.events.list){ if(x.type==='day'){groups.push(g);g={day:x.d,items:[]};} else g.items.push(x); } groups.push(g);
-    const short=x=>x.time+' '+x.txt.replace(', Aufruf durch ZZ',' (ZZ)');
+    const short=x=>x.time+' '+x.txt.replace(', Aufruf durch ZZ',' (ZZ)').replace(', Aufruf durch Rundsteuertelegramm (Text vermutet)',' (RS?)');
     for(let i=groups.length-1;i>=0;i--){ const G=groups[i]; if(!G.items.length&&!G.day)continue;
       P.wrap((G.day?dayLabel(G.day):'Ohne Datum').padEnd(26)+G.items.map(short).join(' · '),{f:'F3',sz:7.5}); } }
 }
