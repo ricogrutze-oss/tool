@@ -358,7 +358,7 @@ body.phFull .phBar{position:sticky;top:0;z-index:6;background:var(--bg);padding:
 <!-- UHRZEIT -->
   <div class="card">
     <h2>Uhrzeit</h2>
-    <div class="mut">Liest Datum/Uhrzeit und stellt sie auf die Handyzeit. Landis+Gyr und Metcom über C003 (wie Q4 bzw. Metcom-Software), EMH und andere über 0.9.2/0.9.1 (wie EMH-Software). Passwort unter ⚙.</div>
+    <div class="mut">Liest Datum/Uhrzeit und stellt sie auf die Handyzeit. Landis+Gyr, Metcom und Elster/ABB über C003 (wie Q4, Metcom- bzw. alphaSET-Software), EMH und andere über 0.9.2/0.9.1 (wie EMH-Software); geht der bekannte Weg nicht, probiert die App den jeweils anderen. Passwort unter ⚙.</div>
     <div class="kpi" id="clkBox"></div>
     <div class="row"><button id="btnClkRead" class="op2">Zeit prüfen</button><button id="btnClkSet" class="op2 pri">Zeit stellen …</button></div>
   </div>
@@ -630,12 +630,14 @@ class DemoT{
       return this.process();}
     if(b[0]===SOH){const e=b.indexOf(ETX);if(e<0||b.length<e+2)return;const m=b.splice(0,e+2);const st=m.indexOf(STX);
       const cmd=dec(m.slice(1,st<0?e:st)),data=st<0?'':dec(m.slice(st+1,e));
-      if(cmd==='P1'){if(data==='(00000000)'){const bd=[...enc('B0'),ETX];this.emit([SOH,...bd,bcc(bd)]);}else this.emit([data.length>2?ACK:NAK]);}
-      else if(cmd==='R2'&&data.startsWith('C003')&&window.__MCS_STRICT)this.emit(this.blk('ERROR'),100);
+      if(cmd==='P1'&&window.__ABB_STRICT){this.emit([data==='(00000000)'?ACK:NAK]);}
+      else if(cmd==='P1'){if(data==='(00000000)'){const bd=[...enc('B0'),ETX];this.emit([SOH,...bd,bcc(bd)]);}else this.emit([data.length>2?ACK:NAK]);}
+      else if(cmd==='R2'&&data.startsWith('C003')&&(window.__MCS_STRICT||window.__ABB_STRICT))this.emit(this.blk('ERROR'),100);
       else if(cmd==='R2'&&data.startsWith('C003'))this.emit(this.blk(`C003(${lgTime(new Date(Date.now()+(this.clkOff??17000)))})`),100);
-      else if(cmd==='W2'&&data.startsWith('C003')){if(window.__MCS_STRICT&&!/^C003\(\d{12}00[1-7][01]\)$/.test(data)){this.emit([NAK]);return this.process();}
+      else if(cmd==='W2'&&data.startsWith('C003')){if(window.__MCS_STRICT&&!/^C003\(\d{12}00[1-7][01]\)$/.test(data)||window.__ABB_STRICT&&!/^C003\(\d{12}\)$/.test(data)){this.emit([NAK]);return this.process();}
         const t=parseLg(data.slice(5));this.clkOff=t?t-Date.now():0;this.emit([ACK]);}
       else if((cmd==='W5'||cmd==='W1')&&/^0\.9\.[12]/.test(data)&&window.__MCS_STRICT){const bd=[...enc('ERROR02'),ETX];this.emit([STX,...bd,bcc(bd)]);}
+      else if(cmd[0]==='R'&&/^0\.9\.[12]/.test(data)&&window.__ABB_NO09){this.emit(this.blk('ERROR'),100);}
       else if(cmd[0]==='R'&&/^0\.9\.[12]/.test(data)){const d=new Date(Date.now()+(this.clkOff??-23000));this.emit(this.blk(data[4]==='1'?`0.9.1(${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())})`:`0.9.2(${pad(d.getFullYear()%100)}${pad(d.getMonth()+1)}${pad(d.getDate())})`),100);}
       else if(cmd==='E2'&&data.startsWith('F101')){this.e2=true;this.emit([ACK]);}
       else if(cmd==='W5'&&/^0\.9\.[12]/.test(data)){if(window.__EMH_STRICT&&!(this.e2&&/^0\.9\.[12]\(\d{6}\)\(\w+\)$/.test(data))){this.emit([NAK]);return this.process();}
@@ -675,13 +677,16 @@ class DemoT{
     to=new Date(Math.min(to,Date.now()));if(to-from>7*864e5)from=new Date(to-7*864e5);
     from=new Date(Math.ceil(from/9e5)*9e5);
     const ts=d=>`0${pad(d.getFullYear()%100)}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}`;
-    const hdr=(d,st)=>`${key}(${ts(d)})(${st})(15)(4)(1.5)(kW)(2.5)(kW)(5.5)(kvar)(8.5)(kvar)`;
+    const abb=window.__ABB_STRICT;
+    if(abb&&window.__ABB_OPEN_ONLY&&/;\d/.test(data))return '(ERROR)';   /* Test: Zähler akzeptiert nur Anfang mit offenem Ende */
+    const hdr=(d,st)=>abb?`${key}(${ts(new Date(+d+9e5))})(${st})(15)(6)(1-1:1.9)(kWh)(1-1:2.9)(kWh)(1-1:3.9)(kvarh)(1-1:4.9)(kvarh)(1-3:1.9)(kWh)(1-4:2.9)(kWh)`:`${key}(${ts(d)})(${st})(15)(4)(1.5)(kW)(2.5)(kW)(5.5)(kvar)(8.5)(kvar)`;
     const L=[hdr(from,'00')];let n=0;
     for(let d=new Date(from);d<to;d=new Date(+d+9e5),n++){
       if(n===40)L.push(hdr(d,'08'));
       const h=d.getHours()+d.getMinutes()/60;const base=6+9*Math.exp(-((h-12)**2)/18)+3*Math.exp(-((h-19)**2)/4)+Math.random()*1.5;
       const pv=Math.max(0,5*Math.sin((h-6)/12*Math.PI))*(.6+Math.random()*.4);const net=base-pv;
-      L.push(`(${Math.max(net,0).toFixed(3)})(${Math.max(-net,0).toFixed(3)})(${(base*.25).toFixed(3)})(${(Math.random()*.1).toFixed(3)})`);
+      if(abb)L.push([Math.max(net,0)/4,Math.max(-net,0)/4,0,base/4e2,0,0].map(x=>`(${x.toFixed(5)})`).join(''));
+      else L.push(`(${Math.max(net,0).toFixed(3)})(${Math.max(-net,0).toFixed(3)})(${(base*.25).toFixed(3)})(${(Math.random()*.1).toFixed(3)})`);
     }
     return L.join('\r\n')+'\r\n';
   }
@@ -712,11 +717,12 @@ class IEC{
   async reset300(){const ble=this.l.t instanceof BleT;if(ble)await this.l.t.prep();else if(this.baud!==300&&!this.l.t.fixedBaud){await this.l.t.setBaud(300);}this.baud=300;await sleep(this.l.t instanceof DemoT?0:ble?120:600);}
   /* to gesetzt (Erkennung/Modem) = ein Versuch; sonst zweiter Versuch mit Pause –
      manche Zähler (Elster/ABB) brauchen nach einer Auslesung einige Sekunden, bis sie wieder auf /?! hören */
-  async handshake(to){
+  async handshake(to,req){
     for(let a=0;;a++){
       await this.reset300();this.l.clear();
-      /* zweiter Versuch mit Weckfolge (Nullbytes), falls der Zähler noch vom vorigen Vorgang (HDLC/Programmiermodus) benommen ist */
-      await this.l.send([...(a?new Array(40).fill(0):[]),...enc(`/?${$('#addr').value.trim()}!\r\n`)]);
+      /* zweiter Versuch mit Weckfolge (Nullbytes), falls der Zähler noch vom vorigen Vorgang (HDLC/Programmiermodus) benommen ist.
+         req: statt „/?!“ eine andere Anfrage, z. B. „2“ → „/2!“ = Datenliste 2 (Metcom MCS301, Handbuch 12.2.2) */
+      await this.l.send([...(a?new Array(40).fill(0):[]),...enc(`/${req?req:'?'+$('#addr').value.trim()}!\r\n`)]);
       try{const id=await this.l.wait(findIdent,to||+S.hs||5000);
         this.ident=id.trim();log('INFO','Kennung: '+this.ident);this.onIdent?.(this.ident);return this.ident;}
       catch(e){if(to||a>=2)throw e;
@@ -756,7 +762,7 @@ class IEC{
         return{type:'FRAME',head,body,ok,eot:all[all.length-2]===EOT};}
       return null;},0,idle,tick);
   }
-  async readout(onPart,pre){if(pre){this.ident=pre;this.onIdent?.(pre);}else await this.handshake();await this.option('0');const f=await this.readFrame(8000,onPart);
+  async readout(onPart,pre,req){if(pre){this.ident=pre;this.onIdent?.(pre);}else await this.handshake(undefined,req);await this.option('0');const f=await this.readFrame(8000,onPart);
     if(f.type!=='FRAME')throw new Error('Unerwartete Antwort: '+f.type);if(!f.ok)log('WARN','Prüfsumme (BCC) der Datenauslesung falsch');return {ident:this.ident,text:f.body,ok:f.ok};}
   /* pw: ein oder mehrere Passwörter (Komma/Leerzeichen getrennt) – werden der Reihe nach probiert wie bei Q4 */
   /* pre=true: die Kennung wurde gerade schon abgefragt (z. B. um L+G Mode E zu erkennen) – erster Versuch ohne neue Anfrage */
@@ -829,8 +835,8 @@ class DLMS{
   /* lim: max. Nutzdaten je Rahmen. Über den Bluetooth-Kopf kommen nur Rahmen ≤ 20 Byte (ein BLE-Paket) heil an
      (Feldtest 21.10.: 9-Byte-Rahmen beantwortet, 32-Byte-Rahmen nie) → 9 Byte Nutzdaten, Rest per HDLC-Segmentierung */
   constructor(link){this.l=link;this.maxTx=128;this.vaa=0xfa00;this.onBlock=null;this.ble=link.t instanceof BleT;}
-  build(ctrl,info=[],seg=false){const len=7+(info.length?2+info.length:0);
-    const f=[0xa0|(seg?8:0)|((len>>8)&7),len&255,this.da,this.ca,ctrl];
+  build(ctrl,info=[],seg=false){const da=[].concat(this.da),len=6+da.length+(info.length?2+info.length:0);
+    const f=[0xa0|(seg?8:0)|((len>>8)&7),len&255,...da,this.ca,ctrl];
     if(info.length){const h=crcH(f);f.push(h&255,h>>8,...info);}
     const c=crcH(f);f.push(c&255,c>>8);return [0x7e,...f,0x7e];}
   async tx(ctrl,info=[],seg=false){const out=this.build(ctrl,info,seg);log('TX',out,true);
@@ -853,18 +859,18 @@ class DLMS{
       let i=2;while(i<L-2&&!(fr[i]&1))i++;i++;while(i<L-2&&!(fr[i]&1))i++;i++;
       const ctrl=fr[i++];const info=L-2>i?fr.slice(i+2,L-2):[];
       return{ctrl,seg:!!(fr[0]&8),info,I:!(ctrl&1),ns:(ctrl>>1)&7};}},timeout);}
-  async connect(server,client,timeout=1500){this.da=(server<<1)|1;this.ca=(client<<1)|1;this.l.clear();
+  async connect(server,client,timeout=1500,tries=2){this.da=Array.isArray(server)?[(server[0]<<1),(server[1]<<1)|1]:(server<<1)|1;this.ca=(client<<1)|1;this.l.clear();
     const snrm=this.ble?[]:[0x81,0x80,0x12,0x05,0x01,0xf8,0x06,0x01,0xf8,0x07,0x04,0,0,0,1,0x08,0x04,0,0,0,1];   /* über BLE ohne Parameter, wie Q4 */
     await this.tx(0x93,snrm);
-    let f=null;for(let k=0;k<2&&!f;k++){if(k){log('INFO',`HDLC: Server-Adresse ${server} – zweiter Versuch`);await this.tx(0x93,snrm);}
+    let f=null;for(let k=0;k<tries&&!f;k++){if(k){log('INFO',`HDLC: Server-Adresse ${[].concat(server).join('/')} – zweiter Versuch`);await this.tx(0x93,snrm);}
       try{f=await this.rx(timeout);}catch{}}
-    if(!f){log('INFO',`HDLC: keine Antwort von Server-Adresse ${server}`);return false;}
+    if(!f){log('INFO',`HDLC: keine Antwort von Server-Adresse ${[].concat(server).join('/')}`);return false;}
     if(f.ctrl!==0x73)throw new Error(f.ctrl===0x1f?'Zähler lehnt HDLC-Verbindung ab (DM)':'HDLC: unerwartete Antwort auf SNRM (0x'+f.ctrl.toString(16)+')');
     this.maxTx=128;const p=f.info;for(let i=3;i+1<p.length;){const id=p[i],n=p[i+1];let v=0;for(let k=0;k<n;k++)v=v*256+p[i+2+k];if(id===6)this.maxTx=v;i+=2+n;}
     /* Über Bluetooth nur kleine Info-Segmente: ein Rahmen soll in ein BLE-Paket (20 Byte) passen (Feldtest 21.10.: 9 Byte Nutzdaten
        = 20-Byte-Rahmen kommen an; ein 71-Byte-AARQ-Frame bleibt ohne Antwort). */
     if(this.ble)this.maxTx=Math.min(this.maxTx,9);
-    this.ns=this.nr=0;this.server=server;this.client=client;log('INFO',`HDLC verbunden: Server ${server}, Client ${client}, max. ${this.maxTx} Byte Nutzdaten je Rahmen`);return true;}
+    this.ns=this.nr=0;this.server=server;this.client=client;log('INFO',`HDLC verbunden: Server ${[].concat(server).join('/')}, Client ${client}, max. ${this.maxTx} Byte Nutzdaten je Rahmen`);return true;}
   /* AARQ: pw=null → ohne Anmeldung (öffentlicher Client), sonst LLS mit Passwort */
   /* lean (nur öffentlich, Bluetooth): ohne das optionale Feld „Protokollversion“ (80 02 07 80) → AARQ ganz ohne 0x80-Byte */
   async assoc(pw,lean){const ini=[0xbe,0x0f,4,0x0d,1,0,0,0,6,0x5f,4,0,0x1c,pw==null?0x1b:0x13,0x20,0,0];
@@ -906,6 +912,33 @@ class DLMS{
   async write(sn,data){const r=await this.xfer([6,1,2,(sn>>8)&255,sn&255,1,...data]);
     if(r[0]!==0x0d)throw new Error('DLMS: keine Schreibbestätigung');return r[2]===0?0:(r[3]??-1);}
   async close(){try{await this.tx(0x53);await this.rx(1500);}catch{}}
+  /* ---- Logical-Name-Adressierung (Green/Blue Book), z. B. Metcom MCS301 / IDIS-Zähler ----
+     AARQ „LN ohne Verschlüsselung“ (Kontext …8.1.1), pw=null → öffentlich ohne Anmeldung, sonst LLS (Mechanismus …8.2.1).
+     GET-Request-Normal: C0 01 C1 <Klasse 2B> <OBIS 6B> <Attribut> 00 → C4 01 C1 00 <Daten> bzw. C4 01 C1 01 <Fehlercode>; große Daten in Blöcken (C4 02 …). */
+  async assocLN(pw){const b=[0xa1,9,6,7,0x60,0x85,0x74,5,8,1,1];
+    if(pw!=null){const p=enc(pw);b.push(0x8a,2,7,0x80,0x8b,7,0x60,0x85,0x74,5,8,2,1,0xac,p.length+2,0x80,p.length,...p);}
+    b.push(0xbe,0x10,4,0x0e,1,0,0,0,6,0x5f,0x1f,4,0,0,0x7e,0x1f,0x04,0xb0);
+    const r=await this.xfer([0x60,b.length,...b]);
+    if(r[0]!==0x61)throw new Error('DLMS: keine Antwort auf Anmeldung (AARE '+(r[0]!=null?'0x'+r[0].toString(16):'leer')+')');
+    const at=pat=>{for(let i=0;i+pat.length<r.length;i++)if(pat.every((x,k)=>r[i+k]===x))return i+pat.length;return -1;};
+    const ri=at([0xa2,3,2,1]),res=ri>0?r[ri]:-1,di=at([0xa3,5]),diag=di>0?r[di+4]:0;this.aare={res,diag};
+    const ctx=at([6,7,0x60,0x85,0x74,5,8,1]),ctxId=ctx>0?r[ctx]:0;   /* Kontext 1 = LN, 2 = SN */
+    if(ctxId===2)log('WARN','DLMS: Zähler antwortet mit Short-Name-Kontext (SN) – LN wird nicht angeboten');
+    if(res===0&&diag===0)return true;
+    log('WARN',`DLMS-Anmeldung (LN) abgelehnt (Ergebnis ${res}, Diagnose ${diag}${diag===13?' = Passwort falsch':diag===14?' = höhere Sicherheitsstufe (HLS) nötig':diag===12||diag===11?' = Authentisierungsverfahren nicht angeboten':diag===2?' = Anwendungskontext nicht unterstützt':''})`);return false;}
+  async getLN(cls,ln,attr){let r=await this.xfer([0xc0,1,0xc1,cls>>8,cls&255,...ln,attr,0]);
+    if(r[0]===0xd8)return{ok:false,err:`Ausnahme ${r[1]}/${r[2]}`};
+    if(r[0]!==0xc4)throw new Error('DLMS: unerwartete Antwort 0x'+(r[0]??0).toString(16));
+    if(r[1]===1){if(r[3]===0)return{ok:true,v:axData(r,4).v};return{ok:false,err:r[4]};}
+    if(r[1]!==2)throw new Error('DLMS: Antworttyp 0x'+r[1].toString(16)+' unbekannt');
+    let raw=[];
+    for(;;){const last=r[3],bn=((r[4]<<24)|(r[5]<<16)|(r[6]<<8)|r[7])>>>0;
+      if(r[8]!==0)return{ok:false,err:r[9]};
+      const [len,j]=axLen(r,9);raw=raw.concat(r.slice(j,j+len));this.onBlock?.(bn);
+      if(last)break;
+      r=await this.xfer([0xc0,2,0xc1,(bn>>>24)&255,(bn>>>16)&255,(bn>>>8)&255,bn&255]);
+      if(r[0]!==0xc4||r[1]!==2)throw new Error('DLMS: Blockübertragung abgebrochen');}
+    return{ok:true,v:axData(raw,0).v};}
 }
 
 /* ---------- Parser ---------- */
@@ -916,6 +949,11 @@ function parseReadout(text){const out=[];
     for(const m of line.matchAll(/([^()\s]+)((?:\([^)]*\))+)/g)){
       const g=[...m[2].matchAll(/\(([^)]*)\)/g)].map(x=>x[1]);const [v,u]=g[0].includes('&')?[g[0],'']:splitVU(g[0]);
       out.push({obis:m[1].trim(),key:norm(m[1]),value:v,unit:u,raw:g[0],extra:g.slice(1).join(' | ')});}}
+  /* gleiche Kennzahl mit anderem Kanalvorsatz (Metcom: 1-0:0.2.0 / 1-1:0.2.0 / 1-2:0.2.0 = drei Firmwarestände) → erster behält den kurzen Schlüssel,
+     die späteren bekommen den Vorsatz, sonst überschreiben sie sich in der Wertetabelle */
+  const first=new Map();
+  for(const e of out){const pf=(e.obis.match(/^\d+-\d+:/)||[''])[0];
+    if(!first.has(e.key))first.set(e.key,pf);else if(pf&&first.get(e.key)!==pf)e.key=pf+e.key;}
   return out;}
 function parseTs(s){s=String(s||'').replace(/\D/g,'');let sec=0;
   if(s.length===13||s.length===12&&false)s=s.slice(1);
@@ -928,6 +966,9 @@ function parseProfile(text){
     const g=[...line.matchAll(/\(([^)]*)\)/g)].map(x=>x[1]);
     if(/^P\.0\d/.test(line)){cur=parseTs(g[0]);const st=g[1];prof.period=+g[2]||prof.period;n=+g[3]||0;
       const ch=[];for(let i=0;i<n;i++)ch.push({key:norm(g[4+2*i]||('K'+(i+1))),unit:g[5+2*i]||''});
+      /* gleiche Kennzahl auf verschiedenen Messkanälen (A1500: 1-1:1.9 und 1-3:1.9) → Kanalvorsatz behalten, sonst nicht unterscheidbar */
+      const k0=ch.map(c=>c.key);
+      for(let i=0;i<n;i++)if(k0.some((k,j)=>j!==i&&k===k0[i])){const m=(g[4+2*i]||'').trim().match(/^(\d+)-(\d+):/);if(m)ch[i].key=`${m[1]}-${m[2]}:${k0[i]}`;}
       if(!prof.channels.length)prof.channels=ch;prof.status=st;
       if(g.length>4+2*n){const rest=g.slice(4+2*n);for(let i=0;i+n<=rest.length;i+=n){prof.rows.push({t:new Date(cur),v:rest.slice(i,i+n).map(parseFloat),st});cur=new Date(+cur+prof.period*6e4);}}
       continue;}
@@ -945,12 +986,13 @@ const OBIS={'0.0':'Geräteadresse','C.1':'Seriennummer','C.7':'Spannungsausfäll
   '1.8':'Wirkenergie Bezug (+A)','2.8':'Wirkenergie Lieferung (−A)','3.8':'Blindenergie +R','4.8':'Blindenergie −R','5.8':'Blindenergie QI','6.8':'Blindenergie QII','7.8':'Blindenergie QIII','8.8':'Blindenergie QIV','9.8':'Scheinenergie',
   '1.6':'Maximum Wirkleistung Bezug','2.6':'Maximum Wirkleistung Lieferung','3.6':'Maximum Blindleistung +R','4.6':'Maximum Blindleistung −R',
   '1.4':'Laufende Periode Bezug','2.4':'Laufende Periode Lieferung','1.5':'Mittelwert Wirkleistung Bezug','2.5':'Mittelwert Wirkleistung Lieferung','3.5':'Mittelwert +R','4.5':'Mittelwert −R','5.5':'Mittelwert QI','6.5':'Mittelwert QII','7.5':'Mittelwert QIII','8.5':'Mittelwert QIV',
-  '1.29':'Wirkenergie Bezug je Periode','2.29':'Wirkenergie Lieferung je Periode',
+  '1.29':'Wirkenergie Bezug je Periode','2.29':'Wirkenergie Lieferung je Periode','1.9':'Wirkenergie Bezug je Periode','2.9':'Wirkenergie Lieferung je Periode','3.9':'Blindenergie +R je Periode','4.9':'Blindenergie −R je Periode',
   '1.7':'Wirkleistung Bezug','2.7':'Wirkleistung Lieferung','3.7':'Blindleistung +R','4.7':'Blindleistung −R','9.7':'Scheinleistung','13.7':'Leistungsfaktor gesamt','14.7':'Frequenz','15.7':'Wirkleistung |Summe|','16.7':'Wirkleistung Summe',
   '21.7':'Wirkleistung L1','41.7':'Wirkleistung L2','61.7':'Wirkleistung L3','23.7':'Blindleistung L1','43.7':'Blindleistung L2','63.7':'Blindleistung L3','29.7':'Scheinleistung L1','49.7':'Scheinleistung L2','69.7':'Scheinleistung L3',
   '31.7':'Strom L1','51.7':'Strom L2','71.7':'Strom L3','91.7':'Strom N','32.7':'Spannung L1','52.7':'Spannung L2','72.7':'Spannung L3','33.7':'Leistungsfaktor L1','53.7':'Leistungsfaktor L2','73.7':'Leistungsfaktor L3'};
 const ANG={'1':'Winkel U L2 zu U L1','2':'Winkel U L3 zu U L1','10':'Winkel U L2 zu U L1','20':'Winkel U L3 zu U L1','4':'Winkel I L1 zu U L1','15':'Winkel I L2 zu U L2','26':'Winkel I L3 zu U L3','40':'Winkel I L1 zu U L1','51':'Winkel I L2 zu U L2','62':'Winkel I L3 zu U L3'};
 function describe(key){
+  const pre=key.match(/^(\d+)-(\d+):/);if(pre){const rest=key.slice(pre[0].length),d=describe(rest);return d+(/^0\.2(\.|$)/.test(rest)?` (${pre[1]}-${pre[2]})`:+pre[2]>1?` (Kanal ${pre[2]})`:'');}
   const m=key.match(/^([0-9A-Z]+)\.([0-9A-Z]+)(?:\.([0-9A-Z]+))?(?:\*(\d+))?/);if(!m)return '';
   const [,C,D,E,F]=m;let s;
   if(C==='81'&&D==='7')s=ANG[E]||'Phasenwinkel';
@@ -1170,8 +1212,8 @@ function renderProfile(){
   const h=p.period/60;
   $('#lgStats').innerHTML='<tr><th>Kanal</th><th class="num">Max</th><th>Zeitpunkt</th><th class="num">Min</th><th class="num">Mittel</th><th class="num">Energie</th></tr>'+p.channels.map((c,i)=>{
     const v=p.rows.map(r=>r.v[i]).filter(isFinite);if(!v.length)return '';const mx=Math.max(...v),mn=Math.min(...v),avg=v.reduce((a,b)=>a+b,0)/v.length;
-    const ri=p.rows.find(r=>r.v[i]===mx);const isP=/^k?(W|var|VA)$/i.test(c.unit);const e=isP?v.reduce((a,b)=>a+b,0)*h:NaN;
-    return `<tr><td class="mono">${esc(c.key)} [${esc(c.unit)}]</td><td class="num">${fmtN(mx,3)}</td><td>${fmtDT(ri?.t)}</td><td class="num">${fmtN(mn,3)}</td><td class="num">${fmtN(avg,3)}</td><td class="num">${isP?fmtN(e,3)+' '+c.unit+'h':'–'}</td></tr>`;}).join('')+
+    const ri=p.rows.find(r=>r.v[i]===mx);const isP=/^k?(W|var|VA)$/i.test(c.unit),isE=/^k?(Wh|varh|VAh)$/i.test(c.unit);const e=isP?v.reduce((a,b)=>a+b,0)*h:isE?v.reduce((a,b)=>a+b,0):NaN;
+    return `<tr><td class="mono">${esc(c.key)} [${esc(c.unit)}]</td><td class="num">${fmtN(mx,3)}</td><td>${fmtDT(ri?.t)}</td><td class="num">${fmtN(mn,3)}</td><td class="num">${fmtN(avg,3)}</td><td class="num">${isP?fmtN(e,3)+' '+c.unit+'h':isE?fmtN(e,3)+' '+c.unit:'–'}</td></tr>`;}).join('')+
     `<tr><td colspan="6" class="mut">${p.rows.length} Werte · ${fmtDT(p.rows[0].t)} – ${fmtDT(p.rows[p.rows.length-1].t)} · Periode ${p.period} min</td></tr>`;
   const lim=p.rows.slice(0,3000);
   $('#lgTable').innerHTML='<tr><th>Zeit</th>'+p.channels.map(c=>`<th class="num">${esc(c.key)}</th>`).join('')+'<th>Status</th></tr>'+lim.map(r=>`<tr><td>${fmtDT(r.t)}</td>${r.v.map(x=>`<td class="num">${fmtN(x,3)}</td>`).join('')}<td class="mono">${esc(r.st)}</td></tr>`).join('');
@@ -1254,7 +1296,8 @@ async function run(label,fn){if(busy)return;
   finally{ST.live=false;renderVals();setBusy(false);prog(null);if(LINK)LINK.strip=true;}}
 async function withLogin(fn){await IECP.login($('#pw').value);try{return await fn();}finally{await IECP.bye();}}
 const tsArg=(d,f=S.profFmt)=>{if(!d)return '';const x=new Date(d);const s=`${pad(x.getFullYear()%100)}${pad(x.getMonth()+1)}${pad(x.getDate())}${pad(x.getHours())}${pad(x.getMinutes())}`;return f==='season'?'0'+s:s;};
-const rangeArg=(a,b,f=S.profFmt)=>f==='all'?'(;)':`(${tsArg(a,f)};${tsArg(b,f)})`;
+/* 'open' = nur Anfang, Ende offen: so fragt die Elster/ABB-Software (A1500: R5 P.01(02611190001;)) – der Zähler liefert dann bis jetzt */
+const rangeArg=(a,b,f=S.profFmt)=>f==='all'?'(;)':f==='open'?`(${tsArg(a,'season')};)`:`(${tsArg(a,f)};${tsArg(b,f)})`;
 /* je Zählertyp gemerkt: welches Profil (P.01/P.02) und Datumsformat der Zähler annimmt */
 const PFKEY='zaehlerauslesung.lgfmt';
 function lgPref(set){let all={};try{all=JSON.parse(localStorage.getItem(PFKEY))||{}}catch{}const t=meterType();if(set){all[t]={...(all[t]||{}),...set};try{localStorage.setItem(PFKEY,JSON.stringify(all))}catch{};return;}return all[t]||{};}
@@ -1330,11 +1373,15 @@ async function readExtras(ex,pre,notes){
       const a=$('#lgFrom').value,b=$('#lgTo').value;const exp=Math.max(1,Math.round((new Date(b)-new Date(a))/9e5));
       status(pre+'Lastgang wird angefordert …');prog(0);
       const pr0=lgPref();const cands=[];if(pr0.p)cands.push({p:pr0.p,f:pr0.f});cands.push({p:S.prof,f:S.profFmt});
-      for(const p of ['P.01','P.02'])for(const f of ['season','plain'])cands.push({p,f});cands.push({p:'P.01',f:'all'});
+      if(/^\/ABB/.test(IECP.ident))cands.push({p:'P.01',f:'open'});   /* A1500: Anfrage der Elster-Software (Anfang;) – belegt */
+      for(const p of ['P.01','P.02'])for(const f of ['season','plain'])cands.push({p,f});cands.push({p:'P.01',f:'open'},{p:'P.01',f:'all'});
       const r=await readTry('Lastgang',cands,c=>c.p+rangeArg(a,b,c.f),p=>{const pr=parseProfile(cutLines(p));ST.profile=pr;renderProfile();const n=pr.rows.length;
           prog(n/exp*100);status(`${pre}Lastgang … ${n} von ca. ${exp} Werten (${Math.min(100,Math.round(n/exp*100))} %)`);},t=>parseProfile(t).rows.length>0);
       if(r.err)notes.push(`Lastgang: Zähler lehnt alle Varianten ab (${r.err}) – Passwort mit Leserecht nötig?`);
-      else{ST.profileRaw=r.txt;ST.profile=parseProfile(r.txt);ST.lgUsed=r.c;renderProfile();if(r.empty)notes.push('Lastgang ohne Werte');log('INFO',`Lastgang gelesen mit ${r.c.p} ${r.c.f}`);}}
+      else{ST.profileRaw=r.txt;ST.profile=parseProfile(r.txt);ST.lgUsed=r.c;
+        /* Anfrage mit offenem Ende liefert bis „jetzt“ – auf den gewählten Zeitraum kürzen */
+        if(r.c.f==='open'&&b){const tb=+new Date(b);const n0=ST.profile.rows.length;ST.profile.rows=ST.profile.rows.filter(x=>+x.t<=tb+9e5);if(ST.profile.rows.length<n0)log('INFO',`Lastgang auf gewählten Zeitraum gekürzt (${n0} → ${ST.profile.rows.length} Werte)`);}
+        renderProfile();if(r.empty)notes.push('Lastgang ohne Werte');log('INFO',`Lastgang gelesen mit ${r.c.p} ${r.c.f}`);}}
     if(ex.includes('log')){showTab('logbuch');status(pre+'Logbuch wird angefordert …');prog('ind');
       const to=new Date(),from=new Date(to-90*864e5);const dl=d=>new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,16);
       const pr0=lgPref();const fs=[pr0.lf,ST.lgUsed?.f,S.profFmt,'season','plain','all'].filter(Boolean).map(f=>({f}));
@@ -1363,23 +1410,38 @@ function parseLg(v){const m=String(v).match(/^(\d{2})(\d{2})(\d{2})(\d{2})(\d{2}
 /* Uhrzeit: L+G über C003 (R2/W2); EMH und andere über 0.9.2 Datum (JJMMTT) und 0.9.1 Zeit (hhmmss), R5 lesen / W5 schreiben (wie EMH-Software) */
 const isLG=()=>/^\/LGZ/.test(IECP.ident);
 async function meterTime(){
-  if(isLG()){const f=await IECP.cmdRW('R2','C003()');if(f.type!=='FRAME'||/ERROR/i.test(f.body))throw new Error('Zähler kennt C003 nicht');
-    const v=(f.body.match(/\(([^)]*)\)/)||[])[1];const mt=parseLg(v);if(!mt)throw new Error('Zeitformat unbekannt: '+v);return mt;}
-  const g=async k=>{const a=await IECP.read(k+'()',5000);const m=a.match(/\((\d{6})/);if(!m)throw new Error(`Zähler liefert ${k} nicht (${a.trim()||'keine Antwort'})`);return m[1];};
-  const d=await g('0.9.2'),t=await g('0.9.1');return new Date(2000+ +d.slice(0,2),+d.slice(2,4)-1,+d.slice(4,6),+t.slice(0,2),+t.slice(2,4),+t.slice(4,6));}
+  /* Lesewege: L+G R2 C003; sonst R5 0.9.2 (Datum) + 0.9.1 (Zeit); als Rückfall jeweils der andere Weg und R5 C003 – so geht es auch bei Zählern, die bisher nicht erprobt sind */
+  const viaC003=async cmd=>{LINK.clear();const f=await IECP.cmdRW(cmd,'C003()',4000);
+    if(f.type!=='FRAME'||/ERROR/i.test(f.body))throw new Error(`${cmd} C003 → ${f.type==='FRAME'?(f.body||'').trim()||'leer':f.type}`);
+    const v=(f.body.match(/\(([^)]*)\)/)||[])[1];const mt=parseLg(v);if(!mt)throw new Error('Zeitformat unbekannt: '+v);return mt;};
+  const via09=async()=>{LINK.clear();
+    const g=async k=>{const a=await IECP.read(k+'()',5000);const m=a.match(/\((\d{6})/);if(!m)throw new Error(`Zähler liefert ${k} nicht (${a.trim()||'keine Antwort'})`);return m[1];};
+    const d=await g('0.9.2'),t=await g('0.9.1');return new Date(2000+ +d.slice(0,2),+d.slice(2,4)-1,+d.slice(4,6),+t.slice(0,2),+t.slice(2,4),+t.slice(4,6));};
+  const order=isLG()?[['R2 C003',()=>viaC003('R2')],['R5 0.9.x',via09],['R5 C003',()=>viaC003('R5')]]:[['R5 0.9.x',via09],['R2 C003',()=>viaC003('R2')],['R5 C003',()=>viaC003('R5')]];
+  const errs=[];
+  for(const [n,f] of order){try{const mt=await f();if(errs.length)log('INFO',`Uhrzeit gelesen über ${n} (Rückfall)`);return mt;}
+    catch(e){errs.push(e.message);log('INFO',`Uhrzeit lesen über ${n}: ${e.message}`);}}
+  throw new Error(isLG()?'Zähler kennt C003 nicht':errs[0]);}
 async function readClock(){return clkShow(await meterTime());}
 function clkShow(mt){const now=new Date();
   const df=Math.round((mt-now)/1000)||0;$('#clkBox').innerHTML=`<div><span class="mut">Zähler</span><b>${mt.toLocaleString('de-DE')}</b></div><div><span class="mut">Handy</span><b>${now.toLocaleString('de-DE')}</b></div><div><span class="mut">Abweichung</span><b class="${Math.abs(df)>CLK_TOL?'warn':'ok'}">${df>=0?'+':''}${fmtN(df,0)} s</b></div>`;return df;}
 async function writeClock(){const n=new Date();
-  /* Metcom (Mitschnitt der Metcom-Software, 19.11.): Login P1, Lesen R5 0.9.2/0.9.1, Stellen mit EINEM Befehl W2 C003(JJMMTThhmmss+Hundertstel 00+Wochentag+Sommerzeit),
-     also dasselbe wie bei L+G – W5/W1 auf 0.9.x lehnt der Metcom mit ERROR02 ab. Hundertstel 00 → auf die volle Sekunde warten. */
-  const mc=/^\/MCS/.test(IECP.ident);
-  if(isLG()||mc){let t=n;if(mc){await sleep(1000-new Date().getMilliseconds());t=new Date();t.setMilliseconds(0);}
-    const v=lgTime(t);const r=await IECP.cmdRW('W2',`C003(${v})`);
-    log('INFO',`W2 C003 → ${r.type}${r.head?' '+r.head:''}${r.body?' '+r.body:''}`);
-    if(r.type!=='ACK')throw new Error('Zähler hat das Stellen abgelehnt ('+(r.type==='NAK'?'NAK':(r.head||r.body||r.type))+')');log('INFO','Zeit gestellt: '+v);return;}
-  const d=`${pad(n.getFullYear()%100)}${pad(n.getMonth()+1)}${pad(n.getDate())}`;
   const rep=r=>r.type==='ACK'?'ACK':r.type==='NAK'?'NAK':(r.body||r.head||r.type);
+  const noPw=pwList().length?'':' – kein Passwort eingetragen (Schreibrecht nötig)';
+  const mc=/^\/MCS/.test(IECP.ident),abb=/^\/ABB/.test(IECP.ident);
+  /* W2 C003 (ein Befehl): L+G (Mitschnitt Q4) und Metcom (Mitschnitt der Metcom-Software, 19.11.): JJMMTThhmmss + Hundertstel 00 + Wochentag(1=Mo…7=So) + Sommerzeit = 16 Ziffern,
+     Metcom lehnt W5/W1 auf 0.9.x mit ERROR02 ab; Hundertstel 00 → auf die volle Sekunde warten.
+     Elster/ABB A1500 (Mitschnitt alphaSET, 19.11.): Login P1 (Standard 00000000, 4800 Bd), W2 C003 nur mit JJMMTThhmmss (12 Ziffern).
+     Bei Zählern ohne Mitschnitt (und wenn W5/W1 scheitern) dient dasselbe als Rückfall: erst 16, dann 12 Ziffern. */
+  const viaC003=async(forms,exact)=>{let last='';
+    for(const f of forms){let t=n;if(exact){await sleep(1000-new Date().getMilliseconds());t=new Date();t.setMilliseconds(0);}
+      const v=f===12?lgTime(t).slice(0,12):lgTime(t);LINK.clear();const r=await IECP.cmdRW('W2',`C003(${v})`);
+      last=`W2 C003 (${f} Ziffern) → ${rep(r)}`;log('INFO',`W2 C003(${v}) → ${r.type}${r.head?' '+r.head:''}${r.body?' '+r.body:''}`);
+      if(r.type==='ACK'){log('INFO','Zeit gestellt: '+v);return{ok:true,last};}}
+    return{ok:false,last};};
+  if(isLG()||mc||abb){const c=await viaC003(abb?[12,16]:mc?[16,12]:[16],mc||abb);
+    if(!c.ok)throw new Error('Zähler hat das Stellen abgelehnt ('+c.last.replace(/^.*→ /,'')+')'+noPw);return;}
+  const d=`${pad(n.getFullYear()%100)}${pad(n.getMonth()+1)}${pad(n.getDate())}`;
   /* EMH-Software (Mitschnitt 10.11.): nach dem Login „E2 F101()“, dann „W5 0.9.2(JJMMTT)(Passwort)“ und „W5 0.9.1(hhmmss)(Passwort)“, je mit ACK.
      Das Passwort steht also in JEDEM Schreibbefehl noch einmal in Klammern. Bei anderen Zählern zuerst ohne, dann mit Passwort probieren. */
   const emh=/^\/EMH/.test(IECP.ident),pw=pwPref()||pwList()[0]||'',pf=pw?`(${pw})`:'';
@@ -1393,7 +1455,10 @@ async function writeClock(){const n=new Date();
   const dateOk=sameDate?true:await wr('0.9.2',d);
   const t=new Date(),tv=`${pad(t.getHours())}${pad(t.getMinutes())}${pad(t.getSeconds())}`;
   const timeOk=await wr('0.9.1',tv);
-  if(!timeOk)throw new Error(`Zähler hat die Uhrzeit nicht angenommen (${last}) – Passwort mit Schreibrecht nötig?`);
+  if(!timeOk){
+    log('INFO','Stellen über 0.9.1/0.9.2 abgelehnt – Rückfall: W2 C003');
+    const c=await viaC003([16,12],true);if(c.ok)return;
+    throw new Error(`Zähler hat die Uhrzeit nicht angenommen (${last}; ${c.last}) – Passwort mit Schreibrecht nötig?`);}
   if(!dateOk)throw new Error(`Uhrzeit gestellt, aber das Datum wurde abgelehnt (${last})`);
   log('INFO',`Zeit gestellt (${used}): ${sameDate?'Datum unverändert':d} ${tv}`);}
 /* Stellen mit allen eingetragenen Passwörtern probieren: das erste, das den Login besteht, hat evtl. nur Leserecht */
@@ -1418,10 +1483,13 @@ async function clockOp(write){
   if(LINK){LINK.strip=true;LINK.clear();}   /* evtl. verschmutzten Zustand (z. B. von einem vorangegangenen Modem-Versuch) bereinigen */
   try{status('Zähler wird angesprochen …');const id=await IECP.handshake();
     status('Programmiermodus …');await IECP.login($('#pw').value,true);
-    try{const df=await readClock();
-      if(write){const who=isLG()||/^\/(EMH|MCS)/.test(IECP.ident)?'':`\n\nHinweis: Für ${IECP.ident.slice(1,4)} ist das Stellen noch nicht erprobt (Datum 0.9.2 / Zeit 0.9.1).`;
-        if(!confirm(`Zählerzeit weicht ${fmtN(df,0)} s ab.\nJetzt auf Handyzeit ${new Date().toLocaleTimeString('de-DE')} stellen?${who}`)){status('Zeitstellen abgebrochen.');return;}
-        await writeClockAny();const d2=await readClock();status(`Uhrzeit gestellt – Abweichung jetzt ${fmtN(d2,0)} s.`,Math.abs(d2)>5?'warn':'ok');}
+    /* Elster/ABB: falls der Zähler 0.9.1/0.9.2 im Programmiermodus nicht liefert, trotzdem Stellen anbieten (die Stellen-Anweisung W2 C003 ist belegt, das Lesen noch nicht) */
+    try{let df=null;try{df=await readClock();}catch(e){if(!write)throw e;log('WARN','Uhrzeit lesen: '+e.message+' – Stellen trotzdem möglich');}
+      if(write){const who=isLG()||/^\/(EMH|MCS|ABB)/.test(IECP.ident)?'':`\n\nHinweis: Für ${IECP.ident.slice(1,4)} ist das Stellen noch nicht erprobt (zuerst Datum 0.9.2 / Zeit 0.9.1, sonst W2 C003).`;
+        if(!confirm(`Zählerzeit ${df==null?'konnte nicht gelesen werden':`weicht ${fmtN(df,0)} s ab`}.\nJetzt auf Handyzeit ${new Date().toLocaleTimeString('de-DE')} stellen?${who}`)){status('Zeitstellen abgebrochen.');return;}
+        await writeClockAny();let d2=null;try{d2=await readClock();}catch(e){log('WARN','Uhrzeit nach dem Stellen nicht lesbar: '+e.message);}
+        if(d2==null)status('Uhrzeit gestellt (Zähler hat die Zeit nicht zum Gegenlesen geliefert).','warn');
+        else status(`Uhrzeit gestellt – Abweichung jetzt ${fmtN(d2,0)} s.`,Math.abs(d2)>5?'warn':'ok');}
       else status(`Zählerzeit gelesen – Abweichung ${fmtN(df,0)} s.`,Math.abs(df)>CLK_TOL?'warn':'ok');}
     finally{await IECP.bye();}}
   catch(e){log('ERR',e.message);status(e.message,'err');}
@@ -1643,6 +1711,138 @@ async function lgModem(count,preId){let found=false;
       catch(e){log('WARN','IP über Client 32: '+e.message);}}
     return res;}
   catch(e){if(found)e.final=true;throw e;}}
+/* ---------- Modem-Empfang über DLMS mit Logical Names (Metcom MCS301, IDIS-/andere DLMS-Zähler) – VERSUCHSWEG, noch nicht an einem echten Zähler geprüft ----------
+   Grundlage: Standard-COSEM-Objekte, wie sie auch die EMH-Liste (Variomod Manager) zeigt: 0-0:25.6.0 „GSM-Diagnose“ (Klasse 47: 2 Betreiber, 3 Status, 4 CS, 5 PS,
+   6 Zellinfo [Zell-ID, Standort-ID, Signalqualität (CSQ 0–31), BER, MCC, MNC, Kanal], 7 Nachbarzellen), 0-0:94.98.22 IMEI, 0-0:25.1.0 IPv4-Setup (Attribut 3).
+   Metcom-MCS301-Handbuch (V35, Kap. 28): ein logisches Gerät (SAP 1); Clients: öffentlich 16 (ohne Sicherheit), Lesen 2 und Verwaltung 1 (HLS, LLS als Rückfall);
+   Kap. 12.2.2: DLMS über Mode E wie bei L+G (300 Bd Start, dann Baudrate Z, 8N1), außerdem Datenlisten /2! und /3!, Einzelregister mit R5.
+   Jeder Schritt steht im Protokoll (Mehr → Protokoll), damit ein Lauf am echten Zähler zur Korrektur reicht. */
+const LN_ERR={1:'Hardwarefehler',2:'vorübergehend nicht verfügbar',3:'Zugriff verweigert',4:'Objekt nicht vorhanden',9:'Klasse passt nicht',11:'Objekt nicht verfügbar',12:'Typ passt nicht',13:'Zugriff nicht erlaubt',14:'Datenblock nicht verfügbar'};
+const lnErr=e=>typeof e==='number'?`${e}${LN_ERR[e]?' = '+LN_ERR[e]:''}`:String(e);
+const lnStr=o=>o&&o.length===6?`${o[0]}-${o[1]}:${o[2]}.${o[3]}.${o[4]}.${o[5]}`:'';
+const lnJson=v=>{try{return JSON.stringify(v,(k,x)=>x&&x.os?(x.os.length<=40&&x.os.every(c=>c>=32&&c<127)?`"${String.fromCharCode(...x.os)}"`:'0x'+x.os.map(c=>c.toString(16).padStart(2,'0')).join('')):x);}catch{return String(v);}};
+const PSTAT={0:'inaktiv',1:'GPRS (2G)',2:'EDGE (2G)',3:'UMTS (3G)',4:'HSDPA (3G)',5:'LTE (4G)',6:'CDMA'};
+const ip4=v=>{const x=typeof v==='number'?[v>>>24,(v>>16)&255,(v>>8)&255,v&255]:v?.os?.length===4?v.os:null;return x?x.join('.'):null;};
+/* Werte der GSM-Diagnose in die Modemanzeige übernehmen */
+function lnMdmApply(G){const c=Array.isArray(G.cell)?G.cell:null;
+  const csq=c&&typeof c[2]==='number'?c[2]:(typeof G.csq==='number'?G.csq:null);
+  const dbm=typeof G.dbm==='number'?G.dbm:(csq!=null&&csq<=31?-113+2*csq:null);
+  const mcc=c?.[4],mnc=c?.[5];
+  Object.assign(MDM,{sigT:'RSSI',csq,rsrp:dbm,reg:typeof G.st==='number'?G.st:MDM.reg??null,actTxt:G.ps!=null?(PSTAT[G.ps]||('Typ '+G.ps)):MDM.actTxt,
+    plmn:(typeof mcc==='number'&&typeof mnc==='number')?String(mcc).padStart(3,'0')+String(mnc).padStart(2,'0'):(MDM.plmn||''),
+    opName:G.op||MDM.opName||'',cell:c?c[0]:MDM.cell,tac:c?c[1]:MDM.tac,imei:G.imei||MDM.imei,ip:G.ip||MDM.ip,fw:G.fw||MDM.fw,t:new Date()});
+  if(Array.isArray(G.adj))MDM.adj=G.adj.filter(Array.isArray).map(a=>({cell:a[0],csq:a[1]})).filter(a=>typeof a.csq==='number'&&a.csq<=31);
+  if(dbm!=null)(MDM.hist=MDM.hist||[]).push([Date.now(),dbm,null]);}
+/* Sitzung: Mode E → HDLC (Client 16 öffentlich, dann 2 und 1 mit LLS-Passwort) → AARQ (LN) → fn(d,client); fn liefert {got:true,msg} bei Erfolg */
+async function lnRun(opt,fn){
+  const d=new DLMS(LINK);let dirty=false,hdlcOk=false,silent=false;const errs=[];
+  const fresh=async()=>{await d.close();await IECP.endE();await IECP.handshake(opt.hs);await IECP.modeE();};
+  await IECP.modeE();
+  try{
+    for(const cl of opt.quick?[16]:(opt.clients||[16,2,1])){
+      if(cl!==16&&!pwList().length){log('INFO',`DLMS-LN: Client ${cl} übersprungen – kein Passwort eingetragen`);errs.push(`Client ${cl}: kein Passwort eingetragen`);continue;}
+      if(dirty)await fresh();dirty=true;
+      let s2=null;
+      for(const sv of opt.servers||[1,[1,16]]){status(`DLMS: Verbindungsaufbau (Client ${cl}, Server ${[].concat(sv).join('/')}) …`);if(await d.connect(sv,cl,1500,silent||opt.quick?1:2)){s2=sv;break;}}
+      if(s2==null){errs.push(`Client ${cl}: HDLC ohne Antwort`);if(!hdlcOk)silent=true;continue;}
+      hdlcOk=true;
+      const pws=cl===16?[null]:pwList();
+      for(let pi=0;pi<pws.length;pi++){
+        if(pi){await fresh();if(!(await d.connect(s2,cl)))break;}
+        status(`DLMS: Anmeldung (Client ${cl}${pws[pi]!=null&&pws.length>1?`, Passwort ${pi+1}/${pws.length}`:''}) …`);
+        let ok=false;try{ok=await d.assocLN(pws[pi]);}catch(e){log('WARN',`DLMS-LN: Anmeldung Client ${cl}: ${e.message}`);}
+        if(!ok){errs.push(`Client ${cl}: Anmeldung ${d.aare?`abgelehnt (${d.aare.res}/${d.aare.diag}${d.aare.diag===13?' – Passwort falsch':d.aare.diag===14?' – höhere Sicherheitsstufe (HLS) nötig':''})`:'ohne Antwort'}`);d.aare=null;continue;}
+        log('INFO',`DLMS-LN: angemeldet (Client ${cl}${pws[pi]!=null?', LLS':', öffentlich'})`);
+        const r=await fn(d,cl);if(r?.got)return r;
+        errs.push(`Client ${cl}: keine Modemwerte lesbar`);break;}}
+    throw Object.assign(new Error(hdlcOk?`DLMS (LN): keine Modemwerte – ${[...new Set(errs)].join('; ')}`:'Zähler antwortet nicht im HDLC-Modus (Mode E) – bietet er DLMS an?'),{noHdlc:!hdlcOk});
+  }finally{await d.close();await IECP.endE();}}
+/* Lesen und Auswerten: erst die Standardobjekte, bei Fehlern über die Objektliste (Klasse 15) suchen */
+async function lnModemRead(d,cl,G,quick){
+  const rd=async(cls,ln,attr,what)=>{try{const r=await d.getLN(cls,ln,attr);
+      log('INFO',`DLMS-LN ${what?what+' ':''}${cls} ${lnStr(ln)} A${attr}: ${r.ok?(cls===15?`${Array.isArray(r.v)?r.v.length:'?'} Einträge`:lnJson(r.v)):'Fehler '+lnErr(r.err)}`);return r;}
+    catch(e){log('WARN',`DLMS-LN ${cls} ${lnStr(ln)} A${attr}: ${e.message}`);return{ok:false,err:e.message};}};
+  const GSM=[0,0,25,6,0,255];let src={cls:47,ln:GSM};
+  let r=await rd(47,GSM,6,'Zellinfo');
+  if(!r.ok&&quick){log('INFO','DLMS-LN: Standardobjekt nicht lesbar – im Kurztest keine Objektliste');return{got:false};}
+  if(!r.ok){
+    /* Standardobjekt nicht lesbar → Objektliste lesen und nach Modem-/Kommunikationsobjekten suchen */
+    status('DLMS: Objektliste wird gelesen …');prog('ind');d.onBlock=n=>status(`DLMS: Objektliste … Block ${n}`);
+    const ol=await rd(15,[0,0,40,0,0,255],2,'Objektliste');d.onBlock=null;
+    const list=ol.ok&&Array.isArray(ol.v)?ol.v.filter(e=>Array.isArray(e)&&e.length>=3&&e[2]?.os?.length===6).map(e=>({cls:e[0],ln:e[2].os})):[];
+    log('INFO',`DLMS-LN: Objektliste mit ${list.length} Objekten (Client ${cl})`);
+    if(list.length)log('INFO','DLMS-LN Objektliste (Klasse:OBIS): '+list.map(o=>`${o.cls}:${lnStr(o.ln)}`).join(' '));
+    const mod=list.filter(o=>o.cls===47||o.cls===45||o.cls===42||/^0-\d+:(25|131|94\.98|96\.12)\./.test(lnStr(o.ln))||/^1-[2-9]:0\.2\.[08]\./.test(lnStr(o.ln)));
+    log('INFO',`DLMS-LN: Modem-/Kommunikationsobjekte: ${mod.map(o=>`${o.cls}:${lnStr(o.ln)}`).join(', ')||'keine'}`);
+    const g47=mod.find(o=>o.cls===47);
+    if(g47){src={cls:47,ln:g47.ln};r=await rd(47,g47.ln,6,'Zellinfo');}
+    else{
+      /* keine GSM-Diagnose: einfache Register der Liste lesen (z. B. 131.3.0 Signalstärke laut COM200-Handbuch) und im Protokoll festhalten */
+      for(const o of mod.filter(o=>o.cls===1||o.cls===3||o.cls===4).slice(0,25)){const v=await rd(o.cls,o.ln,2);const o3=o.cls===3?await rd(3,o.ln,3,'Skalierung'):null;
+        if(v.ok&&typeof v.v==='number'&&/^0-\d+:(131\.3\.0|96\.12\.5)\./.test(lnStr(o.ln))){
+          const sc=o3?.ok&&Array.isArray(o3.v)?(+o3.v[0]||0):0,un=o3?.ok&&Array.isArray(o3.v)?o3.v[1]:null,x=v.v*10**sc;
+          if(x<0||un===70){G.dbm=x;G.cell=null;src={cls:o.cls,ln:o.ln,reg:true,sc};log('INFO',`DLMS-LN: Signalstärke aus ${lnStr(o.ln)}: ${x} dBm`);}}}
+    }}
+  if(r.ok&&Array.isArray(r.v))G.cell=r.v;
+  if(G.cell==null&&G.dbm==null){log('INFO','DLMS-LN: keine Signalstärke gefunden');return{got:false};}
+  /* übrige Werte (einmalig, Fehler sind egal); die Klasse-47-Attribute nur, wenn die Quelle wirklich die GSM-Diagnose ist */
+  if(!src.reg){
+    const op=await rd(47,src.ln,2,'Betreiber');if(op.ok)G.op=dlStr(op.v);
+    const st=await rd(47,src.ln,3,'Status');if(st.ok&&typeof st.v==='number')G.st=st.v;
+    const ps=await rd(47,src.ln,5,'PS-Status');if(ps.ok&&typeof ps.v==='number')G.ps=ps.v;
+    const ad=await rd(47,src.ln,7,'Nachbarzellen');if(ad.ok&&Array.isArray(ad.v))G.adj=ad.v;}
+  const im=await rd(1,[0,0,94,98,22,255],2,'IMEI');if(im.ok){const t=dlStr(im.v);if(/^\d{14,16}$/.test(t))G.imei=t;}
+  const ip=await rd(42,[0,0,25,1,0,255],3,'IP');if(ip.ok){const a=ip4(ip.v);if(a&&a!=='0.0.0.0')G.ip=a;}
+  const fw=await rd(1,[1,2,0,2,0,255],2,'Modul-FW');if(fw.ok)G.fw=dlStr(fw.v);
+  /* nur fürs Protokoll (so liest der Variomod Manager beim EMH-Modem): Modul-Typ, Modul-Info, SIM-Status */
+  if(!quick)for(const [o,w] of [[[0,0,131,15,0,255],'Modul-Typ'],[[0,0,131,10,0,255],'Modul-Info'],[[0,0,131,22,0,255],'SIM-Status']])await rd(1,o,2,w);
+  lnMdmApply(G);
+  return{got:true,src};}
+async function lnModem(count,preId){let known=false;
+  try{status('Zähler wird angesprochen …');prog('ind');
+    const id=preId||await IECP.handshake(isLGE(ST.ident)?undefined:2500);ST.ident=id;
+    if(isLGE(id)||/^\/(ABB|EMH)/.test(id))throw new Error(`Zähler ${id}: kein Weg über DLMS (LN) vorgesehen`);
+    known=true;let err=null;const G={};
+    const quick=!!count&&!/^\/MCS/.test(id);   /* Einbau-Empfangstest bei anderen Zählern: nur kurz probieren, damit „kein Modem“ schnell kommt */
+    try{
+      const res=await lnRun({hs:2500,quick},async(d,cl)=>{
+        const rr=await lnModemRead(d,cl,G,quick);if(!rr.got)return rr;
+        renderMdm();if(MDM.rsrp==null)return{got:false};
+        prog(null);let n=1;if(!count){mdmRun=true;$('#btnModem').textContent='■ Stopp';$('#btnModem').disabled=false;}
+        const again=async()=>{const r=await d.getLN(rr.src.cls,rr.src.ln,rr.src.reg?2:6);if(!r.ok)throw new Error('Signalwert nicht lesbar ('+lnErr(r.err)+')');
+          if(rr.src.reg)G.dbm=r.v*10**(rr.src.sc||0);else G.cell=r.v;lnMdmApply(G);renderMdm();};
+        try{while(count?n<count&&!stopReq:(mdmRun&&!stopReq)){await sleep(1500);await again();n++;
+            status(`${count?'Empfangstest':'Modem-Empfang'}: ${MDM.rsrp} dBm (CSQ ${MDM.csq??'–'}) · Messung ${n}${count?'/'+count:' – „Stopp“ zum Beenden'}`,'ok');}}
+        finally{mdmRun=false;$('#btnModem').textContent='📶 Modem-Empfang';}
+        return{got:true,msg:`Modem-Empfang (DLMS): ${MDM.rsrp} dBm (${rateSig(MDM.rsrp)[0]}), ${n} Messungen`};});
+      return res.msg;}
+    catch(e){if(stopReq)throw e;err=e;log('WARN','DLMS-LN: '+e.message);for(const k in MDM)delete MDM[k];renderMdm();}
+    /* Rückfall über die IEC-Schnittstelle: Datenlisten 2/3 und einzelne Register im Programmiermodus */
+    if(quick)throw new Error(`Modem-Empfang über den Zähler: ${err?.message||'kein Ergebnis'}`);
+    const hit=await iecModemProbe();if(hit)return hit;
+    throw new Error(`Modem-Empfang über den Zähler: ${err?.message||'kein Ergebnis'} · Datenlisten /2! /3! und Register 131.3.0 / 25.6.0 liefern keinen dBm-Wert${probeNote}. Es ist ein Versuchsweg – Protokoll (Mehr → Protokoll) bitte schicken.`);}
+  catch(e){if(known)e.final=true;throw e;}}
+/* IEC-Rückfall: Datenlisten 2 und 3 (/2! /3!) sowie ein paar Einzelregister (R5) – nur lesen. Übernommen wird nur ein negativer Wert mit Einheit dBm. */
+let probeNote='';
+async function iecModemProbe(){const seen=[];probeNote='';
+  const note=(src,vals)=>{for(const v of vals)seen.push({src,...v});};
+  for(const n of ['2','3']){if(stopReq)break;
+    try{status(`Zähler: Datenliste ${n} (/${n}!) …`);prog('ind');const r=await IECP.readout(null,null,n);const v=parseReadout(r.text);
+      log('INFO',`Datenliste ${n}: ${v.length} Werte${v.length?': '+v.slice(0,40).map(x=>x.obis).join(' ')+(v.length>40?' …':''):''}`);note('Liste '+n,v);await sleep(600);}
+    catch(e){log('WARN',`Datenliste ${n}: ${e.message}`);}}
+  if(!stopReq)try{status('Zähler: Programmiermodus …');prog('ind');await IECP.login($('#pw').value);
+    try{for(const c of ['131.3.0','0-0:131.3.0','25.6.0','0-0:25.6.0','94.98.22','96.12.5','1-2:0.2.0']){if(stopReq)break;
+        try{const a=await IECP.read(c+'()',3000);log('INFO',`R5 ${c} → ${a.trim().slice(0,100)||'leer'}`);if(!isErr(a))note('R5 '+c,parseReadout(a));}catch(e){log('WARN',`R5 ${c}: ${e.message}`);}}}
+    finally{await IECP.bye();}}
+  catch(e){log('WARN','Programmiermodus: '+e.message);}
+  const hit=seen.find(v=>/dBm/i.test(v.unit)&&parseFloat(v.value)<0);
+  if(!hit){
+    /* Signalwert ohne Einheit: nicht raten, aber im Protokoll und in der Fehlermeldung zeigen, damit die Einheit geklärt werden kann */
+    const raw=seen.filter(v=>/^(\d+-\d+:)?(131\.3\.0|96\.12\.5)/.test(v.obis)&&v.value!=='').map(v=>`${v.obis}=${v.value}${v.unit?' '+v.unit:''}`);
+    if(raw.length){log('INFO','Signalwert ohne dBm-Angabe: '+raw.join(', '));probeNote=` · Signalwert vom Zähler: ${[...new Set(raw)].join(', ')} (Einheit unklar)`;}
+    return null;}
+  Object.assign(MDM,{sigT:'RSSI',rsrp:Math.round(parseFloat(hit.value)),t:new Date()});(MDM.hist=MDM.hist||[]).push([Date.now(),MDM.rsrp,null]);renderMdm();
+  return `Modem-Empfang (${hit.src}, ${hit.obis}): ${MDM.rsrp} dBm (${rateSig(MDM.rsrp)[0]})`;}
 /* ---------- Modem-Empfang (EMH-Modem, Protokoll aus Mitschnitt) ----------
    Anfrage: 52 03 <a> <b> <c> CRC16-XMODEM (high, low); Antwort: 06 <Länge> <a b c> <Daten> CRC.
    17 00 01 = Funkwerte, 07 00 01 = IMEI/IP/ICCID, 07 00 02 = Firmware/Seriennummer. */
@@ -1678,10 +1878,11 @@ function renderMdm(){const m=MDM;if(m.rsrp==null&&!m.imei){$('#mdmCard').hidden=
   const rows=mdmRows().filter(r=>PNG_KEEP.test(r[0]));
   $('#mdmTable').innerHTML=rows.map(r=>`<tr><td class="mut">${r[0]}</td><td class="mono">${esc(String(r[1]))}</td></tr>`).join('');
   $('#mdmTime').textContent=m.t?m.t.toLocaleTimeString('de-DE'):'';}
-function mdmRows(){const m=MDM;const pl=m.plmn?String(m.plmn):'';const st=mdmStats();const rows=[['Netz',m.act!=null?(ACT[m.act]||'Typ '+m.act)+(m.band?` · Band ${m.band}`:''):''],['Status',m.reg!=null?(REG[m.reg]||m.reg):''],
-    ['Provider',pl?`${pl} ${MNO[pl]||''}`:''],['Localisation ID (TAC)',m.tac||''],['Cell ID',m.cell||''],['IMEI',m.imei],['ICCID',m.iccid],['IP',m.ip],['Firmware',m.fw],['Modul-Nr.',m.msn],['Zähler-ID',m.dev||'']];
+function mdmRows(){const m=MDM;const pl=m.plmn?String(m.plmn):'';const st=mdmStats();const rows=[['Netz',m.actTxt||(m.act!=null?(ACT[m.act]||'Typ '+m.act)+(m.band?` · Band ${m.band}`:''):'')],['Status',m.reg!=null?(REG[m.reg]||m.reg):''],
+    ['Provider',pl?`${pl} ${MNO[pl]||''}`:''],['Betreiber',m.opName||''],['Localisation ID (TAC)',m.tac||''],['Cell ID',m.cell||''],['IMEI',m.imei],['ICCID',m.iccid],['IP',m.ip],['Firmware',m.fw],['Modul-Nr.',m.msn],['Zähler-ID',m.dev||'']];
   if(m.csq!=null)rows.splice(2,0,['CSQ (0–31)',`${m.csq}${m.csq>31?' (unbekannt)':''}`]);
   if(m.scan?.length)rows.splice(3,0,['Netzscan',[...new Set(m.scan.map(x=>x.plmn))].map(pl=>`${pl}${MNO[pl]?' '+MNO[pl]:''}: ${m.scan.filter(x=>x.plmn===pl).map(x=>-113+2*x.csq).join(' / ')} dBm`).join(' · ')]);
+  if(m.adj?.length)rows.splice(3,0,['Nachbarzellen',m.adj.map(x=>`${x.cell}: ${-113+2*x.csq} dBm`).join(' / ')]);
   if(st&&st.n>1)rows.splice(2,0,[`${sigL()} min / Ø / max`,`${st.min} / ${st.avg} / ${st.max} dBm (${st.n} Messungen)`]);
   return rows.filter(r=>r[1]!==''&&r[1]!=null);}
 function mdmStats(){const h=(MDM.hist||[]).map(x=>x[1]).filter(isFinite);if(!h.length)return null;return{n:h.length,min:Math.min(...h),max:Math.max(...h),avg:Math.round(h.reduce((a,b)=>a+b,0)/h.length)};}
@@ -1757,14 +1958,19 @@ async function opModem(count){showTab('werte');for(const k in MDM)delete MDM[k];
   /* Kaltstart (Zählertyp noch unbekannt): erst EINMAL ganz normal nach der Kennung fragen – wie Zeiger/Uhrzeit. Früher probierte der EMH-Weg zuerst
      und beendete den L+G-Zähler mit B0; der brauchte danach Sekunden und der L+G-Weg fand ihn nicht mehr („Kein Modem gefunden“ – ging erst nach „Zeiger“). */
   let preId=null;
-  if(!ST.ident&&IECP){try{status('Zähler wird erkannt …');prog('ind');LINK.strip=true;LINK.clear();
+  /* Elster/ABB A1500 hat kein eigenes Modem: nicht erst EMH-/L+G-Wege durchprobieren (Zähler bleibt danach sekundenlang taub) – gleich sagen */
+  const noMdm=id=>{if(/^\/ABB/.test(id||'')){const e=new Error('Elster/ABB A1500 hat kein internes Modem – Empfang nur bei Zählern mit Modem (L+G, EMH mit Variomod).');e.final=true;return e;}};
+  if((!ST.ident||/^\/ABB/.test(ST.ident))&&IECP){try{status('Zähler wird erkannt …');prog('ind');LINK.strip=true;LINK.clear();
       const id=await IECP.handshake();ST.ident=id;
-      if(isLGE(id))preId=id;else{try{await IECP.bye();}catch{}await sleep(700);}}
-    catch(e){log('INFO','Modem: keine Kennung vom Zähler ('+e.message+') – probiere Modem direkt');}}
-  const order=isLGE(ST.ident)||S.mdmKind==='lg'?[lgModem,extModem]:[extModem,lgModem];
-  try{for(const f of order){try{const r=await f(count,f===lgModem&&isLGE(ST.ident)?preId:null);preId=null;const k=f===lgModem?'lg':'ext';if(S.mdmKind!==k){S.mdmKind=k;saveS();}return r;}
+      if(isLGE(id))preId=id;else{try{await IECP.bye();}catch{}await sleep(700);}
+      const ne=noMdm(id);if(ne)throw ne;}
+    catch(e){if(e.final)throw e;log('INFO','Modem: keine Kennung vom Zähler ('+e.message+') – probiere Modem direkt');}}
+  /* bekannte Zähler (Kennung beginnt mit /XXX) ohne EMH/L+G: DLMS (LN) zuerst – ein eigenständiges Modem meldet keine Zählerkennung */
+  const dlmsMeter=ST.ident&&ST.ident!=='SML'&&/^\/[A-Za-z]{3}/.test(ST.ident)&&!/^\/(EMH|LGZ)/.test(ST.ident);
+  const order=isLGE(ST.ident)?[lgModem,extModem]:dlmsMeter?(/^\/MCS/.test(ST.ident)?[lnModem]:[lnModem,extModem]):S.mdmKind==='lg'?[lgModem,extModem]:[extModem,lgModem];
+  try{for(const f of order){try{const r=await f(count,f===lgModem&&isLGE(ST.ident)||f===lnModem?preId:null);preId=null;const k=f===lgModem?'lg':f===lnModem?'ln':'ext';if(S.mdmKind!==k){S.mdmKind=k;saveS();}return r;}
       catch(e){preId=null;if(e.final||stopReq)throw e;log('WARN',e.message);for(const k in MDM)delete MDM[k];renderMdm();}}
-    throw new Error(`Kein Modem gefunden. Den Empfang über den Zähler gibt es bisher bei EMH (XC mit Variomod-Modem) und L+G${ST.ident?` (hier: ${ST.ident.slice(0,18)})`:''}; ein eigenständiges Modem antwortet nur, wenn der Kopf direkt am Modem sitzt. Metcom folgt. Protokoll (Mehr → Protokoll) bitte schicken.`);}
+    throw new Error(`Kein Modem gefunden. Den Empfang über den Zähler gibt es bisher bei EMH (XC mit Variomod-Modem), L+G und – als Versuchsweg über DLMS – bei Metcom und anderen DLMS-Zählern${ST.ident?` (hier: ${ST.ident.slice(0,18)})`:''}; ein eigenständiges Modem antwortet nur, wenn der Kopf direkt am Modem sitzt. Protokoll (Mehr → Protokoll) bitte schicken.`);}
   finally{stopReq=false;}}
 /* EMH-XC-Zähler mit Variomod-Modem (Mitschnitt Variomod Manager, COM8): das Modem hängt am Zähler und antwortet erst im „Konfigurationsmodus“:
    300 Bd 7E1: Weckfolge 01 02 04 08 10 20 40, „/?!“ → Kennung „/EMH5\@01LZQJ…“ · ACK 0 5 9 (Modus 9) → 9600 Bd 8N1: „EMH“ → „EMH configuration mode …“
@@ -2036,12 +2242,13 @@ async function ioRun(kind,geoP){const aus=kind==='aus';
   try{r=await OPS.auto();}finally{FORCE=null;}
   if(!ST.rawReadout||ST.ident==='SML')throw new Error('Keine IEC-Auslesung – Dateien nur für Zähler mit Datenauslesung (nicht SML).');
   const names=aus?ausFiles():einFiles();let warn=r&&r.startsWith('⚠')?r+' · ':'',extra='';const ctx={clk:aus||S.einClk!==false,conn:!aus&&S.einConn!==false};
-  if(!aus){let mOk=false;if(S.einMdm!==false){await sleep(LINK.t instanceof DemoT?0:500);
+  const abbM=/^\/ABB/.test(ST.ident||IECP?.ident||'');   /* Elster/ABB: kein Modem im Zähler → kein Empfangstest */
+  if(!aus){let mOk=false;if(S.einMdm!==false&&!abbM){await sleep(LINK.t instanceof DemoT?0:500);
       try{await opModem(5);mOk=true;extra=` · Empfang ${MDM.rsrp} dBm (${rateSig(MDM.rsrp)[0]})`;}
       catch(e){log('WARN','Empfangstest: '+e.message);warn='⚠ '+warn+'Empfangstest: Modem antwortet nicht · ';for(const k in MDM)delete MDM[k];}}
     let geo=null;if(geoP){status('Standort wird ermittelt …');geo=await geoP;if(!geo)warn=(warn.startsWith('⚠')?warn:'⚠ '+warn)+'kein Standort (GPS erlaubt?) · ';else extra+=` · Standort ± ${geo.acc} m`;}
     if(mOk||geo){status('Bild wird erstellt …');names.push([`einbau_${(meterNo()||'zaehler').replace(/[^\w-]/g,'')}_${stamp()}.png`,await mdmPng(geo)]);}
-    ctx.mdmTried=S.einMdm!==false;ctx.mdmOk=mOk;ctx.geoTried=!!geoP;ctx.geo=geo;}
+    ctx.mdmTried=S.einMdm!==false&&!abbM;ctx.mdmOk=mOk;ctx.geoTried=!!geoP;ctx.geo=geo;}
   /* Checkliste, Dateiprüfung und Protokoll – die bisherigen Dateien bleiben unverändert */
   const items=buildChk(kind,ctx);let files=names.map(([n,b])=>({n,...checkFile(n,b)}));
   if(S.proto!==false){status('Protokoll wird erstellt …');try{const pn=`${aus?'ausbau':'einbau'}_protokoll_${(meterNo()||'zaehler').replace(/[^\w-]/g,'')}_${stamp()}.png`,pb=await protoPng(kind,items,files,ctx.geo);
