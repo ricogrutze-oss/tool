@@ -358,7 +358,7 @@ body.phFull .phBar{position:sticky;top:0;z-index:6;background:var(--bg);padding:
 <!-- UHRZEIT -->
   <div class="card">
     <h2>Uhrzeit</h2>
-    <div class="mut">Liest Datum/Uhrzeit und stellt sie auf die Handyzeit. Landis+Gyr über C003 (wie Q4), EMH und andere über 0.9.2/0.9.1 (wie EMH-Software). Passwort unter ⚙.</div>
+    <div class="mut">Liest Datum/Uhrzeit und stellt sie auf die Handyzeit. Landis+Gyr und Metcom über C003 (wie Q4 bzw. Metcom-Software), EMH und andere über 0.9.2/0.9.1 (wie EMH-Software). Passwort unter ⚙.</div>
     <div class="kpi" id="clkBox"></div>
     <div class="row"><button id="btnClkRead" class="op2">Zeit prüfen</button><button id="btnClkSet" class="op2 pri">Zeit stellen …</button></div>
   </div>
@@ -631,8 +631,11 @@ class DemoT{
     if(b[0]===SOH){const e=b.indexOf(ETX);if(e<0||b.length<e+2)return;const m=b.splice(0,e+2);const st=m.indexOf(STX);
       const cmd=dec(m.slice(1,st<0?e:st)),data=st<0?'':dec(m.slice(st+1,e));
       if(cmd==='P1'){if(data==='(00000000)'){const bd=[...enc('B0'),ETX];this.emit([SOH,...bd,bcc(bd)]);}else this.emit([data.length>2?ACK:NAK]);}
+      else if(cmd==='R2'&&data.startsWith('C003')&&window.__MCS_STRICT)this.emit(this.blk('ERROR'),100);
       else if(cmd==='R2'&&data.startsWith('C003'))this.emit(this.blk(`C003(${lgTime(new Date(Date.now()+(this.clkOff??17000)))})`),100);
-      else if(cmd==='W2'&&data.startsWith('C003')){const t=parseLg(data.slice(5));this.clkOff=t?t-Date.now():0;this.emit([ACK]);}
+      else if(cmd==='W2'&&data.startsWith('C003')){if(window.__MCS_STRICT&&!/^C003\(\d{12}00[1-7][01]\)$/.test(data)){this.emit([NAK]);return this.process();}
+        const t=parseLg(data.slice(5));this.clkOff=t?t-Date.now():0;this.emit([ACK]);}
+      else if((cmd==='W5'||cmd==='W1')&&/^0\.9\.[12]/.test(data)&&window.__MCS_STRICT){const bd=[...enc('ERROR02'),ETX];this.emit([STX,...bd,bcc(bd)]);}
       else if(cmd[0]==='R'&&/^0\.9\.[12]/.test(data)){const d=new Date(Date.now()+(this.clkOff??-23000));this.emit(this.blk(data[4]==='1'?`0.9.1(${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())})`:`0.9.2(${pad(d.getFullYear()%100)}${pad(d.getMonth()+1)}${pad(d.getDate())})`),100);}
       else if(cmd==='E2'&&data.startsWith('F101')){this.e2=true;this.emit([ACK]);}
       else if(cmd==='W5'&&/^0\.9\.[12]/.test(data)){if(window.__EMH_STRICT&&!(this.e2&&/^0\.9\.[12]\(\d{6}\)\(\w+\)$/.test(data))){this.emit([NAK]);return this.process();}
@@ -1368,7 +1371,11 @@ async function readClock(){return clkShow(await meterTime());}
 function clkShow(mt){const now=new Date();
   const df=Math.round((mt-now)/1000)||0;$('#clkBox').innerHTML=`<div><span class="mut">Zähler</span><b>${mt.toLocaleString('de-DE')}</b></div><div><span class="mut">Handy</span><b>${now.toLocaleString('de-DE')}</b></div><div><span class="mut">Abweichung</span><b class="${Math.abs(df)>CLK_TOL?'warn':'ok'}">${df>=0?'+':''}${fmtN(df,0)} s</b></div>`;return df;}
 async function writeClock(){const n=new Date();
-  if(isLG()){const v=lgTime(n);const r=await IECP.cmdRW('W2',`C003(${v})`);
+  /* Metcom (Mitschnitt der Metcom-Software, 19.11.): Login P1, Lesen R5 0.9.2/0.9.1, Stellen mit EINEM Befehl W2 C003(JJMMTThhmmss+Hundertstel 00+Wochentag+Sommerzeit),
+     also dasselbe wie bei L+G – W5/W1 auf 0.9.x lehnt der Metcom mit ERROR02 ab. Hundertstel 00 → auf die volle Sekunde warten. */
+  const mc=/^\/MCS/.test(IECP.ident);
+  if(isLG()||mc){let t=n;if(mc){await sleep(1000-new Date().getMilliseconds());t=new Date();t.setMilliseconds(0);}
+    const v=lgTime(t);const r=await IECP.cmdRW('W2',`C003(${v})`);
     log('INFO',`W2 C003 → ${r.type}${r.head?' '+r.head:''}${r.body?' '+r.body:''}`);
     if(r.type!=='ACK')throw new Error('Zähler hat das Stellen abgelehnt ('+(r.type==='NAK'?'NAK':(r.head||r.body||r.type))+')');log('INFO','Zeit gestellt: '+v);return;}
   const d=`${pad(n.getFullYear()%100)}${pad(n.getMonth()+1)}${pad(n.getDate())}`;
@@ -1412,7 +1419,7 @@ async function clockOp(write){
   try{status('Zähler wird angesprochen …');const id=await IECP.handshake();
     status('Programmiermodus …');await IECP.login($('#pw').value,true);
     try{const df=await readClock();
-      if(write){const who=isLG()?'':/^\/EMH/.test(IECP.ident)?'':`\n\nHinweis: Für ${IECP.ident.slice(1,4)} ist das Stellen noch nicht erprobt (Datum 0.9.2 / Zeit 0.9.1).`;
+      if(write){const who=isLG()||/^\/(EMH|MCS)/.test(IECP.ident)?'':`\n\nHinweis: Für ${IECP.ident.slice(1,4)} ist das Stellen noch nicht erprobt (Datum 0.9.2 / Zeit 0.9.1).`;
         if(!confirm(`Zählerzeit weicht ${fmtN(df,0)} s ab.\nJetzt auf Handyzeit ${new Date().toLocaleTimeString('de-DE')} stellen?${who}`)){status('Zeitstellen abgebrochen.');return;}
         await writeClockAny();const d2=await readClock();status(`Uhrzeit gestellt – Abweichung jetzt ${fmtN(d2,0)} s.`,Math.abs(d2)>5?'warn':'ok');}
       else status(`Zählerzeit gelesen – Abweichung ${fmtN(df,0)} s.`,Math.abs(df)>CLK_TOL?'warn':'ok');}
