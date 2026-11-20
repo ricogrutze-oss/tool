@@ -198,11 +198,13 @@ img.thumb{cursor:pointer} #photoSheet .btn{display:flex;align-items:center;justi
 .thumb.empty[src]{border:2px solid var(--accent) !important}
 .rc{background:var(--field);border-radius:14px;padding:10px;margin-bottom:10px}.rc input{margin-bottom:6px}.tg{display:flex;flex-wrap:wrap;gap:6px}.tg span{padding:6px 12px;border-radius:999px;border:1.5px solid var(--accent);font-size:13px;cursor:pointer;user-select:none}.tg span.on{background:var(--accent);color:var(--on-accent)}
 .yn{display:flex;gap:8px}.yn span{flex:1;text-align:center;padding:9px 0;border-radius:10px;border:1.5px solid var(--accent);font-weight:600;cursor:pointer;user-select:none}.yn span.on[data-v=ja]{background:var(--accent);color:var(--on-accent)}.yn span.on[data-v=nein]{background:#c0392b;border-color:#c0392b;color:#fff}
-.fm{display:flex;gap:8px}.fm span{flex:1;text-align:center;padding:9px 6px;border-radius:10px;border:1.5px solid var(--accent);font-weight:600;cursor:pointer;user-select:none}.fm span.on{background:var(--accent);color:var(--on-accent)}</style>
+.fm{display:flex;gap:8px}.fm span{flex:1;text-align:center;padding:9px 6px;border-radius:10px;border:1.5px solid var(--accent);font-weight:600;cursor:pointer;user-select:none}.fm span.on{background:var(--accent);color:var(--on-accent)}.device-block.serhide>*:not(h4):not(.buerde-only){display:none !important}
+</style>
 </head>
 <body>
 
 <header>
+  <button class="hdr-btn no-print" id="btnVorl" style="right:110px" aria-label="Vorlagen"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 13h7M9 17h5"/></svg></button>
   <button class="hdr-btn no-print" id="btnSet" style="right:62px" aria-label="E-Mail-Empfänger"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></button>
   <button class="hdr-btn no-print" id="btnHist" aria-label="Verlauf: frühere Protokolle"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg></button>
   <h1>Vor-/Inbetriebnahme</h1>
@@ -285,6 +287,10 @@ img.thumb{cursor:pointer} #photoSheet .btn{display:flex;align-items:center;justi
         <label style="margin-top:14px;">Messart</label>
         <div class="choice-group" id="choiceMessart"></div>
       </div>
+    </div>
+    <div class="card" id="vorVorhandenCard" hidden>
+      <label style="display:flex; gap:10px; align-items:center; margin:0;"><input type="checkbox" id="vorVorhanden" style="width:auto; margin:0;"> <b>Vorinbetriebnahme vorhanden</b></label>
+      <div class="hint" id="vorVorhandenHint" style="margin-bottom:0;"></div>
     </div>
     <div class="card">
       <h2>Art des Termins</h2>
@@ -385,13 +391,17 @@ img.thumb{cursor:pointer} #photoSheet .btn{display:flex;align-items:center;justi
   <div class="panel" id="panel-zaehler">
     <div class="card">
       <h2>Zähler</h2>
-      <label>Zählernummer</label>
+      <div id="zNrBox">
+      <label>Foto Zähler (Typenschild, Barcode wird gelesen)</label>
+      <div id="zaehlerPhotos"></div>
+      <label style="margin-top:10px;">Zählernummer (aus Foto · Scan · Handeingabe)</label>
       <div style="display:flex; gap:6px;">
         <input type="text" id="z_nummer" style="flex:1;">
         <button class="btn btn-sm" onclick="startBarcodeScan('z_nummer','status-zaehler-serial')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M7 8v8M10 8v8M13 8v8M17 8v8"/></svg>Scan</button>
       </div>
       <div class="status-line" id="status-zaehler-serial"></div>
       <div class="hint" id="z_hersteller"></div>
+      </div>
 
       <h3>Auslesen mit Tastkopf</h3>
       <div class="hint" id="z_readHint" style="margin:0 0 8px;"></div>
@@ -416,15 +426,11 @@ img.thumb{cursor:pointer} #photoSheet .btn{display:flex;align-items:center;justi
       </details>
     </div>
 
-    <div class="card">
+    <div class="card" id="standCard">
       <h2>Einbaustände</h2>
       <div class="row">
-        <div><label>Wirkenergie Bezug A+ (kWh)</label><input type="text" id="zs_ap" inputmode="decimal"></div>
-        <div><label>Wirkenergie Lieferung A− (kWh)</label><input type="text" id="zs_am" inputmode="decimal"></div>
-      </div>
-      <div class="row" id="zsBlindRow">
-        <div><label>Blindenergie R+ (kvarh)</label><input type="text" id="zs_rp" inputmode="decimal"></div>
-        <div><label>Blindenergie R− (kvarh)</label><input type="text" id="zs_rm" inputmode="decimal"></div>
+        <div><label>Bezug 1.8.0 (kWh)</label><input type="text" id="zs_ap" inputmode="decimal"></div>
+        <div><label>Einspeisung 2.8.0 (kWh)</label><input type="text" id="zs_am" inputmode="decimal"></div>
       </div>
       <div class="status-line" id="zs_info"></div>
     </div>
@@ -437,17 +443,15 @@ img.thumb{cursor:pointer} #photoSheet .btn{display:flex;align-items:center;justi
       <div id="zeigerFind" style="margin-top:6px;"></div>
     </div>
 
-    <div class="card">
-      <h2>Fotos Zähler</h2>
-      <div id="zaehlerPhotos"></div>
-    </div>
   </div>
 
   <!-- MODEM -->
   <div class="panel" id="panel-modem">
     <div class="card">
       <h2>Modem / Kommunikation</h2>
-      <label>Seriennummer</label>
+      <label>Foto Modem (Barcode wird gelesen)</label>
+      <div id="modemPhotos"></div>
+      <label style="margin-top:10px;">Seriennummer (aus Foto · Scan · Handeingabe)</label>
       <div style="display:flex; gap:6px;">
         <input type="text" id="modem_sim" style="flex:1;">
         <button class="btn btn-sm" onclick="startBarcodeScan('modem_sim','status-modem-serial')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M7 8v8M10 8v8M13 8v8M17 8v8"/></svg>Scan</button>
@@ -461,8 +465,6 @@ img.thumb{cursor:pointer} #photoSheet .btn{display:flex;align-items:center;justi
       </select>
       <label>Notizen</label>
       <textarea id="modem_notizen"></textarea>
-      <label style="margin-top:10px;">Foto Modem</label>
-      <div id="modemPhotos"></div>
     </div>
   </div>
 
@@ -508,14 +510,14 @@ img.thumb{cursor:pointer} #photoSheet .btn{display:flex;align-items:center;justi
         <input type="text" inputmode="decimal" id="fae_last">
         <div class="hint">Bei Überschusseinspeisung misst der Zähler nur die Differenz aus PV-Erzeugung und Verbrauch. Die PV-Leistung ergibt sich aus Zählerwert + Hausverbrauch; bei der 0-%-Stufe darf nichts mehr eingespeist werden. Voraussetzung: Der Verbrauch bleibt während der Prüfung ungefähr gleich.</div>
       </div>
-      <label>FAE Seriennummer</label>
+      <label>Foto FAE (Barcode wird gelesen)</label>
+      <div id="faePhoto"></div>
+      <label style="margin-top:10px;">FAE Seriennummer (aus Foto · Scan · Handeingabe)</label>
       <div style="display:flex; gap:6px;">
         <input type="text" id="fae_nr" style="flex:1;">
         <button class="btn btn-sm" type="button" onclick="startBarcodeScan('fae_nr','status-fae-serial')">Scan</button>
       </div>
       <div class="status-line" id="status-fae-serial"></div>
-      <label style="margin-top:10px;">Foto FAE (Barcode wird gelesen)</label>
-      <div id="faePhoto"></div>
       <label>Zählerkonstante (Impulse je kWh, für die Impulsmessung)</label>
       <input type="text" inputmode="decimal" id="fae_konst">
       <label>Zulässige Abweichung (± % der Einspeiseleistung)</label>
@@ -539,6 +541,26 @@ img.thumb{cursor:pointer} #photoSheet .btn{display:flex;align-items:center;justi
       <datalist id="naTypList"></datalist>
       <label>Ergebnis</label>
       <div class="fm" id="naStatus" style="flex-direction:column"><span data-s="ok">NA-Schutz funktioniert</span><span data-s="defekt">NA-Schutz funktioniert nicht</span><span data-s="fehlt">NA-Schutz nicht verbaut</span></div>
+    </div>
+  </div>
+
+  <!-- ANLAUFPRÜFUNG -->
+  <div class="panel" id="panel-anlauf">
+    <div class="card">
+      <h2>Anlaufprüfung mit Prüfzähler</h2>
+      <div class="hint" style="margin-top:0;" id="anlHint"></div>
+      <label>Foto Display Prüfzähler (PWS)</label>
+      <div style="max-width:160px;">
+        <img class="thumb empty" id="thumb-anl" style="width:100%; height:120px;">
+        <input type="file" accept="image/*" capture="environment" style="display:none" id="file-anl-cam">
+        <input type="file" accept="image/*" style="display:none" id="file-anl-gal">
+      </div>
+      <div class="status-line" id="status-anl"></div>
+      <label>Fehler E1 in % (große Zahl im Display)</label>
+      <input type="text" inputmode="decimal" id="anl_fehler" placeholder="z. B. -0,12">
+      <label>Wirkleistung PΣ in kW (optional)</label>
+      <input type="text" inputmode="decimal" id="anl_pws">
+      <div class="status-line" id="anl_res" style="font-weight:600;"></div>
     </div>
   </div>
 
@@ -616,6 +638,9 @@ img.thumb{cursor:pointer} #photoSheet .btn{display:flex;align-items:center;justi
     <div class="modal-actions"><button class="btn btn-block" id="recipAdd">+ Adresse hinzufügen</button><button class="btn btn-primary btn-block" id="recipClose">Fertig</button></div>
   </div>
 </div>
+<div class="modal" id="vorlModal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true"><div id="vorlBody"></div></div>
+</div>
 <div class="modal" id="histModal" hidden>
   <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="histTitle">
     <h2 id="histTitle">Verlauf</h2>
@@ -675,10 +700,10 @@ function ensureDefaults(){
 
 /* ---------------- VORGANG / SICHTBARKEIT ---------------- */
 function isMSorHS(){ return state.ebene==='MS' || state.ebene==='HS'; }
-function kombiNach(){ return state.vorgang==='ibn' && !!(state.nachpruefung && state.nachpruefung.kombi && state.nachpruefung.items.length); }
+function kombiNach(){ return state.vorgang==='nach' || state.vorgang==='ibn' && !!(state.nachpruefung && state.nachpruefung.kombi && state.nachpruefung.items.length); }
 function showNach(){ return state.vorgang==='nach' || kombiNach(); }
-function isPruefung(){ return !!state.vorgang && state.vorgang!=='nach'; }   // alles außer reine Nachprüfung
-function isLive(){ return state.vorgang==='ibn' || state.vorgang==='bestand'; } // Anlage steht unter Spannung
+function isPruefung(){ return !!state.vorgang; }   // alle Termine; was abgefragt wird, steuert die Feldauswahl (js_felder.js)
+function isLive(){ return state.vorgang==='ibn' || state.vorgang==='bestand' || state.vorgang==='nach'; } // Anlage steht unter Spannung
 function hasWandlerAny(){ return isPruefung() && (isMSorHS() || (state.ebene==='NS' && state.messart==='halbindirekt')); }
 function hasCtPanel(){ return isPruefung() && ((isMSorHS() && state.messart==='wandler') || (state.ebene==='NS' && state.messart==='halbindirekt')); }
 function hasVtPanel(){ return isPruefung() && isMSorHS() && state.messart==='wandler'; }
@@ -888,7 +913,7 @@ function scopeOk(s){ return (s||'all').split('+').every(k=> SCOPE[k] ? SCOPE[k](
 function visibleItems(){
   const out = [];
   if(!isPruefung()) return out;
-  CHECKLIST.forEach(cat=> cat.items.forEach(([id,label,hint,scope])=>{ if(scopeOk(scope)) out.push({cat:cat.cat,id,label,hint}); }));
+  CHECKLIST.forEach(cat=> cat.items.forEach(([id,label,hint,scope])=>{ if(scopeOk(scope) && F(itemFeld(id))) out.push({cat:cat.cat,id,label,hint}); }));
   return out;
 }
 // Die Bewertungsmatrix gilt nur für Niederspannungsanlagen; bei MS/HS gibt es keine Zuordnung (konservative Standardeinstufung)
@@ -911,10 +936,10 @@ function chkAnswered(id){ const c=state.checklist[id]; return !!(c && (c.checked
 function setChk(id,v){ const c=state.checklist[id]; c.checked=(v==='ja'); c.nein=(v==='nein'); }
 function paintYn(id){ const y=document.getElementById('yn-'+id); if(!y) return; const c=state.checklist[id]||{}; y.querySelectorAll('span').forEach(sp=>sp.classList.toggle('on', (sp.dataset.v==='ja'&&!!c.checked)||(sp.dataset.v==='nein'&&!!c.nein&&!c.checked))); }
 function itemsDone(host){ return visibleItems().filter(i=>hostOf(i.id)===host).every(i=>chkAnswered(i.id)); }
-function absicherungVisible(){ return hasWandlerAny(); }
+function absicherungVisible(){ return hasWandlerAny() && F('spsich'); }
 
 // NS (bis 1 kV): keine Bürdemessung der Wandler (Wunsch Rico, 03.11.2026)
-function hasBuerde(){ return state.ebene!=='NS'; }
+function hasBuerde(){ return state.ebene!=='NS' && F('buerde'); }
 // Frist zur Beseitigung der Mängel: pauschal 4 Wochen (28 Tage) ab Prüfdatum
 function fristIso(){
   const base = (document.getElementById('pruefdatum')||{}).value || (state.standort&&state.standort.datum) || '';
@@ -931,6 +956,54 @@ function leistungKw(){
 }
 // Volle Auslesung (Blindenergie, Messwerte, Zeigerdiagramm) erst über 100 kW; darunter nur A+ (1.8.0) und A− (2.8.0)
 function hasFullReadout(){ const p = leistungKw(); return p==null ? true : p>100; }
+
+/* ---------------- FELDAUSWAHL je Spannungsebene und Termin (Auswahl von Rico, 20.11.2026) ---------------- */
+// Spalten: Vor = Vorinbetriebnahme · IbnV = Inbetriebnahme, Vorinbetriebnahme vorhanden · Ibn = Inbetriebnahme (beides zusammen) · Best = Bestandsanlage · Nach = Nachprüfung
+const FELD_MATRIX = {"NS":{"Ibn":{"ct_sn":1,"ct_data":1,"c_wandler":1,"c_verdr":1,"c_pk":1,"c_bed":1,"c_plomb":1,"c_ui":1,"c_kunde":1,"spsich":1,"zn":1,"stand":1,"mw":1,"modem":1,"fae":1,"na":1,"anlauf":1},"Best":{"c_verdr":1,"c_pk":1,"c_plomb":1,"c_ui":1,"c_kunde":1,"spsich":1,"zn":1,"stand":1,"mw":1,"modem":1,"fae":1,"na":1,"anlauf":1,"ct_sn":0,"ct_data":0,"c_wandler":0,"c_bed":0},"Nach":{"c_plomb":1,"c_ui":1,"c_kunde":1,"spsich":1,"zn":1,"stand":1,"mw":1,"fae":1,"na":1,"anlauf":1,"ct_sn":0,"ct_data":0,"c_wandler":0,"c_verdr":0,"c_pk":0,"c_bed":0,"modem":0}},"MS":{"Vor":{"ct_sn":1,"ct_data":1,"vt":1,"kombi":1,"buerde":1,"riso":1,"c_wandler":1,"c_erdung":1,"c_verdr":1,"c_pk":1,"c_bed":1,"c_plomb":1,"c_sicher":1,"spsich":1,"zn":1,"c_ui":0,"stand":0,"mw":0,"modem":0,"anlauf":0},"IbnV":{"c_pk":1,"c_bed":1,"c_plomb":1,"c_ui":1,"spsich":1,"zn":1,"stand":1,"mw":1,"modem":1,"anlauf":1,"ct_sn":0,"ct_data":0,"vt":0,"kombi":0,"buerde":0,"riso":0,"c_wandler":0,"c_erdung":0,"c_verdr":0,"c_sicher":0},"Ibn":{"ct_sn":1,"ct_data":1,"vt":1,"kombi":1,"buerde":1,"riso":1,"c_wandler":1,"c_erdung":1,"c_verdr":1,"c_pk":1,"c_bed":1,"c_plomb":1,"c_sicher":1,"c_ui":1,"spsich":1,"zn":1,"stand":1,"mw":1,"modem":1,"anlauf":1},"Best":{"c_verdr":1,"c_pk":1,"c_bed":1,"c_plomb":1,"c_ui":1,"spsich":1,"zn":1,"stand":1,"mw":1,"modem":1,"anlauf":1,"ct_sn":0,"ct_data":0,"vt":0,"kombi":0,"buerde":0,"riso":0,"c_wandler":0,"c_erdung":0,"c_sicher":0},"Nach":{"c_pk":1,"c_bed":1,"c_plomb":1,"c_ui":1,"spsich":1,"zn":1,"stand":1,"mw":1,"anlauf":1,"ct_sn":0,"ct_data":0,"vt":0,"kombi":0,"buerde":0,"riso":0,"c_wandler":0,"c_erdung":0,"c_verdr":0,"c_sicher":0,"modem":0}},"HS":{"Vor":{"ct_sn":1,"ct_data":1,"vt":1,"kombi":1,"buerde":1,"riso":1,"c_wandler":1,"c_erdung":1,"c_verdr":1,"c_pk":1,"c_bed":1,"c_plomb":1,"c_sicher":1,"spsich":1,"zn":1,"c_ui":0,"stand":0,"mw":0,"modem":0,"anlauf":0},"IbnV":{"c_pk":1,"c_bed":1,"c_plomb":1,"c_ui":1,"spsich":1,"zn":1,"stand":1,"mw":1,"modem":1,"anlauf":1,"ct_sn":0,"ct_data":0,"vt":0,"kombi":0,"buerde":0,"riso":0,"c_wandler":0,"c_erdung":0,"c_verdr":0,"c_sicher":0},"Ibn":{"ct_sn":1,"ct_data":1,"vt":1,"kombi":1,"buerde":1,"riso":1,"c_wandler":1,"c_erdung":1,"c_verdr":1,"c_pk":1,"c_bed":1,"c_plomb":1,"c_sicher":1,"c_ui":1,"spsich":1,"zn":1,"stand":1,"mw":1,"modem":1,"anlauf":1},"Best":{"c_verdr":1,"c_pk":1,"c_bed":1,"c_plomb":1,"c_ui":1,"spsich":1,"zn":1,"stand":1,"mw":1,"modem":1,"anlauf":1,"ct_sn":0,"ct_data":0,"vt":0,"kombi":0,"buerde":0,"riso":0,"c_wandler":0,"c_erdung":0,"c_sicher":0},"Nach":{"c_pk":1,"c_bed":1,"c_plomb":1,"c_ui":1,"spsich":1,"zn":1,"stand":1,"mw":1,"anlauf":1,"ct_sn":0,"ct_data":0,"vt":0,"kombi":0,"buerde":0,"riso":0,"c_wandler":0,"c_erdung":0,"c_verdr":0,"c_sicher":0,"modem":0}}};
+const FELD_ITEM = {
+  w_einbaulage:'c_wandler', w_klemmverbindung:'c_wandler', w_erdung_min4:'c_erdung', w_erdung_ks_strom:'c_erdung', w_erdung_spannung:'c_erdung',
+  v_phasengleich:'c_verdr', v_geschirmt:'c_verdr', v_querschnitt:'c_verdr', v_kabelverlegung:'c_verdr',
+  pk_klemmverbindung:'c_pk', pk_geschlossen:'c_pk', pk_bruecken_offen:'c_pk', z_bedienbereich:'c_bed',
+  p_spannungspfad:'spsich', p_messzelle:'c_plomb', p_zaehler_modem:'c_plomb', p_pruefklemme:'c_plomb',
+  ms_erdung:'c_sicher', ms_spannungsfrei:'c_sicher',
+  s_sternspannung:'c_ui', s_verkettete:'c_ui', s_drehfeld:'c_ui', s_strom:'c_ui', s_vektor:'mw',
+  b_fae:'fae', b_kuppel:'fae', b_naschutz:'na'
+};
+function itemFeld(id){ return FELD_ITEM[id] || (id.indexOf('b_')===0 ? 'c_kunde' : null); }
+// Wandlerdaten aus der Vorinbetriebnahme vorhanden (Seriennummern und Übersetzung aller Wandler der Messart)?
+function vorDatenOk(){
+  const okG = g => !!(g && g.phases && g.phases.length===3 && g.phases.every(p=>p.seriennummer));
+  if(state.messart==='kombiwandler') return okG(state.kombi) && !!(state.kombi.primaerA && state.kombi.primaerV);
+  if(state.messart==='wandler') return okG(state.ct) && !!state.ct.primaer && okG(state.vt) && !!state.vt.primaer;
+  return false;
+}
+function terminSpalte(){
+  const v = state.vorgang;
+  if(v==='vor') return 'Vor';
+  if(v==='ibn') return (isMSorHS() && state.vorVorhanden && vorDatenOk()) ? 'IbnV' : 'Ibn';
+  if(v==='bestand') return 'Best';
+  if(v==='nach') return 'Nach';
+  return null;
+}
+// Wird das Feld bei dieser Ebene und diesem Termin abgefragt? Ohne Auswahl oder ohne Eintrag: ja
+function F(feld){
+  if(!feld) return true;
+  const c = terminSpalte(); if(!c || !state.ebene) return true;
+  const e = FELD_MATRIX[state.ebene]; if(!e || !e[c] || e[c][feld]===undefined) return true;
+  return !!e[c][feld];
+}
+function ctInput(){ return hasCtPanel() && (F('ct_sn') || F('ct_data')); }
+function vtInput(){ return hasVtPanel() && F('vt'); }
+function kombiInput(){ return hasKombiPanel() && F('kombi'); }
+function risoInput(){ return hasRiso() && F('riso'); }
+function buerdeInput(){ return hasBuerde() && F('buerde'); }
+// Checkliste-Reiter nur, wenn er Punkte hat (ohne Rückgriff auf activePanels, sonst Endlosschleife)
+function checklisteHatPunkte(){
+  const wandlerPanel = ctInput() || vtInput() || kombiInput();
+  return visibleItems().some(i=>{ const h = ITEM_HOST[i.id]; return !h || (h==='wandler' && !wandlerPanel); });
+}
+// Anlaufprüfung mit Prüfzähler: überall, wo Wandler im Zählpunkt arbeiten (halbindirekt, MS, HS), außer bei der Vorinbetriebnahme (Anlage spannungsfrei)
+function anlaufNeeded(){ return !!state.vorgang && hasWandlerAny() && state.vorgang!=='vor' && F('anlauf'); }
 
 /* ---------------- RISO ---------------- */
 function risoRowHtml(id, label, desc){
@@ -994,13 +1067,14 @@ function bindRisoFields(){
 const PANEL_DEFS = [
   {id:'setup', label:'Start'},
   {id:'nach', label:'Nachprüfung', cond:()=> showNach()},
-  {id:'checkliste', label:'Checkliste', cond:()=> isPruefung()},
-  {id:'riso', label:'Riso', cond:()=> hasRiso()},
-  {id:'ct', label:'Stromwandler', cond:()=> hasCtPanel()},
-  {id:'vt', label:'Spannungswandler', cond:()=> hasVtPanel()},
-  {id:'kombi', label:'Kombiwandler', cond:()=> hasKombiPanel()},
-  {id:'modem', label:'Modem', cond:()=> isPruefung()},
-  {id:'zaehler', label:'Zähler', cond:()=> isPruefung()},
+  {id:'checkliste', label:'Checkliste', cond:()=> isPruefung() && checklisteHatPunkte()},
+  {id:'riso', label:'Riso', cond:()=> risoInput()},
+  {id:'ct', label:'Stromwandler', cond:()=> ctInput()},
+  {id:'vt', label:'Spannungswandler', cond:()=> vtInput()},
+  {id:'kombi', label:'Kombiwandler', cond:()=> kombiInput()},
+  {id:'modem', label:'Modem', cond:()=> isPruefung() && F('modem')},
+  {id:'zaehler', label:'Zähler', cond:()=> isPruefung() && (F('zn')||F('stand')||F('mw')||F('c_ui'))},
+  {id:'anlauf', label:'Anlaufprüfung', cond:()=> anlaufNeeded()},
   {id:'fae', label:'FRE', cond:()=> faeNeeded()},
   {id:'na', label:'NA-Schutz', cond:()=> naNeeded()},
   {id:'ende', label:'Abschluss-Check', cond:()=> isPruefung()},
@@ -1019,7 +1093,7 @@ function renderStepNav(){
     const complete = isStepComplete(p.id);
     d.className = 'step' + (i===stepIndex?' active':'') + (complete?' complete':'');
     d.textContent = (i+1)+' '+p.label + (complete?' ✓':'');
-    d.onclick = ()=>{ if(i<=stepIndex || (state.vorgang && state.ebene && (state.messart||state.vorgang==='nach'))) showStepByIndex(i); };
+    d.onclick = ()=>{ if(i<=stepIndex || (state.vorgang && state.ebene && state.messart)) showStepByIndex(i); };
     nav.appendChild(d);
   });
 }
@@ -1040,6 +1114,7 @@ function showStepByIndex(i){
   if(panels[i].id==='zaehler') buildZaehlerPanel();
   if(panels[i].id==='fae') buildFae();
   if(panels[i].id==='na') buildNa();
+  if(panels[i].id==='anlauf') buildAnlauf();
   if(panels[i].id==='ct') buildCtBlocks();
   if(panels[i].id==='vt') buildVtBlocks();
   if(panels[i].id==='kombi') buildKombiBlocks();
@@ -1050,7 +1125,7 @@ function showStepByIndex(i){
 
 document.getElementById('btnNext').onclick = ()=>{
   const panels = activePanels();
-  if(panels[stepIndex].id==='setup' && (!state.vorgang || !state.ebene || (!state.messart && state.vorgang!=='nach'))){
+  if(panels[stepIndex].id==='setup' && (!state.vorgang || !state.ebene || !state.messart)){
     alert('Bitte Art des Termins, Spannungsebene und Messart wählen.'); return;
   }
   if(stepIndex < panels.length-1) showStepByIndex(stepIndex+1); else openFinish();
@@ -1060,16 +1135,17 @@ document.getElementById('btnBack').onclick = ()=>{ if(stepIndex>0) showStepByInd
 /* ---------------- COMPLETION CHECK ---------------- */
 function isStepComplete(id){
   switch(id){
-    case 'setup': return !!(state.vorgang && state.ebene && (state.messart || state.vorgang==='nach') && state.standort.name && state.standort.pruefer && state.standort.datum);
+    case 'setup': return !!(state.vorgang && state.ebene && state.messart && state.standort.name && state.standort.pruefer && state.standort.datum);
     case 'nach': return !!(state.nachpruefung.items.length && state.nachpruefung.items.every(i=>i.status));
     case 'riso': {
       const need = ['iL1','iL2','iL3','uL1','uL2','uL3'];
       return need.every(k=>state.riso[k]);
     }
-    case 'ct': return !!(state.ct && state.ct.primaer && state.ct.sekundaer && state.ct.phases.every(p=>p.seriennummer)) && (wandlerHostPanelId()!=='ct' || itemsDone('wandler'));
+    case 'ct': return !!(state.ct && (!F('ct_data') || (state.ct.primaer && state.ct.sekundaer)) && (!F('ct_sn') || state.ct.phases.every(p=>p.seriennummer))) && (wandlerHostPanelId()!=='ct' || itemsDone('wandler'));
     case 'vt': return !!(state.vt && state.vt.primaer && state.vt.sekundaer && state.vt.phases.every(p=>p.seriennummer)) && (wandlerHostPanelId()!=='vt' || itemsDone('wandler'));
     case 'kombi': return !!(state.kombi && state.kombi.primaerA && state.kombi.sekundaerA && state.kombi.primaerV && state.kombi.sekundaerV && state.kombi.phases.every(p=>p.seriennummer)) && (wandlerHostPanelId()!=='kombi' || itemsDone('wandler'));
-    case 'zaehler': return !!(state.zaehler.z_nummer && state.zaehler.stand.ap) && itemsDone('zaehler');
+    case 'zaehler': return !!((!F('zn') || state.zaehler.z_nummer) && (!F('stand') || state.zaehler.stand.ap)) && itemsDone('zaehler');
+    case 'anlauf': return anlFehler()!=null;
     case 'fae': return faeComplete();
     case 'na': return naComplete();
     case 'modem': return !!(state.modem.sim || state.modem.notizen);
@@ -1116,7 +1192,7 @@ function bindSetup(){
     el.onclick = ()=>{
       if(state.vorgang==='vor' && el.dataset.val==='NS') return;
       state.ebene = el.dataset.val;
-      state.messart = null;
+      state.messart = null; state.ctBlock = false;
       syncSetupUI(); saveDraft();
     };
   });
@@ -1138,7 +1214,7 @@ function syncSetupUI(){
     c.classList.toggle('sel', c.dataset.val===state.ebene);
     c.classList.toggle('disabled', state.vorgang==='vor' && c.dataset.val==='NS');
   });
-  document.getElementById('messartWrap').style.display = (state.vorgang==='nach') ? 'none' : '';
+  syncVorVorhanden();
   buildMessartChoices();
   renderStepNav();
 }
@@ -1149,16 +1225,17 @@ function buildMessartChoices(){
   let options = [];
   if(state.ebene==='NS') options = [['direkt','Direktmessung'],['halbindirekt','Halbindirekt (3 Stromwandler)']];
   else if(isMSorHS()){
-    options=[['wandler','Wandlermessung (getrennt)'],['kombiwandler','Kombiwandler']];
+    options=[['wandler','Wandler getrennt'],['kombiwandler','Kombiwandler'],['block','Block-Wandler (3 Stromwandler, 1 Seriennr.)']];
     if(!state.messart) state.messart='wandler';
   }
   else { box.innerHTML='<div class="hint" style="padding:8px;">Bitte zuerst die Spannungsebene wählen.</div>'; return; }
   options.forEach(([val,label])=>{
     const d = document.createElement('div');
-    d.className = 'choice'+(state.messart===val?' sel':'');
+    const isSel = val==='block' ? (state.messart==='wandler' && !!state.ctBlock) : val==='wandler' ? (state.messart==='wandler' && !state.ctBlock) : state.messart===val;
+    d.className = 'choice'+(isSel?' sel':'');
     d.textContent = label; d.dataset.val = val;
     d.onclick = ()=>{
-      state.messart = val;
+      state.messart = (val==='block') ? 'wandler' : val; state.ctBlock = (val==='block');
       document.querySelectorAll('#choiceMessart .choice').forEach(c=>c.classList.remove('sel'));
       d.classList.add('sel');
       renderStepNav(); saveDraft();
@@ -1787,17 +1864,18 @@ function bindGroupFields(prefix, groupObj){
 }
 function phaseBlockHtml(prefix, p){
   const base = prefix+'-'+p.rid;
-  return `<div class="device-block">
-    <h4>${p.label}</h4>
-    <label>Seriennummer</label>
+  const blk = prefix==='ct' && !!state.ctBlock, folge = blk && state.ct.phases[0]!==p;
+  return `<div class="device-block${folge?' serhide':''}">
+    <h4>${blk ? (folge ? p.label+' (Bürde)' : 'Block-Wandler L1–L3 (eine Seriennummer)') : p.label}</h4>
+    <label>Foto Typenschild (Barcode wird gelesen)</label>
+    <div id="photos-${base}"></div>
+    <label style="margin-top:8px;">Seriennummer (aus Foto · Scan · Handeingabe)</label>
     <div style="display:flex; gap:6px;">
       <input type="text" id="${base}-serial" style="flex:1;">
       <button class="btn btn-sm" onclick="startBarcodeScan('${base}-serial','status-${base}')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M7 8v8M10 8v8M13 8v8M17 8v8"/></svg>Scan</button>
     </div>
     <div class="status-line" id="status-${base}"></div>
     <div class="status-line" id="status-${base}-typ"></div>
-    <label style="margin-top:8px;">Fotos Typenschild</label>
-    <div id="photos-${base}"></div>
     <label class="buerde-only" style="margin-top:8px;">Bürdemessung</label>
     <div class="row buerde-only">
       <div>
@@ -1817,7 +1895,7 @@ function bindPhaseBlock(prefix, p, groupObj){
   const base = prefix+'-'+p.rid;
   const serialEl = document.getElementById(base+'-serial');
   serialEl.value = p.seriennummer||'';
-  serialEl.addEventListener('input', e=>{ p.seriennummer=e.target.value; saveDraft(); updateStepCompletionUI(); });
+  serialEl.addEventListener('input', e=>{ p.seriennummer=e.target.value; if(prefix==='ct' && state.ctBlock) groupObj.phases.forEach(q=>{ q.seriennummer=e.target.value; }); saveDraft(); updateStepCompletionUI(); });
 
   document.getElementById('photos-'+base).innerHTML = twoPhotoRowHtml(base);
   bindTwoPhotoSlots(base, p, base+'-serial', 'status-'+base, url=>recognizeTypeFromPhoto(prefix, groupObj, prefix, url, 'status-'+base+'-typ'));
@@ -1860,6 +1938,7 @@ function recomputeBuerdeDisplays(prefix, groupObj){
 
 function buildCtBlocks(){
   ensureCtState();
+  if(state.ctBlock && state.ct.phases.length){ const sn = state.ct.phases[0].seriennummer||''; state.ct.phases.forEach(q=>{ q.seriennummer = sn; }); }
   const c = document.getElementById('ctContainer');
   c.innerHTML = '<div class="no-print" style="margin-bottom:10px;"><button class="btn btn-sm" onclick="openLibrary()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M9 7h6"/></svg>Typenbibliothek verwalten</button></div>'
     + groupRecognitionHtml('ct')
@@ -1950,15 +2029,15 @@ function kombiPhaseBlockHtml(p){
   const base = 'kombi-'+p.rid;
   return `<div class="device-block">
     <h4>${p.label}</h4>
-    <label>Seriennummer</label>
+    <label>Foto Typenschild (Barcode wird gelesen)</label>
+    <div id="photos-${base}"></div>
+    <label style="margin-top:8px;">Seriennummer (aus Foto · Scan · Handeingabe)</label>
     <div style="display:flex; gap:6px;">
       <input type="text" id="${base}-serial" style="flex:1;">
       <button class="btn btn-sm" onclick="startBarcodeScan('${base}-serial','status-${base}')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M7 8v8M10 8v8M13 8v8M17 8v8"/></svg>Scan</button>
     </div>
     <div class="status-line" id="status-${base}"></div>
     <div class="status-line" id="status-${base}-typ"></div>
-    <label style="margin-top:8px;">Fotos Typenschild</label>
-    <div id="photos-${base}"></div>
     <label class="buerde-only" style="margin-top:8px;">Bürdemessung</label>
     <div class="row buerde-only">
       <div>
@@ -2246,24 +2325,17 @@ function buerdeMangel(list, label, key, soll, gem){
 }
 function wandlerGruppen(){   // einheitliche Sicht auf alle Wandler-Phasen für Mängel-/Offen-Prüfung
   const out = [];
-  if(hasCtPanel() && state.ct) state.ct.phases.forEach((p,i)=>out.push({label:'Stromwandler L'+(i+1), key:'ct'+i, soll:state.ct.sollbuerde, gem:p.gemessenebuerde, serial:p.seriennummer}));
-  if(hasVtPanel() && state.vt) state.vt.phases.forEach((p,i)=>out.push({label:'Spannungswandler L'+(i+1), key:'vt'+i, soll:state.vt.sollbuerde, gem:p.gemessenebuerde, serial:p.seriennummer}));
+  if(hasCtPanel() && state.ct) state.ct.phases.forEach((p,i)=>out.push({label:(state.ctBlock?'Block-Wandler Kern ':'Stromwandler L')+(i+1), key:'ct'+i, soll:state.ct.sollbuerde, gem:p.gemessenebuerde, serial:p.seriennummer, inp:ctInput(), blockFolge:!!state.ctBlock && i>0}));
+  if(hasVtPanel() && state.vt) state.vt.phases.forEach((p,i)=>out.push({label:'Spannungswandler L'+(i+1), key:'vt'+i, soll:state.vt.sollbuerde, gem:p.gemessenebuerde, serial:p.seriennummer, inp:vtInput()}));
   if(hasKombiPanel() && state.kombi) state.kombi.phases.forEach((p,i)=>{
-    out.push({label:'Kombiwandler L'+(i+1)+' (Strom)', key:'ka'+i, soll:state.kombi.buerdeA, gem:p.gemessenA, serial:p.seriennummer});
-    out.push({label:'Kombiwandler L'+(i+1)+' (Spannung)', key:'kv'+i, soll:state.kombi.buerdeV, gem:p.gemessenV, serial:p.seriennummer});
+    out.push({label:'Kombiwandler L'+(i+1)+' (Strom)', key:'ka'+i, soll:state.kombi.buerdeA, gem:p.gemessenA, serial:p.seriennummer, inp:kombiInput()});
+    out.push({label:'Kombiwandler L'+(i+1)+' (Spannung)', key:'kv'+i, soll:state.kombi.buerdeV, gem:p.gemessenV, serial:p.seriennummer, inp:kombiInput()});
   });
   return out;
 }
 
 function gatherMaengel(){
   const list = [];
-  if(state.vorgang==='nach'){
-    state.nachpruefung.items.forEach((it,i)=>{
-      if(it.status==='offen') list.push({key:'nach:'+i, text:it.text, ext:it.ext!==false, comp:null, req:it.req||'', massn:it.massn||'', begr:it.begr||'', quelle:it.quelle||it.ref||'', cls:it.cls||'keine', note:it.note||''});
-    });
-    faeMaengel(list);
-    return list;
-  }
   if(!isPruefung()) return list;
   const _nk = new Set();
   if(kombiNach()) state.nachpruefung.items.forEach((it,i)=>{ if(it.key) _nk.add(it.key); if(it.status==='offen') list.push({key:'nach:'+i, text:it.text, ext:it.ext!==false, comp:null, req:it.req||'', massn:it.massn||'', begr:it.begr||'', quelle:it.quelle||it.ref||'', cls:it.cls||'keine', note:it.note||''}); });
@@ -2280,8 +2352,9 @@ function gatherMaengel(){
     if(state.ebene!=='NS' && MSHS_FOLGE[id]) m.cls = MSHS_FOLGE[id];
     list.push(m);
   });
-  if(hasBuerde()) wandlerGruppen().forEach(g=> buerdeMangel(list, g.label, g.key, g.soll, g.gem));
-  if(hasRiso()){
+  if(hasBuerde()) wandlerGruppen().forEach(g=> g.inp && buerdeMangel(list, g.label, g.key, g.soll, g.gem));
+  anlaufMangel(list);
+  if(risoInput()){
     [['iL1','Stromwandler L1'],['iL2','Stromwandler L2'],['iL3','Stromwandler L3'],['uL1','Spannungswandler L1'],['uL2','Spannungswandler L2'],['uL3','Spannungswandler L3']].forEach(([k,l])=>{
       const v = parseNum(state.riso[k]);
       if(v!=null && v<RISO_MIN_MOHM) list.push(mkMangel('riso:'+k, l+': Isolationswiderstand zu niedrig ('+state.riso[k]+' MΩ)', true, {req:'Isolationswiderstand mind. '+RISO_MIN_MOHM+' MΩ bei 500 V DC'}));
@@ -2297,21 +2370,19 @@ function gatherMaengel(){
 function gatherOffen(){   // fehlende Eingaben des Prüfers (keine Mängel der Anlage)
   const o = [];
   if(!state.vorgang){ o.push('Art des Termins wählen'); return o; }
-  if(state.vorgang==='nach'){
-    if(!state.nachpruefung.items.length) o.push('Keine Mängel zur Nachprüfung hinterlegt');
-    state.nachpruefung.items.forEach(it=>{ if(!it.status) o.push('Nachprüfung offen: '+it.text); });
-    faeOffen(o);
-  } else {
+  if(state.vorgang==='nach' && !state.nachpruefung.items.length) o.push('Keine Mängel zur Nachprüfung hinterlegt');
+  {
     if(kombiNach()) state.nachpruefung.items.forEach(it=>{ if(!it.status) o.push('Früheren Mangel abhaken: '+it.text); });
     if(!state.ebene || !state.messart) o.push('Spannungsebene / Messart wählen');
     wandlerGruppen().forEach(g=>{
-      if(!g.serial) o.push(g.label+': Seriennummer fehlt');
-      if(hasBuerde() && !computeBuerdeErgebnis(g.soll, g.gem)) o.push(g.label+': Bürdemessung fehlt');
+      if(g.inp && !g.serial && !g.blockFolge) o.push(g.label+': Seriennummer fehlt');
+      if(g.inp && hasBuerde() && !computeBuerdeErgebnis(g.soll, g.gem)) o.push(g.label+': Bürdemessung fehlt');
     });
-    if(hasRiso()) ['iL1','iL2','iL3','uL1','uL2','uL3'].forEach(k=>{ if(parseNum(state.riso[k])==null) o.push('Riso '+k.replace('iL','Strom L').replace('uL','Spannung L')+' fehlt'); });
-    if(!state.zaehler.z_nummer) o.push('Zählernummer fehlt');
-    if(!state.zaehler.stand.ap) o.push('Einbaustand (Wirkenergie Bezug) fehlt');
-    if(isLive() && hasFullReadout()){ const zs=(state.zaehler.zeiger||{}).status; if(zs==null||zs==='leer'||zs==='unvollstaendig') o.push('Zeigerdiagramm: Werte unvollständig'); }
+    if(risoInput()) ['iL1','iL2','iL3','uL1','uL2','uL3'].forEach(k=>{ if(parseNum(state.riso[k])==null) o.push('Riso '+k.replace('iL','Strom L').replace('uL','Spannung L')+' fehlt'); });
+    if(F('zn') && !state.zaehler.z_nummer) o.push('Zählernummer fehlt');
+    if(F('stand') && !state.zaehler.stand.ap) o.push('Einbaustand (Wirkenergie Bezug) fehlt');
+    if(anlaufNeeded() && anlFehler()==null) o.push('Anlaufprüfung: Fehler in % fehlt');
+    if(F('mw') && isLive() && hasFullReadout()){ const zs=(state.zaehler.zeiger||{}).status; if(zs==null||zs==='leer'||zs==='unvollstaendig') o.push('Zeigerdiagramm: Werte unvollständig'); }
     if(absicherungVisible() && !state.absicherung.sicherung) o.push('Absicherung nicht angegeben');
     visibleItems().forEach(({id})=>{ const d=BEWERTUNG[id], c=state.checklist[id]||{}; if(d && d.variants && c.nein && !c.checked && !c.variant) o.push(d.komp+': Wirksamkeit der Schutzmaßnahme angeben'); });
     { const _un = visibleItems().filter(i=>!chkAnswered(i.id)).length; if(_un) o.push('Checkliste: '+_un+' Punkt(e) noch nicht mit Ja oder Nein beantwortet'); }
@@ -2476,7 +2547,6 @@ function applyReadout(text){
   const set = (key,code)=>{ const n = obisNum(v[code]); if(n!=null) st[key] = fmtNum(n,4); };
   set('ap','1.8.0'); set('am','2.8.0');
   const voll = hasFullReadout();
-  if(voll){ set('rp','3.8.0'); set('rm','4.8.0'); }
   st.zeit = new Date().toLocaleString('de-DE'); st.quelle = 'Auslesung'+(z.hersteller?' ('+z.hersteller.split(' – ')[0]+')':'');
   if(voll){
   // Momentanwerte für das Zeigerdiagramm
@@ -2566,7 +2636,7 @@ async function iecDialog(send, getBuf, setBuf){
 
 /* ---- Felder, Anzeige, Analyse ---- */
 function bindZaehlerExtras(){
-  ['ap','am','rp','rm'].forEach(k=>{
+  ['ap','am'].forEach(k=>{
     const el = document.getElementById('zs_'+k);
     el.addEventListener('input', e=>{ state.zaehler.stand[k]=e.target.value; if(!state.zaehler.stand.zeit) state.zaehler.stand.zeit=new Date().toLocaleString('de-DE'); if(!state.zaehler.stand.quelle) state.zaehler.stand.quelle='Handeingabe'; saveDraft(); updateStepCompletionUI(); });
   });
@@ -2579,7 +2649,7 @@ function bindZaehlerExtras(){
 function hydrateZaehlerPanel(){
   const z = state.zaehler;
   document.getElementById('z_nummer').value = z.z_nummer||'';
-  ['ap','am','rp','rm'].forEach(k=>{ document.getElementById('zs_'+k).value = z.stand[k]||''; });
+  ['ap','am'].forEach(k=>{ document.getElementById('zs_'+k).value = z.stand[k]||''; });
   document.getElementById('zs_info').textContent = z.stand.zeit ? 'Stand vom '+z.stand.zeit+(z.stand.quelle?' · '+z.stand.quelle:'') : '';
   document.getElementById('z_hersteller').textContent = z.hersteller ? 'Zähler: '+z.hersteller : '';
   const chips = document.getElementById('z_chips');
@@ -2590,8 +2660,9 @@ function hydrateZaehlerPanel(){
 }
 function buildZaehlerPanel(){
   const voll = hasFullReadout();
-  document.getElementById('zeigerCard').style.display = (isLive() && voll) ? '' : 'none';
-  document.getElementById('zsBlindRow').style.display = voll ? '' : 'none';
+  document.getElementById('zeigerCard').style.display = (isLive() && voll && F('mw')) ? '' : 'none';
+  document.getElementById('standCard').style.display = F('stand') ? '' : 'none';
+  document.getElementById('zNrBox').style.display = F('zn') ? '' : 'none';
   const kw = leistungKw();
   document.getElementById('z_readHint').textContent = voll ? '' : 'Anlage bis 100 kW'+(kw!=null?' ('+String(kw).replace('.',',')+' kW)':'')+': es werden nur Wirkenergie Bezug A+ (1.8.0) und Lieferung A− (2.8.0) erfasst, kein Zeigerdiagramm.';
   hydrateZaehlerPanel();
@@ -2706,47 +2777,50 @@ function addressLines(){
   return [ [s.strasse,s.hausnr].filter(Boolean).join(' '), [s.plz,s.ort].filter(Boolean).join(' ') ].filter(Boolean);
 }
 function reportCss(){
-  return '@page{size:A4;margin:12mm}'
-  + '*{box-sizing:border-box}'
-  + 'body{font-family:Arial,Helvetica,sans-serif;font-size:10pt;color:#111;margin:0;padding:12px;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
-  + '.toolbar{margin-bottom:12px}.toolbar button{padding:12px 18px;font-size:15px;border-radius:12px;border:none;background:#4d8a0c;color:#fff;font-weight:600}'
-  + 'h1{font-size:19pt;margin:0 0 10px 0;font-weight:600}'
-  + 'h3{font-size:10.5pt;margin:8px 0 3px 0}'
-  + '.head{display:flex;justify-content:space-between;gap:16px;margin-bottom:10px}'
-  + '.head .l{flex:1}.head .r{min-width:42%}'
-  + '.head .m{flex:0 0 auto;align-self:flex-start}.head .m a{display:block;text-decoration:none;color:#1a5fb4}.head .m img{display:block;width:190px;height:119px;border:1px solid #999;border-radius:4px}.head .m .nomap{width:190px;height:119px;border:1px solid #999;border-radius:4px;background:#eef3e6;font-size:9pt;display:flex;align-items:center;justify-content:center;text-align:center;padding:6px}.head .m .cap{font-size:7pt;color:#555;text-align:center;margin-top:1px}.head.hm .r{min-width:0}'
-  + 'table{border-collapse:collapse;width:100%}'
-  + 'th{font-size:8.5pt;text-align:left;color:#444;font-weight:600;padding:2px 6px}'
-  + 'td{padding:2px 6px;font-size:9.5pt;vertical-align:top}'
-  + '.blk{border-top:2px solid #86bc25;padding-top:3px;margin-top:6px;page-break-inside:avoid}'
-  + '.blkh{font-weight:700;font-size:10pt;margin-bottom:2px}.blkh span{font-weight:400;font-size:9pt;color:#333;margin-left:8px}'
-  + '.bad{color:#b00020;font-weight:700}'
-  + '.cols{column-count:3;column-gap:14px;margin-top:8px}'
-  + '.cat{break-inside:avoid;margin-bottom:8px}.cat h3{font-size:10pt}'
-  + '.it{font-size:8.5pt;margin:2px 0;line-height:1.25}.it.open{color:#b00020}.it.tol{color:#8a6d00}'
-  + '.res{margin-top:12px;padding:8px 10px;border-left:5px solid #86bc25;background:#f3f9e6;font-size:11pt;font-weight:700}'
-  + '.res.nein{border-left-color:#b00020;background:#fdecee;color:#8a0018}.res.frist{border-left-color:#e08a00;background:#fff4e0;color:#7a4a00}.res.unv{border-left-color:#888;background:#f0f0f0;color:#333}'
-  + '.kls{display:inline-block;font-size:8pt;font-weight:700;padding:1px 6px;border-radius:8px;margin-right:4px;background:#eee}.kls.keine{background:#fdecee;color:#8a0018}.kls.frist{background:#fff4e0;color:#7a4a00}.kls.hinweis{background:#eef5dd;color:#3d6a08}'
-  + '.fine{font-size:8pt;color:#555;margin-top:6px}'
-  + '.sign{margin-top:18px;display:flex;justify-content:space-between;align-items:flex-end}'
-  + '.sigimg{display:block;height:46px;max-width:100%;margin:0 auto}.sig{font-family:"Brush Script MT",cursive;font-size:20pt;color:#1a3a8a;min-height:30px}'
-  + '.pgrid{display:flex;flex-wrap:wrap;gap:10px}'
-  + '.photo{width:48%;page-break-inside:avoid}'
-  + '.photo .pn{font-size:8.5pt;color:#555;letter-spacing:.5px;border-bottom:1px dashed #aaa;margin-bottom:4px;text-transform:uppercase}'
-  + '.photo img{display:block;width:auto;height:auto;max-width:100%;max-height:70mm}'
-  + '.mt th,.mt td{border:1px solid #999;padding:5px 7px}.mt th{background:#eef5dd}'
-  + '.nr{width:28px;text-align:center}.chk{width:60px;text-align:center;font-size:14pt}'
-  + '.note{font-size:8.5pt;color:#444;margin-top:2px}'
-  + '.box{border:1px solid #999;padding:8px 10px;margin:8px 0}'
-  + '.line{border-top:1px solid #111;margin-top:34px;padding-top:3px;font-size:8.5pt;color:#444}'
-  + '.two{display:flex;gap:16px;align-items:flex-start}.two>div{flex:1}'
-  + '.pg{width:186mm;max-width:100%;margin:0 auto 14px}'
-  + '.int{font-size:9pt}.int h1{font-size:15pt;margin:0 0 6px}.int .head{margin-bottom:6px;font-size:9pt}.int td{font-size:8.5pt;padding:1px 5px}.int th{font-size:7.5pt;padding:1px 5px}'
-  + '.int .blk{margin-top:4px}.int .blkh{font-size:9pt}.int .cols{column-count:3;column-gap:10px;margin-top:4px}.int .cat{margin-bottom:5px}.int .cat h3{font-size:8.5pt;margin:2px 0}'
-  + '.int .it{font-size:7.5pt;margin:1px 0;line-height:1.2}.int .res{margin-top:6px;padding:5px 8px;font-size:10pt}.int .sign{margin-top:12px}'
-  + '.ext{font-size:8.5pt}.ext h1{font-size:15pt;margin:0 0 4px}.ext .head{margin-bottom:6px}.ext .mt th,.ext .mt td{font-size:7.5pt;padding:3px 5px}.ext .note{font-size:7pt}'
-  + '.ext p{margin:4px 0;font-size:8.5pt}.ext h3{font-size:9pt;margin:6px 0 2px}.ext .fine{font-size:7pt}.ext .line{margin-top:20px;font-size:7.5pt}.ext .res{margin-top:6px;padding:5px 8px;font-size:10pt}.ext .box{padding:5px 8px;margin:5px 0}'
-  + '@media print{.toolbar{display:none}body{padding:0}.pg{width:auto;margin:0;page-break-after:always}.pg:last-child{page-break-after:auto}}';
+  return '@page{size:A4;margin:0}*{box-sizing:border-box}'
+  + ':root{--g:#5a9a12;--r:#b3261e;--rd:#fbe7e5;--o:#b26a00;--od:#fdf0d9;--gd:#e8f2d8;--ink:#15191c;--mut:#5f6a72;--line:#dfe4e8;--bg:#f4f6f7}'
+  + 'body{margin:0;font:8.2pt/1.3 "Segoe UI",Helvetica,Arial,sans-serif;color:var(--ink);background:#d9dde0;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+  + '.toolbar{padding:10px 12px}.toolbar button{padding:12px 18px;font-size:15px;border-radius:12px;border:none;background:#4d8a0c;color:#fff;font-weight:600}'
+  + '.pg{width:210mm;min-height:297mm;margin:0 auto 12px;background:#fff;display:flex;flex-direction:column;position:relative}'
+  + '.band{background:#86bc25;color:#15191c;padding:6mm 10mm 5mm;display:flex;justify-content:space-between;gap:10px;align-items:flex-end}'
+  + '.band h1{margin:0;font-size:15.5pt;font-weight:600}.band .s{font-size:8.3pt;opacity:.85}.band .m{font-size:7.4pt;opacity:.95;text-align:right;line-height:1.45}'
+  + '.in{padding:0 10mm 4mm;flex:1}'
+  + '.stat{margin:-3mm 10mm 0;border-radius:6px;padding:5px 10px;display:flex;justify-content:space-between;gap:10px;align-items:center;position:relative;border:1px solid;border-left-width:6px}'
+  + '.stat.o{background:var(--od);border-color:#e8c88a;border-left-color:var(--o);color:#6b3f00}.stat.g{background:var(--gd);border-color:#bcd79a;border-left-color:var(--g);color:#2f5a08}'
+  + '.stat.r{background:var(--rd);border-color:#eab5b0;border-left-color:var(--r);color:#7a1610}.stat.u{background:#eef0f1;border-color:#cfd5d9;border-left-color:#7c868d;color:#3b434a}'
+  + '.stat b{font-size:10.9pt}.stat span{font-size:7.9pt}.stat .pill{font-size:7.7pt;font-weight:700;color:#fff;border-radius:99px;padding:2px 9px;white-space:nowrap}'
+  + '.o .pill{background:var(--o)}.g .pill{background:var(--g)}.r .pill{background:var(--r)}.u .pill{background:#7c868d}'
+  + '.top{display:grid;grid-template-columns:1fr 36mm;gap:6px;margin-top:6px}.top.nomap{grid-template-columns:1fr}'
+  + '.kv{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:3px}.kv div{border:1px solid var(--line);border-radius:5px;padding:2px 6px;background:var(--bg);min-width:0}'
+  + '.kv small{display:block;font-size:6.4pt;color:var(--mut);text-transform:uppercase;letter-spacing:.3px}.kv b{font-size:8.3pt;word-break:break-word}'
+  + '.map{border:1px solid var(--line);border-radius:5px;background:#e9efe0;font-size:6.8pt;color:#456;overflow:hidden;min-height:22mm}'
+  + '.map a{display:flex;width:100%;height:100%;align-items:center;justify-content:center;text-align:center;text-decoration:none;color:#456}.map img{display:block;width:100%;height:100%;object-fit:cover}'
+  + 'h2{font-size:7.4pt;text-transform:uppercase;letter-spacing:.5px;margin:7px 0 2px;display:flex;align-items:center;gap:6px;border-bottom:1.3px solid var(--ink);padding-bottom:1px}'
+  + 'h2 .nr{background:var(--ink);color:#fff;border-radius:3px;font-size:7pt;padding:0 4px}h2 small{margin-left:auto;font-weight:400;text-transform:none;letter-spacing:0;color:var(--mut);font-size:7.2pt}'
+  + 'table{border-collapse:collapse;width:100%}th{font-size:6.9pt;text-align:left;color:var(--mut);font-weight:600;padding:1px 5px;border-bottom:1px solid var(--line);background:var(--bg)}'
+  + 'td{padding:1.5px 5px;border-bottom:1px solid var(--line);font-size:7.9pt;vertical-align:top}.n{text-align:right;font-variant-numeric:tabular-nums}th.n{text-align:right}'
+  + '.okc{color:#2c7a1a;font-weight:700}.bad{color:var(--r);font-weight:700}.mut{color:var(--mut)}'
+  + '.fine{font-size:7pt;color:var(--mut);margin-top:2px}'
+  + '.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.g2>div{min-width:0}'
+  + '.cols{column-count:3;column-gap:8px}'
+  + '.cat{margin-bottom:4px}.cat h3{font-size:7pt;margin:0 0 1px;text-transform:uppercase;letter-spacing:.4px;color:var(--mut);display:flex;justify-content:space-between;border-bottom:1px solid var(--line);break-after:avoid}'
+  + '.ci{display:flex;gap:4px;align-items:flex-start;padding:1.2px 2px;border-bottom:1px dotted var(--line);font-size:7.2pt;line-height:1.22;break-inside:avoid}'
+  + '.ci i{font-style:normal;width:10px;height:10px;border-radius:50%;background:var(--g);color:#fff;font-size:6.2pt;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px}'
+  + '.ci span{flex:1;min-width:0}.ci u{text-decoration:none;color:var(--mut);font-style:italic}'
+  + '.ci.x{background:var(--rd);border-radius:3px;border:1px solid #eab5b0}.ci.x i{background:var(--r)}.ci.w{background:var(--od);border-radius:3px;border:1px solid #e8c88a}.ci.w i{background:var(--o)}.ci.u i{background:#aab2b8}.ci.u span{color:var(--mut)}'
+  + '.tg{font-style:normal;font-size:6.2pt;font-weight:700;border-radius:99px;padding:0 5px;white-space:nowrap;color:#fff;height:fit-content}.tg.r{background:var(--r)}.tg.o{background:var(--o)}'
+  + '.f{border:1px solid var(--line);border-radius:5px;overflow:hidden}.f .row{display:grid;grid-template-columns:auto 1fr;gap:8px;padding:3px 8px;border-bottom:1px solid var(--line)}.f .row:last-child{border:0}'
+  + '.tag{font-size:7pt;font-weight:700;border-radius:99px;padding:1px 8px;height:fit-content;white-space:nowrap}.tag.r{background:var(--rd);color:var(--r)}.tag.o{background:var(--od);color:var(--o)}.tag.u{background:#eef0f1;color:#3b434a}'
+  + '.sig{display:flex;gap:16px;align-items:flex-end;margin-top:30px}.sig .l{flex:1;border-top:1px solid var(--ink);padding-top:2px;font-size:7.2pt;color:var(--mut);position:relative;min-height:28px}'
+  + '.sig .s{position:absolute;top:-22px;left:6px;font:italic 16.5pt "Brush Script MT",cursive;color:#1a3a8a}.sig .sigimg{position:absolute;bottom:100%;left:6px;height:30px;max-width:60%}'
+  + '.foot{margin:0 10mm 5mm;font-size:6.9pt;color:var(--mut);display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--line);padding-top:2px}'
+  + '.mt th{font-size:7.6pt;padding:3px 6px;border:1px solid #c7cdd2}.mt td{font-size:8.6pt;padding:5px 6px;border:1px solid #c7cdd2;vertical-align:top}'
+  + '.mt .nr{width:22px;text-align:center}.mt .chk{width:46px;text-align:center;font-size:13pt}.mt .note{font-size:7.6pt;color:var(--mut);margin-top:2px}'
+  + '.sec{margin:12px 0 4px;font-size:9.5pt;font-weight:700;display:flex;align-items:center;gap:8px}.sec .tag{font-size:7.6pt}'
+  + 'p{margin:6px 0}.lead{font-size:9pt}'
+  + '.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.photo{break-inside:avoid}'
+  + '.photo .pn{font-size:7.4pt;color:var(--mut);letter-spacing:.4px;border-bottom:1px dashed #aaa;margin-bottom:3px;text-transform:uppercase}.photo img{display:block;width:auto;height:auto;max-width:100%;max-height:72mm}'
+  + '@media print{body{background:#fff}.toolbar{display:none}.pg{margin:0;page-break-after:always}.pg:last-child{page-break-after:auto}}';
 }
 function wrapReport(title, bodyHtml){
   return '<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(title)+'</title><style>'+reportCss()+'</style></head><body><div class="toolbar"><button onclick="window.print()">Drucken / Als PDF speichern</button></div>'+bodyHtml+'</body></html>';
@@ -2761,21 +2835,11 @@ function reportFileTitle(prefix){
   return prefix+'_'+n+'_'+fmtDateDe().replace(/\./g,'-');
 }
 function ratioText(g){ return (g && g.primaer && g.sekundaer) ? g.primaer+'/'+g.sekundaer : ''; }
-function wandlerTableHtml(title, ratio, klasse, buerde, rows, withRiso){
-  const bu = hasBuerde();
-  const body = rows.map(r=>{
-    const res = bu ? computeBuerdeErgebnis(buerde, r.gem) : null;
-    return '<tr><td style="width:40px"><b>'+esc(r.label)+'</b></td><td>'+esc(r.serial||'–')+'</td>'
-      + (bu ? '<td>'+esc(r.gem?r.gem+' VA':'–')+'</td><td class="'+(res&&res.status!=='io'?'bad':'')+'">'+(res?esc(res.text):'–')+'</td>' : '')
-      + (withRiso ? '<td>'+esc(r.riso?r.riso+' MΩ':'–')+'</td>' : '')+'</tr>';
-  }).join('');
-  return '<div class="blk"><div class="blkh">'+esc(title)+'<span>'+esc(ratio||'–')+' · Klasse '+esc(klasse||'–')+(bu?' · Wandlerbürde '+esc(buerde||'–'):'')+'</span></div>'
-    + '<table><thead><tr><th>Phase</th><th>Seriennummer</th>'+(bu?'<th>Bürde gemessen</th><th>Auslastung</th>':'')+(withRiso?'<th>Riso (500 V)</th>':'')+'</tr></thead><tbody>'+body+'</tbody></table></div>';
-}
 function collectPhotos(){
   const out = [];
   const add = (src,label)=>{ if(src) out.push({src:src,label:label}); };
   (state.zaehler.photos||[]).forEach((p,i)=>add(p,'Zähler '+(i+1)));
+  if(anlaufNeeded() && state.anlauf) add(state.anlauf.photo,'Anlaufprüfung Prüfzähler');
   (state.modem.photos||[]).forEach(p=>add(p,'Modem'));
   const grp = g=> g && g.phases.forEach(p=>{ (p.photos||[]).forEach((ph,i)=>add(ph,p.label+' – Typenschild '+(i+1))); if(hasBuerde()) add(p.buerdePhoto,p.label+' – Bürdemessung'); });
   if(hasCtPanel()) grp(state.ct);
@@ -2785,52 +2849,120 @@ function collectPhotos(){
   (state.abschluss.weitereFotos||[]).forEach(p=>add(p,'Weiteres Foto'));
   return out;
 }
-function checklistReportHtml(){
-  const items = visibleItems();
-  let html = '<div class="cols">';
-  CHECKLIST.forEach(cat=>{
-    const its = items.filter(i=>i.cat===cat.cat);
-    if(!its.length) return;
-    html += '<div class="cat"><h3>Checkliste '+esc(cat.cat)+'</h3>';
-    html += its.map(({id,label})=>{
-      const c = state.checklist[id] || {};
-      return '<div class="it '+(c.checked?'':'open')+'">'+(c.checked?'☑':(c.nein?'☒':'☐'))+' '+esc(label)+(c.note?' <i>('+esc(c.note)+')</i>':'')+'</div>';
-    }).join('');
-    html += '</div>';
-  });
-  if(absicherungVisible()){
-    const sicherungTxt = {'3polig':'3-Polig Z 10A','schmelz':'Schmelzsicherung 10A (nur bei NS)'}[state.absicherung.sicherung]
-      || (state.absicherung.sicherung==='sonstiges' ? 'Sonstiges: '+(state.absicherung.sonstigesText||'–') : '–');
-    html += '<div class="cat"><h3>Spannungspfadsicherung</h3><div class="it">'+esc(sicherungTxt)+'</div></div>';
+/* ---- Bausteine des einseitigen Layouts ---- */
+function sec(title, small, inner){ return '<h2><span class="nr">NR</span>'+esc(title)+(small?'<small>'+small+'</small>':'')+'</h2>'+inner; }
+function renumSections(h){ let n=0; return h.replace(/<span class="nr">NR<\/span>/g, ()=>'<span class="nr">'+(++n)+'</span>'); }
+function tile(k,v){ return '<div><small>'+esc(k)+'</small><b>'+esc(v||'–')+'</b></div>'; }
+function g2(l, r){ return (l||r) ? '<div class="g2"><div>'+(l||'')+'</div><div>'+(r||'')+'</div></div>' : ''; }
+function ebeneText(){ return state.ebene==='NS' ? 'Niederspannung' : state.ebene==='MS' ? '20 kV' : state.ebene==='HS' ? '110 kV' : (state.ebene||'–'); }
+function wandSec(title, ratio, klasse, buerde, rows, withRiso){
+  const bu = hasBuerde();
+  const head = '<tr><th>Ph.</th><th>Serien-Nr.</th>'+(bu?'<th class="n">Bürde VA</th><th>Auslastung</th>':'')+(withRiso?'<th class="n">Riso MΩ</th>':'')+'</tr>';
+  const body = rows.map(r=>{
+    const res = bu ? computeBuerdeErgebnis(buerde, r.gem) : null;
+    return '<tr><td><b>'+esc(r.label)+'</b></td><td>'+esc(r.serial||'–')+'</td>'
+      + (bu ? '<td class="n">'+esc(r.gem||'–')+'</td><td class="'+(res&&res.status!=='io'?'bad':'')+'">'+(res?esc(res.text):'–')+'</td>' : '')
+      + (withRiso ? '<td class="n">'+esc(r.riso||'–')+'</td>' : '')+'</tr>';
+  }).join('');
+  return sec(title, esc((ratio||'–')+' · Kl. '+(klasse||'–')+(bu?' · Bürde '+(buerde||'–')+' VA':'')), '<table>'+head+body+'</table>');
+}
+function wandlerSecs(){
+  const rr = hasRiso(); let strom = '', spann = '';
+  if(hasCtPanel() && state.ct) strom = wandSec(state.ctBlock?'Block-Wandler (Strom)':'Stromwandler', ratioText(state.ct), state.ct.klasse, state.ct.sollbuerde,
+    state.ct.phases.map((p,i)=>({label:'L'+(i+1), serial:p.seriennummer, gem:p.gemessenebuerde, riso:state.riso['iL'+(i+1)]})), rr);
+  if(hasVtPanel() && state.vt) spann = wandSec('Spannungswandler', ratioText(state.vt), state.vt.klasse, state.vt.sollbuerde,
+    state.vt.phases.map((p,i)=>({label:'L'+(i+1), serial:p.seriennummer, gem:p.gemessenebuerde, riso:state.riso['uL'+(i+1)]})), rr);
+  if(hasKombiPanel() && state.kombi){
+    const k = state.kombi;
+    strom = wandSec('Kombiwandler – Stromteil', ratioText({primaer:k.primaerA,sekundaer:k.sekundaerA}), k.klasseA, k.buerdeA,
+      k.phases.map((p,i)=>({label:'L'+(i+1), serial:p.seriennummer, gem:p.gemessenA, riso:state.riso['iL'+(i+1)]})), rr);
+    spann = wandSec('Kombiwandler – Spannungsteil', ratioText({primaer:k.primaerV,sekundaer:k.sekundaerV}), k.klasseV, k.buerdeV,
+      k.phases.map((p,i)=>({label:'L'+(i+1), serial:p.seriennummer, gem:p.gemessenV, riso:state.riso['uL'+(i+1)]})), rr);
   }
-  return html + '</div>';
+  return g2(strom, spann);
 }
-function zaehlerBlockHtml(){
-  const z = state.zaehler, st = z.stand, wf = computeWandlerfaktor();
-  const mod = state.modem;
-  let html = '<div class="blk"><table><tbody>'
-    + '<tr><td style="width:34%"><b>Zähler</b></td><td>'+esc(z.z_nummer||'–')+'</td><td style="width:26%"><b>'+(hasWandlerAny()?'Wandlerkonstante':'')+'</b></td></tr>'
-    + '<tr><td>Modem/SMGW</td><td>'+esc(mod.sim||'–')+(mod.verbindungstest?' · Verbindungstest '+(mod.verbindungstest==='io'?'erfolgreich':'nicht erfolgreich'):'')+'</td><td><b>'+(hasWandlerAny()?esc(wf.total||'–'):'')+'</b></td></tr>'
-    + '</tbody></table></div>';
-  const voll = hasFullReadout();
-  html += '<div class="blk"><div class="blkh">Einbaustände'+(st.zeit?'<span>'+esc(st.zeit)+'</span>':'')+'</div>'
-    + '<table><thead><tr><th>Wirk Bezug A+ (kWh)</th><th>Wirk Lieferung A− (kWh)</th>'+(voll?'<th>Blind R+ (kvarh)</th><th>Blind R− (kvarh)</th>':'')+'</tr></thead><tbody><tr>'
-    + (voll?['ap','am','rp','rm']:['ap','am']).map(k=>'<td>'+esc(st[k]||'–')+'</td>').join('')+'</tr></tbody></table></div>';
-  return html;
+function einbauSec(){
+  if(!F('stand') && !F('zn')) return '';
+  const z = state.zaehler, st = z.stand;
+  return sec('Einbaustände', esc(st.zeit||''),
+    '<table><tr><th>Zähler</th><th class="n">Bezug 1.8.0 (kWh)</th><th class="n">Einspeisung 2.8.0 (kWh)</th></tr>'
+    + '<tr><td>'+esc(z.z_nummer||'–')+'</td><td class="n">'+esc(st.ap||'–')+'</td><td class="n">'+esc(st.am||'–')+'</td></tr></table>');
 }
-function zeigerReportHtml(size){
-  if(!isLive() || !hasFullReadout()) return '';
+function freSec(){
+  if(!faeShown()) return '';
+  const f = faeS(), c = faeCalc();
+  const lbl = {ok:'bestanden', hoch:'zu hoch', niedrig:'zu niedrig', offen:'offen', na:'n. prüfbar'};
+  let h = '<table><tr><th>Stufe</th><th class="n">Soll kW</th>'+(c.ueb?'<th class="n">Zähler kW</th>':'')+'<th class="n">Ist kW</th><th class="n">Abw. kW</th><th>Ergebnis</th></tr>'
+    + c.rows.map(r=>'<tr><td>'+r.pct+' %</td><td class="n">'+fmtKw(r.soll)+'</td>'+(c.ueb?'<td class="n">'+fmtKw(r.net)+'</td>':'')+'<td class="n">'+fmtKw(r.mess)+'</td><td class="n">'+(r.dev==null?'–':(r.dev>0?'+':'')+fmtKw(r.dev))+'</td><td class="'+(r.status==='ok'?'okc':(r.status==='hoch'||r.status==='niedrig')?'bad':'mut')+'">'+lbl[r.status]+'</td></tr>').join('')
+    + '</table><div class="fine">FAE-Nr. '+esc(f.nr||'–')+' · '+(c.ueb?'Überschuss':'Volleinspeisung')+' · '+fmtKw(c.P,1)+' kW'+(c.drossel?' (auf 60 % begrenzt)':'')+' · 100 % = '+fmtKw(c.base,1)+' kW · Toleranz ± '+fmtKw(c.tol)+' kW'+(c.ueb&&c.last!=null?' · Hausverbrauch '+fmtKw(c.last)+' kW':'')+'</div>';
+  if(c.rows.some(r=>r.status==='na')) h += '<div class="fine">Stufe(n) '+c.rows.filter(r=>r.status==='na').map(r=>r.pct+' %').join(', ')+' wegen zu geringer Einstrahlung nicht prüfbar.</div>';
+  if(naNeeded()){
+    const n = naS(), l = (NA_STATUS.find(x=>x[0]===n.status)||[0,'nicht angegeben'])[1];
+    h += '<div class="fine">NA-Schutz'+(n.typ?' '+esc(n.typ):'')+': <b class="'+(n.status==='ok'?'okc':(n.status==='defekt'||n.status==='fehlt')?'bad':'mut')+'">'+esc(l)+'</b></div>';
+  }
+  return sec('Einspeisemanagement (FRE)', '', h);
+}
+function auslSec(){
+  if(!isLive() || !hasFullReadout() || !F('mw')) return '';
   const res = state.zaehler.zeiger || {status:'leer',findings:[]};
   if(res.status==='leer') return '';
-  const mw = state.zaehler.mw;
-  const tab = '<table style="margin-top:4px"><thead><tr><th></th><th>U (V)</th><th>I (A)</th><th>φ U–I (°)</th></tr></thead><tbody>'
-    + [1,2,3].map(i=>'<tr><td><b>L'+i+'</b></td><td>'+esc(mw['u'+i]||'–')+'</td><td>'+esc(mw['i'+i]||'–')+'</td><td>'+esc(mw['w'+i]||'–')+'</td></tr>').join('')
-    + '</tbody></table>'
-    + ((mw.uu12||mw.uu13) ? '<div class="fine">Winkel U1–U2: '+esc(mw.uu12||'–')+'° · U1–U3: '+esc(mw.uu13||'–')+'°</div>' : '');
-  return '<div class="blk"><div class="blkh">Zeigerdiagramm (Wirkdiagramm)<span>Zählerauslesung'+(state.zaehler.stand.zeit?' · '+esc(state.zaehler.stand.zeit):'')+'</span></div><div class="two"><div style="max-width:'+((size||220)-10)+'px">'+zeigerSvg(size||220,true)+'</div><div>'
-    + tab + (res.findings||[]).map(f=>'<div class="it '+(f.level==='warn'?'open':'')+'">'+(f.level==='ok'?'✓':f.level==='warn'?'⚠':'ℹ')+' '+esc(f.text)+'</div>').join('')+'</div></div></div>';
+  const mw = state.zaehler.mw, warns = (res.findings||[]).filter(f=>f.level==='warn');
+  const tab = '<table><tr><th></th><th class="n">U (V)</th><th class="n">I (A)</th><th class="n">φ U–I (°)</th></tr>'
+    + [1,2,3].map(i=>'<tr><td>L'+i+'</td><td class="n">'+esc(mw['u'+i]||'–')+'</td><td class="n">'+esc(mw['i'+i]||'–')+'</td><td class="n">'+esc(mw['w'+i]||'–')+'</td></tr>').join('')+'</table>';
+  const winkel = (mw.uu12||mw.uu13) ? ' · U1–U2 '+esc(mw.uu12||'–')+'° · U1–U3 '+esc(mw.uu13||'–')+'°' : '';
+  return sec('Zählerauslesung (RLM)', esc(state.zaehler.stand.zeit||''),
+    '<div style="display:flex;gap:8px;align-items:center"><div style="width:84px;flex:none">'+zeigerSvg(84,false)+'</div><div style="flex:1;min-width:0">'+tab+'</div></div>'
+    + '<div class="fine">'+(warns.length ? warns.map(f=>'<span class="bad">⚠ '+esc(f.text)+'</span>').join('<br>') : 'Zeigerdiagramm plausibel')+winkel+'</div>');
 }
-
+function maengelKeyMap(r){ const m = {}; r.maengel.forEach(x=>{ if(x.key && x.key.indexOf('chk:')===0) m[x.key.slice(4)] = x.cls; }); return m; }
+function checklistSec(r){
+  const items = visibleItems(), km = maengelKeyMap(r);
+  let ok = 0, tot = 0, html = '';
+  CHECKLIST.forEach(cat=>{
+    const its = items.filter(i=>i.cat===cat.cat); if(!its.length) return;
+    let o = 0;
+    const rows = its.map(({id,label})=>{
+      const c = state.checklist[id] || {}, k = km[id]; tot++;
+      let cls = '', ic = '✓', tag = '';
+      if(c.checked){ o++; ok++; }
+      else if(k==='keine'){ cls=' x'; ic='✕'; tag='<em class="tg r">Keine IBS</em>'; }
+      else if(k==='frist'){ cls=' x'; ic='✕'; tag='<em class="tg r">Mängelkarte</em>'; }
+      else if(k==='hinweis'){ cls=' w'; ic='!'; tag='<em class="tg o">Hinweis</em>'; }
+      else { cls=' u'; ic='–'; }
+      return '<div class="ci'+cls+'"><i>'+ic+'</i><span>'+esc(label)+(c.note?' – <u>'+esc(c.note)+'</u>':'')+'</span>'+tag+'</div>';
+    }).join('');
+    html += '<div class="cat"><h3>'+esc(cat.cat)+' <small>'+o+'/'+its.length+'</small></h3>'+rows+'</div>';
+  });
+  return sec('Checkliste · alle Prüfpunkte', esc(ok+' von '+tot+' in Ordnung'), '<div class="cols">'+html+'</div>');
+}
+function festSec(r){
+  const rows = [];
+  const fr = fristIso() ? fmtIso(fristIso()) : '';
+  const add = (tag, cls, m)=> rows.push('<div class="row"><span class="tag '+cls+'">'+tag+'</span><div><b>'+esc(m.text)+'</b>'+(m.ext?'':' <span class="mut">(intern)</span>')+(m.massn?' – '+esc(m.massn):'')+'</div></div>');
+  r.keine.forEach(m=>add('Keine Inbetriebsetzung','r',m));
+  r.frist.forEach(m=>add('Mängelkarte'+(fr?' · bis '+esc(fr):''),'r',m));
+  r.hinweis.forEach(m=>add('Hinweis','o',m));
+  r.offen.forEach(t=>rows.push('<div class="row"><span class="tag u">Offen</span><div class="mut">'+esc(t)+'</div></div>'));
+  if(!rows.length) rows.push('<div class="row"><span class="tag u">–</span><div>Keine Feststellungen.</div></div>');
+  const bem = state.abschluss.bemerkung;
+  return sec('Feststellungen und Bemerkung', '', '<div class="f">'+rows.join('')+'</div>')
+    + '<div style="margin:3px 0 22px;white-space:pre-wrap">'+(bem?'<b>Bemerkung:</b> '+esc(bem):'')+'</div>';
+}
+function sigInner(){ const a = state.abschluss; return a.sigImg ? '<img class="sigimg" src="'+a.sigImg+'" alt="Unterschrift">' : '<span class="s">'+esc(a.unterschrift||'')+'</span>'; }
+function bandHtml(title, sub){
+  const s = state.standort;
+  return '<div class="band"><div><h1>'+esc(title)+'</h1><div class="s">'+esc(sub)+'</div></div><div class="m">'+esc(fmtDateDe())+(s.pruefer?'<br>Prüfer '+esc(s.pruefer):'')+'<br>Avacon Netz GmbH</div></div>';
+}
+function statHtml(r){
+  const cls = r.status==='ja'||r.status==='hinweis' ? 'g' : r.status==='nein' ? 'r' : r.status==='frist' ? 'o' : 'u';
+  const pill = r.status==='ja' ? 'In Ordnung' : r.status==='hinweis' ? 'Hinweis offen' : r.status==='frist' ? (fristIso()?'Frist '+fmtIso(fristIso()):'Mit Frist') : r.status==='nein' ? 'Keine Inbetriebsetzung' : 'Unvollständig';
+  const p = [];
+  if(r.keine.length) p.push(r.keine.length+' Mangel'+(r.keine.length>1?'/Mängel':'')+' ohne Inbetriebsetzung');
+  if(r.frist.length) p.push(r.frist.length+' Mangel'+(r.frist.length>1?'/Mängel':'')+' mit Frist');
+  if(r.hinweis.length) p.push(r.hinweis.length+' Hinweis'+(r.hinweis.length>1?'e':''));
+  if(r.offen.length) p.push(r.offen.length+' Eingabe'+(r.offen.length>1?'n':'')+' offen');
+  return {cls, pill, sub:p.join(' · ')};
+}
 /* ---- Gemeinsame Bausteine ---- */
 function fmtIso(d){ const m=String(d||'').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? m[3]+'.'+m[2]+'.'+m[1] : (d||''); }
 function resClass(st){ return st==='ja'||st==='hinweis' ? '' : st==='nein' ? ' nein' : st==='frist' ? ' frist' : ' unv'; }
@@ -2885,106 +3017,87 @@ async function ensureMapImg(){
 function mapHtml(){
   const u = mapUrl(); if(!u) return '';
   const img = (_mapCache.gps===state.standort.gps && _mapCache.img) ? _mapCache.img : '';
-  return '<div class="m"><a href="'+u+'" target="_blank" rel="noopener" data-pdflink="'+u+'">'
-    + (img ? '<img src="'+img+'" alt="Karte">' : '<div class="nomap">Karte in Google Maps öffnen</div>')
-    + '</a><div class="cap">Antippen: Karte öffnen</div></div>';
+  return '<div class="map"><a href="'+u+'" target="_blank" rel="noopener" data-pdflink="'+u+'">'
+    + (img ? '<img src="'+img+'" alt="Karte">' : 'Karte<br>Antippen: Google Maps') + '</a></div>';
 }
-
-function sigHtml(){ const a = state.abschluss; return a.sigImg ? '<div class="sig" style="min-height:0"><img class="sigimg" src="'+a.sigImg+'" alt="Unterschrift"></div>' : '<div class="sig">'+esc(a.unterschrift||'')+'</div>'; }
+function kopfHtml(kvHtml){
+  const s = state.standort, adr = addressLines(), mp = mapHtml();
+  return '<div class="top'+(mp?'':' nomap')+'"><div><div style="font-size:10.5pt;font-weight:600">'+esc(s.name||'–')+'</div><div class="mut">'+esc(adr.join(' · '))+'</div><div class="kv">'+kvHtml+'</div></div>'+mp+'</div>';
+}
+function internKacheln(){
+  const s = state.standort, z = state.zaehler, mod = state.modem;
+  const sp = {'3polig':'3-polig Z 10 A','schmelz':'Schmelzsicherung 10 A'}[state.absicherung.sicherung] || (state.absicherung.sicherung==='sonstiges' ? (state.absicherung.sonstigesText||'Sonstiges') : '–');
+  const test = mod.verbindungstest ? ' · Test '+(mod.verbindungstest==='io'?'✓':'✕') : '';
+  return tile('Spannungsebene', ebeneText())
+    + tile('Bezug', s.bezug ? s.bezug+' kW' : '–')
+    + tile('Einspeisung', s.einspeise ? s.einspeise+' kW' : '–')
+    + tile('Zähler', z.z_nummer)
+    + tile('Modem / SMGW', (mod.sim||'–')+test)
+    + tile('Wandlerfaktor', hasWandlerAny() ? (computeWandlerfaktor().total||'–') : '–')
+    + tile('Spannungspfad', absicherungVisible() ? sp : '–')
+    + tile('HarNES-Nr.', s.id);
+}
+function nachSec(){
+  const np = state.nachpruefung;
+  return sec('Nachprüfung der Mängel', np.quelle?esc('Quelle: '+np.quelle):'',
+    '<table class="mt"><thead><tr><th class="nr">Nr.</th><th>Mangel</th><th style="width:70px">Ergebnis</th><th>Bemerkung</th></tr></thead><tbody>'
+    + np.items.map((it,i)=>'<tr><td class="nr">'+(i+1)+'</td><td><span class="tag '+((it.cls||'keine')==='hinweis'?'o':'r')+'">'+esc(KLASSE_LABEL[it.cls||'keine'])+'</span> '+esc(it.text)+'</td><td class="'+(it.status==='offen'?'bad':'')+'">'+(it.status==='behoben'?'behoben':it.status==='offen'?'nicht behoben':'offen')+'</td><td>'+esc(it.note||'')+'</td></tr>').join('')
+    + '</tbody></table>');
+}
 function buildInternalHtml(){
-  const s = state.standort, r = computeErgebnis();
-  const adr = addressLines();
-  const messart = {direkt:'Direktmessung',halbindirekt:'Halbindirekte Messung',wandler:'Wandlermessung',kombiwandler:'Kombiwandler'}[state.messart] || '';
-  let html = '<div class="pg int"><h1>'+esc(reportTitle())+'</h1>';
-  const mp = mapHtml();
-  html += '<div class="head'+(mp?' hm':'')+'"><div class="l"><div>'+esc(s.name||'')+'</div>'+adr.map(a=>'<div>'+esc(a)+'</div>').join('')+'<div style="margin-top:6px;color:#444">'+esc(messart)+'</div></div>'
-    + mp
-    + '<div class="r">'+(s.einspeise?'<div>Einspeiseleistung: '+esc(s.einspeise)+' kW</div>':'')+(s.bezug?'<div>Bezugsleistung: '+esc(s.bezug)+' kW</div>':'')
-    + (s.id?'<div>HarNES-Nr.: '+esc(s.id)+'</div>':'')+(s.gps?'<div style="color:#444;font-size:9pt">GPS: '+esc(s.gps)+'</div>':'')+'</div></div>';
-  html += '<div class="res'+resClass(r.status)+'">'+esc(r.label)+'</div>';
-
-  if(showNach()){
-    html += '<div class="blk"><div class="blkh">Nachprüfung der Mängel'+(state.nachpruefung.quelle?'<span>Quelle: '+esc(state.nachpruefung.quelle)+'</span>':'')+'</div>'
-      + '<table class="mt"><thead><tr><th class="nr">Nr.</th><th>Mangel</th><th style="width:90px">Ergebnis</th><th>Bemerkung</th></tr></thead><tbody>'
-      + state.nachpruefung.items.map((it,i)=>'<tr><td class="nr">'+(i+1)+'</td><td><span class="kls '+(it.cls||'keine')+'">'+esc(KLASSE_LABEL[it.cls||'keine'])+'</span> '+esc(it.text)+'</td><td class="'+(it.status==='offen'?'bad':'')+'">'+(it.status==='behoben'?'behoben':it.status==='offen'?'nicht behoben':'offen')+'</td><td>'+esc(it.note||'')+'</td></tr>').join('')
-      + '</tbody></table></div>';
-  }
-  if(state.vorgang==='nach') html += faeBlockHtml();
-  if(state.vorgang!=='nach'){
-    html += zaehlerBlockHtml();
-    html += faeBlockHtml();
-    const rr = hasRiso();
-    if(hasCtPanel() && state.ct) html += wandlerTableHtml('Stromwandler', ratioText(state.ct), state.ct.klasse, state.ct.sollbuerde,
-      state.ct.phases.map((p,i)=>({label:'L'+(i+1), serial:p.seriennummer, gem:p.gemessenebuerde, riso:state.riso['iL'+(i+1)]})), rr);
-    if(hasVtPanel() && state.vt) html += wandlerTableHtml('Spannungswandler', ratioText(state.vt), state.vt.klasse, state.vt.sollbuerde,
-      state.vt.phases.map((p,i)=>({label:'L'+(i+1), serial:p.seriennummer, gem:p.gemessenebuerde, riso:state.riso['uL'+(i+1)]})), rr);
-    if(hasKombiPanel() && state.kombi){
-      const k = state.kombi;
-      html += wandlerTableHtml('Kombiwandler – Stromteil', ratioText({primaer:k.primaerA,sekundaer:k.sekundaerA}), k.klasseA, k.buerdeA,
-        k.phases.map((p,i)=>({label:'L'+(i+1), serial:p.seriennummer, gem:p.gemessenA, riso:state.riso['iL'+(i+1)]})), rr);
-      html += wandlerTableHtml('Kombiwandler – Spannungsteil', ratioText({primaer:k.primaerV,sekundaer:k.sekundaerV}), k.klasseV, k.buerdeV,
-        k.phases.map((p,i)=>({label:'L'+(i+1), serial:p.seriennummer, gem:p.gemessenV, riso:state.riso['uL'+(i+1)]})), rr);
-    }
-    html += zeigerReportHtml(150);
-    html += checklistReportHtml();
-  }
-
-  const p2 = !!(r.keine.length||r.frist.length||r.hinweis.length||r.offen.length||state.abschluss.bemerkung);
-  if(p2) html += '</div><div class="pg int"><h1 style="font-size:13pt">'+esc(reportTitle())+' – Mängel und Hinweise</h1>';
-  [['keine','Mängel – keine Inbetriebsetzung',r.keine],['frist','Mängelkarte mit Frist',r.frist],['hinweis','Hinweise',r.hinweis]].forEach(([k,t,l])=>{
-    if(!l.length) return;
-    html += '<h3>'+t+(k==='frist'&&fristIso()?' – Frist bis '+esc(fmtIso(fristIso())):'')+'</h3><ul style="margin:2px 0 0 18px;font-size:9.5pt">'
-      + l.map(m=>'<li>'+esc(m.text)+(m.ext?'':' <i>(intern)</i>')+(m.massn?'<div class="fine" style="margin:0">'+esc(m.massn)+'</div>':'')+'</li>').join('')+'</ul>';
-  });
-  if(r.offen.length) html += '<h3>Nicht dokumentiert</h3><ul style="margin:2px 0 0 18px;font-size:9pt;color:#555">'+r.offen.map(t=>'<li>'+esc(t)+'</li>').join('')+'</ul>';
-  if(state.abschluss.bemerkung) html += '<h3>Bemerkung</h3><div style="font-size:9.5pt;white-space:pre-wrap">'+esc(state.abschluss.bemerkung)+'</div>';
-  html += '<div class="sign"><div style="color:#444;font-size:9pt">Prüfer: '+esc(s.pruefer||'–')+'</div>'
-    + '<div style="text-align:center">'+sigHtml()+'<div style="font-style:italic">'+esc(fmtDateDe())+'</div></div></div>';
-  html += '<div class="fine">'+(state.ebene==='NS' ? 'Bewertung der Mängel nach „Bewertung je Komponente“ (Stand 01.11.2026), Spalte '+(state.vorgang==='bestand'?'Bestandsanlage bzw. Neuanlage je Mangel':'Neuanlage')+' – fachliche Bewertung, keine Rechtsberatung.' : 'MS/HS: keine Bewertungsmatrix hinterlegt – jeder Mangel verhindert die Inbetriebsetzung'+(state.vorgang==='bestand'?' (Bestand: Mängelkarte mit Frist).':'.'))+'</div>';
-
-  html += '</div>';
+  const s = state.standort, r = computeErgebnis(), st = statHtml(r);
+  const title = reportTitle();
+  const sub = 'Zähleranlage'+(hasFullReadout()?' · RLM':'');
+  let body = '';
+  if(showNach()) body += nachSec();
+  body += einbauSec() + wandlerSecs() + anlaufSec() + g2(freSec(), auslSec()) + checklistSec(r);
+  body += festSec(r);
+  const rechts = state.ebene==='NS' ? 'Bewertung nach „Bewertung je Komponente“ (Stand 01.11.2026)' : 'MS/HS: ohne Bewertungsmatrix – jeder Mangel verhindert die Inbetriebsetzung'+(state.vorgang==='bestand'?' (Bestand: Mängelkarte mit Frist)':'');
+  const str = [s.strasse,s.hausnr].filter(Boolean).join(' ');
+  let html = '<div class="pg">'+bandHtml(title, sub)
+    + '<div class="stat '+st.cls+'"><div><b>'+esc(r.label)+'</b><br><span>'+esc(st.sub||' ')+'</span></div><div class="pill">'+esc(st.pill)+'</div></div>'
+    + '<div class="in">'+kopfHtml(internKacheln())+renumSections(body)
+    + '<div class="sig"><div class="l">'+sigInner()+'Prüfer'+(s.pruefer?': '+esc(s.pruefer):'')+' · '+esc(fmtDateDe())+'</div><div class="l">Kunde / Vertreter (optional)</div></div></div>'
+    + '<div class="foot"><span>'+esc([ 'Protokoll', s.name, str, fmtDateDe() ].filter(Boolean).join(' · '))+'</span><span>'+esc(rechts)+'</span></div></div>';
   const photos = collectPhotos();
   for(let k=0;k<photos.length;k+=6){
-    html += '<div class="pg"><h1 style="font-size:14pt">'+esc(reportTitle())+' – Fotos</h1><div class="pgrid">'
-      + photos.slice(k,k+6).map((p,j)=>'<div class="photo"><div class="pn">'+(k+j+1)+'. Bild – '+esc(p.label)+'</div><img src="'+p.src+'"></div>').join('') + '</div></div>';
+    html += '<div class="pg">'+bandHtml(title+' – Fotos', s.name||'')+'<div class="in"><div class="pgrid">'
+      + photos.slice(k,k+6).map((p,j)=>'<div class="photo"><div class="pn">'+(k+j+1)+'. Bild – '+esc(p.label)+'</div><img src="'+p.src+'"></div>').join('')
+      + '</div></div><div class="foot"><span>'+esc(title)+'</span><span>Fotos '+(k+1)+'–'+Math.min(k+6,photos.length)+' von '+photos.length+'</span></div></div>';
   }
   return html;
 }
 
 /* ---- Extern: Mängelschein ---- */
-function maengelTabelle(list, mitBehoben){
-  return '<table class="mt"><thead><tr><th class="nr">Nr.</th><th>Feststellung</th><th>Folge / Maßnahme</th><th>Begründung und Rechtsgrundlage</th>'+(mitBehoben?'<th class="chk" style="font-size:8.5pt">Behoben</th>':'')+'</tr></thead><tbody>'
-    + list.map((m,i)=>'<tr><td class="nr">'+(i+1)+'</td><td><b>'+esc(m.text)+'</b>'+(m.req?'<div class="note">Anforderung: '+esc(m.req)+'</div>':'')+(m.note?'<div class="note">Bemerkung: '+esc(m.note)+'</div>':'')+'</td>'
+function maengelTabelle(list, mitBehoben, start){
+  return '<table class="mt"><thead><tr><th class="nr">Nr.</th><th>Feststellung</th><th>Folge / Maßnahme</th><th>Begründung und Rechtsgrundlage</th>'+(mitBehoben?'<th class="chk" style="font-size:7.6pt">Behoben</th>':'')+'</tr></thead><tbody>'
+    + list.map((m,i)=>'<tr><td class="nr">'+((start||0)+i+1)+'</td><td><b>'+esc(m.text)+'</b>'+(m.req?'<div class="note">Anforderung: '+esc(m.req)+'</div>':'')+(m.note?'<div class="note">Bemerkung: '+esc(m.note)+'</div>':'')+'</td>'
       + '<td>'+esc(m.massn||'')+'</td><td>'+esc(m.begr||'')+(m.quelle?'<div class="note">'+esc(m.quelle)+'</div>':'')+'</td>'+(mitBehoben?'<td class="chk">☐</td>':'')+'</tr>').join('')
     + '</tbody></table>';
 }
 function buildExternalHtml(){
-  const s = state.standort, r = computeErgebnis();
-  const adr = addressLines();
+  const s = state.standort, r = computeErgebnis(), st = statHtml(r);
   const ext = r.ext;
   const keine = ext.filter(m=>m.cls==='keine'), frist = ext.filter(m=>m.cls==='frist'), hinweis = ext.filter(m=>m.cls==='hinweis');
   const anlass = {vor:'der Vorinbetriebnahme', ibn:'der Inbetriebnahme', nach:'der Nachprüfung', bestand:'der Abnahme der Bestandsanlage'}[state.vorgang] || 'der Prüfung';
-  let html = '<div class="pg ext"><h1>Mängelschein</h1><div style="margin:-6px 0 10px;color:#444">'+esc(reportTitle())+'</div>';
-  html += '<div class="head"><div class="l"><div><b>'+esc(s.name||'')+'</b></div>'+adr.map(a=>'<div>'+esc(a)+'</div>').join('')+'</div>'
-    + '<div class="r">'+(s.id?'<div>HarNES-Nr.: '+esc(s.id)+'</div>':'')+'<div>Datum der Prüfung: '+esc(fmtDateDe())+'</div>'
-    + (state.zaehler.z_nummer && state.vorgang!=='nach' ? '<div>Zählernummer: '+esc(state.zaehler.z_nummer)+'</div>' : '')+'</div></div>';
-  html += '<div class="res'+resClass(r.status)+'">'+esc(r.label)+'</div>';
+  const fr = fristIso() ? fmtIso(fristIso()) : '________________';
+  let n = 0, body = '';
   if(!ext.length){
-    html += '<div class="box"><b>Es wurden keine vom Installateur bzw. Anlagenbetreiber zu behebenden Mängel festgestellt.</b></div>';
+    body += '<p class="lead"><b>Es wurden keine vom Installateur bzw. Anlagenbetreiber zu behebenden Mängel festgestellt.</b></p>';
   } else {
-    html += '<p>Bei '+anlass+' wurden die nachfolgenden Feststellungen getroffen. Bitte beheben Sie die Mängel und melden Sie die Beseitigung dem Messstellenbetreiber zur Nachprüfung.</p>';
-    if(keine.length) html += '<h3>Mängel – keine Inbetriebsetzung bis zur Beseitigung</h3>'+(state.ebene==='NS'?'<div class="fine" style="margin:0 0 4px">'+esc(TXT_VERWEIGERUNG)+'</div>':'')+maengelTabelle(keine,true);
-    if(frist.length){
-      html += '<h3 style="margin-top:12px">Mängelkarte mit Frist – Inbetriebsetzung erfolgt</h3>'
-        + '<div style="margin:0 0 4px"><b>Frist zur Beseitigung: '+(fristIso()?esc(fmtIso(fristIso())):'________________')+' <span style="font-weight:400">(vier Wochen ab Prüfdatum)</span></b></div>'+maengelTabelle(frist,true)
-        + (state.ebene==='NS' ? '<div class="fine">'+esc(TXT_FRIST)+'</div>' : '');
-    }
-    if(hinweis.length) html += '<h3 style="margin-top:12px">Hinweise (kein Verweigerungsgrund)</h3>'+maengelTabelle(hinweis,false);
+    body += '<p class="lead">Bei '+anlass+' wurden die nachfolgenden Feststellungen getroffen. Bitte beheben Sie die Mängel und melden Sie die Beseitigung dem Messstellenbetreiber zur Nachprüfung.</p>';
+    if(keine.length){ body += '<div class="sec"><span class="tag r">Keine Inbetriebsetzung</span>bis zur Beseitigung der Mängel</div>'+(state.ebene==='NS'?'<div class="fine" style="margin:0 0 3px">'+esc(TXT_VERWEIGERUNG)+'</div>':'')+maengelTabelle(keine,true,n); n += keine.length; }
+    if(frist.length){ body += '<div class="sec"><span class="tag r">Mängelkarte mit Frist</span>Inbetriebsetzung erfolgt · Frist zur Beseitigung: <u>'+esc(fr)+'</u> <span style="font-weight:400;color:var(--mut)">(vier Wochen ab Prüfdatum)</span></div>'+maengelTabelle(frist,true,n)+(state.ebene==='NS'?'<div class="fine" style="margin-top:3px">'+esc(TXT_FRIST)+'</div>':''); n += frist.length; }
+    if(hinweis.length){ body += '<div class="sec"><span class="tag o">Hinweise</span>kein Verweigerungsgrund</div>'+maengelTabelle(hinweis,false,n); }
   }
-  html += '<div class="sign" style="margin-top:24px"><div style="width:46%">'+sigHtml()+'<div class="line">Prüfer Messstellenbetreiber'+(s.pruefer?': '+esc(s.pruefer):'')+' · '+esc(fmtDateDe())+'</div></div>'
-    + '<div style="width:46%"><div class="line">Kenntnisnahme Installateur / Anlagenbetreiber (Ort, Datum, Unterschrift)</div></div></div>';
-  html += '</div>';
-  return html;
+  const z = state.zaehler;
+  const kv = tile('HarNES-Nr.', s.id) + tile('Datum der Prüfung', fmtDateDe()) + tile('Zählernummer', state.vorgang!=='nach' ? z.z_nummer : '');
+  const str = [s.strasse,s.hausnr].filter(Boolean).join(' ');
+  return '<div class="pg">'+bandHtml('Mängelschein', reportTitle())
+    + '<div class="stat '+st.cls+'"><div><b>'+esc(r.label)+'</b><br><span>'+esc(st.sub||' ')+'</span></div><div class="pill">'+esc(st.pill)+'</div></div>'
+    + '<div class="in">'+kopfHtml(kv).replace('class="kv"','class="kv" style="grid-template-columns:repeat(3,1fr)"')+body
+    + '<div class="sig"><div class="l">'+sigInner()+'Prüfer Messstellenbetreiber'+(s.pruefer?': '+esc(s.pruefer):'')+' · '+esc(fmtDateDe())+'</div><div class="l">Kenntnisnahme Installateur / Anlagenbetreiber (Ort, Datum, Unterschrift)</div></div></div>'
+    + '<div class="foot"><span>'+esc(['Mängelschein', s.name, str, fmtDateDe()].filter(Boolean).join(' · '))+'</span><span>Fachliche Bewertung, keine Rechtsberatung</span></div></div>';
 }
 function externalText(){
   const s = state.standort, r = computeErgebnis(), ext = r.ext;
@@ -3030,7 +3143,7 @@ function faeS(){
   FAE_STUFEN.forEach(([k])=>{ if(!f.st[k]) f.st[k] = {val:'', bezug:false, na:false}; });
   return f;
 }
-function faeNeeded(){ return !!state.vorgang && state.vorgang!=='vor' && state.ebene==='NS' && (parseNum(state.standort.einspeise)||0) > 25; }
+function faeNeeded(){ return !!state.vorgang && state.vorgang!=='vor' && state.ebene==='NS' && F('fae') && (parseNum(state.standort.einspeise)||0) > 25; }
 function faeShown(){ return faeNeeded(); }
 function fmtKw(v, d){ return (v==null||!isFinite(v)) ? '–' : v.toFixed(d==null?2:d).replace('.',','); }
 function faeCalc(){
@@ -3241,7 +3354,7 @@ function naS(){
   if(n.typ==null) n.typ = ''; if(!n.status) n.status = '';
   return n;
 }
-function naNeeded(){ return faeNeeded() && (parseNum(state.standort.einspeise)||0) > 30; }
+function naNeeded(){ return faeNeeded() && F('na') && (parseNum(state.standort.einspeise)||0) > 30; }
 function naComplete(){ return !naNeeded() || !!naS().status; }
 function naMaengel(list){
   if(!naNeeded()) return; const n = naS();
@@ -3334,17 +3447,17 @@ async function htmlToPdfBlob(bodyHtml){
   await ensurePdfLibs();
   const ifr = document.createElement('iframe');
   ifr.setAttribute('aria-hidden','true');
-  ifr.style.cssText = 'position:fixed;left:-12000px;top:0;width:720px;height:1200px;border:0';
+  ifr.style.cssText = 'position:fixed;left:-12000px;top:0;width:794px;height:1200px;border:0';
   document.body.appendChild(ifr);
   try{
-    await new Promise(res=>{ ifr.onload = res; ifr.srcdoc = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>'+reportCss()+'body{padding:0!important;margin:0}.pg{margin:0!important}</style></head><body>'+bodyHtml+'</body></html>'; });
+    await new Promise(res=>{ ifr.onload = res; ifr.srcdoc = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>'+reportCss()+'body{padding:0!important;margin:0;background:#fff!important}.pg{margin:0!important}</style></head><body>'+bodyHtml+'</body></html>'; });
     const doc = ifr.contentDocument;
     await Promise.all([...doc.images].map(i=> i.complete ? Promise.resolve() : new Promise(r=>{ i.onload = i.onerror = r; })));
     const pdf = new window.jspdf.jsPDF({unit:'mm', format:'a4', compress:true});
-    const PW = 186, PH = 273, MX = 12, MY = 12;
+    const PW = 210, PH = 297, MX = 0, MY = 0;
     let first = true;
     for(const el of [...doc.querySelectorAll('.pg')]){
-      const canvas = await window.html2canvas(el, {scale:2, backgroundColor:'#ffffff', useCORS:true, logging:false, windowWidth:720});
+      const canvas = await window.html2canvas(el, {scale:2, backgroundColor:'#ffffff', useCORS:true, logging:false, windowWidth:794});
       const elR = el.getBoundingClientRect();
       const lks = [...el.querySelectorAll('a[data-pdflink]')].map(a=>{ const r=a.getBoundingClientRect(); return {u:a.getAttribute('data-pdflink'), x:r.left-elR.left, y:r.top-elR.top, w:r.width, h:r.height}; });
       const words = pdfTextWords(el, elR);
@@ -3356,14 +3469,15 @@ async function htmlToPdfBlob(bodyHtml){
         const c = document.createElement('canvas'); c.width = canvas.width; c.height = h;
         const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,c.width,h); ctx.drawImage(canvas,0,y,canvas.width,h,0,0,canvas.width,h);
         if(!first) pdf.addPage(); first = false;
-        pdf.addImage(c.toDataURL('image/jpeg',0.9), 'JPEG', MX, MY, w, h*ratio);
+        const OX = MX + (PW-w)/2;
+        pdf.addImage(c.toDataURL('image/jpeg',0.9), 'JPEG', OX, MY, w, h*ratio);
         const sTop = y*ratio, sBot = sTop + h*ratio;
-        lks.forEach(l=>{ const top = l.y*2*ratio; if(top>=sTop && top<sBot) try{ pdf.link(MX+l.x*2*ratio, MY+top-sTop, l.w*2*ratio, l.h*2*ratio, {url:l.u}); }catch(e){} });
+        lks.forEach(l=>{ const top = l.y*2*ratio; if(top>=sTop && top<sBot) try{ pdf.link(OX+l.x*2*ratio, MY+top-sTop, l.w*2*ratio, l.h*2*ratio, {url:l.u}); }catch(e){} });
         // unsichtbare Textebene: Text und Nummern lassen sich im PDF markieren, kopieren und suchen
         words.forEach(wd=>{ const top = wd.y*2*ratio; if(top<sTop || top>=sBot) return;
           try{ const hmm = wd.h*2*ratio; let fs = Math.max(3, hmm*2.835*0.82); pdf.setFontSize(fs);
             const nat = pdf.getTextWidth(wd.t), tw = wd.w*2*ratio; if(nat>tw && tw>0){ fs = fs*tw/nat; pdf.setFontSize(fs); }
-            pdf.text(wd.t, MX+wd.x*2*ratio, MY+top-sTop+hmm*0.8, {renderingMode:'invisible'}); }catch(e){} });
+            pdf.text(wd.t, OX+wd.x*2*ratio, MY+top-sTop+hmm*0.8, {renderingMode:'invisible'}); }catch(e){} });
       }
     }
     return pdf.output('blob');
@@ -3543,7 +3657,7 @@ async function histAction(pid, act, btn){
     const st = JSON.parse(e.state);
     const items = ((st.abschluss&&st.abschluss.maengelListe)||[]).map(itemFromSnapshot);
     const neu = JSON.parse(JSON.stringify(st)); delete neu.abschluss; delete neu.weitereFotos;
-    Object.assign(neu, {pid:newPid(), vorgang:'ibn',
+    Object.assign(neu, {pid:newPid(), vorgang:'ibn', vorVorhanden:(st.vorgang==='vor'),
       nachpruefung:{items, kombi:true, quelle:(VORGANG_KURZ[st.vorgang]||'Protokoll')+' vom '+(st.standort&&st.standort.datum?fmtIso(st.standort.datum):new Date(e.ts).toLocaleDateString('de-DE'))}});
     neu.standort = Object.assign({}, st.standort, {datum:'', pruefer:(profilLoad().pruefer||(st.standort||{}).pruefer||'')});
     if(neu.zaehler){ neu.zaehler = Object.assign({}, neu.zaehler, {zeiger:null}); }
@@ -3703,6 +3817,242 @@ function openSigPad(){
 document.getElementById('sigOpen').onclick = openSigPad;
 document.getElementById('sigClear').onclick = ()=>setSig('');
 paintSig();
+
+/* ---------------- VORLAGEN (Anlagendaten vorab erfassen, vor Ort aufrufen) ---------------- */
+const VORL_KEY = 'vorlagen';
+async function vorlLoad(){ try{ return (await idbGet(VORL_KEY)) || []; }catch(e){ return []; } }
+async function vorlSave(l){ await idbSet(VORL_KEY, l); }
+let _vorlEdit = null, _vorlSearch = '';
+function vorlLeer(){
+  return {id:newPid(), name:'', ebene:'', messart:'', ts:Date.now(),
+    std:{name:'',id:'',bezug:'',einspeise:'',strasse:'',hausnr:'',plz:'',ort:'',gps:''},
+    z_nummer:'', sim:'', sicherung:'', sonstigesText:'',
+    ct:{primaer:'',sekundaer:'',klasse:'',sollbuerde:''},
+    vt:{primaer:'',sekundaer:'100 V',klasse:'',sollbuerde:''},
+    ko:{primaerA:'',sekundaerA:'',klasseA:'',buerdeA:'',primaerV:'',sekundaerV:'100 V',klasseV:'',buerdeV:''}};
+}
+function vGet(o,p){ return p.split('.').reduce((a,k)=>a==null?a:a[k], o); }
+function vSet(o,p,v){ const a = p.split('.'), l = a.pop(); a.reduce((x,k)=>x[k], o)[l] = v; }
+function vIn(label, p, ph){ return '<label>'+label+'</label><input type="text" data-p="'+p+'" value="'+esc(vGet(_vorlEdit,p)||'')+'" placeholder="'+esc(ph||'')+'">'; }
+function vSel(label, p, opts){
+  const cur = vGet(_vorlEdit,p)||'';
+  return '<label>'+label+'</label><select data-p="'+p+'"><option value="">– wählen –</option>'+opts.map(o=>'<option value="'+o[0]+'"'+(o[0]===cur?' selected':'')+'>'+esc(o[1])+'</option>').join('')+'</select>';
+}
+function vSelS(label, p, opts){ return vSel(label, p, opts.map(o=>[o,o])); }
+function vChoice(label, p, opts){
+  const cur = vGet(_vorlEdit,p)||'';
+  return '<label style="margin-top:12px">'+label+'</label><div class="choice-group">'+opts.map(o=>'<div class="choice'+(o[0]===cur?' sel':'')+'" data-cp="'+p+'" data-cv="'+o[0]+'">'+esc(o[1])+'</div>').join('')+'</div>';
+}
+function vorlHatWandler(v){ return v.ebene==='MS' || v.ebene==='HS' ? true : (v.ebene==='NS' && v.messart==='halbindirekt'); }
+function vorlAdr(v){ const s = v.std; return [[s.strasse,s.hausnr].filter(Boolean).join(' '), [s.plz,s.ort].filter(Boolean).join(' ')].filter(Boolean).join(', '); }
+function vorlTyp(v){ return [v.ebene, {direkt:'Direktmessung',halbindirekt:'Halbindirekt',wandler:'Wandlermessung',kombiwandler:'Kombiwandler'}[v.messart]].filter(Boolean).join(' · '); }
+
+async function vorlOpen(){ document.getElementById('vorlModal').hidden = false; _vorlSearch = ''; await vorlRenderList(); }
+function vorlClose(){ document.getElementById('vorlModal').hidden = true; _vorlEdit = null; }
+async function vorlRenderList(){
+  const body = document.getElementById('vorlBody');
+  const all = await vorlLoad();
+  const q = _vorlSearch.trim().toLowerCase();
+  const list = all.filter(v=> !q || (v.name+' '+v.std.name+' '+vorlAdr(v)+' '+v.std.id+' '+v.z_nummer).toLowerCase().includes(q));
+  const hasCur = !!(state.standort.name || state.standort.strasse);
+  body.innerHTML = '<h2>Vorlagen</h2><div class="hint" style="margin:0">Anlagendaten vorab eintragen. Vor Ort die Vorlage antippen und „Termin starten“ wählen.</div>'
+    + '<div class="modal-actions" style="margin-top:10px"><button class="btn btn-primary btn-block" id="vorlNew">+ Neue Vorlage</button>'
+    + (hasCur?'<button class="btn btn-block" id="vorlFromCur">Aktuelles Protokoll als Vorlage speichern</button>':'')+'</div>'
+    + (all.length>4?'<input type="text" id="vorlSearch" placeholder="Suchen (Name, Adresse, HarNES, Zähler)" value="'+esc(_vorlSearch)+'" style="margin-top:10px">':'')
+    + '<div id="vorlList" style="margin-top:10px">'
+    + (list.length ? list.map(v=>'<div class="hist-item" data-id="'+esc(v.id)+'"><div class="hist-top"><b>'+esc(v.name||v.std.name||'(ohne Namen)')+'</b></div>'
+        + '<div class="hist-sub">'+esc(vorlAdr(v))+'</div><div class="hist-sub">'+esc(vorlTyp(v))+(v.std.bezug?' · Bezug '+esc(v.std.bezug)+' kW':'')+(v.std.einspeise?' · Einspeisung '+esc(v.std.einspeise)+' kW':'')+(v.z_nummer?' · Zähler '+esc(v.z_nummer):'')+'</div>'
+        + '<div class="hist-act" hidden><button class="btn btn-sm btn-primary" data-act="start">Termin starten</button><button class="btn btn-sm" data-act="edit">Bearbeiten</button><button class="btn btn-sm" data-act="dup">Duplizieren</button><button class="btn btn-sm btn-danger" data-act="del">Löschen</button></div></div>').join('')
+      : '<div class="hint">'+(q?'Keine Treffer.':'Noch keine Vorlagen.')+'</div>')
+    + '</div><div class="modal-actions"><button class="btn btn-block" id="vorlClose">Schließen</button></div>';
+  document.getElementById('vorlClose').onclick = vorlClose;
+  document.getElementById('vorlNew').onclick = ()=>{ _vorlEdit = vorlLeer(); vorlRenderEdit(); };
+  const fc = document.getElementById('vorlFromCur'); if(fc) fc.onclick = ()=>{ _vorlEdit = vorlAusAktuell(); vorlRenderEdit(); };
+  const se = document.getElementById('vorlSearch'); if(se) se.oninput = e=>{ _vorlSearch = e.target.value; vorlRenderList().then(()=>{ const n = document.getElementById('vorlSearch'); if(n){ n.focus(); n.setSelectionRange(n.value.length,n.value.length); } }); };
+  body.querySelectorAll('.hist-item').forEach(it=>{
+    it.onclick = ev=>{
+      const act = ev.target.closest('[data-act]');
+      if(!act){ const a = it.querySelector('.hist-act'); a.hidden = !a.hidden; return; }
+      vorlAction(it.dataset.id, act.dataset.act, act);
+    };
+  });
+}
+async function vorlAction(id, act, btn){
+  const all = await vorlLoad(), v = all.find(x=>x.id===id); if(!v) return;
+  if(act==='edit'){ _vorlEdit = JSON.parse(JSON.stringify(v)); vorlRenderEdit(); return; }
+  if(act==='dup'){ const c = JSON.parse(JSON.stringify(v)); c.id = newPid(); c.ts = Date.now(); c.name = (v.name||v.std.name||'Vorlage')+' (Kopie)'; all.unshift(c); await vorlSave(all); vorlRenderList(); return; }
+  if(act==='del'){
+    if(btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn.textContent='Wirklich löschen?'; return; }
+    await vorlSave(all.filter(x=>x.id!==id)); vorlRenderList(); return;
+  }
+  if(act==='start') await vorlStart(v);
+}
+function vorlAusAktuell(){
+  const v = vorlLeer(), s = state.standort;
+  v.ebene = state.ebene||''; v.messart = state.messart||'';
+  ['name','id','bezug','einspeise','strasse','hausnr','plz','ort','gps'].forEach(k=>{ v.std[k] = s[k]||''; });
+  v.name = s.name || vorlAdr(v) || '';
+  v.z_nummer = state.zaehler.z_nummer||''; v.sim = (state.modem&&state.modem.sim)||'';
+  v.sicherung = (state.absicherung&&state.absicherung.sicherung)||''; v.sonstigesText = (state.absicherung&&state.absicherung.sonstigesText)||'';
+  if(state.ct) ['primaer','sekundaer','klasse','sollbuerde'].forEach(k=>{ v.ct[k] = state.ct[k]||''; });
+  if(state.vt) ['primaer','sekundaer','klasse','sollbuerde'].forEach(k=>{ v.vt[k] = state.vt[k]||''; });
+  if(state.kombi) Object.keys(v.ko).forEach(k=>{ v.ko[k] = state.kombi[k]||v.ko[k]; });
+  return v;
+}
+function vorlRenderEdit(){
+  const v = _vorlEdit, body = document.getElementById('vorlBody');
+  const ms = v.ebene==='MS' || v.ebene==='HS';
+  const messOpts = v.ebene==='NS' ? [['direkt','Direktmessung'],['halbindirekt','Halbindirekt (3 Stromwandler)']] : ms ? [['wandler','Wandlermessung (getrennt)'],['kombiwandler','Kombiwandler']] : [];
+  const KS = ['0.5S','0.2S','0.1'], KV = ['0.5','0.2','0.1'], BU = ['5 VA','10 VA','15 VA'];
+  let h = '<h2>Vorlage</h2>'
+    + vIn('Name der Vorlage','name','z. B. Umspannwerk Nord')
+    + vChoice('Spannungsebene','ebene',[['NS','Niederspannung'],['MS','Mittelspannung'],['HS','Hochspannung']])
+    + (messOpts.length ? vChoice('Messart','messart',messOpts) : '')
+    + '<h3 style="margin-bottom:0">Standort</h3>'
+    + vIn('Anlagenbezeichnung / Messstellen-ID','std.name') + vIn('HarNES-Nr.','std.id')
+    + '<div class="row"><div>'+vIn('Bezugsleistung (kW)','std.bezug')+'</div><div>'+vIn('Einspeiseleistung (kW)','std.einspeise')+'</div></div>'
+    + vIn('GPS-Position (optional, z. B. 52.12345, 11.62345)','std.gps')
+    + '<div class="row"><div>'+vIn('Straße','std.strasse')+'</div><div style="max-width:90px">'+vIn('Hausnr.','std.hausnr')+'</div></div>'
+    + '<div class="row"><div style="max-width:110px">'+vIn('PLZ','std.plz')+'</div><div>'+vIn('Ort','std.ort')+'</div></div>'
+    + '<h3 style="margin-bottom:0">Zähler und Modem</h3>' + vIn('Zählernummer','z_nummer') + vIn('Modem / SMGW (SIM-Nr.)','sim');
+  if(vorlHatWandler(v)){
+    h += vSel('Spannungspfadsicherung','sicherung',[['3polig','3-polig Z 10 A'],['schmelz','Schmelzsicherung 10 A'],['sonstiges','Sonstiges']]);
+    if(v.sicherung==='sonstiges') h += vIn('Sonstiges','sonstigesText');
+  }
+  if(v.messart==='kombiwandler'){
+    h += '<h3 style="margin-bottom:0">Kombiwandler – Stromteil</h3><div class="row"><div>'+vIn('Primär (A)','ko.primaerA','z. B. 100')+'</div><div>'+vSelS('Sekundär (A)','ko.sekundaerA',['1 A','5 A'])+'</div></div>'
+      + '<div class="row"><div>'+vSelS('Klasse','ko.klasseA',KS)+'</div><div>'+vSelS('Wandlerbürde','ko.buerdeA',BU)+'</div></div>'
+      + '<h3 style="margin-bottom:0">Kombiwandler – Spannungsteil</h3><div class="row"><div>'+vIn('Primär (V)','ko.primaerV','z. B. 20000')+'</div><div>'+vSelS('Sekundär (V)','ko.sekundaerV',['100 V'])+'</div></div>'
+      + '<div class="row"><div>'+vSelS('Klasse','ko.klasseV',KV)+'</div><div>'+vSelS('Wandlerbürde','ko.buerdeV',BU)+'</div></div>';
+  } else if(vorlHatWandler(v)){
+    h += '<h3 style="margin-bottom:0">Stromwandler</h3><div class="row"><div>'+vIn('Primär (A)','ct.primaer','z. B. 1000')+'</div><div>'+vSelS('Sekundär (A)','ct.sekundaer',['1 A','5 A'])+'</div></div>'
+      + '<div class="row"><div>'+vSelS('Klasse','ct.klasse',KS)+'</div><div>'+vSelS('Wandlerbürde','ct.sollbuerde',BU)+'</div></div>';
+    if(ms) h += '<h3 style="margin-bottom:0">Spannungswandler</h3><div class="row"><div>'+vIn('Primär (V)','vt.primaer','z. B. 20000')+'</div><div>'+vSelS('Sekundär (V)','vt.sekundaer',['100 V'])+'</div></div>'
+      + '<div class="row"><div>'+vSelS('Klasse','vt.klasse',KV)+'</div><div>'+vSelS('Wandlerbürde','vt.sollbuerde',BU)+'</div></div>';
+  }
+  h += '<div class="modal-actions"><button class="btn btn-primary btn-block" id="vorlSaveBtn">Vorlage speichern</button><button class="btn btn-block" id="vorlCancel">Abbrechen</button></div>';
+  body.innerHTML = h;
+  body.querySelectorAll('[data-p]').forEach(el=>{
+    const upd = ()=>{ vSet(_vorlEdit, el.dataset.p, el.value); if(el.dataset.p==='sicherung') vorlRenderEdit(); };
+    el.addEventListener(el.tagName==='SELECT'?'change':'input', upd);
+  });
+  body.querySelectorAll('[data-cp]').forEach(el=> el.onclick = ()=>{
+    vSet(_vorlEdit, el.dataset.cp, el.dataset.cv);
+    if(el.dataset.cp==='ebene') _vorlEdit.messart = '';
+    vorlRenderEdit();
+  });
+  document.getElementById('vorlCancel').onclick = vorlRenderList;
+  document.getElementById('vorlSaveBtn').onclick = async ()=>{
+    const v2 = _vorlEdit;
+    if(!v2.name.trim()) v2.name = v2.std.name || vorlAdr(v2) || 'Vorlage';
+    v2.ts = Date.now();
+    const all = await vorlLoad(), i = all.findIndex(x=>x.id===v2.id);
+    if(i>=0) all[i] = v2; else all.unshift(v2);
+    await vorlSave(all); _vorlEdit = null; vorlRenderList();
+  };
+}
+function vorlBuildState(v){
+  const ms = v.ebene==='MS' || v.ebene==='HS';
+  const neu = {pid:newPid(), vorgang:null, ebene:v.ebene||null, messart:v.messart||(ms?'wandler':null),
+    standort:Object.assign({name:'',id:'',bezug:'',einspeise:'',strasse:'',hausnr:'',plz:'',ort:'',gps:''}, v.std, {pruefer:(profilLoad().pruefer||''), datum:''}),
+    zaehler:{z_nummer:v.z_nummer||'', photos:[null,null], hersteller:'', kandidaten:[], stand:{ap:'',am:'',rp:'',rm:'',zeit:'',quelle:''}, mw:Object.fromEntries(MW_KEYS.map(k=>[k,''])), zeiger:null},
+    modem:{typ:'', sim:v.sim||'', verbindungstest:'', notizen:'', photos:[null,null]},
+    absicherung:{sicherung:v.sicherung||'', sonstigesText:v.sonstigesText||''},
+    ct:null, vt:null, kombi:null};
+  if(v.messart==='kombiwandler') neu.kombi = Object.assign({}, v.ko, {phases:[]});
+  else if(ms || v.messart==='halbindirekt'){
+    neu.ct = Object.assign({typ:'', baujahr:''}, v.ct, {phases:[]});
+    if(ms) neu.vt = Object.assign({}, v.vt, {phases:[]});
+  }
+  return neu;
+}
+async function vorlStart(v){
+  try{ await archiveCurrent(); }catch(e){}
+  const neu = vorlBuildState(v);
+  clearTimeout(_saveTimer); flushDraft = async function(){};   // sonst überschreibt der alte Stand beim Neuladen die Vorlage
+  await idbSet(LS_KEY, JSON.stringify(neu));
+  location.reload();
+}
+document.getElementById('btnVorl').onclick = vorlOpen;
+
+/* ---------------- ANLAUFPRÜFUNG MIT PRÜFZÄHLER (PWS) ---------------- */
+const ANL_TOL = {NS:1, MS:0.5, HS:0.2};   // zulässiger Fehler in % je Spannungsebene (Rico, 20.11.2026)
+function anlS(){ if(!state.anlauf) state.anlauf = {photo:null, fehler:'', pws:''}; return state.anlauf; }
+function anlTol(){ return ANL_TOL[state.ebene] != null ? ANL_TOL[state.ebene] : 1; }
+function anlFehler(){ const a = state.anlauf; if(!a || a.fehler==null || String(a.fehler).trim()==='') return null; const n = parseFloat(String(a.fehler).replace(',','.').replace(/[−–]/g,'-')); return isFinite(n) ? n : null; }
+function fmtPct(v){ return (v>0?'+':'')+String(v).replace('.',','); }
+function anlOk(){ const f = anlFehler(); return f==null ? null : Math.abs(f) <= anlTol(); }
+function anlaufMangel(list){
+  if(!anaNeeded()) return;
+  const f = anlFehler(); if(f==null || anlOk()) return;
+  const m = mkMangel('anlauf', 'Anlaufprüfung: Fehler '+fmtPct(f)+' % liegt außerhalb der zulässigen ± '+String(anlTol()).replace('.',',')+' %', true, {req:'Fehlergrenze Anlaufprüfung ± '+String(anlTol()).replace('.',',')+' % ('+ebeneText()+')'});
+  m.massn = 'Eichrechtskonforme Messung nicht gewährleistet. Ursache klären (Verdrahtung, Übersetzung, Bürde, Zähler), danach Anlaufprüfung wiederholen.';
+  list.push(m);
+}
+function anaNeeded(){ return anlaufNeeded(); }
+function anlaufSec(){
+  if(!anlaufNeeded()) return '';
+  const a = anlS(), f = anlFehler(); if(f==null) return '';
+  const ok = anlOk();
+  return sec('Anlaufprüfung Prüfzähler', 'PWS', '<table><tr><th class="n">Fehler E1</th><th class="n">Grenze</th>'+(a.pws?'<th class="n">PΣ</th>':'')+'<th>Ergebnis</th></tr>'
+    + '<tr><td class="n">'+esc(fmtPct(f))+' %</td><td class="n">± '+esc(String(anlTol()).replace('.',','))+' %</td>'+(a.pws?'<td class="n">'+esc(a.pws)+' kW</td>':'')
+    + '<td class="'+(ok?'okc':'bad')+'">'+(ok?'bestanden':'Grenze überschritten')+'</td></tr></table>');
+}
+function anlParse(text){
+  const t = String(text||'').replace(/,/g,'.').replace(/[−–]/g,'-');
+  let m = /E\s*1\s*[:=]?\s*([-+]?\s*\d+\.\d+)/i.exec(t);
+  if(!m) m = /([-+]?\s*\d+\.\d+)\s*%/.exec(t);
+  return m ? m[1].replace(/\s+/g,'') : null;
+}
+function anlRefresh(){
+  const el = document.getElementById('anl_res'); if(!el) return;
+  const f = anlFehler();
+  if(f==null){ el.textContent=''; el.className='status-line'; return; }
+  const ok = anlOk();
+  el.textContent = (ok?'i.O.':'n.i.O.')+' – Fehler '+fmtPct(f)+' % bei Grenze ± '+String(anlTol()).replace('.',',')+' %';
+  el.className = 'status-line '+(ok?'ok':'err');
+}
+async function readAnlaufFromPhoto(file){
+  const st = document.getElementById('status-anl'), inp = document.getElementById('anl_fehler');
+  try{
+    st.className='status-line'; st.textContent='Lese Fehlerwert aus Foto …';
+    await ensureTesseract();
+    const { data:{ text } } = await Tesseract.recognize(await ocrPrepare(file), 'eng');
+    const v = anlParse(text);
+    if(!v){ st.className='status-line err'; st.textContent='Kein Wert erkannt. Bitte von Hand eintragen.'; return; }
+    inp.value = v; inp.dispatchEvent(new Event('input'));
+    st.className='status-line ok'; st.textContent='✓ Erkannt: '+v+' % – bitte mit dem Display vergleichen.';
+  }catch(e){ st.className='status-line err'; st.textContent='Texterkennung nicht möglich ('+(e.message||e)+'). Bitte von Hand eintragen.'; }
+}
+function buildAnlauf(){
+  const a = anlS();
+  document.getElementById('anlHint').textContent = 'Prüfung des Zählpunkts mit dem Prüfzähler PWS. Zulässig sind ± '+String(anlTol()).replace('.',',')+' % ('+ebeneText()+'). Der Fehler E1 steht groß im Display.';
+  const th = document.getElementById('thumb-anl');
+  if(a.photo){ th.src = a.photo; th.classList.remove('empty'); }
+  ['cam','gal'].forEach(mo=>{
+    const el = document.getElementById('file-anl-'+mo); el.value='';
+    el.onchange = e=> handleSimplePhoto(e, val=>{ a.photo = val; th.classList.remove('empty'); }, 'thumb-anl', f=>readAnlaufFromPhoto(f));
+  });
+  th.onclick = ()=>document.getElementById('file-anl-cam').click();
+  const fe = document.getElementById('anl_fehler'); fe.value = a.fehler||'';
+  fe.oninput = e=>{ a.fehler = e.target.value; saveDraft(); anlRefresh(); updateStepCompletionUI(); };
+  const pw = document.getElementById('anl_pws'); pw.value = a.pws||'';
+  pw.oninput = e=>{ a.pws = e.target.value; saveDraft(); };
+  anlRefresh();
+}
+
+/* ---------------- Haken „Vorinbetriebnahme vorhanden“ + Block-Wandler (Setup) ---------------- */
+function syncVorVorhanden(){
+  const card = document.getElementById('vorVorhandenCard'); if(!card) return;
+  const show = state.vorgang==='ibn' && isMSorHS();
+  card.hidden = !show;
+  const cb = document.getElementById('vorVorhanden'); cb.checked = !!state.vorVorhanden;
+  cb.onchange = ()=>{ state.vorVorhanden = cb.checked; saveDraft(); syncVorVorhanden(); renderStepNav(); };
+  const h = document.getElementById('vorVorhandenHint');
+  h.textContent = !state.vorVorhanden ? 'Ohne Haken wird alles abgefragt (Inbetriebnahme und Vorinbetriebnahme zusammen).'
+    : vorDatenOk() ? 'Wandlerdaten, Bürde und Riso stammen aus der Vorinbetriebnahme und werden nicht erneut abgefragt.'
+    : 'Die Wandlerdaten aus der Vorinbetriebnahme fehlen in diesem Protokoll – deshalb werden die Wandlerfelder vorerst weiter abgefragt.';
+}
 
 
 bootDraft().then(init);
