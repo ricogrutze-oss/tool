@@ -98,7 +98,9 @@
   .device-block input, .device-block select, .device-block textarea{background:var(--card);}
 
   .check-cat{margin-bottom:6px;}
-  .check-cat-title{font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.6px; color:var(--accent); margin:16px 0 4px;}
+  .check-cat-title{font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.6px; color:var(--accent); margin:16px 0 4px; cursor:pointer; padding:6px 0; user-select:none;}
+  .check-cat-title.done{color:var(--ok,#2e7d32);}
+  .check-cat.collapsed .check-item{display:none !important;}
   .check-item{display:flex; gap:12px; align-items:flex-start; padding:11px 0; border-bottom:1px solid var(--border);}
   .check-item:last-child{border-bottom:none;}
   input[type=checkbox]{-webkit-appearance:none; appearance:none; width:26px; height:26px; border-radius:50%; border:2px solid var(--border-light); background:transparent; flex-shrink:0; position:relative; cursor:pointer; margin:0; transition:background .15s,border-color .15s;}
@@ -389,6 +391,7 @@ img.thumb{cursor:pointer} #photoSheet .btn{display:flex;align-items:center;justi
 
   <!-- ZÄHLER -->
   <div class="panel" id="panel-zaehler">
+    <div class="card" id="ibnVCard" style="display:none"></div>
     <div class="card">
       <h2>Zähler</h2>
       <div id="zNrBox">
@@ -1004,6 +1007,17 @@ function checklisteHatPunkte(){
 }
 // Anlaufprüfung mit Prüfzähler: überall, wo Wandler im Zählpunkt arbeiten (halbindirekt, MS, HS), außer bei der Vorinbetriebnahme (Anlage spannungsfrei)
 function anlaufNeeded(){ return !!state.vorgang && hasWandlerAny() && state.vorgang!=='vor' && F('anlauf'); }
+// Block „Inbetriebnahme nach Vorinbetriebnahme“: was übernommen ist und was heute noch geprüft wird
+const FELD_LABEL = {c_pk:'Prüfklemme', c_bed:'Bedienbereich am Zähler', c_plomb:'Plombierung', c_ui:'Spannungs- und Stromprüfung', spsich:'Spannungspfadsicherung', zn:'Zählernummer mit Foto', stand:'Einbaustände 1.8.0 / 2.8.0', mw:'Zeigerdiagramm', modem:'Modem / SMGW', anlauf:'Anlaufprüfung mit Prüfzähler', c_kunde:'Kundenanlage', fae:'FRE', na:'NA-Schutz'};
+function buildIbnVCard(){
+  const c = document.getElementById('ibnVCard'); if(!c) return;
+  if(terminSpalte()!=='IbnV'){ c.style.display='none'; return; }
+  const heute = Object.keys(FELD_LABEL).filter(f=>F(f) && (f!=='anlauf' || anlaufNeeded()) && (f!=='fae' || faeNeeded()) && (f!=='na' || naNeeded())).map(f=>FELD_LABEL[f]);
+  c.style.display='';
+  c.innerHTML = '<h2>Inbetriebnahme nach Vorinbetriebnahme</h2>'
+    + '<div class="hint" style="margin-top:0;"><b>Übernommen:</b> Wandlerdaten und Seriennummern, Bürdemessung, Isolationsmessung, Einbaulage, Erdung, Verdrahtung.</div>'
+    + '<div class="hint"><b>Heute zu prüfen:</b> '+heute.map(esc).join(' · ')+'.</div>';
+}
 
 /* ---------------- RISO ---------------- */
 function risoRowHtml(id, label, desc){
@@ -2148,13 +2162,13 @@ function buildChecklist(){
       const hk = ITEM_HOST[id]||'checkliste';
       if(!catDivs[hk]){
         const cd = document.createElement('div'); cd.className='check-cat';
-        const t = document.createElement('div'); t.className='check-cat-title'; t.textContent=cat.cat; cd.appendChild(t);
+        cd.dataset.cat = cat.cat; const t = document.createElement('div'); t.className='check-cat-title'; t.textContent=cat.cat; t.onclick = ()=>{ cd.classList.toggle('collapsed'); updateCatCounts(); }; cd.appendChild(t);
         document.getElementById(CONT[hk]).appendChild(cd); catDivs[hk]=cd;
       }
       const catDiv = catDivs[hk];
       if(!state.checklist[id]) state.checklist[id] = {checked:false, note:''};
       const item = document.createElement('div');
-      item.className = 'check-item'; item.dataset.scope = scope||'all';
+      item.className = 'check-item'; item.dataset.scope = scope||'all'; item.dataset.id = id;
       item.innerHTML = `
         <div style="flex:1;">
           <div class="txt">${label}</div>
@@ -2170,7 +2184,7 @@ function buildChecklist(){
   Object.keys(state.checklist).forEach(id=>{
     const yn = document.getElementById('yn-'+id); if(!yn) return;
     paintYn(id);
-    yn.querySelectorAll('span').forEach(sp=>{ sp.onclick = ()=>{ const c=state.checklist[id]; const cur = c.checked?'ja':(c.nein?'nein':''); setChk(id, cur===sp.dataset.v ? '' : sp.dataset.v); paintYn(id); syncVariantUi(id); saveDraft(); updateStepCompletionUI(); }; });
+    yn.querySelectorAll('span').forEach(sp=>{ sp.onclick = ()=>{ const c=state.checklist[id]; const cur = c.checked?'ja':(c.nein?'nein':''); setChk(id, cur===sp.dataset.v ? '' : sp.dataset.v); paintYn(id); syncVariantUi(id); saveDraft(); updateStepCompletionUI(); updateCatCounts(); }; });
     const vs = document.getElementById('var-'+id);
     if(vs){ vs.value = state.checklist[id].variant||''; vs.addEventListener('change', e=>{ state.checklist[id].variant=e.target.value; saveDraft(); updateStepCompletionUI(); }); syncVariantUi(id); }
     const note = document.getElementById('note-'+id);
@@ -2209,12 +2223,12 @@ function placeChecklistCards(){
 function refreshChecklistVisibility(){
   placeChecklistCards();
   ['wandlerChecklistCard','liveChecklistCard','endChecklistCard'].forEach(cid=>{
-    const c=document.getElementById(cid); c.style.display = [...c.querySelectorAll('.check-item')].some(it=>scopeOk(it.dataset.scope)) ? '' : 'none';
+    const c=document.getElementById(cid); c.style.display = [...c.querySelectorAll('.check-item')].some(itemOk) ? '' : 'none';
   });
   document.querySelectorAll('.check-cat').forEach(cat=>{
     let any = false;
     cat.querySelectorAll('.check-item').forEach(it=>{
-      const ok = scopeOk(it.dataset.scope); it.style.display = ok ? '' : 'none'; if(ok) any = true;
+      const ok = itemOk(it); it.style.display = ok ? '' : 'none'; if(ok) any = true;
     });
     cat.style.display = any ? '' : 'none';
   });
@@ -2228,6 +2242,18 @@ function refreshChecklistVisibility(){
     el.classList.toggle('sel', state.absicherung.sicherung===el.dataset.val);
   });
   document.getElementById('sicherungSonstigesBox').style.display = state.absicherung.sicherung==='sonstiges' ? 'block' : 'none';
+  updateCatCounts();
+}
+function itemOk(it){ return scopeOk(it.dataset.scope) && F(itemFeld(it.dataset.id)); }
+// Gruppenkopf: Name, Stand (erledigt/gesamt) und Auf-/Zuklappen
+function updateCatCounts(){
+  document.querySelectorAll('.check-cat').forEach(cat=>{
+    const its = [...cat.querySelectorAll('.check-item')].filter(itemOk);
+    const done = its.filter(it=>chkAnswered(it.dataset.id)).length;
+    const t = cat.querySelector('.check-cat-title'); if(!t) return;
+    t.textContent = (cat.classList.contains('collapsed') ? '\u25B8 ' : '\u25BE ')+cat.dataset.cat+'  '+done+'/'+its.length;
+    t.classList.toggle('done', its.length>0 && done===its.length);
+  });
 }
 
 /* ---------------- SUMMARY / GALLERY ---------------- */
@@ -2659,6 +2685,7 @@ function hydrateZaehlerPanel(){
   renderZeiger();
 }
 function buildZaehlerPanel(){
+  buildIbnVCard();
   const voll = hasFullReadout();
   document.getElementById('zeigerCard').style.display = (isLive() && voll && F('mw')) ? '' : 'none';
   document.getElementById('standCard').style.display = F('stand') ? '' : 'none';
