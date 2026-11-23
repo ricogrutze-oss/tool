@@ -1,0 +1,482 @@
+{
+ "stand": [
+  "02.11.2026",
+  "02.07.2026"
+ ],
+ "checked": "2026-11-23",
+ "source": "https://www.hs-anhalt.de/fileadmin/Dateien/FB6/studiengaenge/Elektrotechnik_Fern_B_Eng/Dokumente/FET_2025_WS_26_27_11.09.2026.pdf",
+ "events": [
+  {
+   "date": "2026-04-17",
+   "start": "09:00",
+   "end": "12:00",
+   "subject": "GET III Klausur",
+   "room": "",
+   "semester": "4"
+  },
+  {
+   "date": "2026-10-09",
+   "start": "08:00",
+   "end": "10:00",
+   "subject": "Klausur Ing.mathematik II",
+   "room": "03/017",
+   "semester": "3"
+  },
+  {
+   "date": "2026-10-09",
+   "start": "10:00",
+   "end": "11:30",
+   "subject": "GET III",
+   "room": "03/017",
+   "semester": "3"
+  },
+  {
+   "date": "2026-10-09",
+   "start": "12:30",
+   "end": "14:00",
+   "subject": "GET III",
+   "room": "03/017",
+   "semester": "3"
+  },
+  {
+   "date": "2026-10-09",
+   "start": "14:30",
+   "end": "16:00",
+   "subject": "GET III",
+   "room": "03/017",
+   "semester": "3"
+  },
+  {
+   "date": "2026-10-09",
+   "start": "16:30",
+   "end": "18:00",
+   "subject": "Signale & Systeme",
+   "room": "01/322-1",
+   "semester": "3"
+  },
+  {
+   "date": "2026-10-09",
+   "start": "18:30",
+   "end": "20:00",
+   "subject": "Signale & Systeme",
+   "room": "01/322-1",
+   "semester": "3"
+  },
+  {
+   "date": "2026-10-10",
+   "start": "08:00",
+   "end": "09:30",
+   "subject": "Physikalische Technologien",
+   "room": "01/322-1",
+   "semester": "3"
+  },
+  {
+   "date": "2026-10-10",
+   "start": "10:00",
+   "end": "11:30",
+   "subject": "Physikalische Technologien",
+   "room": "01/322-1",
+   "semester": "3"
+  },
+  {
+   "date": "2026-10-10",
+   "start": "12:30",
+   "end": "14:00",
+   "subject": "Physikalische Technologien",
+   "room": "01/322-1",
+   "semester": "3"
+  },
+  {
+   "date": "2026-11-06",
+   "start": "12:30",
+   "end": "14:00",
+   "subject": "Physikalische Technologien",
+   "room": "01/322-1",
+   "semester": "3"
+  },
+  {
+   "date": "2026-11-06",
+   "start": "14:30",
+   "end": "16:00",
+   "subject": "Physikalische Technologien",
+   "room": "01/322-1",
+   "semester": "3"
+  },
+  {
+   "date": "2026-11-06",
+   "start": "16:30",
+   "end": "18:00",
+   "subject": "GET III",
+   "room": "01/322-1",
+   "semester": "3"
+  },
+  {
+   "date": "2026-11-06",
+   "start": "18:30",
+   "end": "20:00",
+   "subject": "GET III",
+   "room": "01/322-1",
+   "semester": "3"
+  },
+  {
+   "date": "2026-11-07",
+   "start": "08:00",
+   "end": "09:30",
+   "subject": "Physikalische Technologien",
+   "room": "01/322-1",
+   "semester": "3"
+  },
+  {
+   "date": "2026-11-07",
+   "start": "10:00",
+   "end": "11:30",
+   "subject": "Physikalische Technologien",
+   "room": "01/322-1",
+   "semester": "3"
+  },
+  {
+   "date": "2026-11-07",
+   "start": "12:30",
+   "end": "14:00",
+   "subject": "Physikalische Technologien",
+   "room": "01/322-1",
+   "semester": "3"
+  },
+  {
+   "date": "2026-12-04",
+   "start": "08:00",
+   "end": "10:00",
+   "subject": "WP GET II",
+   "room": "01/322-2",
+   "semester": "3"
+  },
+  {
+   "date": "2026-12-04",
+   "start": "10:30",
+   "end": "12:00",
+   "subject": "GET III",
+   "room": "01/121",
+   "semester": "3"
+  },
+  {
+   "date": "2026-12-04",
+   "start": "12:30",
+   "end": "14:00",
+   "subject": "GET III",
+   "room": "01/121",
+   "semester": "3"
+  },
+  {
+   "date": "2026-12-04",
+   "start": "14:30",
+   "end": "16:00",
+   "subject": "GET III",
+   "room": "01/121",
+   "semester": "3"
+  },
+  {
+   "date": "2026-12-04",
+   "start": "16:30",
+   "end": "18:00",
+   "subject": "Ingenieurinformatik II",
+   "room": "01/322-1",
+   "semester": "3"
+  },
+  {
+   "date": "2026-12-04",
+   "start": "18:30",
+   "end": "20:00",
+   "subject": "Ingenieurinformatik II",
+   "room": "01/322-1",
+   "semester": "3"
+  },
+  {
+   "date": "2026-12-05",
+   "start": "08:00",
+   "end": "09:30",
+   "subject": "Signale & Systeme",
+   "room": "01/216",
+   "semester": "3"
+  },
+  {
+   "date": "2026-12-05",
+   "start": "10:00",
+   "end": "11:30",
+   "subject": "Signale & Systeme",
+   "room": "01/216",
+   "semester": "3"
+  },
+  {
+   "date": "2026-12-05",
+   "start": "12:30",
+   "end": "14:00",
+   "subject": "Signale & Systeme",
+   "room": "01/216",
+   "semester": "3"
+  },
+  {
+   "date": "2027-01-15",
+   "start": "10:00",
+   "end": "11:30",
+   "subject": "Signale und Systeme",
+   "room": "01/121",
+   "semester": "3"
+  },
+  {
+   "date": "2027-01-15",
+   "start": "12:30",
+   "end": "14:00",
+   "subject": "Signale und Systeme",
+   "room": "01/121",
+   "semester": "3"
+  },
+  {
+   "date": "2027-01-15",
+   "start": "14:30",
+   "end": "16:00",
+   "subject": "Signale und Systeme",
+   "room": "01/121",
+   "semester": "3"
+  },
+  {
+   "date": "2027-01-15",
+   "start": "16:30",
+   "end": "18:00",
+   "subject": "GET III",
+   "room": "01/121",
+   "semester": "3"
+  },
+  {
+   "date": "2027-01-15",
+   "start": "18:30",
+   "end": "20:00",
+   "subject": "GET III",
+   "room": "01/121",
+   "semester": "3"
+  },
+  {
+   "date": "2027-01-16",
+   "start": "08:00",
+   "end": "09:30",
+   "subject": "Ingenieurinformatik II",
+   "room": "01/322-1",
+   "semester": "3"
+  },
+  {
+   "date": "2027-01-16",
+   "start": "10:00",
+   "end": "11:30",
+   "subject": "Ingenieurinformatik II",
+   "room": "01/322-1",
+   "semester": "3"
+  },
+  {
+   "date": "2027-01-16",
+   "start": "12:30",
+   "end": "14:00",
+   "subject": "Ingenieurinformatik II",
+   "room": "01/322-1",
+   "semester": "3"
+  },
+  {
+   "date": "2027-03-08",
+   "start": "12:30",
+   "end": "14:00",
+   "subject": "Ingenieurinformatik II",
+   "room": "",
+   "semester": "3"
+  },
+  {
+   "date": "2027-03-08",
+   "start": "14:30",
+   "end": "16:00",
+   "subject": "Praktikum IngInf. II",
+   "room": "01/K32",
+   "semester": "3"
+  },
+  {
+   "date": "2027-03-08",
+   "start": "16:30",
+   "end": "18:00",
+   "subject": "Praktikum IngInf. II",
+   "room": "01/K32",
+   "semester": "3"
+  },
+  {
+   "date": "2027-03-08",
+   "start": "18:30",
+   "end": "20:00",
+   "subject": "Praktikum IngInf. II",
+   "room": "01/K32",
+   "semester": "3"
+  },
+  {
+   "date": "2027-03-09",
+   "start": "10:00",
+   "end": "11:30",
+   "subject": "Klausur - Ingenieurinformatik II",
+   "room": "",
+   "semester": "3"
+  },
+  {
+   "date": "2027-03-09",
+   "start": "12:30",
+   "end": "14:00",
+   "subject": "Signale & Systeme",
+   "room": "",
+   "semester": "3"
+  },
+  {
+   "date": "2027-03-09",
+   "start": "14:30",
+   "end": "16:00",
+   "subject": "Signale & Systeme",
+   "room": "",
+   "semester": "3"
+  },
+  {
+   "date": "2027-03-09",
+   "start": "16:30",
+   "end": "18:00",
+   "subject": "Physikalische Technologien",
+   "room": "",
+   "semester": "3"
+  },
+  {
+   "date": "2027-03-09",
+   "start": "18:30",
+   "end": "20:00",
+   "subject": "Physikalische Technologien",
+   "room": "",
+   "semester": "3"
+  },
+  {
+   "date": "2027-03-10",
+   "start": "08:00",
+   "end": "09:30",
+   "subject": "Messtechnik (4. Sem.)",
+   "room": "",
+   "semester": "3"
+  },
+  {
+   "date": "2027-03-10",
+   "start": "10:00",
+   "end": "11:30",
+   "subject": "Messtechnik (4. Sem.)",
+   "room": "",
+   "semester": "3"
+  },
+  {
+   "date": "2027-03-10",
+   "start": "12:30",
+   "end": "14:00",
+   "subject": "Praktikum GET III",
+   "room": "",
+   "semester": "3"
+  },
+  {
+   "date": "2027-03-10",
+   "start": "14:30",
+   "end": "16:00",
+   "subject": "Praktikum GET III",
+   "room": "",
+   "semester": "3"
+  },
+  {
+   "date": "2027-03-10",
+   "start": "16:30",
+   "end": "18:00",
+   "subject": "Praktikum GET III",
+   "room": "",
+   "semester": "3"
+  },
+  {
+   "date": "2027-03-11",
+   "start": "08:00",
+   "end": "09:30",
+   "subject": "GET III",
+   "room": "",
+   "semester": "3"
+  },
+  {
+   "date": "2027-03-11",
+   "start": "10:00",
+   "end": "11:30",
+   "subject": "Digitaltechnik (4. Sem.)",
+   "room": "",
+   "semester": "3"
+  },
+  {
+   "date": "2027-03-11",
+   "start": "12:30",
+   "end": "14:00",
+   "subject": "Digitaltechnik (4. Sem.)",
+   "room": "",
+   "semester": "3"
+  },
+  {
+   "date": "2027-03-11",
+   "start": "14:30",
+   "end": "16:00",
+   "subject": "Praktikum - Physikalische Technologien",
+   "room": "",
+   "semester": "3"
+  },
+  {
+   "date": "2027-03-11",
+   "start": "16:30",
+   "end": "18:00",
+   "subject": "Praktikum - Physikalische Technologien",
+   "room": "",
+   "semester": "3"
+  },
+  {
+   "date": "2027-03-12",
+   "start": "08:00",
+   "end": "10:00",
+   "subject": "Klausur Signale & Systeme",
+   "room": "",
+   "semester": "3"
+  },
+  {
+   "date": "2027-03-12",
+   "start": "10:00",
+   "end": "11:30",
+   "subject": "Elektrische Maschinen (4.Sem.)",
+   "room": "",
+   "semester": "3"
+  },
+  {
+   "date": "2027-03-12",
+   "start": "12:30",
+   "end": "14:00",
+   "subject": "Elektrische Maschinen (4.Sem.)",
+   "room": "",
+   "semester": "3"
+  },
+  {
+   "date": "2027-03-13",
+   "start": "08:00",
+   "end": "10:00",
+   "subject": "Klausur Physikalische Technologien",
+   "room": "",
+   "semester": "3"
+  },
+  {
+   "date": "2027-03-13",
+   "start": "10:45",
+   "end": "12:15",
+   "subject": "Mikrocontrollertechnik (4. Sem.)",
+   "room": "01/221",
+   "semester": "3"
+  },
+  {
+   "date": "2027-03-13",
+   "start": "12:30",
+   "end": "14:00",
+   "subject": "Mikrocontrollertechnik (4. Sem.)",
+   "room": "01/221",
+   "semester": "3"
+  }
+ ]
+}

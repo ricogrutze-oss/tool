@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Stundenplan FET 2025</title>
+<style>
+  :root{--bg:#f6f7f9;--fg:#1c1e21;--mut:#6b7280;--card:#fff;--line:#e5e7eb;--acc:#1d4ed8;--hi:#fef3c7}
+  @media (prefers-color-scheme:dark){:root{--bg:#111318;--fg:#e8eaed;--mut:#9aa0a6;--card:#1b1e24;--line:#2c3038;--acc:#8ab4f8;--hi:#3a3220}}
+  *{box-sizing:border-box}
+  body{margin:0;font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--fg)}
+  main{max-width:640px;margin:0 auto;padding:20px 16px 48px}
+  h1{font-size:20px;margin:0 0 2px}
+  .mut{color:var(--mut);font-size:13px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin:16px 0}
+  .btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  a.b,button.b{appearance:none;border:1px solid var(--line);background:var(--bg);color:var(--fg);padding:9px 12px;border-radius:9px;font:inherit;text-decoration:none;cursor:pointer}
+  a.b.p{background:var(--acc);border-color:var(--acc);color:#fff}
+  code{display:block;word-break:break-all;font-size:12px;background:var(--bg);padding:8px;border-radius:8px;margin-top:8px}
+  h2{font-size:14px;margin:22px 0 6px;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+  .ev{display:grid;grid-template-columns:92px 1fr;gap:2px 10px;padding:7px 0;border-bottom:1px solid var(--line)}
+  .ev .t{font-variant-numeric:tabular-nums;color:var(--mut)}
+  .ev.k .s{font-weight:600}
+  .day{margin-top:14px;font-weight:600}
+  details summary{cursor:pointer;color:var(--mut);font-size:13px}
+</style>
+</head>
+<body>
+<main>
+  <h1>Stundenplan FET 2025</h1>
+  <div class="mut" id="stand">Lade …</div>
+
+  <div class="card">
+    <strong>Kalender abonnieren</strong>
+    <div class="mut">Wird alle 3 Stunden mit der PDF der Hochschule abgeglichen. Änderungen erscheinen automatisch in deinem Kalender.</div>
+    <div class="btns">
+      <a class="b p" id="webcal" href="#">In Kalender-App öffnen</a>
+      <a class="b" id="outlook" href="#" target="_blank" rel="noopener">Outlook (Web)</a>
+      <a class="b" id="google" href="#" target="_blank" rel="noopener">Google</a>
+      <button class="b" id="copy">URL kopieren</button>
+    </div>
+    <code id="url"></code>
+  </div>
+
+  <h2>Kommende Termine</h2>
+  <div id="list"></div>
+  <details style="margin-top:16px"><summary>Vergangene Termine anzeigen</summary><div id="past"></div></details>
+</main>
+<script>
+  const ics = new URL('plan.ics', location.href).href;
+  const webcal = ics.replace(/^https?:/, 'webcal:');
+  document.getElementById('url').textContent = ics;
+  document.getElementById('webcal').href = webcal;
+  document.getElementById('outlook').href =
+    'https://outlook.office.com/calendar/0/addfromweb?url=' + encodeURIComponent(ics) + '&name=' + encodeURIComponent('Stundenplan FET 2025');
+  document.getElementById('google').href =
+    'https://calendar.google.com/calendar/r?cid=' + encodeURIComponent(webcal);
+  document.getElementById('copy').onclick = async (e) => {
+    try { await navigator.clipboard.writeText(ics); e.target.textContent = 'Kopiert ✓'; }
+    catch { prompt('URL kopieren:', ics); }
+  };
+
+  const WD = ['So','Mo','Di','Mi','Do','Fr','Sa'];
+  const fmtDay = d => { const x = new Date(d + 'T12:00'); return WD[x.getDay()] + ', ' + x.toLocaleDateString('de-DE'); };
+  function render(target, evs){
+    let html = '', last = '';
+    for (const e of evs){
+      if (e.date !== last){ html += `<div class="day">${fmtDay(e.date)}</div>`; last = e.date; }
+      const k = /klausur/i.test(e.subject) ? ' k' : '';
+      html += `<div class="ev${k}"><span class="t">${e.start}–${e.end}</span><span><span class="s"></span>${e.room ? ' <span class="mut">· ' + e.room + '</span>' : ''}</span></div>`;
+    }
+    target.innerHTML = html || '<div class="mut">Keine Termine.</div>';
+    // Fachnamen sicher als Text einsetzen
+    target.querySelectorAll('.s').forEach((el, i) => el.textContent = evs[i].subject);
+  }
+
+  fetch('events.json?t=' + Date.now()).then(r => r.json()).then(d => {
+    const stand = [...new Set(d.stand || [])].join(', ');
+    document.getElementById('stand').textContent =
+      `PDF-Stand: ${stand || '–'} · zuletzt geändert erkannt: ${new Date(d.checked).toLocaleDateString('de-DE')}`;
+    const today = new Date().toISOString().slice(0, 10);
+    render(document.getElementById('list'), d.events.filter(e => e.date >= today));
+    render(document.getElementById('past'), d.events.filter(e => e.date < today).reverse());
+  }).catch(() => document.getElementById('stand').textContent = 'Termine konnten nicht geladen werden.');
+</script>
+</body>
+</html>

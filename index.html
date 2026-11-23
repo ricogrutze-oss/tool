@@ -281,9 +281,10 @@ button:not(:disabled):active{opacity:.85}
           title: meta.title || d.name,
           description: meta.description || '',
           icon,
-          url: `./${encodeURIComponent(d.name)}/`
+          url: `./${encodeURIComponent(d.name)}/`,
+          hidden: meta.hidden === true
         };
-      }));
+      })).then(list => list.filter(t => !t.hidden));
 
       // Externe Tools (eigene Repos/URLs), optional aus external-tools.json
       let externalTools = [];

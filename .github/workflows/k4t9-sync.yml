@@ -1,0 +1,56 @@
+name: k4t9 sync
+
+on:
+  schedule:
+    - cron: "17 */3 * * *"   # alle 3 Stunden
+  workflow_dispatch: {}       # manuell startbar (Actions-Tab -> Run workflow)
+
+permissions:
+  contents: write
+  issues: write
+  pages: write
+
+concurrency:
+  group: k4t9-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install --quiet pdfplumber
+
+      - name: Stundenplan laden und Feed erzeugen
+        id: plan
+        run: python .github/scripts/stundenplan.py k4t9
+
+      - name: Änderungen committen
+        if: steps.plan.outputs.changed == 'true'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add k4t9/plan.ics k4t9/events.json
+          git commit -m "k4t9: Update (Stand ${{ steps.plan.outputs.stand }})"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Pages-Build anstoßen
+        if: steps.plan.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X POST "repos/${{ github.repository }}/pages/builds" || true
+
+      - name: Benachrichtigung (Issue -> E-Mail)
+        if: steps.plan.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create \
+            --title "Stundenplan geändert (Stand ${{ steps.plan.outputs.stand }})" \
+            --body-file /tmp/changes.md || true
