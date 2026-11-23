@@ -98,7 +98,8 @@
   .device-block input, .device-block select, .device-block textarea{background:var(--card);}
 
   .check-cat{margin-bottom:6px;}
-  .check-cat-title{font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.6px; color:var(--accent); margin:16px 0 4px; cursor:pointer; padding:6px 0; user-select:none;}
+  .check-cat-title{font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.6px; color:var(--accent); margin:16px 0 4px; cursor:pointer; padding:6px 0; user-select:none; display:flex; justify-content:space-between; align-items:center; gap:10px;}
+  .check-cat-title .all{border:1.5px solid var(--accent); border-radius:8px; padding:4px 10px; font-size:11px; letter-spacing:.3px; text-transform:none; white-space:nowrap;}
   .check-cat-title.done{color:var(--ok,#2e7d32);}
   .check-cat.collapsed .check-item{display:none !important;}
   .check-item{display:flex; gap:12px; align-items:flex-start; padding:11px 0; border-bottom:1px solid var(--border);}
@@ -213,7 +214,7 @@ header>div:first-child{max-width:calc(100% - 215px)}
   <button class="hdr-btn no-print" id="btnSet" style="right:62px" aria-label="E-Mail-Empfänger"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></button>
   <button class="hdr-btn no-print" id="btnHist" aria-label="Verlauf: frühere Protokolle"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg></button>
   <h1>Vor-/Inbetriebnahme</h1>
-  <div class="sub">Zähleranlagen NS · MS · HS · v31<span id="saveBadge"></span></div>
+  <div class="sub">Zähleranlagen NS · MS · HS · v32<span id="saveBadge"></span></div>
   <div class="steps no-print" id="stepNav"></div>
 </header>
 
@@ -2173,7 +2174,7 @@ function buildChecklist(){
       const hk = ITEM_HOST[id]||'checkliste';
       if(!catDivs[hk]){
         const cd = document.createElement('div'); cd.className='check-cat';
-        cd.dataset.cat = cat.cat; const t = document.createElement('div'); t.className='check-cat-title'; t.textContent=cat.cat; t.onclick = ()=>{ cd.classList.toggle('collapsed'); updateCatCounts(); }; cd.appendChild(t);
+        cd.dataset.cat = cat.cat; const t = document.createElement('div'); t.className='check-cat-title'; t.innerHTML='<span class="cl"></span><span class="all"></span>'; t.onclick = ev=>{ if(ev.target.classList.contains('all')){ catAllJa(cd); return; } cd.classList.toggle('collapsed'); updateCatCounts(); }; cd.appendChild(t);
         document.getElementById(CONT[hk]).appendChild(cd); catDivs[hk]=cd;
       }
       const catDiv = catDivs[hk];
@@ -2255,6 +2256,13 @@ function refreshChecklistVisibility(){
   document.getElementById('sicherungSonstigesBox').style.display = state.absicherung.sicherung==='sonstiges' ? 'block' : 'none';
   updateCatCounts();
 }
+// Ganze Gruppe auf „Ja“ setzen (nochmal tippen: zurücksetzen)
+function catAllJa(cat){
+  const its = [...cat.querySelectorAll('.check-item')].filter(itemOk);
+  const allJa = its.length>0 && its.every(it=>{ const c = state.checklist[it.dataset.id]; return c && c.checked; });
+  its.forEach(it=>{ const id = it.dataset.id; setChk(id, allJa ? '' : 'ja'); paintYn(id); syncVariantUi(id); });
+  saveDraft(); updateStepCompletionUI(); updateCatCounts();
+}
 function itemOk(it){ return scopeOk(it.dataset.scope) && F(itemFeld(it.dataset.id)); }
 // Gruppenkopf: Name, Stand (erledigt/gesamt) und Auf-/Zuklappen
 function updateCatCounts(){
@@ -2262,8 +2270,10 @@ function updateCatCounts(){
     const its = [...cat.querySelectorAll('.check-item')].filter(itemOk);
     const done = its.filter(it=>chkAnswered(it.dataset.id)).length;
     const t = cat.querySelector('.check-cat-title'); if(!t) return;
-    t.textContent = (cat.classList.contains('collapsed') ? '\u25B8 ' : '\u25BE ')+cat.dataset.cat+'  '+done+'/'+its.length;
+    t.querySelector('.cl').textContent = (cat.classList.contains('collapsed') ? '\u25B8 ' : '\u25BE ')+cat.dataset.cat+'  '+done+'/'+its.length;
     t.classList.toggle('done', its.length>0 && done===its.length);
+    const allJa = its.length>0 && its.every(it=>{ const c = state.checklist[it.dataset.id]; return c && c.checked; });
+    t.querySelector('.all').textContent = allJa ? 'Zurücksetzen' : 'Alle Ja';
   });
 }
 
