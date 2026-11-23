@@ -3592,19 +3592,29 @@ async function finishShare(g){
     return;
   }
   const files = gr ? filesForGroup(gr) : currentFiles(), mails = gr ? gr.mails : recipientsFor(), names = gr ? gr.names.map(n=>n==='Protokoll intern'?'Inbetriebsetzungsprotokoll (intern)':n==='Datendatei'?'Datendatei (JSON)':n) : null;
+  const mailto = 'mailto:'+mails.map(encodeURIComponent).join(',')+'?subject='+encodeURIComponent(emailSubject())+'&body='+encodeURIComponent(emailBody(names)+'\n\n(Dateien bitte anhängen)');
   try{
-    if(navigator.canShare && navigator.canShare({files})){
+    let sh = files, rest = [];
+    if(!(navigator.canShare && navigator.canShare({files:sh}))){
+      // Android erlaubt beim Teilen oft keine .json-Datei: dann nur die PDFs teilen, die Datendatei separat speichern
+      const pdfs = files.filter(f=>/\.pdf$/i.test(f.name));
+      if(pdfs.length && pdfs.length<files.length && navigator.canShare && navigator.canShare({files:pdfs})){ sh = pdfs; rest = files.filter(f=>!pdfs.includes(f)); }
+      else sh = null;
+    }
+    if(sh){
       let kop = false;
       if(mails.length){ try{ await navigator.clipboard.writeText(mails.join('; ')); kop = true; }catch(e){} }
-      await navigator.share({files, title:emailSubject(), text:emailSubject()+'\n\n'+emailBody(names)});
+      if(rest.length){ downloadFiles(rest); finishLine('Die Datendatei wurde separat gespeichert (sie lässt sich nicht direkt teilen).'); }
+      await navigator.share({files:sh, title:emailSubject(), text:emailSubject()+'\n\n'+emailBody(names)});
       finishLine('Zum Teilen übergeben.'+(kop?' Die E-Mail-Adresse(n) liegen in der Zwischenablage (im „An“-Feld einfügen).':''));
       return;
     }
   }catch(e){ if(e && e.name==='AbortError') return; }
-  // Fallback (z. B. Desktop): PDFs speichern und E-Mail-Programm ohne Anhang öffnen
+  // Fallback: Dateien speichern, E-Mail-Programm ohne Anhang öffnen; zusätzlich ein Knopf, falls der Browser das automatische Öffnen blockiert
   downloadFiles(files);
   finishLine('Die Dateien wurden gespeichert. Bitte im E-Mail-Programm anhängen.');
-  location.href = 'mailto:'+mails.map(encodeURIComponent).join(',')+'?subject='+encodeURIComponent(emailSubject())+'&body='+encodeURIComponent(emailBody(names)+'\n\n(Dateien bitte anhängen)');
+  const l = finishLine('', ''); const a2 = document.createElement('a'); a2.href = mailto; a2.className = 'btn btn-block'; a2.style.marginTop = '6px'; a2.textContent = 'E-Mail-Programm öffnen'; l.appendChild(a2);
+  location.href = mailto;
 }
 function finishSave(){ if(_finish.pdfs) downloadFiles(currentFiles()); }
 document.getElementById('finishData').onclick = ()=>{ try{ state.standort.datum = document.getElementById('pruefdatum').value || state.standort.datum; }catch(e){} downloadFiles([dataFile()]); finishLine('Datendatei gespeichert. Bitte in den gemeinsamen Ordner legen.'); };
