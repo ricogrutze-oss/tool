@@ -213,7 +213,7 @@ header>div:first-child{max-width:calc(100% - 215px)}
   <button class="hdr-btn no-print" id="btnSet" style="right:62px" aria-label="E-Mail-Empfänger"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></button>
   <button class="hdr-btn no-print" id="btnHist" aria-label="Verlauf: frühere Protokolle"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg></button>
   <h1>Vor-/Inbetriebnahme</h1>
-  <div class="sub">Zähleranlagen NS · MS · HS<span id="saveBadge"></span></div>
+  <div class="sub">Zähleranlagen NS · MS · HS · v31<span id="saveBadge"></span></div>
   <div class="steps no-print" id="stepNav"></div>
 </header>
 
@@ -3626,8 +3626,16 @@ document.getElementById('finishOpen').onclick = ()=>{ openInternalReport(); setT
 
 /* ---------------- PRÜFER-PROFIL (Name + Unterschrift merken) ---------------- */
 const PROFIL_KEY = 'vibn_profil_v1';
-function profilLoad(){ try{ return JSON.parse(localStorage.getItem(PROFIL_KEY)||'{}')||{}; }catch(e){ return {}; } }
-function profilSave(part){ try{ localStorage.setItem(PROFIL_KEY, JSON.stringify(Object.assign(profilLoad(), part))); }catch(e){} }
+// Prüfer, Unterschrift und E-Mail-Adressen: im Arbeitsspeicher, in localStorage UND in IndexedDB (localStorage ist auf dieser Webadresse mit anderen Tools geteilt und kann voll sein – dann ging das Speichern bisher still verloren)
+let _profMem = null;
+function profilLoadLS(){ try{ return JSON.parse(localStorage.getItem(PROFIL_KEY)||'{}')||{}; }catch(e){ return {}; } }
+function profilLoad(){ return _profMem || profilLoadLS(); }
+function profilSave(part){
+  _profMem = Object.assign({}, profilLoad(), part);
+  try{ localStorage.setItem(PROFIL_KEY, JSON.stringify(_profMem)); }catch(e){}
+  try{ idbSet('profil', _profMem).catch(()=>{}); }catch(e){}
+}
+(async()=>{ try{ const p = await idbGet('profil'); if(p && typeof p==='object') _profMem = Object.assign({}, profilLoadLS(), p, _profMem||{}); }catch(e){} })();
 function applyProfil(){
   const p = profilLoad();
   if(p.pruefer && !state.standort.pruefer){ state.standort.pruefer = p.pruefer; document.getElementById('pruefer').value = p.pruefer; }
