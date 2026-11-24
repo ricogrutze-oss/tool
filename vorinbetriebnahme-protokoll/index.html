@@ -217,7 +217,7 @@ header>div:first-child{max-width:calc(100% - 170px)}
   <button class="hdr-btn no-print" id="btnMenu" aria-label="Einstellungen"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
   <button class="hdr-btn no-print" id="btnHist" style="right:62px" aria-label="Verlauf: frühere Protokolle"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg></button>
   <h1>Vor-/Inbetriebnahme</h1>
-  <div class="sub">Zähleranlagen NS · MS · HS · v33<span id="saveBadge"></span></div>
+  <div class="sub">Zähleranlagen NS · MS · HS · v34<span id="saveBadge"></span></div>
   <div class="steps no-print" id="stepNav"></div>
 </header>
 
@@ -300,6 +300,10 @@ header>div:first-child{max-width:calc(100% - 170px)}
     <div class="card" id="vorVorhandenCard" hidden>
       <label style="display:flex; gap:10px; align-items:center; margin:0;"><input type="checkbox" id="vorVorhanden" style="width:auto; margin:0;"> <b>Vorinbetriebnahme vorhanden</b></label>
       <div class="hint" id="vorVorhandenHint" style="margin-bottom:0;"></div>
+    </div>
+    <div class="card" id="ohneSpgCard" hidden>
+      <label style="display:flex; gap:10px; align-items:center; margin:0;"><input type="checkbox" id="ohneSpg" style="width:auto; margin:0;"> <b>Anlage ohne Spannung</b></label>
+      <div class="hint" style="margin-bottom:0;">Zeigerdiagramm, Spannungs- und Stromprüfung sowie Anlaufprüfung entfallen. Das Protokoll lässt sich trotzdem abschließen und versenden.</div>
     </div>
     <div class="card">
       <h2>Art des Termins</h2>
@@ -659,7 +663,7 @@ header>div:first-child{max-width:calc(100% - 170px)}
   <div class="modal-box" role="dialog" aria-modal="true"><h2>Neue Anlage</h2><div class="hint" style="margin-top:0">Das aktuelle Protokoll wird automatisch im Verlauf gespeichert und lässt sich dort wieder öffnen.</div><div class="modal-actions"><button class="btn btn-primary btn-block" id="newEmpty">Leeres Protokoll starten</button><button class="btn btn-block" id="newVorl">Aus Vorlage starten</button><button class="btn btn-block" id="newCancel">Abbrechen</button></div></div>
 </div>
 <div class="modal" id="menuModal" hidden>
-  <div class="modal-box" role="dialog" aria-modal="true"><h2>Einstellungen</h2><div class="modal-actions" style="margin-top:6px"><button class="btn btn-block" id="mnVorl">Vorlagen</button><button class="btn btn-block" id="mnAdr">Gespeicherte E-Mail-Adressen</button><button class="btn btn-block" id="mnRecip">E-Mail-Empfänger bearbeiten</button><div class="hint" style="text-align:center">Version 33</div><button class="btn btn-primary btn-block" id="mnClose">Schließen</button></div></div>
+  <div class="modal-box" role="dialog" aria-modal="true"><h2>Einstellungen</h2><div class="modal-actions" style="margin-top:6px"><button class="btn btn-block" id="mnVorl">Vorlagen</button><button class="btn btn-block" id="mnAdr">Gespeicherte E-Mail-Adressen</button><button class="btn btn-block" id="mnRecip">E-Mail-Empfänger bearbeiten</button><div class="hint" style="text-align:center">Version 34</div><button class="btn btn-primary btn-block" id="mnClose">Schließen</button></div></div>
 </div>
 <div class="modal" id="vorlModal" hidden>
   <div class="modal-box" role="dialog" aria-modal="true"><div id="vorlBody"></div></div>
@@ -1011,6 +1015,7 @@ function terminSpalte(){
 // Wird das Feld bei dieser Ebene und diesem Termin abgefragt? Ohne Auswahl oder ohne Eintrag: ja
 function F(feld){
   if(!feld) return true;
+  if(state.ohneSpannung && (feld==='mw'||feld==='c_ui'||feld==='anlauf')) return false;
   const c = terminSpalte(); if(!c || !state.ebene) return true;
   const e = FELD_MATRIX[state.ebene]; if(!e || !e[c] || e[c][feld]===undefined) return true;
   return !!e[c][feld];
@@ -3547,7 +3552,8 @@ function dataJsonText(withPhotos){
   return JSON.stringify(state, (k,v)=>{ if(k==='sigImg') return v; if(!withPhotos){ if(k==='weitereFotos') return []; if(typeof v==='string' && v.indexOf('data:image')===0) return ''; } return v; }, 1);
 }
 function dataFile(){ const wp = document.getElementById('finishPhotos').checked; return new File([dataJsonText(wp)], reportFileTitle('Daten')+'.json', {type:'application/json'}); }
-function currentFiles(){ return (_finish.pdfs||[]).concat([dataFile()]); }
+function hatMang(){ try{ return computeErgebnis().ext.length>0; }catch(e){ return true; } }
+function currentFiles(){ return (_finish.pdfs||[]).filter(Boolean).concat([dataFile()]); }
 function emailSubject(){
   const s = state.standort;
   const str = [s.strasse, s.hausnr].filter(Boolean).join(' '), ort = [s.plz, s.ort].filter(Boolean).join(' ');
@@ -3558,7 +3564,7 @@ function emailBody(names){
   const r = computeErgebnis(), s = state.standort;
   let t = 'Ergebnis: '+r.label+'\n';
   if(r.frist.length) t += 'Frist zur Beseitigung der Mängel: '+fmtIso(fristIso())+'\n';
-  t += '\nAnlage: '+[s.name, addressLines().join(', ')].filter(Boolean).join(', ')+'\nPrüfdatum: '+fmtDateDe()+(s.pruefer?'\nPrüfer: '+s.pruefer:'')+'\n\nAnlagen: '+((names&&names.length)?names:['Inbetriebsetzungsprotokoll (intern)','Mängelschein','Datendatei (JSON)']).join(', ')+'.';
+  t += '\nAnlage: '+[s.name, addressLines().join(', ')].filter(Boolean).join(', ')+'\nPrüfdatum: '+fmtDateDe()+(s.pruefer?'\nPrüfer: '+s.pruefer:'')+'\n\nAnlagen: '+((names&&names.length)?names:['Inbetriebsetzungsprotokoll (intern)'].concat(hatMang()?['Mängelschein']:[]).concat(['Datendatei (JSON)'])).join(', ')+'.';
   return t;
 }
 function finishLine(txt, cls){ const d=document.createElement('div'); d.textContent=txt; if(cls) d.className=cls; document.getElementById('finishStatus').appendChild(d); return d; }
@@ -3586,11 +3592,11 @@ async function openFinish(){
     await flushDraft();
     await ensureMapImg();
     const b1 = await htmlToPdfBlob(buildInternalHtml());
-    const b2 = await htmlToPdfBlob(buildExternalHtml());
-    _finish.pdfs = [ new File([b1], reportFileTitle('Protokoll')+'.pdf', {type:'application/pdf'}), new File([b2], reportFileTitle('Maengelschein')+'.pdf', {type:'application/pdf'}) ];
+    const mg = hatMang(); const b2 = mg ? await htmlToPdfBlob(buildExternalHtml()) : null;
+    _finish.pdfs = [ new File([b1], reportFileTitle('Protokoll')+'.pdf', {type:'application/pdf'}), b2 ? new File([b2], reportFileTitle('Maengelschein')+'.pdf', {type:'application/pdf'}) : null ];
     _finish.files = currentFiles();
     state.abschluss.fertigTs = Date.now(); await flushDraft(); await archiveCurrent(true);
-    prog.textContent = 'Fertig: Protokoll (intern), Mängelschein und Datendatei erstellt. Das Protokoll liegt im Verlauf.';
+    prog.textContent = 'Fertig: Protokoll (intern)'+(mg?', Mängelschein':'')+' und Datendatei erstellt'+(mg?'.':' (keine Mängel, daher kein Mängelschein).')+' Das Protokoll liegt im Verlauf.';
     ['finishShare','finishSave'].forEach(id=>document.getElementById(id).disabled = false);
     renderFinishRecip();
   }catch(e){
@@ -3774,8 +3780,10 @@ function recipientsFor(){ return recipObjsFor().map(r=>r.mail.trim()); }
 // Empfänger mit gleichem Inhalt werden zu einer Sendung zusammengefasst
 function groupsFor(){
   const m = {};
+  const mg = hatMang();
   recipObjsFor().forEach(r=>{
-    const k = r.txt ? 'txt' : INHALTE.filter(([id])=>r.inh[id]).map(([id])=>id).join('+'); if(!k) return;
+    if(r.txt && !mg) return;
+    const k = r.txt ? 'txt' : INHALTE.filter(([id])=>r.inh[id] && (mg || id!=='mang')).map(([id])=>id).join('+'); if(!k) return;
     (m[k] = m[k] || {key:k, mails:[], who:[]}); m[k].mails.push(r.mail.trim()); m[k].who.push(r.name||r.mail.trim());
   });
   return Object.values(m).map(g=>{ g.txt = g.key==='txt'; g.ids = g.txt ? ['mang'] : g.key.split('+'); g.names = g.txt ? ['Mängelschein als Text'] : INHALTE.filter(([id])=>g.ids.includes(id)).map(([,t])=>t); return g; });
@@ -4128,6 +4136,8 @@ function syncVorVorhanden(){
   card.hidden = !show;
   const cb = document.getElementById('vorVorhanden'); cb.checked = !!state.vorVorhanden;
   cb.onchange = ()=>{ state.vorVorhanden = cb.checked; saveDraft(); syncVorVorhanden(); renderStepNav(); };
+  const os = document.getElementById('ohneSpg'), osc = document.getElementById('ohneSpgCard');
+  if(os){ osc.hidden = !state.vorgang; os.checked = !!state.ohneSpannung; os.onchange = ()=>{ state.ohneSpannung = os.checked; saveDraft(); try{ renderStepNav(); updateStepCompletionUI(); }catch(e){} }; }
   const h = document.getElementById('vorVorhandenHint');
   h.textContent = !state.vorVorhanden ? 'Ohne Haken wird alles abgefragt (Inbetriebnahme und Vorinbetriebnahme zusammen).'
     : vorDatenOk() ? 'Wandlerdaten, Bürde und Riso stammen aus der Vorinbetriebnahme und werden nicht erneut abgefragt.'
