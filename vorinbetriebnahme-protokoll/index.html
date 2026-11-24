@@ -203,18 +203,21 @@ img.thumb{cursor:pointer} #photoSheet .btn{display:flex;align-items:center;justi
 .yn{display:flex;gap:8px}.yn span{flex:1;text-align:center;padding:9px 0;border-radius:10px;border:1.5px solid var(--accent);font-weight:600;cursor:pointer;user-select:none}.yn span.on[data-v=ja]{background:var(--accent);color:var(--on-accent)}.yn span.on[data-v=nein]{background:#c0392b;border-color:#c0392b;color:#fff}
 .fm{display:flex;gap:8px}.fm span{flex:1;text-align:center;padding:9px 6px;border-radius:10px;border:1.5px solid var(--accent);font-weight:600;cursor:pointer;user-select:none}.fm span.on{background:var(--accent);color:var(--on-accent)}.device-block.serhide>*:not(h4):not(.buerde-only){display:none !important}
 header h1{font-size:17px !important}
-header>div:first-child{max-width:calc(100% - 215px)}
+#saveBadge{display:block;margin-left:0 !important;font-size:11px}
+header>div:first-child{max-width:calc(100% - 170px)}
 </style>
 </head>
 <body>
 
 <header>
-  <button class="hdr-btn no-print" id="btnAdr" style="right:158px" aria-label="Gespeicherte E-Mail-Adressen"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8"/></svg></button>
-  <button class="hdr-btn no-print" id="btnVorl" style="right:110px" aria-label="Vorlagen"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 13h7M9 17h5"/></svg></button>
-  <button class="hdr-btn no-print" id="btnSet" style="right:62px" aria-label="E-Mail-Empfänger"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></button>
-  <button class="hdr-btn no-print" id="btnHist" aria-label="Verlauf: frühere Protokolle"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg></button>
+  <button class="hdr-btn no-print" id="btnAdr" style="display:none" aria-label="Gespeicherte E-Mail-Adressen"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8"/></svg></button>
+  <button class="hdr-btn no-print" id="btnVorl" style="display:none" aria-label="Vorlagen"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 13h7M9 17h5"/></svg></button>
+  <button class="hdr-btn no-print" id="btnSet" style="display:none" aria-label="E-Mail-Empfänger"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></button>
+  <button class="hdr-btn no-print" id="btnNew" style="right:110px" aria-label="Neue Anlage"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+  <button class="hdr-btn no-print" id="btnMenu" aria-label="Einstellungen"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+  <button class="hdr-btn no-print" id="btnHist" style="right:62px" aria-label="Verlauf: frühere Protokolle"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg></button>
   <h1>Vor-/Inbetriebnahme</h1>
-  <div class="sub">Zähleranlagen NS · MS · HS · v32<span id="saveBadge"></span></div>
+  <div class="sub">Zähleranlagen NS · MS · HS · v33<span id="saveBadge"></span></div>
   <div class="steps no-print" id="stepNav"></div>
 </header>
 
@@ -651,6 +654,12 @@ header>div:first-child{max-width:calc(100% - 215px)}
 </div>
 <div class="modal" id="adrModal" hidden>
   <div class="modal-box" role="dialog" aria-modal="true"><h2>Gespeicherte E-Mail-Adressen</h2><div id="adrList"></div><div class="modal-actions"><button class="btn btn-block" id="adrEdit">Bearbeiten / hinzufügen</button><button class="btn btn-primary btn-block" id="adrClose">Schließen</button></div></div>
+</div>
+<div class="modal" id="newModal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true"><h2>Neue Anlage</h2><div class="hint" style="margin-top:0">Das aktuelle Protokoll wird automatisch im Verlauf gespeichert und lässt sich dort wieder öffnen.</div><div class="modal-actions"><button class="btn btn-primary btn-block" id="newEmpty">Leeres Protokoll starten</button><button class="btn btn-block" id="newVorl">Aus Vorlage starten</button><button class="btn btn-block" id="newCancel">Abbrechen</button></div></div>
+</div>
+<div class="modal" id="menuModal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true"><h2>Einstellungen</h2><div class="modal-actions" style="margin-top:6px"><button class="btn btn-block" id="mnVorl">Vorlagen</button><button class="btn btn-block" id="mnAdr">Gespeicherte E-Mail-Adressen</button><button class="btn btn-block" id="mnRecip">E-Mail-Empfänger bearbeiten</button><div class="hint" style="text-align:center">Version 33</div><button class="btn btn-primary btn-block" id="mnClose">Schließen</button></div></div>
 </div>
 <div class="modal" id="vorlModal" hidden>
   <div class="modal-box" role="dialog" aria-modal="true"><div id="vorlBody"></div></div>
@@ -4149,6 +4158,20 @@ function openAdr(){
 document.getElementById('btnAdr').onclick = openAdr;
 document.getElementById('adrClose').onclick = ()=>{ document.getElementById('adrModal').hidden = true; };
 document.getElementById('adrEdit').onclick = ()=>{ document.getElementById('adrModal').hidden = true; openRecip(); };
+
+/* ---------------- Kopfzeile: Plus (neue Anlage) und Zahnrad (Einstellungen) ---------------- */
+(function(){
+  const $ = id=>document.getElementById(id);
+  $('btnNew').onclick = ()=>{ $('newModal').hidden = false; };
+  $('newCancel').onclick = ()=>{ $('newModal').hidden = true; };
+  $('newEmpty').onclick = ()=>{ $('newModal').hidden = true; resetAll(); };
+  $('newVorl').onclick = ()=>{ $('newModal').hidden = true; $('btnVorl').click(); };
+  $('btnMenu').onclick = ()=>{ $('menuModal').hidden = false; };
+  $('mnClose').onclick = ()=>{ $('menuModal').hidden = true; };
+  $('mnVorl').onclick = ()=>{ $('menuModal').hidden = true; $('btnVorl').click(); };
+  $('mnAdr').onclick = ()=>{ $('menuModal').hidden = true; $('btnAdr').click(); };
+  $('mnRecip').onclick = ()=>{ $('menuModal').hidden = true; $('btnSet').click(); };
+})();
 
 
 bootDraft().then(init);
