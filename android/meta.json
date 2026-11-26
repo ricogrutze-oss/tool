@@ -1,0 +1,5 @@
+{
+  "title": "Android-Quellcode",
+  "description": "Quellcode der Android-Apps (wird per GitHub Actions gebaut)",
+  "hidden": true
+}

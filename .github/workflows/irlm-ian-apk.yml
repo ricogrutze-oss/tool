@@ -1,0 +1,62 @@
+name: IAN-Monitor APK
+
+# Baut die Android-App aus android/irlm-ian und stellt sie als Release "irlm-ian" bereit.
+# Download-Link (fest): https://github.com/ricogrutze-oss/tool/releases/download/irlm-ian/IAN-Monitor.apk
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "android/irlm-ian/**"
+      - ".github/workflows/irlm-ian-apk.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: irlm-ian-apk
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Tests und APK bauen
+        working-directory: android/irlm-ian
+        run: |
+          set -o pipefail
+          gradle --no-daemon -PversionCode=${{ github.run_number }} testReleaseUnitTest assembleRelease 2>&1 | tee build.log
+
+      - name: Fehler anzeigen
+        if: failure()
+        working-directory: android/irlm-ian
+        run: |
+          grep -E "^e: |error:|FAILED|went wrong|expected:|AssertionError|Exception" build.log | head -10 | while IFS= read -r l; do echo "::error::${l}"; done
+          grep -A3 "What went wrong" build.log | head -10 | while IFS= read -r l; do echo "::warning::${l}"; done
+
+      - name: Release aktualisieren
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp android/irlm-ian/app/build/outputs/apk/release/app-release.apk IAN-Monitor.apk
+          VER="1.0.${{ github.run_number }}"
+          NOTES="Version ${VER} · gebaut am $(TZ=Europe/Berlin date '+%d.%m.%Y %H:%M') · Commit ${GITHUB_SHA::7}"
+          if gh release view irlm-ian >/dev/null 2>&1; then
+            gh release edit irlm-ian --title "IAN-Monitor ${VER}" --notes "${NOTES}"
+          else
+            gh release create irlm-ian --title "IAN-Monitor ${VER}" --notes "${NOTES}" --latest=false
+          fi
+          gh release upload irlm-ian IAN-Monitor.apk --clobber
+          echo "### IAN-Monitor ${VER} bereitgestellt" >> "$GITHUB_STEP_SUMMARY"
