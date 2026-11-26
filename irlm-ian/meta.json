@@ -1,0 +1,7 @@
+{
+  "title": "IAN-Monitor (iRLM)",
+  "name": "IAN-Monitor (iRLM)",
+  "description": "Android-App: iRLM-Zähler über IAN-Schnittstelle (DLMS-Push) auslesen – Werte, Zeigerdiagramm, Mitschnitt",
+  "icon": "icon.svg",
+  "version": "1.0.0"
+}

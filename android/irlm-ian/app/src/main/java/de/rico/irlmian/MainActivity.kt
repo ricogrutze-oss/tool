@@ -57,6 +57,7 @@ class MainActivity : Activity(), Mapping {
     private lateinit var treeTv: TextView
     private lateinit var rawTv: TextView
     private var scanner: Scanner? = null
+    private val myListener: () -> Unit = { render() }
 
     // ---------- Zuordnung (Mapping) ----------
     override fun obisFor(key: String): String? = prefs.getString("obis_$key", null)
@@ -83,14 +84,14 @@ class MainActivity : Activity(), Mapping {
                 View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
         }
         setContentView(buildUi())
-        State.listener = { render() }
+        State.listener = myListener
         if (State.conn != null) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         render()
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        if (State.listener != null) State.listener = null
+        if (State.listener === myListener) State.listener = null
         scanner?.cancelled = true
     }
 
@@ -351,6 +352,7 @@ class MainActivity : Activity(), Mapping {
             b.background = if (act) rounded(if (pal.dark) 0xFF636366.toInt() else 0xFFFFFFFF.toInt(), 8) else null
             b.typeface = if (act) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
         }
+        if (::rawTv.isInitialized) render()
     }
 
     // ---------- Verbindung ----------

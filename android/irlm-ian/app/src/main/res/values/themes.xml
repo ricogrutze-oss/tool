@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="launcher_bg">#8CC63F</color>
+    <color name="launcher_bg">#1C1C1E</color>
     <style name="AppTheme" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:colorAccent">#8CC63F</item>
         <item name="android:colorPrimary">#8CC63F</item>
